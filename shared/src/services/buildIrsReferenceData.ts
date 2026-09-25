@@ -36,9 +36,10 @@ import {
   getCleanEnergy,
   getQcd,
   getHomeOffice,
+  getEitcBrackets,
+  getEitcInvestmentIncomeLimit,
 } from '../constants/taxConstants.js';
 import { getAMTConstants } from '../constants/amt.js';
-import { EITC_BRACKETS, INVESTMENT_INCOME_LIMIT } from '../engine/eitc.js';
 
 // ─── Types ────────────────────────────────────────
 
@@ -78,7 +79,7 @@ function $(n: number): string {
 function formatBrackets(fs: FilingStatus, taxYear: number): string {
   const brackets = getTaxBrackets(taxYear)[fs];
   const label = FS_SHORT[fs];
-  const parts = brackets.map((b: { rate: number; max: number | Infinity }) => {
+  const parts = brackets.map((b: { rate: number; max: number }) => {
     const rate = `${(b.rate * 100).toFixed(0)}%`;
     return b.max === Infinity ? `${rate} above` : `${rate} to ${$(b.max)}`;
   });
@@ -179,8 +180,9 @@ function buildSectionData(fs: FilingStatus, isMFS: boolean, section: string, tax
       lines.push(`  Phase-out at ${ctcPhaseOut} AGI | ACTC refundable max ${$(CTC.REFUNDABLE_MAX)}`);
 
       // EITC
-      const e0 = EITC_BRACKETS[0], e1 = EITC_BRACKETS[1], e2 = EITC_BRACKETS[2], e3 = EITC_BRACKETS[3];
-      lines.push(`EITC Max Credit: ${$(e0.maxCredit)} (0 children) | ${$(e1.maxCredit)} (1) | ${$(e2.maxCredit)} (2) | ${$(e3.maxCredit)} (3+). Investment income limit: ${$(INVESTMENT_INCOME_LIMIT)}`);
+      const EITC = getEitcBrackets(taxYear);
+      const e0 = EITC[0], e1 = EITC[1], e2 = EITC[2], e3 = EITC[3];
+      lines.push(`EITC Max Credit: ${$(e0.maxCredit)} (0 children) | ${$(e1.maxCredit)} (1) | ${$(e2.maxCredit)} (2) | ${$(e3.maxCredit)} (3+). Investment income limit: ${$(getEitcInvestmentIncomeLimit(taxYear))}`);
 
       // Education
       const aotcPO = fs === FilingStatus.MarriedFilingJointly

@@ -1,20 +1,10 @@
 import { FilingStatus } from '../types/index.js';
 import { round2, parseDateString } from './utils.js';
+import { getEitcBrackets, getEitcInvestmentIncomeLimit } from '../constants/taxConstants.js';
 
-// ─── 2025 EITC Constants ────────────────────────────────────────────────────
-// Parameters for tax year 2025 per Rev. Proc. 2024-40, Sections 3.04-3.07.
-// Exported for use by scripts/gen-constants-doc.ts (auto-generated docs).
+// ─── EITC Bracket Interface ─────────────────────────────────────────────────
+// Parameters are resolved per tax year via getEitcBrackets(taxYear).
 
-/** Maximum investment income a taxpayer may have and still claim EITC. */
-export const INVESTMENT_INCOME_LIMIT = 11_950;
-
-/**
- * EITC schedule indexed by number of qualifying children (0–3).
- * Children counts above 3 use the "3" row.
- *
- * phaseInRate   = maxCredit / earnedIncomeThreshold
- * phaseOutRate  = maxCredit / (completePhaseOut − phaseOutStart)
- */
 interface EITCBracket {
   maxCredit: number;
   earnedIncomeThreshold: number;
@@ -50,12 +40,23 @@ function buildBracket(
   };
 }
 
-export const EITC_BRACKETS: Record<number, EITCBracket> = {
-  0: buildBracket(649, 8_490, 10_620, 17_730, 19_104, 26_214),
-  1: buildBracket(4_328, 12_730, 23_350, 30_470, 50_434, 57_554),
-  2: buildBracket(7_152, 17_880, 23_350, 30_470, 57_310, 64_430),
-  3: buildBracket(8_046, 17_880, 23_350, 30_470, 61_555, 68_675),
-};
+function getBracketsForYear(taxYear: number): Record<number, EITCBracket> {
+  const raw = getEitcBrackets(taxYear);
+  const result: Record<number, EITCBracket> = {};
+  for (const key of Object.keys(raw)) {
+    const numKey = Number(key);
+    const b = raw[numKey];
+    result[numKey] = buildBracket(
+      b.maxCredit,
+      b.earnedIncomeThreshold,
+      b.phaseOutStartSingle,
+      b.phaseOutStartMFJ,
+      b.completePhaseOutSingle,
+      b.completePhaseOutMFJ,
+    );
+  }
+  return result;
+}
 
 // ─── Credit Calculation for a Single Income Measure ─────────────────────────
 
@@ -99,16 +100,15 @@ export const EITC_MIN_AGE_NO_CHILDREN = 25;
 export const EITC_MAX_AGE_NO_CHILDREN = 64; // Must be under 65 at end of tax year
 
 /**
- * Calculate the Earned Income Tax Credit for tax year 2025.
+ * Calculate the Earned Income Tax Credit for the given tax year.
  *
  * @authority
  *   IRC: Section 32 — earned income tax credit
- *   Rev. Proc: 2024-40, Sections 3.04-3.07 — EITC thresholds and phase-outs
+ *   Rev. Proc: 2023-34 (2024), 2024-40 (2025), 2025-32 (2026) — EITC thresholds and phase-outs
  *   Form: Schedule EIC (Form 1040)
  *   Pub: Publication 596 — Earned Income Credit
- * @see https://www.irs.gov/irb/2024-44_IRB#REV-PROC-2024-40
  * @scope Full EITC computation with qualifying children
- * @limitations Investment income disqualification at $11,950 limit, does not model tie-breaker rules for shared dependents
+ * @limitations Investment income disqualification varies by year; does not model tie-breaker rules for shared dependents
  *
  * @param filingStatus        - The taxpayer's filing status.
  * @param earnedIncome        - Wages, salaries, self-employment income, etc.
@@ -142,7 +142,7 @@ export function calculateEITC(
   }
 
   // Investment income exceeds the limit.
-  if (investmentIncome > INVESTMENT_INCOME_LIMIT) {
+  if (investmentIncome > getEitcInvestmentIncomeLimit(taxYear)) {
     return 0;
   }
 
@@ -168,7 +168,8 @@ export function calculateEITC(
 
   // Cap qualifying children at 3 for EITC lookup purposes.
   const childrenKey = Math.min(qualifyingChildren, 3);
-  const bracket = EITC_BRACKETS[childrenKey];
+  const brackets = getBracketsForYear(taxYear);
+  const bracket = brackets[childrenKey];
 
   // ── Determine if MFJ for phase-out thresholds ────────────────────────
   // QSS is NOT treated as MFJ for EITC phase-out thresholds.

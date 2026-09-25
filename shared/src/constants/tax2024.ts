@@ -1238,6 +1238,28 @@ export const EV_REFUELING = {
 // Thresholds based on IRS audit trigger research and SOI statistical norms.
 // ──────────────────────────────────────────────────
 
+// ──────────────────────────────────────────────────
+// Earned Income Tax Credit (EITC) — 2024
+// Authority: IRC §32 — Earned income credit
+// Constants: Rev. Proc. 2023-34, Sections 3.04-3.07 — EITC thresholds and phase-outs
+// ──────────────────────────────────────────────────
+
+export const INVESTMENT_INCOME_LIMIT = 11_950;  // Rev. Proc. 2023-34 §3.04
+
+export const EITC_BRACKETS: Record<number, {
+  maxCredit: number;
+  earnedIncomeThreshold: number;
+  phaseOutStartSingle: number;
+  phaseOutStartMFJ: number;
+  completePhaseOutSingle: number;
+  completePhaseOutMFJ: number;
+}> = {
+  0: { maxCredit: 632, earnedIncomeThreshold: 8_490, phaseOutStartSingle: 10_620, phaseOutStartMFJ: 17_730, completePhaseOutSingle: 19_104, completePhaseOutMFJ: 26_214 },
+  1: { maxCredit: 3_995, earnedIncomeThreshold: 12_730, phaseOutStartSingle: 20_800, phaseOutStartMFJ: 27_930, completePhaseOutSingle: 49_399, completePhaseOutMFJ: 56_529 },
+  2: { maxCredit: 6_604, earnedIncomeThreshold: 17_880, phaseOutStartSingle: 20_800, phaseOutStartMFJ: 27_930, completePhaseOutSingle: 55_768, completePhaseOutMFJ: 62_898 },
+  3: { maxCredit: 7_430, earnedIncomeThreshold: 17_880, phaseOutStartSingle: 20_800, phaseOutStartMFJ: 27_930, completePhaseOutSingle: 59_898, completePhaseOutMFJ: 67_028 },
+};
+
 export const PLAUSIBILITY = {
   // Income thresholds (absolute dollar amounts)
   W2_WAGES_HIGH: 1_000_000,              // Single W-2 wages > $1M is unusual

@@ -1144,6 +1144,28 @@ export const EV_REFUELING = {
 // Thresholds based on IRS audit trigger research and SOI statistical norms.
 // ──────────────────────────────────────────────────
 
+// ──────────────────────────────────────────────────
+// Earned Income Tax Credit (EITC) — 2026
+// Authority: IRC §32 — Earned income credit (extended permanently by OBBBA)
+// Constants: Rev. Proc. 2025-32, Sections 3.04-3.07 — EITC thresholds and phase-outs
+// ──────────────────────────────────────────────────
+
+export const INVESTMENT_INCOME_LIMIT = 12_250;  // Rev. Proc. 2025-32 §3.04
+
+export const EITC_BRACKETS: Record<number, {
+  maxCredit: number;
+  earnedIncomeThreshold: number;
+  phaseOutStartSingle: number;
+  phaseOutStartMFJ: number;
+  completePhaseOutSingle: number;
+  completePhaseOutMFJ: number;
+}> = {
+  0: { maxCredit: 660, earnedIncomeThreshold: 8_650, phaseOutStartSingle: 10_840, phaseOutStartMFJ: 18_100, completePhaseOutSingle: 19_528, completePhaseOutMFJ: 26_788 },
+  1: { maxCredit: 4_430, earnedIncomeThreshold: 12_950, phaseOutStartSingle: 23_700, phaseOutStartMFJ: 30_940, completePhaseOutSingle: 51_198, completePhaseOutMFJ: 58_438 },
+  2: { maxCredit: 7_320, earnedIncomeThreshold: 18_130, phaseOutStartSingle: 23_700, phaseOutStartMFJ: 30_940, completePhaseOutSingle: 58_230, completePhaseOutMFJ: 65_470 },
+  3: { maxCredit: 8_160, earnedIncomeThreshold: 18_130, phaseOutStartSingle: 23_700, phaseOutStartMFJ: 30_940, completePhaseOutSingle: 62_530, completePhaseOutMFJ: 69_770 },
+};
+
 export const PLAUSIBILITY = {
   W2_WAGES_HIGH: 1_000_000,
   SELF_EMPLOYMENT_INCOME_HIGH: 500_000,

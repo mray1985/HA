@@ -490,6 +490,7 @@ export function createForm1040Context(
 
 export function calculateIncomeSection(ctx: Form1040Context): void {
   const { taxReturn } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
 
   // Schedule C (if self-employed)
   const hasSelfEmployment =
@@ -504,7 +505,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
 
   // Schedule F (if farming)
   if (taxReturn.scheduleF) {
-    ctx.scheduleFResult = calculateScheduleF(taxReturn.scheduleF);
+    ctx.scheduleFResult = calculateScheduleF(taxReturn.scheduleF, _taxYear);
     ctx.scheduleFNetProfit = ctx.scheduleFResult.netFarmProfit;
   }
 
@@ -769,6 +770,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
 
 export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
 
   ctx.k1SEIncome = ctx.k1Routing?.totalSEIncome || 0;
   ctx.totalSENetProfit = round2(ctx.scheduleCNetProfit + ctx.k1SEIncome + ctx.scheduleFNetProfit);
@@ -813,10 +815,10 @@ export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
       .reduce((sum, w) => sum + (w.socialSecurityWages || 0), 0);
 
     const primarySE = primaryTotalProfit > 0
-      ? calculateScheduleSE(primaryTotalProfit, filingStatus, primaryW2SS, farmOptionalAmount)
+      ? calculateScheduleSE(primaryTotalProfit, filingStatus, primaryW2SS, farmOptionalAmount, _taxYear)
       : undefined;
     const spouseSE = spouseTotalProfit > 0
-      ? calculateScheduleSE(spouseTotalProfit, filingStatus, spouseW2SS)
+      ? calculateScheduleSE(spouseTotalProfit, filingStatus, spouseW2SS, undefined, _taxYear)
       : undefined;
 
     // Combine per-spouse results into single ctx.scheduleSE for downstream use.
@@ -849,13 +851,13 @@ export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
       .filter(w => useSpouseW2 ? w.isSpouse === true : w.isSpouse !== true)
       .reduce((sum, w) => sum + (w.socialSecurityWages || 0), 0);
     ctx.scheduleSE = ctx.totalSENetProfit > 0 || farmOptionalAmount > 0
-      ? calculateScheduleSE(ctx.totalSENetProfit, filingStatus, ctx.w2SSWages, farmOptionalAmount)
+      ? calculateScheduleSE(ctx.totalSENetProfit, filingStatus, ctx.w2SSWages, farmOptionalAmount, _taxYear)
       : undefined;
   } else {
     // Single filer or non-MFJ: use all W-2 SS wages
     ctx.w2SSWages = taxReturn.w2Income.reduce((sum, w) => sum + (w.socialSecurityWages || 0), 0);
     ctx.scheduleSE = ctx.totalSENetProfit > 0 || farmOptionalAmount > 0
-      ? calculateScheduleSE(ctx.totalSENetProfit, filingStatus, ctx.w2SSWages, farmOptionalAmount)
+      ? calculateScheduleSE(ctx.totalSENetProfit, filingStatus, ctx.w2SSWages, farmOptionalAmount, _taxYear)
       : undefined;
   }
 
@@ -941,10 +943,11 @@ export function convertDisposedRentalsToForm4797(
 
 export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
 
   // Sale of Home Exclusion (Section 121)
   if (taxReturn.homeSale && taxReturn.homeSale.salePrice > 0) {
-    ctx.homeSaleResult = calculateHomeSaleExclusion(taxReturn.homeSale, filingStatus);
+    ctx.homeSaleResult = calculateHomeSaleExclusion(taxReturn.homeSale, filingStatus, _taxYear);
     ctx.homeSaleTaxableGain = ctx.homeSaleResult.taxableGain;
   }
 
@@ -986,6 +989,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
         taxReturn.capitalLossCarryforwardST,
         taxReturn.capitalLossCarryforwardLT,
         ctx.totalCapitalGainDistributions,
+        _taxYear,
       )
     : undefined;
 
@@ -1016,6 +1020,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
 
 export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
 
   ctx.allInterest = round2(ctx.totalInterest + ctx.k1Interest);
   ctx.allOrdinaryDividends = round2(ctx.totalOrdinaryDividends + ctx.k1OrdinaryDividends);
@@ -1247,7 +1252,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
 
   // FEIE (Form 2555)
   if (taxReturn.foreignEarnedIncome && taxReturn.foreignEarnedIncome.foreignEarnedIncome > 0) {
-    ctx.feieResult = calculateFEIE(taxReturn.foreignEarnedIncome);
+    ctx.feieResult = calculateFEIE(taxReturn.foreignEarnedIncome, _taxYear);
     ctx.feieExclusion = ctx.feieResult.totalExclusion;
   }
 
@@ -1436,6 +1441,7 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
 
 export function calculateDeductionsSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = taxReturn.taxYear || 2025;
   const disc = taxReturn.incomeDiscovery || {};
   const isDeclined = (key: string) => disc[key] === 'no';
 
@@ -1502,7 +1508,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
       };
     }
 
-    ctx.scheduleA = calculateScheduleA(effectiveItemized, ctx.agi, filingStatus);
+    ctx.scheduleA = calculateScheduleA(effectiveItemized, ctx.agi, filingStatus, _taxYear);
     const gamblingLossDeduction = !isDeclined('ded_gambling') ? Math.min(
       Math.max(0, safeNum(taxReturn.gamblingLosses)),
       ctx.totalGamblingIncome,
@@ -1706,6 +1712,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
 
 export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
 
   // SE Tax
   ctx.seTax = ctx.scheduleSE?.totalSETax || 0;
@@ -1748,12 +1755,12 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     }
   }
   const investmentIncomeForNIIT = round2(Math.max(0, grossInvestmentIncomeForNIIT - niitStateTaxDeduction));
-  ctx.niitTax = calculateNIIT(ctx.agi, investmentIncomeForNIIT, filingStatus);
+  ctx.niitTax = calculateNIIT(ctx.agi, investmentIncomeForNIIT, filingStatus, _taxYear);
 
   // Additional Medicare Tax
   const w2MedicareWages = taxReturn.w2Income.reduce((sum, w) => sum + (w.medicareWages || w.wages || 0), 0);
   const seNetEarnings = ctx.scheduleSE?.netEarnings || 0;
-  ctx.additionalMedicareTaxW2 = calculateAdditionalMedicareTaxW2(w2MedicareWages, seNetEarnings, filingStatus);
+  ctx.additionalMedicareTaxW2 = calculateAdditionalMedicareTaxW2(w2MedicareWages, seNetEarnings, filingStatus, _taxYear);
 
   // Early Distribution Penalty — now computed via Form 5329 (includes SECURE 2.0 emergency exemption
   // and IRC §72(t)(2) partial exceptions for education, medical, first-time homebuyer, etc.)
@@ -1791,7 +1798,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
       : [];
   for (const entry of kiddieTaxEntries) {
     if (entry.childUnearnedIncome > 0) {
-      const result = calculateKiddieTax(entry);
+      const result = calculateKiddieTax(entry, _taxYear);
       ctx.kiddieTaxResults.push(result);
       ctx.kiddieTaxAmount = round2(ctx.kiddieTaxAmount + result.additionalTax);
     }
@@ -1799,7 +1806,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
 
   // Schedule H
   if (taxReturn.householdEmployees && taxReturn.householdEmployees.totalCashWages > 0) {
-    ctx.scheduleHResult = calculateScheduleH(taxReturn.householdEmployees);
+    ctx.scheduleHResult = calculateScheduleH(taxReturn.householdEmployees, _taxYear);
     ctx.scheduleHTax = ctx.scheduleHResult.totalTax;
   }
 
@@ -1856,6 +1863,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
       effectiveExcess,
       hasEmergency ? taxReturn.income1099R : undefined,
       taxReturn.emergencyDistributions,
+      _taxYear,
     );
     ctx.excessContributionPenalty = round2(ctx.form5329Result.iraExciseTax + ctx.form5329Result.hsaExciseTax + ctx.form5329Result.esaExciseTax);
     // Override early distribution penalty if Form 5329 computed it (with emergency exemption)
@@ -1866,7 +1874,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
 
   // Form 4137 (unreported tips)
   if (taxReturn.form4137 && taxReturn.form4137.unreportedTips > 0) {
-    ctx.form4137Result = calculateForm4137(taxReturn.form4137.unreportedTips, ctx.w2SSWages);
+    ctx.form4137Result = calculateForm4137(taxReturn.form4137.unreportedTips, ctx.w2SSWages, _taxYear);
     ctx.form4137Tax = ctx.form4137Result.totalTax;
   }
 
@@ -1891,6 +1899,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
 
 export function calculateCreditsSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = ctx.taxReturn.taxYear || 2025;
   const disc = taxReturn.incomeDiscovery || {};
   const isDeclined = (key: string) => disc[key] === 'no';
 
@@ -1950,6 +1959,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
       taxReturn.dependentCare.isStudentSpouse,
       taxReturn.dependentCare.isDisabledSpouse,
       livedApartMFS,
+      _taxYear,
     );
     if (ctx.dependentCareResult.credit > 0) {
       ctx.credits.dependentCareCredit = ctx.dependentCareResult.credit;
@@ -1972,6 +1982,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
         isSpouseFullTimeStudent: taxReturn.isSpouseFullTimeStudent,
         isClaimedAsDependent: taxReturn.isClaimedAsDependent,
       },
+      _taxYear,
     );
     if (ctx.saversCreditResult.credit > 0) {
       ctx.credits.saversCredit = ctx.saversCreditResult.credit;
@@ -1992,7 +2003,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
 
   // Clean Energy (Form 5695, Part I)
   if (!isDeclined('clean_energy') && taxReturn.cleanEnergy) {
-    ctx.cleanEnergyResult = calculateCleanEnergyCredit(taxReturn.cleanEnergy);
+    ctx.cleanEnergyResult = calculateCleanEnergyCredit(taxReturn.cleanEnergy, _taxYear);
     if (ctx.cleanEnergyResult.totalAvailableCredit > 0) {
       ctx.credits.cleanEnergyCredit = ctx.cleanEnergyResult.totalAvailableCredit;
       ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.cleanEnergyResult.totalAvailableCredit);
@@ -2004,7 +2015,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
   // IRC §30D(f)(10): Income test uses lesser of current-year or prior-year MAGI
   if (!isDeclined('ev_credit') && taxReturn.evCredit) {
     const priorYearAgiForEV = taxReturn.priorYearSummary?.agi;
-    ctx.evCreditResult = calculateEVCredit(taxReturn.evCredit, ctx.agi, filingStatus, priorYearAgiForEV);
+    ctx.evCreditResult = calculateEVCredit(taxReturn.evCredit, ctx.agi, filingStatus, priorYearAgiForEV, _taxYear);
     if (ctx.evCreditResult.credit > 0) {
       ctx.credits.evCredit = ctx.evCreditResult.credit;
       ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.evCreditResult.credit);
@@ -2094,7 +2105,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
 
   // Adoption Credit (Form 8839)
   if (!isDeclined('adoption_credit') && taxReturn.adoptionCredit && (taxReturn.adoptionCredit.qualifiedExpenses > 0 || taxReturn.adoptionCredit.isSpecialNeeds)) {
-    ctx.adoptionCreditResult = calculateAdoptionCredit(taxReturn.adoptionCredit, ctx.agi);
+    ctx.adoptionCreditResult = calculateAdoptionCredit(taxReturn.adoptionCredit, ctx.agi, _taxYear);
     if (ctx.adoptionCreditResult.credit > 0) {
       ctx.credits.adoptionCredit = ctx.adoptionCreditResult.credit;
       ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.adoptionCreditResult.credit);
@@ -2104,7 +2115,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
 
   // EV Refueling (Form 8911)
   if (!isDeclined('ev_refueling') && taxReturn.evRefuelingCredit?.properties?.length) {
-    ctx.evRefuelingResult = calculateEVRefuelingCredit(taxReturn.evRefuelingCredit);
+    ctx.evRefuelingResult = calculateEVRefuelingCredit(taxReturn.evRefuelingCredit, _taxYear);
     if (ctx.evRefuelingResult.totalCredit > 0) {
       ctx.credits.evRefuelingCredit = ctx.evRefuelingResult.totalCredit;
       ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.evRefuelingResult.totalCredit);
@@ -2114,7 +2125,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
 
   // Schedule R (Elderly/Disabled Credit)
   if (!isDeclined('elderly_disabled') && taxReturn.scheduleR) {
-    ctx.scheduleRResult = calculateScheduleR(taxReturn.scheduleR, ctx.agi, filingStatus);
+    ctx.scheduleRResult = calculateScheduleR(taxReturn.scheduleR, ctx.agi, filingStatus, _taxYear);
     if (ctx.scheduleRResult.credit > 0) {
       ctx.credits.elderlyDisabledCredit = ctx.scheduleRResult.credit;
       ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.scheduleRResult.credit);

@@ -312,3 +312,11 @@ export function getSimpleIra(year: number) {
 export function getPlausibility(year: number) {
   return getTaxConstants(year).PLAUSIBILITY;
 }
+
+export function getEitcBrackets(year: number) {
+  return getTaxConstants(year).EITC_BRACKETS;
+}
+
+export function getEitcInvestmentIncomeLimit(year: number) {
+  return getTaxConstants(year).INVESTMENT_INCOME_LIMIT;
+}
