@@ -64,7 +64,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB — Syncfusion PDF viewer + charts (merged chunk)
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
@@ -72,6 +72,10 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
+      input: {
+        main: 'index.html',
+        preparer: 'preparer.html',
+      },
       output: {
         manualChunks: {
           syncfusion: [
