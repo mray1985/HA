@@ -35,7 +35,7 @@ import {
   Solo401kResult, SEPIRAResult, HSAContributionInfo,
   ScholarshipCreditResult, Form8801Result,
 } from '../types/index.js';
-import { STANDARD_DEDUCTION_2025, ADDITIONAL_STANDARD_DEDUCTION, DEPENDENT_STANDARD_DEDUCTION, STUDENT_LOAN_INTEREST, IRA, EARLY_DISTRIBUTION, EDUCATOR_EXPENSES, EXCESS_SS_TAX, ALIMONY, NOL, DEPENDENT_CARE_FSA, DISTRIBUTION_529, FORM_4137, QCD, SE_TAX } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { calculateScheduleC } from './scheduleC.js';
 import { calculateScheduleSE } from './scheduleSE.js';
 import { calculateScheduleA } from './scheduleA.js';
@@ -610,7 +610,8 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
 
     // Regular (non-conversion) IRA distributions for Form 8606 Line 7 pro-rata denominator.
     // QCDs bypass the pro-rata rule (Notice 2007-7, Q&A-36) — exclude them from the denominator.
-    const cappedQCD = Math.min(ctx.totalQCD, QCD.MAX_AMOUNT);
+    const _taxYear = ctx.taxReturn.taxYear || 2025;
+    const cappedQCD = Math.min(ctx.totalQCD, getTaxConstants(_taxYear).QCD.MAX_AMOUNT);
     const regularIRADist = conversionIn1099R
       ? Math.max(0, ctx.iraDistributionsGross - conversionGross - cappedQCD)
       : Math.max(0, ctx.iraDistributionsGross - cappedQCD);
@@ -645,7 +646,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
   // QCDs reduce Line 4b (taxable) but NOT Line 4a (gross). IRC §408(d)(8).
   // Applied after Form 8606 so pro-rata is computed on non-QCD distributions only.
   if (ctx.totalQCD > 0) {
-    const cappedQCD = Math.min(ctx.totalQCD, QCD.MAX_AMOUNT);
+    const cappedQCD = Math.min(ctx.totalQCD, getTaxConstants(ctx.taxReturn.taxYear || 2025).QCD.MAX_AMOUNT);
     ctx.totalQCD = cappedQCD;
     ctx.iraDistributionsTaxable = Math.max(0, ctx.iraDistributionsTaxable - cappedQCD);
     ctx.totalRetirementIncome = Math.max(0, ctx.totalRetirementIncome - cappedQCD);
@@ -684,7 +685,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
   // Alimony received (pre-2019)
   if (taxReturn.alimonyReceived && taxReturn.alimonyReceived.totalReceived > 0) {
     const divorceDate = new Date(taxReturn.alimonyReceived.divorceDate);
-    const cutoff = new Date(ALIMONY.TCJA_CUTOFF_DATE);
+    const cutoff = new Date(getTaxConstants(ctx.taxReturn.taxYear || 2025).ALIMONY.TCJA_CUTOFF_DATE);
     if (!isNaN(divorceDate.getTime()) && divorceDate < cutoff) {
       ctx.alimonyReceivedIncome = round2(Math.max(0, taxReturn.alimonyReceived.totalReceived));
     }
@@ -716,7 +717,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
         ctx.taxable529Income = round2(ctx.taxable529Income + taxableEarnings);
       }
     }
-    ctx.penalty529 = round2(ctx.taxable529Income * DISTRIBUTION_529.PENALTY_RATE);
+    ctx.penalty529 = round2(ctx.taxable529Income * getTaxConstants(ctx.taxReturn.taxYear || 2025).DISTRIBUTION_529.PENALTY_RATE);
   }
 
   // K-1 (partnerships & S-Corps)
@@ -828,7 +829,7 @@ export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
       const perSpouseAdditionalMedicare = (primarySE?.additionalMedicareTax || 0) + (spouseSE?.additionalMedicareTax || 0);
       // Recalculate Additional Medicare at household level
       const householdAdditionalMedicare = round2(
-        Math.max(0, combinedNetEarnings - SE_TAX.ADDITIONAL_MEDICARE_THRESHOLD_MFJ) * SE_TAX.ADDITIONAL_MEDICARE_RATE,
+        Math.max(0, combinedNetEarnings - getTaxConstants(ctx.taxReturn.taxYear || 2025).SE_TAX.ADDITIONAL_MEDICARE_THRESHOLD_MFJ) * getTaxConstants(ctx.taxReturn.taxYear || 2025).SE_TAX.ADDITIONAL_MEDICARE_RATE,
       );
       const additionalMedicareDiff = round2(householdAdditionalMedicare - perSpouseAdditionalMedicare);
       return {
@@ -1030,8 +1031,8 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
   );
   if (rawDCBenefits > 0) {
     const dcExclusionLimit = filingStatus === FilingStatus.MarriedFilingSeparately
-      ? DEPENDENT_CARE_FSA.MAX_EXCLUSION_MFS
-      : DEPENDENT_CARE_FSA.MAX_EXCLUSION;
+      ? getTaxConstants(ctx.taxReturn.taxYear || 2025).DEPENDENT_CARE_FSA.MAX_EXCLUSION_MFS
+      : getTaxConstants(ctx.taxReturn.taxYear || 2025).DEPENDENT_CARE_FSA.MAX_EXCLUSION;
     ctx.dcFSATaxableExcess = round2(Math.max(0, rawDCBenefits - dcExclusionLimit));
   }
 
@@ -1325,24 +1326,24 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
   const magiForAdjustments = round2(ctx.totalIncome - preliminaryAdjustments + ctx.feieExclusion);
 
   if (!isDeclined('ded_student_loan')) {
-    const rawStudentLoan = Math.min(safeNum(taxReturn.studentLoanInterest), STUDENT_LOAN_INTEREST.MAX_DEDUCTION);
-    ctx.studentLoanInterest = calculateStudentLoanDeduction(rawStudentLoan, magiForAdjustments, filingStatus);
+    const rawStudentLoan = Math.min(safeNum(taxReturn.studentLoanInterest), getTaxConstants(taxReturn.taxYear || 2025).STUDENT_LOAN_INTEREST.MAX_DEDUCTION);
+    ctx.studentLoanInterest = calculateStudentLoanDeduction(rawStudentLoan, magiForAdjustments, filingStatus, taxReturn.taxYear || 2025);
   }
 
   if (!isDeclined('ded_ira')) {
     // IRC §219(b)(5)(B): $1,000 catch-up contribution for age 50+
     const iraCatchUpEligible = isAge50OrOlder(taxReturn.dateOfBirth, taxReturn.taxYear) ||
       isAge50OrOlder(taxReturn.spouseDateOfBirth, taxReturn.taxYear);
-    const iraLimit = IRA.MAX_CONTRIBUTION + (iraCatchUpEligible ? IRA.CATCH_UP_50_PLUS : 0);
+    const iraLimit = getTaxConstants(taxReturn.taxYear || 2025).IRA.MAX_CONTRIBUTION + (iraCatchUpEligible ? getTaxConstants(taxReturn.taxYear || 2025).IRA.CATCH_UP_50_PLUS : 0);
     const rawIRA = Math.min(safeNum(taxReturn.iraContribution), iraLimit);
     // Auto-derive coveredByEmployerPlan from W-2 Box 13 if not explicitly set
     // Explicit user value (from the IRA deduction step) takes precedence via ??
     const effectiveCoveredByPlan = taxReturn.coveredByEmployerPlan ?? hasRetirementPlanCoverage(taxReturn.w2Income);
-    ctx.iraDeduction = calculateIRADeduction(rawIRA, magiForAdjustments, filingStatus, effectiveCoveredByPlan, taxReturn.spouseCoveredByEmployerPlan);
+    ctx.iraDeduction = calculateIRADeduction(rawIRA, magiForAdjustments, filingStatus, effectiveCoveredByPlan, taxReturn.spouseCoveredByEmployerPlan, taxReturn.taxYear || 2025);
   }
 
   if (!isDeclined('ded_educator')) {
-    ctx.educatorExpenses = round2(Math.min(Math.max(0, safeNum(taxReturn.educatorExpenses)), EDUCATOR_EXPENSES.MAX_DEDUCTION));
+    ctx.educatorExpenses = round2(Math.min(Math.max(0, safeNum(taxReturn.educatorExpenses)), getTaxConstants(taxReturn.taxYear || 2025).EDUCATOR_EXPENSES.MAX_DEDUCTION));
   }
 
   ctx.earlyWithdrawalPenalty = round2(
@@ -1351,7 +1352,7 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
   );
 
   if (!isDeclined('ded_alimony')) {
-    ctx.alimonyDeduction = calculateAlimonyDeduction(taxReturn.alimony);
+    ctx.alimonyDeduction = calculateAlimonyDeduction(taxReturn.alimony, taxReturn.taxYear || 2025);
   }
 
   // Form 3903 — Moving expenses (military only, Schedule 1 Line 14)
@@ -1375,7 +1376,7 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
     // Match the catch-up-aware limit used above
     const iraCatchUpEligibleFor8606 = isAge50OrOlder(taxReturn.dateOfBirth, taxReturn.taxYear) ||
       isAge50OrOlder(taxReturn.spouseDateOfBirth, taxReturn.taxYear);
-    const iraLimitFor8606 = IRA.MAX_CONTRIBUTION + (iraCatchUpEligibleFor8606 ? IRA.CATCH_UP_50_PLUS : 0);
+    const iraLimitFor8606 = getTaxConstants(taxReturn.taxYear || 2025).IRA.MAX_CONTRIBUTION + (iraCatchUpEligibleFor8606 ? getTaxConstants(taxReturn.taxYear || 2025).IRA.CATCH_UP_50_PLUS : 0);
     const rawIRA = Math.min(safeNum(taxReturn.iraContribution), iraLimitFor8606);
     const nonDeductibleRemainder = round2(rawIRA - ctx.iraDeduction);
 
@@ -1522,7 +1523,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
   const nolCarryforward = !isDeclined('ded_nol') ? Math.max(0, safeNum(taxReturn.nolCarryforward)) : 0;
   const taxableBeforeNOL = Math.max(0, ctx.agi - ctx.deductionAmount);
   ctx.nolDeduction = nolCarryforward > 0
-    ? round2(Math.min(nolCarryforward, taxableBeforeNOL * NOL.DEDUCTION_LIMIT_RATE))
+    ? round2(Math.min(nolCarryforward, taxableBeforeNOL * getTaxConstants(taxReturn.taxYear || 2025).NOL.DEDUCTION_LIMIT_RATE))
     : 0;
 
   // QBI — per IRC §199A, QBI deduction is based on taxable income AFTER NOL.
@@ -1601,6 +1602,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
 
 export function calculateIncomeTaxSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = taxReturn.taxYear || 2025;
 
   let preferentialQD = ctx.allQualifiedDividends;
   // Capital gain distributions are now included in scheduleDLongTermGain (via Schedule D Line 13)
@@ -1627,9 +1629,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
       // §911(f) + preferential rates: stack excluded income under the full computation
       const fullResult = calculatePreferentialRateTax(
         ctx.taxableIncome + feieStack, preferentialQD, totalPreferentialLTCG, filingStatus,
-        unrecapturedSection1250Gain,
+        unrecapturedSection1250Gain, _taxYear,
       );
-      const excludedResult = calculateProgressiveTax(feieStack, filingStatus);
+      const excludedResult = calculateProgressiveTax(feieStack, filingStatus, _taxYear);
       ctx.incomeTax = round2(Math.max(0, fullResult.totalTax - excludedResult.tax));
       ctx.preferentialTax = fullResult.preferentialTax;
       ctx.section1250Tax = fullResult.section1250Tax;
@@ -1637,7 +1639,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     } else {
       const prefResult = calculatePreferentialRateTax(
         ctx.taxableIncome, preferentialQD, totalPreferentialLTCG, filingStatus,
-        unrecapturedSection1250Gain,
+        unrecapturedSection1250Gain, _taxYear,
       );
       ctx.incomeTax = prefResult.totalTax;
       ctx.preferentialTax = prefResult.preferentialTax;
@@ -1647,12 +1649,12 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
   } else {
     if (feieStack > 0) {
       // §911(f): tax = tax(taxableIncome + exclusion) - tax(exclusion)
-      const fullResult = calculateProgressiveTax(ctx.taxableIncome + feieStack, filingStatus);
-      const excludedResult = calculateProgressiveTax(feieStack, filingStatus);
+      const fullResult = calculateProgressiveTax(ctx.taxableIncome + feieStack, filingStatus, _taxYear);
+      const excludedResult = calculateProgressiveTax(feieStack, filingStatus, _taxYear);
       ctx.incomeTax = round2(Math.max(0, fullResult.tax - excludedResult.tax));
       ctx.marginalTaxRate = fullResult.marginalRate;
     } else {
-      const result = calculateProgressiveTax(ctx.taxableIncome, filingStatus);
+      const result = calculateProgressiveTax(ctx.taxableIncome, filingStatus, _taxYear);
       ctx.incomeTax = result.tax;
       ctx.marginalTaxRate = result.marginalRate;
     }
@@ -1675,7 +1677,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     if (ctx.traceOptions?.enabled && !hasPreferentialIncome) {
       // When stacking, trace the full (stacked) brackets so user sees the real rate schedule
       const traceIncome = feieStack > 0 ? ctx.taxableIncome + feieStack : ctx.taxableIncome;
-      const traced = traceProgressiveTax(traceIncome, filingStatus);
+      const traced = traceProgressiveTax(traceIncome, filingStatus, _taxYear);
       bracketChildren = traced.traces;
     }
     const feieNote = feieStack > 0
@@ -1761,7 +1763,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     let earlyExceptionTotal = 0;
     for (const r of taxReturn.income1099R || []) {
       const code = (r.distributionCode || '7').toUpperCase();
-      if (EARLY_DISTRIBUTION.PENALTY_CODES.includes(code)) {
+      if (getTaxConstants(taxReturn.taxYear || 2025).EARLY_DISTRIBUTION.PENALTY_CODES.includes(code)) {
         const taxable = Math.max(0, safeNum(r.taxableAmount));
         earlyDistTotal += taxable;
         // IRC §72(t)(2) partial exception — subtract exception amount before penalty
@@ -1771,7 +1773,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
       }
     }
     const penaltyBase = Math.max(0, earlyDistTotal - earlyExceptionTotal);
-    const earlyDistributions = round2(penaltyBase * EARLY_DISTRIBUTION.PENALTY_RATE);
+    const earlyDistributions = round2(penaltyBase * getTaxConstants(taxReturn.taxYear || 2025).EARLY_DISTRIBUTION.PENALTY_RATE);
     // If there are emergency distributions, reduce penalty via Form 5329
     if (taxReturn.emergencyDistributions && earlyDistTotal > 0) {
       // Handled below in consolidated Form 5329 block
@@ -1804,7 +1806,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
   // Form 5329 — excess contribution penalties + early distribution penalties (with emergency exemption)
   const hasExcess = !!taxReturn.excessContributions;
   const hasEmergency = !!taxReturn.emergencyDistributions;
-  const hasEarlyDist = (taxReturn.income1099R || []).some(r => EARLY_DISTRIBUTION.PENALTY_CODES.includes((r.distributionCode || '7').toUpperCase()));
+  const hasEarlyDist = (taxReturn.income1099R || []).some(r => getTaxConstants(taxReturn.taxYear || 2025).EARLY_DISTRIBUTION.PENALTY_CODES.includes((r.distributionCode || '7').toUpperCase()));
   if (hasExcess || (hasEmergency && hasEarlyDist)) {
     // Apply corrective withdrawal choices — reduces effective excess before penalty calc
     let effectiveExcess = { ...(taxReturn.excessContributions || { iraExcessContribution: 0, hsaExcessContribution: 0 }) };
@@ -2080,8 +2082,8 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
     const spouseSSTax = round2(taxReturn.w2Income
       .filter(w => w.isSpouse)
       .reduce((sum, w) => sum + (w.socialSecurityTax || 0), 0));
-    const primaryExcess = round2(Math.max(0, primarySSTax - EXCESS_SS_TAX.MAX_SS_TAX));
-    const spouseExcess = round2(Math.max(0, spouseSSTax - EXCESS_SS_TAX.MAX_SS_TAX));
+    const primaryExcess = round2(Math.max(0, primarySSTax - getTaxConstants(taxReturn.taxYear || 2025).EXCESS_SS_TAX.MAX_SS_TAX));
+    const spouseExcess = round2(Math.max(0, spouseSSTax - getTaxConstants(taxReturn.taxYear || 2025).EXCESS_SS_TAX.MAX_SS_TAX));
     const excessSSCredit = round2(primaryExcess + spouseExcess);
     if (excessSSCredit > 0) {
       ctx.credits.excessSSTaxCredit = excessSSCredit;
@@ -2281,7 +2283,7 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
       const totalMedicareWages = round2(
         taxReturn.w2Income.reduce((sum, w) => sum + (w.medicareWages || w.wages || 0), 0),
       );
-      const regularMedicareTax = round2(totalMedicareWages * FORM_4137.MEDICARE_RATE);
+      const regularMedicareTax = round2(totalMedicareWages * getTaxConstants(taxReturn.taxYear || 2025).FORM_4137.MEDICARE_RATE);
       ctx.form8959WithholdingCredit = round2(Math.max(0, totalMedicareTaxWithheld - regularMedicareTax));
     }
   }
@@ -2578,14 +2580,14 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
 /**
  * Student loan interest deduction with income phase-out.
  */
-export function calculateStudentLoanDeduction(amount: number, income: number, filingStatus: FilingStatus): number {
+export function calculateStudentLoanDeduction(amount: number, income: number, filingStatus: FilingStatus, taxYear: number = 2025): number {
   if (amount <= 0) return 0;
   if (filingStatus === FilingStatus.MarriedFilingSeparately) return 0;
 
   const isMFJ = filingStatus === FilingStatus.MarriedFilingJointly ||
     filingStatus === FilingStatus.QualifyingSurvivingSpouse;
-  const phaseOutStart = isMFJ ? STUDENT_LOAN_INTEREST.PHASE_OUT_MFJ : STUDENT_LOAN_INTEREST.PHASE_OUT_SINGLE;
-  const phaseOutRange = isMFJ ? STUDENT_LOAN_INTEREST.PHASE_OUT_RANGE_MFJ : STUDENT_LOAN_INTEREST.PHASE_OUT_RANGE_SINGLE;
+  const phaseOutStart = isMFJ ? getTaxConstants(taxYear).STUDENT_LOAN_INTEREST.PHASE_OUT_MFJ : getTaxConstants(taxYear).STUDENT_LOAN_INTEREST.PHASE_OUT_SINGLE;
+  const phaseOutRange = isMFJ ? getTaxConstants(taxYear).STUDENT_LOAN_INTEREST.PHASE_OUT_RANGE_MFJ : getTaxConstants(taxYear).STUDENT_LOAN_INTEREST.PHASE_OUT_RANGE_SINGLE;
 
   if (income <= phaseOutStart) return round2(amount);
   if (income >= phaseOutStart + phaseOutRange) return 0;
@@ -2603,6 +2605,7 @@ export function calculateIRADeduction(
   filingStatus: FilingStatus,
   coveredByEmployerPlan?: boolean,
   spouseCoveredByEmployerPlan?: boolean,
+  taxYear: number = 2025,
 ): number {
   if (amount <= 0) return 0;
 
@@ -2615,14 +2618,14 @@ export function calculateIRADeduction(
     let phaseOutRange: number;
 
     if (isMFS) {
-      phaseOutStart = IRA.DEDUCTION_PHASE_OUT_MFS;
-      phaseOutRange = IRA.DEDUCTION_PHASE_OUT_RANGE_MFS;
+      phaseOutStart = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_MFS;
+      phaseOutRange = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_RANGE_MFS;
     } else if (isMFJ) {
-      phaseOutStart = IRA.DEDUCTION_PHASE_OUT_MFJ;
-      phaseOutRange = IRA.DEDUCTION_PHASE_OUT_RANGE_MFJ;
+      phaseOutStart = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_MFJ;
+      phaseOutRange = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_RANGE_MFJ;
     } else {
-      phaseOutStart = IRA.DEDUCTION_PHASE_OUT_SINGLE;
-      phaseOutRange = IRA.DEDUCTION_PHASE_OUT_RANGE_SINGLE;
+      phaseOutStart = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_SINGLE;
+      phaseOutRange = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_RANGE_SINGLE;
     }
 
     if (income <= phaseOutStart) return round2(amount);
@@ -2632,8 +2635,8 @@ export function calculateIRADeduction(
   }
 
   if (spouseCoveredByEmployerPlan && isMFJ) {
-    const phaseOutStart = IRA.DEDUCTION_PHASE_OUT_MFJ_SPOUSE_COVERED;
-    const phaseOutRange = IRA.DEDUCTION_PHASE_OUT_RANGE_MFJ_SPOUSE_COVERED;
+    const phaseOutStart = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_MFJ_SPOUSE_COVERED;
+    const phaseOutRange = getTaxConstants(taxYear).IRA.DEDUCTION_PHASE_OUT_RANGE_MFJ_SPOUSE_COVERED;
 
     if (income <= phaseOutStart) return round2(amount);
     if (income >= phaseOutStart + phaseOutRange) return 0;
@@ -2648,12 +2651,12 @@ export function calculateIRADeduction(
  * Standard deduction with additional amounts for age 65+ and/or legally blind.
  */
 export function calculateStandardDeduction(taxReturn: TaxReturn, filingStatus: FilingStatus, earnedIncome: number = 0): number {
-  let base = STANDARD_DEDUCTION_2025[filingStatus];
+  let base = getTaxConstants(taxReturn.taxYear || 2025).STANDARD_DEDUCTION_2025[filingStatus];
 
   if (taxReturn.canBeClaimedAsDependent) {
     const dependentBase = Math.max(
-      DEPENDENT_STANDARD_DEDUCTION.MIN_AMOUNT,
-      earnedIncome + DEPENDENT_STANDARD_DEDUCTION.EARNED_INCOME_PLUS,
+      getTaxConstants(taxReturn.taxYear || 2025).DEPENDENT_STANDARD_DEDUCTION.MIN_AMOUNT,
+      earnedIncome + getTaxConstants(taxReturn.taxYear || 2025).DEPENDENT_STANDARD_DEDUCTION.EARNED_INCOME_PLUS,
     );
     base = Math.min(dependentBase, base);
   }
@@ -2663,8 +2666,8 @@ export function calculateStandardDeduction(taxReturn: TaxReturn, filingStatus: F
     filingStatus === FilingStatus.MarriedFilingSeparately ||
     filingStatus === FilingStatus.QualifyingSurvivingSpouse;
   const additionalAmount = isMarried
-    ? ADDITIONAL_STANDARD_DEDUCTION.MARRIED
-    : ADDITIONAL_STANDARD_DEDUCTION.UNMARRIED;
+    ? getTaxConstants(taxReturn.taxYear || 2025).ADDITIONAL_STANDARD_DEDUCTION.MARRIED
+    : getTaxConstants(taxReturn.taxYear || 2025).ADDITIONAL_STANDARD_DEDUCTION.UNMARRIED;
 
   let additional = 0;
 
@@ -2730,14 +2733,14 @@ function isAge50OrOlder(dateOfBirth: string | undefined, taxYear: number): boole
 /**
  * Alimony deduction for pre-2019 divorce agreements.
  */
-export function calculateAlimonyDeduction(alimony?: { totalPaid: number; divorceDate: string }): number {
+export function calculateAlimonyDeduction(alimony?: { totalPaid: number; divorceDate: string }, taxYear: number = 2025): number {
   if (!alimony || alimony.totalPaid <= 0) return 0;
   if (!alimony.divorceDate) return 0;
 
   const divorceDate = new Date(alimony.divorceDate);
   if (isNaN(divorceDate.getTime())) return 0;
 
-  const cutoff = new Date(ALIMONY.TCJA_CUTOFF_DATE);
+  const cutoff = new Date(getTaxConstants(taxYear).ALIMONY.TCJA_CUTOFF_DATE);
   if (divorceDate >= cutoff) return 0;
 
   return round2(Math.max(0, alimony.totalPaid));

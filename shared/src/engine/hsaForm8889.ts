@@ -1,5 +1,5 @@
 import { HSAContributionInfo } from '../types/index.js';
-import { HSA } from '../constants/tax2025.js';
+import { getHsa } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -31,12 +31,13 @@ import { round2 } from './utils.js';
  * @limitations Does not implement the "last month rule" (IRC §223(b)(8)) which
  *   allows full-year contribution if eligible on Dec 1 (with testing period requirement).
  */
-export function calculateHSADeduction(info: HSAContributionInfo): number {
+export function calculateHSADeduction(info: HSAContributionInfo, taxYear: number = 2025): number {
   if (!info || !info.totalContributions || info.totalContributions <= 0) return 0;
 
+  const hsa = getHsa(taxYear);
   const baseLimit = info.coverageType === 'family'
-    ? HSA.FAMILY_LIMIT
-    : HSA.INDIVIDUAL_LIMIT;
+    ? hsa.FAMILY_LIMIT
+    : hsa.INDIVIDUAL_LIMIT;
 
   // Prorate base limit for partial-year HDHP coverage (Form 8889 Line 6 Worksheet)
   const months = Math.min(12, Math.max(1, info.hdhpCoverageMonths ?? 12));
@@ -48,10 +49,10 @@ export function calculateHSADeduction(info: HSAContributionInfo): number {
   if ((info.catchUpContributions || 0) > 0) {
     if (info.dateOfBirth && info.taxYear) {
       const age = getAgeAtEndOfYear(info.dateOfBirth, info.taxYear);
-      catchUpAmount = (age !== null && age >= 55) ? HSA.CATCH_UP_55_PLUS : 0;
+      catchUpAmount = (age !== null && age >= 55) ? hsa.CATCH_UP_55_PLUS : 0;
     } else {
       // No date of birth provided — trust the user's input
-      catchUpAmount = HSA.CATCH_UP_55_PLUS;
+      catchUpAmount = hsa.CATCH_UP_55_PLUS;
     }
   }
   const effectiveLimit = proratedLimit + catchUpAmount;

@@ -1,5 +1,5 @@
 import { ScheduleFInfo, ScheduleFResult } from '../types/index.js';
-import { SE_TAX } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -41,7 +41,8 @@ import { round2 } from './utils.js';
  * @param info - Farm income and expense detail
  * @returns ScheduleFResult with gross income, total expenses, and net farm profit/loss
  */
-export function calculateScheduleF(info: ScheduleFInfo): ScheduleFResult {
+export function calculateScheduleF(info: ScheduleFInfo, taxYear: number = 2025): ScheduleFResult {
+  const SE_TAX = getTaxConstants(taxYear).SE_TAX;
   // ─── Part I: Farm Income ────────────────────────────────
   // Line 3: Gross income from sales of livestock (Line 1 − Line 2)
   const livestockSalesNet = round2(

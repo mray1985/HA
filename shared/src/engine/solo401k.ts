@@ -1,4 +1,4 @@
-import { SOLO_401K, SEP_IRA } from '../constants/tax2025.js';
+import { getSolo401k, getSepIra } from '../constants/taxConstants.js';
 import { Solo401kInput, Solo401kResult, SEPIRAInput, SEPIRAResult } from '../types/index.js';
 import { round2 } from './utils.js';
 
@@ -18,7 +18,8 @@ import { round2 } from './utils.js';
  *   - Multiple businesses each with Solo 401(k) plans
  *   - Controlled group / common ownership aggregation (IRC §414(b)-(c))
  */
-export function calculateSolo401kLimits(input: Solo401kInput): Solo401kResult {
+export function calculateSolo401kLimits(input: Solo401kInput, taxYear: number = 2025): Solo401kResult {
+  const SOLO_401K = getSolo401k(taxYear);
   const warnings: string[] = [];
 
   // ─── Step 1: Adjusted Net SE Income ───────────────────
@@ -221,7 +222,8 @@ export function calculateSolo401kLimits(input: Solo401kInput): Solo401kResult {
  * @scope Self-employed individuals using SEP-IRA.
  * @limitations Does not handle employees of the self-employed person.
  */
-export function calculateSEPIRALimits(input: SEPIRAInput): SEPIRAResult {
+export function calculateSEPIRALimits(input: SEPIRAInput, taxYear: number = 2025): SEPIRAResult {
+  const SEP_IRA = getSepIra(taxYear);
   const warnings: string[] = [];
 
   // Adjusted net SE income: net profit minus deductible half of SE tax

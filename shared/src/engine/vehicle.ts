@@ -1,5 +1,5 @@
 import { VehicleInfo, VehicleResult } from '../types/index.js';
-import { VEHICLE, VEHICLE_DEPRECIATION } from '../constants/tax2025.js';
+import { getVehicle, getVehicleDepreciation } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 // ── Expense category keys (order matches UI) ────────────
@@ -26,8 +26,8 @@ const EXPENSE_KEYS = [
  *   Form: Form 4562 — Depreciation and Amortization (Parts IV/V)
  * @scope Standard mileage and actual expense vehicle deduction with depreciation
  */
-export function calculateVehicleDeduction(vehicle: VehicleInfo): number {
-  const result = calculateVehicleDetailed(vehicle);
+export function calculateVehicleDeduction(vehicle: VehicleInfo, taxYear: number = 2025): number {
+  const result = calculateVehicleDetailed(vehicle, taxYear);
   return result.totalDeduction;
 }
 
@@ -36,7 +36,9 @@ export function calculateVehicleDeduction(vehicle: VehicleInfo): number {
  * Returns a VehicleResult with expense breakdown, depreciation, Section 280F,
  * Form 4562 Part V documentation, and validation warnings.
  */
-export function calculateVehicleDetailed(vehicle: VehicleInfo): VehicleResult {
+export function calculateVehicleDetailed(vehicle: VehicleInfo, taxYear: number = 2025): VehicleResult {
+  const VEHICLE = getVehicle(taxYear);
+  const VEHICLE_DEPRECIATION = getVehicleDepreciation(taxYear);
   if (!vehicle.method) {
     return { method: 'standard_mileage', businessUsePercentage: 0, totalDeduction: 0 };
   }
@@ -107,7 +109,7 @@ export function calculateVehicleDetailed(vehicle: VehicleInfo): VehicleResult {
   const businessPortionExpenses = round2(totalActualExpenses * businessPct);
 
   // ── Compute depreciation (Form 4562) ───────────────────
-  const depr = computeVehicleDepreciation(vehicle, businessPct);
+  const depr = computeVehicleDepreciation(vehicle, businessPct, taxYear);
 
   // ── Total actual deduction ─────────────────────────────
   const totalDeduction = round2(businessPortionExpenses + depr.allowed);
@@ -154,7 +156,9 @@ interface DepreciationResult {
 function computeVehicleDepreciation(
   vehicle: VehicleInfo,
   businessPct: number,
+  taxYear: number = 2025,
 ): DepreciationResult {
+  const VEHICLE_DEPRECIATION = getVehicleDepreciation(taxYear);
   const cost = vehicle.vehicleCost || 0;
   const priorDepr = vehicle.priorDepreciation || 0;
   const depreciableBasis = Math.max(0, cost - priorDepr);
@@ -168,7 +172,7 @@ function computeVehicleDepreciation(
   if (depreciableBasis <= 0 || businessPct <= 0) return zero;
 
   // Determine year index in MACRS table
-  const yearIndex = getYearIndex(vehicle.dateInService);
+  const yearIndex = getYearIndex(vehicle.dateInService, taxYear);
 
   // Business use ≤ 50% → straight-line, no bonus depreciation (IRC §280F(b)(1))
   const useStraightLine = businessPct <= 0.50;
@@ -290,12 +294,12 @@ function buildWarnings(vehicle: VehicleInfo, businessPct: number): string[] {
 
 // ── Year index helper ────────────────────────────────────
 
-function getYearIndex(dateInService?: string): number {
+function getYearIndex(dateInService?: string, taxYear: number = 2025): number {
   if (!dateInService) return 0; // Default to first year
   const date = new Date(dateInService + 'T00:00:00');
   if (isNaN(date.getTime())) return 0;
   const yearPlaced = date.getFullYear();
-  return Math.max(0, VEHICLE_DEPRECIATION.TAX_YEAR - yearPlaced);
+  return Math.max(0, getVehicleDepreciation(taxYear).TAX_YEAR - yearPlaced);
 }
 
 // ── Method comparison ────────────────────────────────────
@@ -308,6 +312,7 @@ export function compareVehicleMethods(
   vehicleOrBusinessMiles: VehicleInfo | number,
   totalMiles?: number,
   actualExpenses?: number,
+  taxYear: number = 2025,
 ): { standardMileage: number; actual: number } {
   // Legacy 3-argument signature (backward compat for fuzzing tests)
   if (typeof vehicleOrBusinessMiles === 'number') {
@@ -315,20 +320,20 @@ export function compareVehicleMethods(
     const standard = calculateVehicleDeduction({
       method: 'standard_mileage',
       businessMiles,
-    });
+    }, taxYear);
     const actual = calculateVehicleDeduction({
       method: 'actual',
       businessMiles,
       totalMiles: totalMiles || 0,
       actualExpenses: actualExpenses || 0,
-    });
+    }, taxYear);
     return { standardMileage: standard, actual };
   }
 
   // New VehicleInfo signature
   const vehicle = vehicleOrBusinessMiles;
-  const standard = calculateVehicleDetailed({ ...vehicle, method: 'standard_mileage' });
-  const actual = calculateVehicleDetailed({ ...vehicle, method: 'actual' });
+  const standard = calculateVehicleDetailed({ ...vehicle, method: 'standard_mileage' }, taxYear);
+  const actual = calculateVehicleDetailed({ ...vehicle, method: 'actual' }, taxYear);
   return { standardMileage: standard.totalDeduction, actual: actual.totalDeduction };
 }
 

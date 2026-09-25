@@ -42,7 +42,7 @@
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
 import type { TaxReturn, CalculationResult } from '../types/index.js';
-import { FEIE } from './tax2025.js';
+import { getFeie } from './taxConstants.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 const P2 = 'topmostSubform[0].Page2[0]';
@@ -54,7 +54,9 @@ function fmtDollar(n: number | undefined | null): string | undefined {
   return Math.round(n).toString();
 }
 
-export const FORM_2555_FIELDS: IRSFieldMapping[] = [
+export function getForm2555Fields(taxYear = 2025): IRSFieldMapping[] {
+const FEIE = getFeie(taxYear);
+return [
   // ================================================================
   // Page 1 -- Header
   // ================================================================
@@ -262,6 +264,7 @@ export const FORM_2555_FIELDS: IRSFieldMapping[] = [
     },
   },
 ];
+}
 
 export const FORM_2555_TEMPLATE: IRSFormTemplate = {
   formId: 'f2555',
@@ -271,5 +274,5 @@ export const FORM_2555_TEMPLATE: IRSFormTemplate = {
   condition: (_tr, calc) =>
     (calc.feie?.incomeExclusion ?? 0) > 0 ||
     (_tr.foreignEarnedIncome?.foreignEarnedIncome ?? 0) > 0,
-  fields: FORM_2555_FIELDS,
+  fields: getForm2555Fields(),
 };

@@ -349,9 +349,9 @@ function calculateYCTC(
     if (!dep.dateOfBirth) continue;
     const dob = parseDateString(dep.dateOfBirth);
     if (!dob) continue;
-    // Under 6 means born after Dec 31, 2019 (age < 6 on Dec 31, 2025).
+    // Under 6 means born after Dec 31, (taxYear-6) (age < 6 on Dec 31, taxYear).
     // No birthday adjustment needed since year-end is Dec 31.
-    const ageAtYearEnd = 2025 - dob.year;
+    const ageAtYearEnd = (taxReturn.taxYear || 2025) - dob.year;
     if (ageAtYearEnd < 6) childrenUnder6++;
   }
 
@@ -436,9 +436,9 @@ function calculateSeniorHoHCredit(
   const dob = parseDateString(taxReturn.dateOfBirth);
   if (!dob) return 0;
 
-  // Age at end of tax year (Dec 31, 2025) — no birthday adjustment
+  // Age at end of tax year (Dec 31) — no birthday adjustment
   // needed since year-end is the last possible day of the year.
-  const ageAtYearEnd = 2025 - dob.year;
+  const ageAtYearEnd = (taxReturn.taxYear || 2025) - dob.year;
   if (ageAtYearEnd < CA_SENIOR_HOH_MIN_AGE) return 0;
 
   return Math.min(round2(taxableIncome * CA_SENIOR_HOH_CREDIT_RATE), CA_SENIOR_HOH_CREDIT);
@@ -541,7 +541,7 @@ function computeCACoreTax(
     if (!dep.dateOfBirth) return dep.monthsLivedWithYou >= 6;
     const dob = parseDateString(dep.dateOfBirth);
     if (!dob) return dep.monthsLivedWithYou >= 6;
-    const age = 2025 - dob.year;
+    const age = (taxReturn.taxYear || 2025) - dob.year;
     return dep.monthsLivedWithYou >= 6 && (age < 19 || (dep.isStudent && age < 24));
   }).length;
 
@@ -633,7 +633,7 @@ function calculate540NR(
     if (!dep.dateOfBirth) return dep.monthsLivedWithYou >= 6;
     const dob = parseDateString(dep.dateOfBirth);
     if (!dob) return dep.monthsLivedWithYou >= 6;
-    const age = 2025 - dob.year;
+    const age = (taxReturn.taxYear || 2025) - dob.year;
     return dep.monthsLivedWithYou >= 6 && (age < 19 || (dep.isStudent && age < 24));
   }).length;
 

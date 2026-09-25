@@ -1,5 +1,5 @@
 import { FilingStatus, ScheduleSEResult } from '../types/index.js';
-import { SE_TAX } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -21,7 +21,9 @@ export function calculateScheduleSE(
   filingStatus: FilingStatus,
   w2SocialSecurityWages: number = 0,
   optionalMethodEarnings: number = 0,
+  taxYear: number = 2025,
 ): ScheduleSEResult {
+  const SE_TAX = getTaxConstants(taxYear).SE_TAX;
   // Per IRS Schedule SE instructions: SE tax is owed only if net SE earnings are $400+.
   // IRC §1402(b): "net earnings from self-employment" must be at least $400.
   // When optional method is used, the optional amount counts toward the $400 threshold.
@@ -63,7 +65,7 @@ export function calculateScheduleSE(
   const medicareTax = round2(netEarnings * SE_TAX.MEDICARE_RATE);
 
   // Additional Medicare tax: 0.9% on earnings above threshold
-  const threshold = getAdditionalMedicareThreshold(filingStatus);
+  const threshold = getAdditionalMedicareThreshold(filingStatus, SE_TAX);
   const additionalMedicareEarnings = Math.max(0, netEarnings - threshold);
   const additionalMedicareTax = round2(additionalMedicareEarnings * SE_TAX.ADDITIONAL_MEDICARE_RATE);
 
@@ -84,7 +86,7 @@ export function calculateScheduleSE(
   };
 }
 
-function getAdditionalMedicareThreshold(filingStatus: FilingStatus): number {
+function getAdditionalMedicareThreshold(filingStatus: FilingStatus, SE_TAX: Record<string, any>): number {
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
       return SE_TAX.ADDITIONAL_MEDICARE_THRESHOLD_MFJ;

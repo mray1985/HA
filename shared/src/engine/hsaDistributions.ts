@@ -19,7 +19,7 @@
  */
 
 import { Income1099SA } from '../types/index.js';
-import { HSA_DISTRIBUTIONS } from '../constants/tax2025.js';
+import { getHsaDistributions } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 export interface HSADistributionResult {
@@ -40,7 +40,7 @@ export interface HSADistributionResult {
  * @scope HSA distribution tax consequences (taxable + 20% penalty)
  * @limitations None
  */
-export function calculateHSADistribution(dist: Income1099SA): HSADistributionResult {
+export function calculateHSADistribution(dist: Income1099SA, taxYear: number = 2025): HSADistributionResult {
   const grossDistribution = dist.grossDistribution || 0;
   const code = (dist.distributionCode || '1').trim();
   const isQualifiedMedical = !!dist.qualifiedMedicalExpenses;
@@ -78,7 +78,7 @@ export function calculateHSADistribution(dist: Income1099SA): HSADistributionRes
   let penaltyAmount = 0;
   const penaltyApplies = code === '5' || code === '1' || code === '2';
   if (penaltyApplies && taxableAmount > 0) {
-    penaltyAmount = round2(taxableAmount * HSA_DISTRIBUTIONS.PENALTY_RATE);
+    penaltyAmount = round2(taxableAmount * getHsaDistributions(taxYear).PENALTY_RATE);
   }
 
   return {
@@ -103,12 +103,13 @@ export function calculateHSADistribution(dist: Income1099SA): HSADistributionRes
 export function aggregateHSADistributions(
   distributions: Income1099SA[],
   isAge65OrOlder: boolean = false,
+  taxYear: number = 2025,
 ): { totalTaxable: number; totalPenalty: number; results: HSADistributionResult[] } {
   if (!distributions || distributions.length === 0) {
     return { totalTaxable: 0, totalPenalty: 0, results: [] };
   }
 
-  const results = distributions.map(calculateHSADistribution);
+  const results = distributions.map(d => calculateHSADistribution(d, taxYear));
 
   const totalTaxable = round2(results.reduce((sum, r) => sum + r.taxableAmount, 0));
 

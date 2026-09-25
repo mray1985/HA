@@ -1,5 +1,5 @@
 import { CleanEnergyInfo, CleanEnergyResult } from '../types/index.js';
-import { CLEAN_ENERGY } from '../constants/tax2025.js';
+import { getCleanEnergy } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -30,7 +30,7 @@ import { round2 } from './utils.js';
  * @scope Residential clean energy credit (30% of qualified costs) with prior-year carryforward
  * @limitations Does not validate property eligibility or certification requirements
  */
-export function calculateCleanEnergyCredit(info: CleanEnergyInfo): CleanEnergyResult {
+export function calculateCleanEnergyCredit(info: CleanEnergyInfo, taxYear: number = 2025): CleanEnergyResult {
   const zero: CleanEnergyResult = {
     totalExpenditures: 0,
     currentYearCredit: 0,
@@ -50,14 +50,14 @@ export function calculateCleanEnergyCredit(info: CleanEnergyInfo): CleanEnergyRe
   // Fuel cell: capped at $500 per 0.5 kW of capacity
   let fuelCell = Math.max(0, info.fuelCell || 0);
   if (info.fuelCellKW && info.fuelCellKW > 0) {
-    const fuelCellCap = round2((info.fuelCellKW / 0.5) * CLEAN_ENERGY.FUEL_CELL_CAP_PER_HALF_KW);
+    const fuelCellCap = round2((info.fuelCellKW / 0.5) * getCleanEnergy(taxYear).FUEL_CELL_CAP_PER_HALF_KW);
     fuelCell = Math.min(fuelCell, fuelCellCap);
   }
 
   const totalExpenditures = round2(solar + wind + geothermal + battery + fuelCell);
 
   // Current year credit = 30% of qualified expenditures
-  const currentYearCredit = totalExpenditures > 0 ? round2(totalExpenditures * CLEAN_ENERGY.RATE) : 0;
+  const currentYearCredit = totalExpenditures > 0 ? round2(totalExpenditures * getCleanEnergy(taxYear).RATE) : 0;
 
   // Prior year carryforward — IRC §25D(c)
   const priorYearCarryforward = round2(Math.max(0, info.priorYearCarryforward || 0));

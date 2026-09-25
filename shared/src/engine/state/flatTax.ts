@@ -19,7 +19,7 @@ import {
   type StateReturnConfig, type CalculationTrace, FilingStatus,
 } from '../../types/index.js';
 import { FLAT_TAX_CONSTANTS, MA_PERSONAL_EXEMPTION } from '../../constants/states/flatTax.js';
-import { STANDARD_DEDUCTION_2025 } from '../../constants/tax2025.js';
+import { getTaxConstants } from '../../constants/taxConstants.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
 import { getStateWithholding, getStateFilingKey, getStateName } from './index.js';
@@ -44,9 +44,10 @@ function countPersons(filingStatus: FilingStatus | undefined): number {
  * Get the federal standard deduction for the filing status.
  * Used by UT's taxpayer credit calculation.
  */
-function getFederalStandardDeduction(filingStatus: FilingStatus | undefined): number {
-  if (!filingStatus) return STANDARD_DEDUCTION_2025[FilingStatus.Single];
-  return STANDARD_DEDUCTION_2025[filingStatus] || STANDARD_DEDUCTION_2025[FilingStatus.Single];
+function getFederalStandardDeduction(filingStatus: FilingStatus | undefined, taxYear: number = 2025): number {
+  const std = getTaxConstants(taxYear).STANDARD_DEDUCTION_2025;
+  if (!filingStatus) return std[FilingStatus.Single];
+  return std[filingStatus] || std[FilingStatus.Single];
 }
 
 // ─── Factory ────────────────────────────────────────────────────
@@ -127,13 +128,13 @@ export function createFlatTaxCalculator(stateCode: string): StateCalculator {
         let agedExemptions = 0;
         if (taxReturn.dateOfBirth) {
           const birthYear = parseInt(taxReturn.dateOfBirth.substring(0, 4), 10);
-          if (!isNaN(birthYear) && (2025 - birthYear) >= 65) {
+          if (!isNaN(birthYear) && ((taxReturn.taxYear || 2025) - birthYear) >= 65) {
             agedExemptions += config.agedExemption;
           }
         }
         if (numPersons >= 2 && taxReturn.spouseDateOfBirth) {
           const spouseBirthYear = parseInt(taxReturn.spouseDateOfBirth.substring(0, 4), 10);
-          if (!isNaN(spouseBirthYear) && (2025 - spouseBirthYear) >= 65) {
+          if (!isNaN(spouseBirthYear) && ((taxReturn.taxYear || 2025) - spouseBirthYear) >= 65) {
             agedExemptions += config.agedExemption;
           }
         }
@@ -248,7 +249,7 @@ export function createFlatTaxCalculator(stateCode: string): StateCalculator {
       // The credit phases out at higher incomes, but for initial implementation
       // we apply it without phase-out.
       if (stateCode === 'UT' && config.taxpayerCreditRate) {
-        const federalStdDed = getFederalStandardDeduction(filingStatus);
+        const federalStdDed = getFederalStandardDeduction(filingStatus, taxReturn.taxYear || 2025);
         const utCredit = Math.round(config.taxpayerCreditRate * federalStdDed * 100) / 100;
         stateCredits += utCredit;
       }
@@ -267,7 +268,7 @@ export function createFlatTaxCalculator(stateCode: string): StateCalculator {
             if (dep.dateOfBirth) {
               const depBirthYear = parseInt(dep.dateOfBirth.substring(0, 4), 10);
               if (!isNaN(depBirthYear)) {
-                age = 2025 - depBirthYear;
+                age = (taxReturn.taxYear || 2025) - depBirthYear;
               }
             }
             depCredit += age < 17 ? config.dependentCredit.under17 : config.dependentCredit.age17plus;

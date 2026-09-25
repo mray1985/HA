@@ -1,5 +1,5 @@
 import { AdoptionCreditInfo, AdoptionCreditResult } from '../types/index.js';
-import { ADOPTION_CREDIT } from '../constants/tax2025.js';
+import { getAdoptionCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -22,12 +22,13 @@ import { round2 } from './utils.js';
 export function calculateAdoptionCredit(
   info: AdoptionCreditInfo,
   agi: number,
+  taxYear: number = 2025,
 ): AdoptionCreditResult {
   const zero: AdoptionCreditResult = { expensesBasis: 0, credit: 0 };
 
   if (!info) return zero;
 
-  const c = ADOPTION_CREDIT;
+  const c = getAdoptionCredit(taxYear);
   const numChildren = Math.max(1, info.numberOfChildren || 1);
 
   // Expenses basis: actual expenses or max per child for special needs

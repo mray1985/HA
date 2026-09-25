@@ -1,5 +1,5 @@
 import { ArcherMSAInfo, ArcherMSAResult, W2Income } from '../types/index.js';
-import { ARCHER_MSA } from '../constants/tax2025.js';
+import { getArcherMsa } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -22,6 +22,7 @@ import { round2 } from './utils.js';
 export function calculateArcherMSADeduction(
   info: ArcherMSAInfo,
   w2Income: W2Income[],
+  taxYear: number = 2025,
 ): ArcherMSAResult {
   const zero: ArcherMSAResult = {
     contributionLimit: 0,
@@ -45,7 +46,8 @@ export function calculateArcherMSADeduction(
   );
 
   // Contribution limit based on coverage type and HDHP deductible
-  const rate = info.coverageType === 'family' ? ARCHER_MSA.FAMILY_RATE : ARCHER_MSA.SELF_ONLY_RATE;
+  const archerMsa = getArcherMsa(taxYear);
+  const rate = info.coverageType === 'family' ? archerMsa.FAMILY_RATE : archerMsa.SELF_ONLY_RATE;
   const contributionLimit = round2(info.hdhpDeductible * rate);
 
   // Prorate for partial-year coverage

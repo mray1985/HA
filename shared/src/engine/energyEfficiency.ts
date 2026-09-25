@@ -1,5 +1,5 @@
 import { EnergyEfficiencyInfo, EnergyEfficiencyResult } from '../types/index.js';
-import { ENERGY_EFFICIENCY } from '../constants/tax2025.js';
+import { getEnergyEfficiency } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -32,12 +32,12 @@ import { round2 } from './utils.js';
  * @scope Energy efficient home improvement credit with annual limits
  * @limitations None
  */
-export function calculateEnergyEfficiencyCredit(info: EnergyEfficiencyInfo): EnergyEfficiencyResult {
+export function calculateEnergyEfficiencyCredit(info: EnergyEfficiencyInfo, taxYear: number = 2025): EnergyEfficiencyResult {
   const zero: EnergyEfficiencyResult = { totalExpenditures: 0, credit: 0 };
 
   if (!info) return zero;
 
-  const c = ENERGY_EFFICIENCY;
+  const c = getEnergyEfficiency(taxYear);
 
   // Category A: Heat pump items — $2,000 annual limit
   const heatPumpExpenses = Math.max(0, info.heatPump || 0);

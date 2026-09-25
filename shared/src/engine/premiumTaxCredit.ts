@@ -1,5 +1,5 @@
 import { FilingStatus, PremiumTaxCreditInfo, PremiumTaxCreditResult } from '../types/index.js';
-import { PREMIUM_TAX_CREDIT } from '../constants/tax2025.js';
+import { getPremiumTaxCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -31,7 +31,9 @@ export function calculatePremiumTaxCredit(
   info: PremiumTaxCreditInfo,
   householdIncome: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): PremiumTaxCreditResult {
+  const PREMIUM_TAX_CREDIT = getPremiumTaxCredit(taxYear);
   const zero: PremiumTaxCreditResult = {
     annualPTC: 0,
     totalAPTC: 0,
@@ -66,7 +68,7 @@ export function calculatePremiumTaxCredit(
 
   // ─── Step 1: Calculate FPL percentage ───────────────
   const familySize = Math.max(1, info.familySize || 1);
-  const fpl = getFPL(familySize, info.state);
+  const fpl = getFPL(familySize, info.state, taxYear);
   const fplPercentage = householdIncome > 0 ? round2((householdIncome / fpl) * 100) : 0;
 
   // Below 100% FPL: generally ineligible (Medicaid eligible)
@@ -85,7 +87,7 @@ export function calculatePremiumTaxCredit(
   }
 
   // ─── Step 2: Calculate applicable figure ────────────
-  const applicableFigure = getApplicableFigure(fplPercentage);
+  const applicableFigure = getApplicableFigure(fplPercentage, taxYear);
 
   // ─── Step 3: Calculate expected annual contribution ─
   const expectedContribution = round2(householdIncome * applicableFigure);
@@ -143,7 +145,7 @@ export function calculatePremiumTaxCredit(
   // ─── Step 6: Repayment cap ─────────────────────────
   const isSingle = filingStatus === FilingStatus.Single ||
     filingStatus === FilingStatus.MarriedFilingSeparately;
-  const repaymentCap = getRepaymentCap(fplPercentage, isSingle);
+  const repaymentCap = getRepaymentCap(fplPercentage, isSingle, taxYear);
   const excessAPTCRepayment = round2(Math.min(excessAPTC, repaymentCap));
 
   return {
@@ -164,8 +166,8 @@ export function calculatePremiumTaxCredit(
 /**
  * Calculate Federal Poverty Level for a given family size and state.
  */
-function getFPL(familySize: number, state?: string): number {
-  const c = PREMIUM_TAX_CREDIT;
+function getFPL(familySize: number, state?: string, taxYear: number = 2025): number {
+  const c = getPremiumTaxCredit(taxYear);
 
   let base: number;
   let increment: number;
@@ -188,8 +190,8 @@ function getFPL(familySize: number, state?: string): number {
  * Get the applicable figure (expected contribution percentage) from Table 2.
  * Uses linear interpolation within each bracket.
  */
-function getApplicableFigure(fplPercentage: number): number {
-  const table = PREMIUM_TAX_CREDIT.APPLICABLE_FIGURE_TABLE;
+function getApplicableFigure(fplPercentage: number, taxYear: number = 2025): number {
+  const table = getPremiumTaxCredit(taxYear).APPLICABLE_FIGURE_TABLE;
 
   for (const bracket of table) {
     if (fplPercentage < bracket.ceiling || bracket.ceiling === Infinity) {
@@ -212,8 +214,8 @@ function getApplicableFigure(fplPercentage: number): number {
 /**
  * Get the repayment cap for excess APTC based on FPL percentage and filing status.
  */
-function getRepaymentCap(fplPercentage: number, isSingle: boolean): number {
-  const caps = PREMIUM_TAX_CREDIT.REPAYMENT_CAPS;
+function getRepaymentCap(fplPercentage: number, isSingle: boolean, taxYear: number = 2025): number {
+  const caps = getPremiumTaxCredit(taxYear).REPAYMENT_CAPS;
 
   for (const cap of caps) {
     if (fplPercentage < cap.ceiling) {

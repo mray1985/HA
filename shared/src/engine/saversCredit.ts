@@ -1,5 +1,5 @@
 import { FilingStatus, SaversCreditResult } from '../types/index.js';
-import { SAVERS_CREDIT } from '../constants/tax2025.js';
+import { getSaversCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -52,8 +52,11 @@ export function calculateSaversCredit(
   agi: number,
   filingStatus: FilingStatus,
   eligibility?: SaversCreditEligibility,
+  taxYear: number = 2025,
 ): SaversCreditResult {
   const zero: SaversCreditResult = { eligibleContributions: 0, creditRate: 0, credit: 0 };
+
+  const SAVERS_CREDIT = getSaversCredit(taxYear);
 
   if (contributions <= 0) return zero;
 
@@ -89,7 +92,7 @@ export function calculateSaversCredit(
   const eligibleContributions = round2(Math.min(contributions, cap));
 
   // Determine credit rate based on AGI and filing status
-  const creditRate = getSaversCreditRate(agi, filingStatus);
+  const creditRate = getSaversCreditRate(agi, filingStatus, taxYear);
 
   if (creditRate === 0) return zero;
 
@@ -102,8 +105,8 @@ export function calculateSaversCredit(
   };
 }
 
-function getSaversCreditRate(agi: number, filingStatus: FilingStatus): number {
-  const thresholds = getThresholds(filingStatus);
+function getSaversCreditRate(agi: number, filingStatus: FilingStatus, taxYear: number = 2025): number {
+  const thresholds = getThresholds(filingStatus, taxYear);
 
   if (agi <= thresholds.rate50) return 0.50;
   if (agi <= thresholds.rate20) return 0.20;
@@ -111,7 +114,8 @@ function getSaversCreditRate(agi: number, filingStatus: FilingStatus): number {
   return 0;
 }
 
-function getThresholds(filingStatus: FilingStatus): { rate50: number; rate20: number; rate10: number } {
+function getThresholds(filingStatus: FilingStatus, taxYear: number = 2025): { rate50: number; rate20: number; rate10: number } {
+  const SAVERS_CREDIT = getSaversCredit(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:

@@ -1,5 +1,5 @@
 import { ForeignEarnedIncomeInfo } from '../types/index.js';
-import { FEIE } from '../constants/tax2025.js';
+import { getFeie } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -29,7 +29,8 @@ export interface FEIEResult {
 
 const FULL_YEAR_DAYS = 365;
 
-export function calculateFEIE(info: ForeignEarnedIncomeInfo): FEIEResult {
+export function calculateFEIE(info: ForeignEarnedIncomeInfo, taxYear: number = 2025): FEIEResult {
+  const FEIE = getFeie(taxYear);
   const zero: FEIEResult = {
     incomeExclusion: 0,
     housingExclusion: 0,

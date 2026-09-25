@@ -32,7 +32,7 @@
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
 import type { TaxReturn, CalculationResult } from '../types/index.js';
-import { ADOPTION_CREDIT } from './tax2025.js';
+import { getAdoptionCredit } from './taxConstants.js';
 
 const fmtDollar = (v: number | undefined): string => {
   if (v === undefined || v === null || v === 0) return '';
@@ -41,6 +41,8 @@ const fmtDollar = (v: number | undefined): string => {
 
 const P1 = 'topmostSubform[0].Page1[0]';
 
+export function getForm8839Fields(taxYear = 2025): IRSFieldMapping[] {
+const ADOPTION_CREDIT = getAdoptionCredit(taxYear);
 const FORM_8839_FIELDS: IRSFieldMapping[] = [
   // ================================================================
   // Header
@@ -194,6 +196,9 @@ const FORM_8839_FIELDS: IRSFieldMapping[] = [
   },
 ];
 
+return FORM_8839_FIELDS;
+}
+
 export const FORM_8839_TEMPLATE: IRSFormTemplate = {
   formId: 'f8839',
   displayName: 'Form 8839',
@@ -202,5 +207,5 @@ export const FORM_8839_TEMPLATE: IRSFormTemplate = {
   condition: (tr, calc) =>
     (calc.adoptionCredit?.credit ?? 0) > 0 ||
     (tr.adoptionCredit?.qualifiedExpenses ?? 0) > 0,
-  fields: FORM_8839_FIELDS,
+  fields: getForm8839Fields(),
 };

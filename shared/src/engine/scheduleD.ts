@@ -1,5 +1,5 @@
 import { FilingStatus, Income1099B, ScheduleDResult } from '../types/index.js';
-import { SCHEDULE_D } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -35,7 +35,9 @@ export function calculateScheduleD(
   carryforwardST?: number,
   carryforwardLT?: number,
   capitalGainDistributions?: number,
+  taxYear: number = 2025,
 ): ScheduleDResult {
+  const SCHEDULE_D = getTaxConstants(taxYear).SCHEDULE_D;
   let shortTermGain = 0;
   let shortTermLoss = 0;
   let longTermGain = 0;

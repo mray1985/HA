@@ -1,5 +1,5 @@
 import { FilingStatus, DependentCareResult } from '../types/index.js';
-import { DEPENDENT_CARE, DEPENDENT_CARE_EMPLOYER } from '../constants/tax2025.js';
+import { getDependentCare, getDependentCareEmployer } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -46,8 +46,12 @@ export function calculateDependentCareCredit(
   isStudentSpouse?: boolean,
   isDisabledSpouse?: boolean,
   livedApartFromSpouseMFS?: boolean,
+  taxYear: number = 2025,
 ): DependentCareResult {
   const zero: DependentCareResult = { qualifyingExpenses: 0, creditRate: 0, credit: 0 };
+
+  const DEPENDENT_CARE = getDependentCare(taxYear);
+  const DEPENDENT_CARE_EMPLOYER = getDependentCareEmployer(taxYear);
 
   // MFS is generally ineligible unless lived apart all year
   if (filingStatus === FilingStatus.MarriedFilingSeparately && !livedApartFromSpouseMFS) {
@@ -122,7 +126,7 @@ export function calculateDependentCareCredit(
   }
 
   // Credit rate: 35% minus 1% for each $2k over $15k AGI, floor of 20%
-  const creditRate = calculateCreditRate(agi);
+  const creditRate = calculateCreditRate(agi, taxYear);
 
   const credit = round2(qualifyingExpenses * creditRate);
 
@@ -142,7 +146,8 @@ export function calculateDependentCareCredit(
  * Decreases by 1% for each $2,000 (or fraction) over $15,000.
  * Floor of 20% (reached at AGI of $43,000+).
  */
-function calculateCreditRate(agi: number): number {
+function calculateCreditRate(agi: number, taxYear: number = 2025): number {
+  const DEPENDENT_CARE = getDependentCare(taxYear);
   if (agi <= DEPENDENT_CARE.RATE_PHASE_OUT_START) {
     return DEPENDENT_CARE.MAX_RATE;
   }

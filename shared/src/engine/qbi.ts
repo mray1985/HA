@@ -1,5 +1,5 @@
 import { FilingStatus, QBIBusinessEntry } from '../types/index.js';
-import { QBI } from '../constants/tax2025.js';
+import { getQbi } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -34,11 +34,13 @@ export function calculateQBIDeduction(
   w2WagesPaid: number = 0,
   ubiaOfQualifiedProperty: number = 0,
   netCapitalGain: number = 0,
+  taxYear: number = 2025,
 ): number {
   if (qualifiedBusinessIncome <= 0) return 0;
 
-  const threshold = getQBIThreshold(filingStatus);
-  const phaseInRange = getQBIPhaseInRange(filingStatus);
+  const QBI = getQbi(taxYear);
+  const threshold = getQBIThreshold(filingStatus, taxYear);
+  const phaseInRange = getQBIPhaseInRange(filingStatus, taxYear);
 
   // IRC §199A(a)(2): QBI deduction is lesser of 20% of QBI or 20% of (taxable income − net capital gain)
   // Net capital gain per §1(h) = max(0, net LTCG) + qualified dividends
@@ -115,15 +117,17 @@ export function calculateMultiBusinessQBIDeduction(
   taxableIncomeBeforeQBI: number,
   filingStatus: FilingStatus,
   netCapitalGain: number = 0,
+  taxYear: number = 2025,
 ): number {
   if (!businesses || businesses.length === 0) return 0;
 
+  const QBI = getQbi(taxYear);
   const totalQBI = businesses.reduce((sum, b) => sum + Math.max(0, b.qualifiedBusinessIncome), 0);
   if (totalQBI <= 0) return 0;
 
   const taxableIncomeForLimit = Math.max(0, taxableIncomeBeforeQBI - netCapitalGain);
   const taxableIncomeLimit = round2(taxableIncomeForLimit * QBI.RATE);
-  const threshold = getQBIThreshold(filingStatus);
+  const threshold = getQBIThreshold(filingStatus, taxYear);
 
   // Below threshold: simple 20% of combined QBI — no per-business limitation
   if (taxableIncomeBeforeQBI <= threshold) {
@@ -143,6 +147,7 @@ export function calculateMultiBusinessQBIDeduction(
       biz.w2WagesPaid,
       biz.ubiaOfQualifiedProperty,
       netCapitalGain,
+      taxYear,
     );
   }
 
@@ -152,7 +157,8 @@ export function calculateMultiBusinessQBIDeduction(
 
 // QBI threshold: MFJ and QSS use the higher threshold per IRS Form 8995 worksheet.
 // Note: IRC §199A(e)(2) says "joint return" but IRS practice groups QSS with MFJ.
-function getQBIThreshold(filingStatus: FilingStatus): number {
+function getQBIThreshold(filingStatus: FilingStatus, taxYear: number = 2025): number {
+  const QBI = getQbi(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
@@ -162,7 +168,8 @@ function getQBIThreshold(filingStatus: FilingStatus): number {
   }
 }
 
-function getQBIPhaseInRange(filingStatus: FilingStatus): number {
+function getQBIPhaseInRange(filingStatus: FilingStatus, taxYear: number = 2025): number {
+  const QBI = getQbi(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:

@@ -1,5 +1,5 @@
 import { ScholarshipCreditInfo, ScholarshipCreditResult } from '../types/index.js';
-import { SCHOLARSHIP_CREDIT } from '../constants/tax2025.js';
+import { getScholarshipCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -20,10 +20,13 @@ import { round2 } from './utils.js';
  */
 export function calculateScholarshipCredit(
   info: ScholarshipCreditInfo,
+  taxYear = 2025,
 ): ScholarshipCreditResult {
   const zero: ScholarshipCreditResult = { eligibleContribution: 0, credit: 0 };
 
   if (info.contributionAmount <= 0) return zero;
+
+  const SCHOLARSHIP_CREDIT = getScholarshipCredit(taxYear);
 
   // Reduce contribution by any state tax credit received for the same donation
   const stateOffset = Math.max(0, info.stateTaxCreditReceived || 0);

@@ -1,5 +1,5 @@
 import { FilingStatus, ChildTaxCreditInfo, EducationCreditInfo, EducationCreditStudentDetail, CreditsResult, Dependent } from '../types/index.js';
-import { CHILD_TAX_CREDIT, EDUCATION_CREDITS, ACTC } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2, parseDateString } from './utils.js';
 
 /**
@@ -36,8 +36,8 @@ export function calculateCredits(
 ): CreditsResult {
   // Derive CTC counts from dependents if available, otherwise fall back to manual counts
   const ctcInfo = deriveCTCInfo(childTaxCredit, dependents, taxYear);
-  const ctcResult = calculateChildTaxCredit(filingStatus, agi, ctcInfo);
-  const eduResult = calculateEducationCreditsDetailed(filingStatus, agi, educationCredits || []);
+  const ctcResult = calculateChildTaxCredit(filingStatus, agi, ctcInfo, taxYear);
+  const eduResult = calculateEducationCreditsDetailed(filingStatus, agi, educationCredits || [], taxYear);
 
   // Form 8863 Line 7: If filer is under 24, didn't provide half own support,
   // and has a living parent (and isn't MFJ), refundable AOTC is disallowed.
@@ -63,6 +63,7 @@ export function calculateCredits(
     earnedIncome,
     incomeTaxLiability,
     totalNonRefundable,
+    taxYear,
   );
 
   // Refundable credits (can go below $0 / create refund)
@@ -108,6 +109,7 @@ function calculateACTC(
   earnedIncome: number,
   incomeTaxLiability: number,
   totalNonRefundable: number,
+  taxYear: number = 2025,
 ): number {
   if (qualifyingChildren <= 0 || ctcAmount <= 0) return 0;
 
@@ -119,11 +121,11 @@ function calculateACTC(
   if (excessCTC <= 0) return 0;
 
   // Max refundable amount per child
-  const maxPerChild = CHILD_TAX_CREDIT.REFUNDABLE_MAX; // $1,700 for 2025
+  const maxPerChild = getTaxConstants(taxYear).CHILD_TAX_CREDIT.REFUNDABLE_MAX; // $1,700 for 2025
   const maxRefundable = qualifyingChildren * maxPerChild;
 
   // Earned income formula: 15% of earned income over $2,500
-  const earnedIncomeFormula = Math.max(0, (earnedIncome - ACTC.EARNED_INCOME_THRESHOLD) * ACTC.EARNED_INCOME_RATE);
+  const earnedIncomeFormula = Math.max(0, (earnedIncome - getTaxConstants(taxYear).ACTC.EARNED_INCOME_THRESHOLD) * getTaxConstants(taxYear).ACTC.EARNED_INCOME_RATE);
 
   return round2(Math.min(excessCTC, maxRefundable, earnedIncomeFormula));
 }
@@ -169,23 +171,26 @@ function calculateChildTaxCredit(
   filingStatus: FilingStatus,
   agi: number,
   info?: ChildTaxCreditInfo,
+  taxYear: number = 2025,
 ): { childCredit: number; otherDependentCredit: number } {
   if (!info) return { childCredit: 0, otherDependentCredit: 0 };
+
+  const ctc = getTaxConstants(taxYear).CHILD_TAX_CREDIT;
 
   // Per IRS Schedule 8812: MFJ and QSS use $400,000 threshold; all others use $200,000
   const threshold = (filingStatus === FilingStatus.MarriedFilingJointly ||
     filingStatus === FilingStatus.QualifyingSurvivingSpouse)
-    ? CHILD_TAX_CREDIT.PHASE_OUT_THRESHOLD_MFJ
-    : CHILD_TAX_CREDIT.PHASE_OUT_THRESHOLD_SINGLE;
+    ? ctc.PHASE_OUT_THRESHOLD_MFJ
+    : ctc.PHASE_OUT_THRESHOLD_SINGLE;
 
-  const totalChildCredit = info.qualifyingChildren * CHILD_TAX_CREDIT.PER_CHILD;
-  const totalOtherCredit = info.otherDependents * CHILD_TAX_CREDIT.PER_OTHER_DEPENDENT;
+  const totalChildCredit = info.qualifyingChildren * ctc.PER_CHILD;
+  const totalOtherCredit = info.otherDependents * ctc.PER_OTHER_DEPENDENT;
   const totalCredit = totalChildCredit + totalOtherCredit;
 
   if (agi > threshold) {
     const excess = agi - threshold;
     const reductionIncrements = Math.ceil(excess / 1000);
-    const reduction = reductionIncrements * CHILD_TAX_CREDIT.PHASE_OUT_RATE;
+    const reduction = reductionIncrements * ctc.PHASE_OUT_RATE;
     const remainingCredit = Math.max(0, totalCredit - reduction);
 
     if (totalCredit > 0) {
@@ -212,6 +217,7 @@ function calculateEducationCreditsDetailed(
   filingStatus: FilingStatus,
   agi: number,
   credits: EducationCreditInfo[],
+  taxYear: number = 2025,
 ): { nonRefundable: number; refundable: number; details: EducationCreditStudentDetail[] } {
   let totalNonRefundable = 0;
   let totalRefundable = 0;
@@ -221,9 +227,9 @@ function calculateEducationCreditsDetailed(
     const qualifiedExpenses = Math.max(0, credit.tuitionPaid - (credit.scholarships || 0));
 
     if (credit.type === 'american_opportunity') {
-      const totalAOTC = calculateAOTC(filingStatus, agi, qualifiedExpenses);
+      const totalAOTC = calculateAOTC(filingStatus, agi, qualifiedExpenses, taxYear);
       // 40% is refundable, 60% is non-refundable
-      const refundablePortion = round2(totalAOTC * EDUCATION_CREDITS.AOTC_REFUNDABLE_RATE);
+      const refundablePortion = round2(totalAOTC * getTaxConstants(taxYear).EDUCATION_CREDITS.AOTC_REFUNDABLE_RATE);
       const nonRefundablePortion = round2(totalAOTC - refundablePortion);
       totalRefundable += refundablePortion;
       totalNonRefundable += nonRefundablePortion;
@@ -237,7 +243,7 @@ function calculateEducationCreditsDetailed(
         aotcNonRefundable: nonRefundablePortion,
       });
     } else if (credit.type === 'lifetime_learning') {
-      const llcCredit = calculateLLC(filingStatus, agi, qualifiedExpenses);
+      const llcCredit = calculateLLC(filingStatus, agi, qualifiedExpenses, taxYear);
       totalNonRefundable += llcCredit;
       details.push({
         studentName: credit.studentName,
@@ -254,8 +260,8 @@ function calculateEducationCreditsDetailed(
   return { nonRefundable: round2(totalNonRefundable), refundable: round2(totalRefundable), details };
 }
 
-function calculateAOTC(filingStatus: FilingStatus, agi: number, expenses: number): number {
-  const ec = EDUCATION_CREDITS;
+function calculateAOTC(filingStatus: FilingStatus, agi: number, expenses: number, taxYear: number = 2025): number {
+  const ec = getTaxConstants(taxYear).EDUCATION_CREDITS;
 
   // IRC §25A(g)(6): MFS filers are ineligible for education credits
   if (filingStatus === FilingStatus.MarriedFilingSeparately) return 0;
@@ -278,8 +284,8 @@ function calculateAOTC(filingStatus: FilingStatus, agi: number, expenses: number
   return Math.max(0, credit);
 }
 
-function calculateLLC(filingStatus: FilingStatus, agi: number, expenses: number): number {
-  const ec = EDUCATION_CREDITS;
+function calculateLLC(filingStatus: FilingStatus, agi: number, expenses: number, taxYear: number = 2025): number {
+  const ec = getTaxConstants(taxYear).EDUCATION_CREDITS;
 
   // IRC §25A(g)(6): MFS filers are ineligible for education credits
   if (filingStatus === FilingStatus.MarriedFilingSeparately) return 0;

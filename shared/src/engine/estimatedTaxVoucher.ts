@@ -14,7 +14,7 @@
  */
 import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
-import { ESTIMATED_TAX } from '../constants/tax2025.js';
+import { getEstimatedTax } from '../constants/taxConstants.js';
 import { calculateSafeHarbor } from './estimatedTax.js';
 import { round2 } from './utils.js';
 
@@ -60,7 +60,9 @@ export interface EstimatedPaymentRecommendation {
 export function assessEstimatedPaymentNeed(
   taxReturn: TaxReturn,
   calc: CalculationResult,
+  taxYear: number = 2025,
 ): EstimatedPaymentRecommendation {
+  const ESTIMATED_TAX = getEstimatedTax(taxYear);
   const filingStatus = taxReturn.filingStatus ?? FilingStatus.Single;
   const totalTax = calc.form1040.totalTax;
   const agi = calc.form1040.agi;
@@ -75,7 +77,7 @@ export function assessEstimatedPaymentNeed(
   const isHighIncome = agi > threshold;
 
   // Safe harbor: 100% of current year tax, or 110% if high income
-  const safeHarborAmount = calculateSafeHarbor(totalTax, agi, filingStatus);
+  const safeHarborAmount = calculateSafeHarbor(totalTax, agi, filingStatus, taxYear);
 
   // Recommended annual amount = safe harbor minus projected withholding (assume same)
   const annualAmount = round2(Math.max(0, safeHarborAmount - totalWithholding));

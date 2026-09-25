@@ -86,7 +86,7 @@ function getSubtractions(taxReturn: TaxReturn, federalResult: CalculationResult)
     if (dob) {
       const dobParts = parseDateString(dob);
       if (dobParts) {
-        const age = 2025 - dobParts.year;
+        const age = (taxReturn.taxYear || 2025) - dobParts.year;
         // 59½ by Dec 31, 2025 means born on or before June 30 (month is 0-based, so June = 5)
         meetsAgeReq = age >= 60 || (age === 59 && dobParts.month <= 5);
       }
@@ -280,8 +280,8 @@ function calculateEmpireStateChildCredit(
     if (!dep.dateOfBirth) continue;
     const dob = parseDateString(dep.dateOfBirth);
     if (!dob) continue;
-    // Age at end of tax year (Dec 31, 2025)
-    const age = 2025 - dob.year;
+    // Age at end of tax year (Dec 31)
+    const age = (taxReturn.taxYear || 2025) - dob.year;
     if (age < 0) continue;
     if (age < 4) {
       under4Amount += NY_ESCC_PER_CHILD_UNDER_4;
@@ -620,7 +620,7 @@ function computeNYCoreTax(
     if (!dep.dateOfBirth) return false;
     const dob = parseDateString(dep.dateOfBirth);
     if (!dob) return false;
-    const age = 2025 - dob.year;
+    const age = (taxReturn.taxYear || 2025) - dob.year;
     return age >= 0 && age < 4;
   });
 

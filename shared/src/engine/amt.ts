@@ -29,8 +29,8 @@
  */
 
 import { FilingStatus, TaxReturn, ScheduleAResult } from '../types/index.js';
-import { AMT_2025 } from '../constants/amt2025.js';
-import { CAPITAL_GAINS_RATES } from '../constants/tax2025.js';
+import { getAMTConstants } from '../constants/amt.js';
+import { getCapitalGainsRates } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 // ─── Result Types ────────────────────────────────────────
@@ -167,6 +167,7 @@ export function calculateAMT(
   qualifiedDividends?: number,
   longTermCapitalGains?: number,
   unrecapturedSection1250Gain?: number,
+  taxYear: number = 2025,
 ): AMTResult {
   const amtData = taxReturn.amtData;
 
@@ -277,7 +278,7 @@ export function calculateAMT(
   // ══════════════════════════════════════════════════════════
 
   // Line 5: AMT exemption (with phase-out)
-  const exemption = calculateExemption(amti, filingStatus);
+  const exemption = calculateExemption(amti, filingStatus, taxYear);
 
   // Line 6: AMT base = AMTI - exemption
   const amtBase = round2(Math.max(0, amti - exemption));
@@ -295,12 +296,12 @@ export function calculateAMT(
 
   if ((qd > 0 || ltcg > 0) && amtBase > 0) {
     // Part III: preferential capital gains rates applied to AMT base
-    partIII = calculateAMTPartIII(amtBase, qd, ltcg, s1250, filingStatus);
+    partIII = calculateAMTPartIII(amtBase, qd, ltcg, s1250, filingStatus, taxYear);
     tentativeMinimumTax = partIII.tentativeMinimumTax;
     usedPartIII = true;
   } else {
     // Flat 26%/28% on entire AMT base
-    tentativeMinimumTax = calculateFlatTMT(amtBase, filingStatus);
+    tentativeMinimumTax = calculateFlatTMT(amtBase, filingStatus, taxYear);
   }
 
   // Line 8: AMT foreign tax credit
@@ -380,6 +381,7 @@ export function calculateAMTPartIII(
   longTermCapitalGains: number,
   unrecapturedSection1250Gain: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): AMTPartIIIResult {
   if (amtBase <= 0) {
     return {
@@ -396,7 +398,7 @@ export function calculateAMTPartIII(
   }
 
   // Flat rate tax for comparison (26%/28% on entire AMT base)
-  const flatRateTax = calculateFlatTMT(amtBase, filingStatus);
+  const flatRateTax = calculateFlatTMT(amtBase, filingStatus, taxYear);
 
   // Adjusted net capital gain = QD + LTCG, capped at AMT base
   const adjustedNetCapitalGain = Math.min(
@@ -423,7 +425,7 @@ export function calculateAMTPartIII(
   const ordinaryAMTIncome = round2(amtBase - adjustedNetCapitalGain);
 
   // Tax on ordinary portion at 26%/28%
-  const ordinaryTax = calculateFlatTMT(ordinaryAMTIncome, filingStatus);
+  const ordinaryTax = calculateFlatTMT(ordinaryAMTIncome, filingStatus, taxYear);
 
   // Cap §1250 gain to actual LTCG and to the capital gains portion
   const effective1250 = Math.min(
@@ -433,7 +435,8 @@ export function calculateAMTPartIII(
   );
 
   // §1250 gain taxed at 25%
-  const section1250Tax = round2(effective1250 * CAPITAL_GAINS_RATES.RATE_25);
+  const capitalGainsRates = getCapitalGainsRates(taxYear);
+  const section1250Tax = round2(effective1250 * capitalGainsRates.RATE_25);
 
   // Remaining preferential income (LTCG + QD minus §1250) → 0%/15%/20% zones
   const remainingPreferential = round2(adjustedNetCapitalGain - effective1250);
@@ -441,8 +444,8 @@ export function calculateAMTPartIII(
   let capitalGainsTax = 0;
 
   if (remainingPreferential > 0) {
-    const threshold0 = CAPITAL_GAINS_RATES.THRESHOLD_0[filingStatus];
-    const threshold15 = CAPITAL_GAINS_RATES.THRESHOLD_15[filingStatus];
+    const threshold0 = capitalGainsRates.THRESHOLD_0[filingStatus];
+    const threshold15 = capitalGainsRates.THRESHOLD_15[filingStatus];
 
     // Capital gains stack on top of ordinary AMT income + §1250
     const prefStart = round2(ordinaryAMTIncome + effective1250);
@@ -456,9 +459,9 @@ export function calculateAMTPartIII(
     const in20Zone = Math.max(0, prefEnd - Math.max(prefStart, threshold15));
 
     capitalGainsTax = round2(
-      in0Zone * CAPITAL_GAINS_RATES.RATE_0 +
-      in15Zone * CAPITAL_GAINS_RATES.RATE_15 +
-      in20Zone * CAPITAL_GAINS_RATES.RATE_20,
+      in0Zone * capitalGainsRates.RATE_0 +
+      in15Zone * capitalGainsRates.RATE_15 +
+      in20Zone * capitalGainsRates.RATE_20,
     );
   }
 
@@ -490,9 +493,9 @@ export function calculateAMTPartIII(
  * above the phase-out threshold. At a certain income level, the
  * exemption is completely phased out.
  */
-function calculateExemption(amti: number, filingStatus: FilingStatus): number {
-  const baseExemption = getExemptionAmount(filingStatus);
-  const phaseOutStart = getPhaseOutThreshold(filingStatus);
+function calculateExemption(amti: number, filingStatus: FilingStatus, taxYear: number): number {
+  const baseExemption = getExemptionAmount(filingStatus, taxYear);
+  const phaseOutStart = getPhaseOutThreshold(filingStatus, taxYear);
 
   if (amti <= phaseOutStart) {
     return baseExemption;
@@ -504,33 +507,35 @@ function calculateExemption(amti: number, filingStatus: FilingStatus): number {
   return round2(Math.max(0, baseExemption - reduction));
 }
 
-function getExemptionAmount(filingStatus: FilingStatus): number {
+function getExemptionAmount(filingStatus: FilingStatus, taxYear: number): number {
+  const amt = getAMTConstants(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
-      return AMT_2025.EXEMPTION.MFJ;
+      return amt.EXEMPTION.MFJ;
     case FilingStatus.MarriedFilingSeparately:
-      return AMT_2025.EXEMPTION.MFS;
+      return amt.EXEMPTION.MFS;
     case FilingStatus.HeadOfHousehold:
-      return AMT_2025.EXEMPTION.HOH;
+      return amt.EXEMPTION.HOH;
     case FilingStatus.Single:
     default:
-      return AMT_2025.EXEMPTION.SINGLE;
+      return amt.EXEMPTION.SINGLE;
   }
 }
 
-function getPhaseOutThreshold(filingStatus: FilingStatus): number {
+function getPhaseOutThreshold(filingStatus: FilingStatus, taxYear: number): number {
+  const amt = getAMTConstants(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
-      return AMT_2025.PHASE_OUT.MFJ;
+      return amt.PHASE_OUT.MFJ;
     case FilingStatus.MarriedFilingSeparately:
-      return AMT_2025.PHASE_OUT.MFS;
+      return amt.PHASE_OUT.MFS;
     case FilingStatus.HeadOfHousehold:
-      return AMT_2025.PHASE_OUT.HOH;
+      return amt.PHASE_OUT.HOH;
     case FilingStatus.Single:
     default:
-      return AMT_2025.PHASE_OUT.SINGLE;
+      return amt.PHASE_OUT.SINGLE;
   }
 }
 
@@ -543,26 +548,28 @@ function getPhaseOutThreshold(filingStatus: FilingStatus): number {
  *
  * Exported for use by Part III (ordinary income portion) and Part II (fallback).
  */
-export function calculateFlatTMT(amtBase: number, filingStatus: FilingStatus): number {
+export function calculateFlatTMT(amtBase: number, filingStatus: FilingStatus, taxYear: number = 2025): number {
   if (amtBase <= 0) return 0;
 
-  const threshold = getRateThreshold(filingStatus);
+  const amt = getAMTConstants(taxYear);
+  const threshold = getRateThreshold(filingStatus, taxYear);
 
   if (amtBase <= threshold) {
-    return round2(amtBase * AMT_2025.RATES.LOW);
+    return round2(amtBase * amt.RATES.LOW);
   }
 
-  const lowBracketTax = round2(threshold * AMT_2025.RATES.LOW);
-  const highBracketTax = round2((amtBase - threshold) * AMT_2025.RATES.HIGH);
+  const lowBracketTax = round2(threshold * amt.RATES.LOW);
+  const highBracketTax = round2((amtBase - threshold) * amt.RATES.HIGH);
   return round2(lowBracketTax + highBracketTax);
 }
 
-function getRateThreshold(filingStatus: FilingStatus): number {
+function getRateThreshold(filingStatus: FilingStatus, taxYear: number): number {
+  const amt = getAMTConstants(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingSeparately:
-      return AMT_2025.RATE_THRESHOLD.MFS;
+      return amt.RATE_THRESHOLD.MFS;
     default:
-      return AMT_2025.RATE_THRESHOLD.SINGLE; // Same for all others
+      return amt.RATE_THRESHOLD.SINGLE; // Same for all others
   }
 }
 

@@ -1,5 +1,5 @@
 import { NonCashDonation, CharitableCarryforward, Form8283Result } from '../types/index.js';
-import { CHARITABLE_AGI_LIMITS, FORM_8283 } from '../constants/tax2025.js';
+import { getCharitableAgiLimits, getForm8283 } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -33,6 +33,9 @@ export function calculateForm8283(
   carryforwards?: CharitableCarryforward[],
   taxYear: number = 2025,
 ): Form8283Result {
+  const CHARITABLE_AGI_LIMITS = getCharitableAgiLimits(taxYear);
+  const FORM_8283 = getForm8283(taxYear);
+
   // ── Step 1: Classify items into Section A vs Section B ──
   const sectionAItems: NonCashDonation[] = [];
   const sectionBItems: NonCashDonation[] = [];

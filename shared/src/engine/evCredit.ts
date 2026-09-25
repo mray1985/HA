@@ -1,5 +1,5 @@
 import { FilingStatus, EVCreditInfo, EVCreditResult } from '../types/index.js';
-import { EV_CREDIT } from '../constants/tax2025.js';
+import { getEvCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -34,6 +34,7 @@ export function calculateEVCredit(
   agi: number,
   filingStatus: FilingStatus,
   priorYearAgi?: number,
+  taxYear: number = 2025,
 ): EVCreditResult {
   const zero: EVCreditResult = { baseCredit: 0, credit: 0 };
 
@@ -46,9 +47,9 @@ export function calculateEVCredit(
     : agi;
 
   if (info.isNewVehicle) {
-    return calculateNewVehicleCredit(info, effectiveAgi, filingStatus);
+    return calculateNewVehicleCredit(info, effectiveAgi, filingStatus, taxYear);
   } else {
-    return calculateUsedVehicleCredit(info, effectiveAgi, filingStatus);
+    return calculateUsedVehicleCredit(info, effectiveAgi, filingStatus, taxYear);
   }
 }
 
@@ -56,6 +57,7 @@ function calculateNewVehicleCredit(
   info: EVCreditInfo,
   agi: number,
   filingStatus: FilingStatus,
+  taxYear: number,
 ): EVCreditResult {
   const zero: EVCreditResult = { baseCredit: 0, credit: 0 };
 
@@ -63,23 +65,24 @@ function calculateNewVehicleCredit(
   if (!info.finalAssemblyUS) return zero;
 
   // MSRP cap check — vans, SUVs, and pickups get the higher $80,000 cap; others use $55,000
-  const msrpCap = info.isVanSUVPickup ? EV_CREDIT.NEW_MSRP_CAP_VAN_SUV_TRUCK : EV_CREDIT.NEW_MSRP_CAP_OTHER;
+  const evCredit = getEvCredit(taxYear);
+  const msrpCap = info.isVanSUVPickup ? evCredit.NEW_MSRP_CAP_VAN_SUV_TRUCK : evCredit.NEW_MSRP_CAP_OTHER;
   if (info.vehicleMSRP > msrpCap) return zero;
 
   // Income limit check
-  const incomeLimit = getNewIncomeLimit(filingStatus);
+  const incomeLimit = getNewIncomeLimit(filingStatus, taxYear);
   if (agi > incomeLimit) return zero;
 
   // Calculate credit components
   let credit = 0;
   if (info.meetsMineralReq) {
-    credit += EV_CREDIT.NEW_CRITICAL_MINERAL;
+    credit += evCredit.NEW_CRITICAL_MINERAL;
   }
   if (info.meetsBatteryComponentReq) {
-    credit += EV_CREDIT.NEW_BATTERY_COMPONENT;
+    credit += evCredit.NEW_BATTERY_COMPONENT;
   }
 
-  const baseCredit = Math.min(credit, EV_CREDIT.NEW_VEHICLE_MAX);
+  const baseCredit = Math.min(credit, evCredit.NEW_VEHICLE_MAX);
 
   return {
     baseCredit: round2(baseCredit),
@@ -91,19 +94,22 @@ function calculateUsedVehicleCredit(
   info: EVCreditInfo,
   agi: number,
   filingStatus: FilingStatus,
+  taxYear: number,
 ): EVCreditResult {
   const zero: EVCreditResult = { baseCredit: 0, credit: 0 };
 
+  const evCredit = getEvCredit(taxYear);
+
   // Price cap check
-  if (info.purchasePrice > EV_CREDIT.USED_PRICE_CAP) return zero;
+  if (info.purchasePrice > evCredit.USED_PRICE_CAP) return zero;
 
   // Income limit check
-  const incomeLimit = getUsedIncomeLimit(filingStatus);
+  const incomeLimit = getUsedIncomeLimit(filingStatus, taxYear);
   if (agi > incomeLimit) return zero;
 
   // Credit = lesser of $4,000 or 30% of purchase price
   const baseCredit = Math.min(
-    EV_CREDIT.USED_VEHICLE_MAX,
+    evCredit.USED_VEHICLE_MAX,
     round2(info.purchasePrice * 0.30),
   );
 
@@ -113,26 +119,28 @@ function calculateUsedVehicleCredit(
   };
 }
 
-function getNewIncomeLimit(filingStatus: FilingStatus): number {
+function getNewIncomeLimit(filingStatus: FilingStatus, taxYear: number): number {
+  const evCredit = getEvCredit(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
-      return EV_CREDIT.NEW_INCOME_LIMIT_MFJ;
+      return evCredit.NEW_INCOME_LIMIT_MFJ;
     case FilingStatus.HeadOfHousehold:
-      return EV_CREDIT.NEW_INCOME_LIMIT_HOH;
+      return evCredit.NEW_INCOME_LIMIT_HOH;
     default:
-      return EV_CREDIT.NEW_INCOME_LIMIT_SINGLE;
+      return evCredit.NEW_INCOME_LIMIT_SINGLE;
   }
 }
 
-function getUsedIncomeLimit(filingStatus: FilingStatus): number {
+function getUsedIncomeLimit(filingStatus: FilingStatus, taxYear: number): number {
+  const evCredit = getEvCredit(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
-      return EV_CREDIT.USED_INCOME_LIMIT_MFJ;
+      return evCredit.USED_INCOME_LIMIT_MFJ;
     case FilingStatus.HeadOfHousehold:
-      return EV_CREDIT.USED_INCOME_LIMIT_HOH;
+      return evCredit.USED_INCOME_LIMIT_HOH;
     default:
-      return EV_CREDIT.USED_INCOME_LIMIT_SINGLE;
+      return evCredit.USED_INCOME_LIMIT_SINGLE;
   }
 }

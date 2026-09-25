@@ -5,12 +5,12 @@ import {
   MACRSPropertyClass,
 } from '../types/index.js';
 import {
-  SECTION_179,
-  MACRS_GDS_RATES,
-  MACRS_GDS_RATES_MID_QUARTER,
-  BONUS_DEPRECIATION_RATE_2025,
-  DEPRECIATION_TAX_YEAR,
-} from '../constants/tax2025.js';
+  getSection179,
+  getMacrsGdsRates,
+  getMacrsGdsRatesMidQuarter,
+  getBonusDepreciationRate,
+  getDepreciationTaxYear,
+} from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -39,7 +39,9 @@ import { round2 } from './utils.js';
 export function calculateForm4562(
   assets: DepreciationAsset[],
   businessIncome: number,
+  taxYear: number = 2025,
 ): Form4562Result {
+  const SECTION_179 = getSection179(taxYear);
   const zero: Form4562Result = {
     totalCostSection179Property: 0,
     section179Limit: SECTION_179.MAX_DEDUCTION,
@@ -66,7 +68,7 @@ export function calculateForm4562(
   const priorYearAssets: DepreciationAsset[] = [];
 
   for (const asset of activeAssets) {
-    const yearIndex = getYearIndex(asset.dateInService);
+    const yearIndex = getYearIndex(asset.dateInService, taxYear);
     if (yearIndex < 0) continue; // Future-year asset — not yet depreciable
     if (yearIndex === 0) {
       currentYearAssets.push(asset);
@@ -80,6 +82,7 @@ export function calculateForm4562(
   const section179Result = computeSection179(
     currentYearAssets,
     Math.max(0, businessIncome),
+    taxYear,
   );
 
   // ── Convention detection (IRC §168(d)(3)) ────────────────
@@ -100,6 +103,7 @@ export function calculateForm4562(
       section179Result.allocations,
       section179Result.electedAllocations,
       convention,
+      taxYear,
     );
     assetDetails.push(detail);
     bonusTotal += detail.bonusDepreciation;
@@ -108,7 +112,7 @@ export function calculateForm4562(
 
   // Prior-year assets: MACRS only (no 179, no bonus)
   for (const asset of priorYearAssets) {
-    const detail = computePriorYearAsset(asset);
+    const detail = computePriorYearAsset(asset, taxYear);
     assetDetails.push(detail);
     macrsPriorTotal += detail.macrsDepreciation;
   }
@@ -130,9 +134,9 @@ export function calculateForm4562(
       'deduction limited by business income (IRC §179(b)(3))',
     );
     // Advisory: with 100% bonus, skipping §179 may yield a larger current-year deduction
-    if (BONUS_DEPRECIATION_RATE_2025 >= 1.0) {
+    if (getBonusDepreciationRate(taxYear) >= 1.0) {
       warnings.push(
-        `Advisory: With 100% bonus depreciation available in ${DEPRECIATION_TAX_YEAR}, ` +
+        `Advisory: With 100% bonus depreciation available in ${getDepreciationTaxYear(taxYear)}, ` +
         'the Section 179 election created a carryforward instead of an immediate deduction. ' +
         'Consider reducing the Section 179 election — bonus depreciation is not income-limited ' +
         'and may provide a larger current-year deduction.',
@@ -186,6 +190,7 @@ function computeSoftwareAmortization(
   cost: number,
   dateInService: string,
   priorDepreciation: number,
+  taxYear: number = 2025,
 ): number {
   const monthlyAmount = round2(cost / SOFTWARE_AMORTIZATION_MONTHS);
   const startDate = new Date(dateInService + 'T00:00:00');
@@ -196,6 +201,7 @@ function computeSoftwareAmortization(
 
   // Calculate months of service during the tax year (DEPRECIATION_TAX_YEAR)
   // Amortization begins the month the software is placed in service
+  const DEPRECIATION_TAX_YEAR = getDepreciationTaxYear(taxYear);
   const taxYearStart = new Date(DEPRECIATION_TAX_YEAR, 0, 1);
   const taxYearEnd = new Date(DEPRECIATION_TAX_YEAR, 11, 31);
   const amortStart = startDate < taxYearStart ? taxYearStart : startDate;
@@ -248,7 +254,9 @@ interface Section179Result {
 function computeSection179(
   currentYearAssets: DepreciationAsset[],
   businessIncome: number,
+  taxYear: number = 2025,
 ): Section179Result {
+  const SECTION_179 = getSection179(taxYear);
   const allocations = new Map<string, number>();
   const electedAllocations = new Map<string, number>();
 
@@ -365,7 +373,11 @@ function computeCurrentYearAsset(
   section179AllowedAllocations: Map<string, number>,
   section179ElectedAllocations: Map<string, number>,
   convention: 'half-year' | 'mid-quarter',
+  taxYear: number = 2025,
 ): Form4562AssetDetail {
+  const BONUS_DEPRECIATION_RATE_2025 = getBonusDepreciationRate(taxYear);
+  const MACRS_GDS_RATES = getMacrsGdsRates(taxYear);
+  const MACRS_GDS_RATES_MID_QUARTER = getMacrsGdsRatesMidQuarter(taxYear);
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
@@ -377,6 +389,7 @@ function computeCurrentYearAsset(
       businessUseBasis,
       asset.dateInService,
       0, // No prior depreciation for current-year asset
+      taxYear,
     );
     return {
       assetId: asset.id,
@@ -462,7 +475,9 @@ function computeCurrentYearAsset(
  * If the asset was placed in service under mid-quarter convention (stored in
  * asset.convention/asset.quarterPlaced), continues using mid-quarter rates.
  */
-function computePriorYearAsset(asset: DepreciationAsset): Form4562AssetDetail {
+function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025): Form4562AssetDetail {
+  const MACRS_GDS_RATES = getMacrsGdsRates(taxYear);
+  const MACRS_GDS_RATES_MID_QUARTER = getMacrsGdsRatesMidQuarter(taxYear);
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
@@ -473,6 +488,7 @@ function computePriorYearAsset(asset: DepreciationAsset): Form4562AssetDetail {
       businessUseBasis,
       asset.dateInService,
       priorDepr,
+      taxYear,
     );
     return {
       assetId: asset.id,
@@ -495,7 +511,7 @@ function computePriorYearAsset(asset: DepreciationAsset): Form4562AssetDetail {
     Math.max(0, businessUseBasis - (asset.priorSection179 || 0)),
   );
 
-  const yearIndex = getYearIndex(asset.dateInService);
+  const yearIndex = getYearIndex(asset.dateInService, taxYear);
 
   // Determine which rate table to use based on stored convention
   const assetConvention = asset.convention || 'half-year';
@@ -627,11 +643,12 @@ export function detectConvention(
  * Returns -1 for future-year assets (placed in service after the tax year) —
  * these are not yet depreciable.
  */
-function getYearIndex(dateInService?: string): number {
+function getYearIndex(dateInService?: string, taxYear: number = 2025): number {
   if (!dateInService) return 0;
   const date = new Date(dateInService + 'T00:00:00');
   if (isNaN(date.getTime())) return 0;
   const yearPlaced = date.getFullYear();
+  const DEPRECIATION_TAX_YEAR = getDepreciationTaxYear(taxYear);
   if (yearPlaced > DEPRECIATION_TAX_YEAR) return -1; // Not yet depreciable
   return DEPRECIATION_TAX_YEAR - yearPlaced;
 }

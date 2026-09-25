@@ -37,7 +37,7 @@ import {
   PassiveActivityDetail,
   TaxReturn,
 } from '../types/index.js';
-import { FORM_8582 } from '../constants/tax2025.js';
+import { getForm8582 } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 // ─── Main Entry Point ────────────────────────────────
@@ -58,7 +58,9 @@ export function calculateForm8582(
   livedApartFromSpouse: boolean,
   form8582Data?: TaxReturn['form8582Data'],
   misc1099Rents: number = 0,
+  taxYear: number = 2025,
 ): Form8582Result {
+  const FORM_8582 = getForm8582(taxYear);
   const warnings: string[] = [];
 
   // Collect all passive activities with their current-year net income
@@ -200,7 +202,7 @@ export function calculateForm8582(
   const rentalActiveLossAbs = Math.abs(rentalActiveLoss);
 
   const specialAllowance = calculateSpecialAllowance(
-    magi, filingStatus, livedApartFromSpouse,
+    magi, filingStatus, livedApartFromSpouse, taxYear,
   );
 
   // Special allowance only applies to rental RE with active participation losses
@@ -244,7 +246,9 @@ export function calculateSpecialAllowance(
   magi: number,
   filingStatus: FilingStatus,
   livedApartFromSpouse: boolean,
+  taxYear: number = 2025,
 ): number {
+  const FORM_8582 = getForm8582(taxYear);
   // MFS who lived together all year → $0 allowance
   if (filingStatus === FilingStatus.MarriedFilingSeparately && !livedApartFromSpouse) {
     return 0;

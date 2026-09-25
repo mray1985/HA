@@ -1,5 +1,5 @@
 import { Form4137Result } from '../types/index.js';
-import { FORM_4137 } from '../constants/tax2025.js';
+import { getForm4137 } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -25,7 +25,9 @@ import { round2 } from './utils.js';
 export function calculateForm4137(
   unreportedTips: number,
   w2SocialSecurityWages: number = 0,
+  taxYear: number = 2025,
 ): Form4137Result {
+  const FORM_4137 = getForm4137(taxYear);
   const zero: Form4137Result = {
     unreportedTips: 0,
     socialSecurityTax: 0,

@@ -1,5 +1,5 @@
 import { FilingStatus, Schedule1AInfo, Schedule1AResult } from '../types/index.js';
-import { SCHEDULE_1A } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -30,7 +30,9 @@ export function calculateSchedule1A(
   filingStatus: FilingStatus,
   taxpayerAge65OrOlder: boolean,
   spouseAge65OrOlder: boolean = false,
+  taxYear: number = 2025,
 ): Schedule1AResult {
+  const SCHEDULE_1A = getTaxConstants(taxYear).SCHEDULE_1A;
   const isMFS = filingStatus === FilingStatus.MarriedFilingSeparately;
   const isMFJ = filingStatus === FilingStatus.MarriedFilingJointly ||
     filingStatus === FilingStatus.QualifyingSurvivingSpouse;

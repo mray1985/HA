@@ -1,5 +1,5 @@
 import { HouseholdEmployeeInfo, ScheduleHResult } from '../types/index.js';
-import { SCHEDULE_H } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -31,7 +31,8 @@ import { round2 } from './utils.js';
  * @scope Household employee tax (combined SS + Medicare + FUTA)
  * @limitations None
  */
-export function calculateScheduleH(info: HouseholdEmployeeInfo): ScheduleHResult {
+export function calculateScheduleH(info: HouseholdEmployeeInfo, taxYear: number = 2025): ScheduleHResult {
+  const SCHEDULE_H = getTaxConstants(taxYear).SCHEDULE_H;
   const zero: ScheduleHResult = {
     socialSecurityTax: 0,
     medicareTax: 0,

@@ -13,7 +13,7 @@
  */
 
 import type { TaxReturn } from '../types/index.js';
-import { PLAUSIBILITY, FORM_4137 } from '../constants/tax2025.js';
+import { getPlausibility, getForm4137 } from '../constants/taxConstants.js';
 
 // ─── Types ──────────────────────────────────────────
 
@@ -51,9 +51,12 @@ export interface PlausibilityWarning {
 export function checkPlausibility(
   taxReturn: TaxReturn,
   agi?: number,
+  taxYear: number = 2025,
 ): PlausibilityWarning[] {
   const warnings: PlausibilityWarning[] = [];
   const effectiveAGI = agi ?? 0;
+  const PLAUSIBILITY = getPlausibility(taxYear);
+  const FORM_4137 = getForm4137(taxYear);
 
   // ── Income: W-2 wages ─────────────────────────────
   (taxReturn.w2Income || []).forEach((w2, idx) => {

@@ -42,7 +42,7 @@
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
 import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
-import { FORM_4137 } from './tax2025.js';
+import { getForm4137 } from './taxConstants.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 
@@ -52,7 +52,9 @@ function fmtDollar(n: number | undefined | null): string | undefined {
   return Math.round(n).toString();
 }
 
-export const FORM_4137_FIELDS: IRSFieldMapping[] = [
+export function getForm4137Fields(taxYear = 2025): IRSFieldMapping[] {
+const FORM_4137 = getForm4137(taxYear);
+return [
   // ======================================================================
   // Header
   // ======================================================================
@@ -205,6 +207,7 @@ export const FORM_4137_FIELDS: IRSFieldMapping[] = [
     transform: (_tr, calc) => fmtDollar(calc.form4137?.totalTax),
   },
 ];
+}
 
 export const FORM_4137_TEMPLATE: IRSFormTemplate = {
   formId: 'f4137',
@@ -216,5 +219,5 @@ export const FORM_4137_TEMPLATE: IRSFormTemplate = {
     const hasTax = (calc.form4137?.totalTax ?? 0) > 0;
     return hasTips || hasTax;
   },
-  fields: FORM_4137_FIELDS,
+  fields: getForm4137Fields(),
 };

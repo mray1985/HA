@@ -1,4 +1,4 @@
-import { ESTIMATED_TAX } from '../constants/tax2025.js';
+import { getEstimatedTax } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 import { FilingStatus } from '../types/index.js';
 
@@ -16,9 +16,10 @@ import { FilingStatus } from '../types/index.js';
 export function calculateEstimatedQuarterly(
   totalTaxOwed: number,
   totalWithholding: number,
+  taxYear: number = 2025,
 ): { quarterlyPayment: number; annualEstimated: number } {
   const annualEstimated = Math.max(0, round2(totalTaxOwed - totalWithholding));
-  const quarterlyPayment = round2(annualEstimated / ESTIMATED_TAX.QUARTERLY_DIVISOR);
+  const quarterlyPayment = round2(annualEstimated / getEstimatedTax(taxYear).QUARTERLY_DIVISOR);
 
   return { quarterlyPayment, annualEstimated };
 }
@@ -38,7 +39,9 @@ export function calculateSafeHarbor(
   currentYearTax: number,
   agi: number,
   filingStatus?: FilingStatus,
+  taxYear: number = 2025,
 ): number {
+  const ESTIMATED_TAX = getEstimatedTax(taxYear);
   const threshold = filingStatus === FilingStatus.MarriedFilingSeparately
     ? ESTIMATED_TAX.HIGH_INCOME_THRESHOLD / 2
     : ESTIMATED_TAX.HIGH_INCOME_THRESHOLD;

@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { stripPII, stripConversationHistory, stripContext } from '../services/piiStripper.js';
 import { anthropicCompletionWithKey } from '../services/anthropicClient.js';
 import { config } from '../config.js';
-import { SYSTEM_PROMPT } from '../services/systemPrompt.js';
+import { getSystemPrompt } from '../services/systemPrompt.js';
 import { handleLLMError, handleRouteError } from '../services/errorSanitizer.js';
 import { initRateLimitTable, checkRateLimit as sharedCheckRateLimit, getClientIp, sendRateLimitResponse } from '../services/rateLimiter.js';
 import type { ChatResponse } from '@telostax/engine';
@@ -42,6 +42,7 @@ const BYOKRequestSchema = ChatRequestSchema.extend({
   provider: z.literal('anthropic'),
   apiKey: z.string().min(1).max(200),
   model: z.string().min(1).max(100),
+  taxYear: z.number().int().min(2020).max(2030).default(2025),
 });
 
 // ─── Shared PII + Message Preparation ─────────────
@@ -127,7 +128,7 @@ router.post('/byok', async (req: Request, res: Response) => {
       return;
     }
 
-    const { message, conversationHistory, context, apiKey, model } =
+    const { message, conversationHistory, context, apiKey, model, taxYear } =
       parseResult.data;
 
     // 3. Validate API key format (basic sanity check — never log the key)
@@ -156,7 +157,7 @@ router.post('/byok', async (req: Request, res: Response) => {
         model,
         messages,
         sanitizedContext,
-        SYSTEM_PROMPT,
+        getSystemPrompt(taxYear),
       );
     } catch (err: any) {
       if (handleLLMError(err, res, 'byok-chat')) return;

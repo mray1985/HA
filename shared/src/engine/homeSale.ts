@@ -1,5 +1,5 @@
 import { FilingStatus, HomeSaleInfo, HomeSaleResult } from '../types/index.js';
-import { HOME_SALE_EXCLUSION } from '../constants/tax2025.js';
+import { getHomeSaleExclusion } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -23,7 +23,9 @@ import { round2 } from './utils.js';
 export function calculateHomeSaleExclusion(
   info: HomeSaleInfo,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): HomeSaleResult {
+  const HOME_SALE_EXCLUSION = getHomeSaleExclusion(taxYear);
   const sellingExpenses = Math.max(0, info.sellingExpenses || 0);
   const netProceeds = round2(info.salePrice - sellingExpenses);
   const gainOrLoss = round2(netProceeds - info.costBasis);

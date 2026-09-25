@@ -1,5 +1,5 @@
 import { FilingStatus } from '../types/index.js';
-import { CAPITAL_GAINS_RATES } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { calculateProgressiveTax } from './brackets.js';
 import { round2 } from './utils.js';
 
@@ -33,6 +33,7 @@ export function calculatePreferentialRateTax(
   longTermCapitalGains: number,
   filingStatus: FilingStatus,
   unrecapturedSection1250Gain: number = 0,
+  taxYear: number = 2025,
 ): { ordinaryTax: number; preferentialTax: number; section1250Tax: number; totalTax: number; marginalRate: number } {
   if (taxableIncome <= 0) {
     return { ordinaryTax: 0, preferentialTax: 0, section1250Tax: 0, totalTax: 0, marginalRate: 0 };
@@ -54,7 +55,7 @@ export function calculatePreferentialRateTax(
   );
 
   // Regular tax: all at progressive rates (the baseline comparison)
-  const regularResult = calculateProgressiveTax(taxableIncome, filingStatus);
+  const regularResult = calculateProgressiveTax(taxableIncome, filingStatus, taxYear);
   const regularTax = regularResult.tax;
 
   // If no preferential income, fall back to normal progressive calculation
@@ -74,13 +75,13 @@ export function calculatePreferentialRateTax(
   const ordinaryTaxableIncome = round2(taxableIncome - totalPreferential);
 
   // Tax on ordinary income at progressive rates
-  const ordinaryResult = calculateProgressiveTax(ordinaryTaxableIncome, filingStatus);
+  const ordinaryResult = calculateProgressiveTax(ordinaryTaxableIncome, filingStatus, taxYear);
   const ordinaryTax = ordinaryResult.tax;
 
   // ── Section 1250 gain (25% zone) ──────────────────────
   // Stacks on top of ordinary income, before the 0%/15%/20% zones
   // Per Schedule D Tax Worksheet Line 36: flat 25% rate
-  const section1250Tax = round2(effective1250 * CAPITAL_GAINS_RATES.RATE_25);
+  const section1250Tax = round2(effective1250 * getTaxConstants(taxYear).CAPITAL_GAINS_RATES.RATE_25);
 
   // ── Remaining preferential income (0%/15%/20% zones) ──
   // The non-1250 preferential income stacks on top of ordinary + 1250
@@ -89,8 +90,8 @@ export function calculatePreferentialRateTax(
   let preferentialTax = 0;
 
   if (remainingPreferential > 0) {
-    const threshold0 = CAPITAL_GAINS_RATES.THRESHOLD_0[filingStatus];
-    const threshold15 = CAPITAL_GAINS_RATES.THRESHOLD_15[filingStatus];
+    const threshold0 = getTaxConstants(taxYear).CAPITAL_GAINS_RATES.THRESHOLD_0[filingStatus];
+    const threshold15 = getTaxConstants(taxYear).CAPITAL_GAINS_RATES.THRESHOLD_15[filingStatus];
 
     // Remaining preferential starts after ordinary + 1250
     const prefStart = round2(ordinaryTaxableIncome + effective1250);
@@ -104,9 +105,9 @@ export function calculatePreferentialRateTax(
     const in20Zone = Math.max(0, prefEnd - Math.max(prefStart, threshold15));
 
     preferentialTax = round2(
-      in0Zone * CAPITAL_GAINS_RATES.RATE_0 +
-      in15Zone * CAPITAL_GAINS_RATES.RATE_15 +
-      in20Zone * CAPITAL_GAINS_RATES.RATE_20,
+      in0Zone * getTaxConstants(taxYear).CAPITAL_GAINS_RATES.RATE_0 +
+      in15Zone * getTaxConstants(taxYear).CAPITAL_GAINS_RATES.RATE_15 +
+      in20Zone * getTaxConstants(taxYear).CAPITAL_GAINS_RATES.RATE_20,
     );
   }
 

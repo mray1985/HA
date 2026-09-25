@@ -1,5 +1,5 @@
 import { HomeOfficeInfo, HomeOfficeResult } from '../types/index.js';
-import { HOME_OFFICE, HOME_OFFICE_DEPRECIATION } from '../constants/tax2025.js';
+import { getHomeOffice, getHomeOfficeDepreciation } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -29,8 +29,9 @@ import { round2 } from './utils.js';
 export function calculateHomeOfficeDeduction(
   homeOffice: HomeOfficeInfo,
   tentativeProfit: number,
+  taxYear: number = 2025,
 ): number {
-  const result = calculateHomeOfficeDetailed(homeOffice, tentativeProfit);
+  const result = calculateHomeOfficeDetailed(homeOffice, tentativeProfit, taxYear);
   return result.totalDeduction;
 }
 
@@ -41,10 +42,13 @@ export function calculateHomeOfficeDeduction(
 export function calculateHomeOfficeDetailed(
   homeOffice: HomeOfficeInfo,
   tentativeProfit: number,
+  taxYear: number = 2025,
 ): HomeOfficeResult {
   if (!homeOffice.method) {
     return { method: 'simplified', businessPercentage: 0, totalDeduction: 0 };
   }
+
+  const HOME_OFFICE = getHomeOffice(taxYear);
 
   // ── Part I: Business percentage ──────────────────────────────────────
   const officeSqft = homeOffice.squareFeet || 0;
@@ -137,7 +141,7 @@ export function calculateHomeOfficeDetailed(
   const remainingAfterTier2 = round2(Math.max(0, remainingAfterTier1 - tier2Allowed));
 
   // ── Part III: Depreciation ───────────────────────────────────────────
-  const depreciationComputed = computeDepreciation(homeOffice, businessPct);
+  const depreciationComputed = computeDepreciation(homeOffice, businessPct, taxYear);
 
   // ── Part II, Tier 3: Depreciation + excess casualty (Lines 28-33) ────
   const tier3Depreciation = depreciationComputed;
@@ -179,6 +183,7 @@ export function calculateHomeOfficeDetailed(
 function computeDepreciation(
   homeOffice: HomeOfficeInfo,
   businessPct: number,
+  taxYear: number = 2025,
 ): number {
   const homeCost = homeOffice.homeCostOrValue || 0;
   const landValue = homeOffice.landValue || 0;
@@ -193,7 +198,7 @@ function computeDepreciation(
   if (businessBasis <= 0) return 0;
 
   // Line 41: Depreciation percentage
-  const rate = getDepreciationRate(homeOffice.dateFirstUsedForBusiness);
+  const rate = getDepreciationRate(homeOffice.dateFirstUsedForBusiness, taxYear);
 
   // Line 42: Depreciation allowable
   return round2(businessBasis * rate);
@@ -205,7 +210,8 @@ function computeDepreciation(
  * - If placed in service before 2025, use the subsequent-year rate (3.636%)
  * - If no date provided, use the subsequent-year rate as a safe default
  */
-function getDepreciationRate(dateFirstUsed?: string): number {
+function getDepreciationRate(dateFirstUsed?: string, taxYear: number = 2025): number {
+  const HOME_OFFICE_DEPRECIATION = getHomeOfficeDepreciation(taxYear);
   if (!dateFirstUsed) {
     return HOME_OFFICE_DEPRECIATION.SUBSEQUENT_YEAR_RATE;
   }
@@ -216,11 +222,11 @@ function getDepreciationRate(dateFirstUsed?: string): number {
   }
 
   const year = date.getFullYear();
-  if (year < 2025) {
+  if (year < taxYear) {
     return HOME_OFFICE_DEPRECIATION.SUBSEQUENT_YEAR_RATE;
   }
 
-  if (year === 2025) {
+  if (year === taxYear) {
     const month = date.getMonth() + 1; // 1-indexed
     return HOME_OFFICE_DEPRECIATION.FIRST_YEAR_RATE_BY_MONTH[month]
       || HOME_OFFICE_DEPRECIATION.SUBSEQUENT_YEAR_RATE;
@@ -243,6 +249,7 @@ export function compareHomeOfficeMethods(
   totalHomeSquareFeetOrProfit: number,
   actualExpensesOrUndef?: number,
   tentativeProfitOrUndef?: number,
+  taxYear: number = 2025,
 ): { simplified: number; actual: number } {
   // Support both signatures:
   //   compareHomeOfficeMethods(homeOffice, tentativeProfit)           — new
@@ -266,10 +273,12 @@ export function compareHomeOfficeMethods(
   const simplified = calculateHomeOfficeDeduction(
     { method: 'simplified', squareFeet: homeOffice.squareFeet },
     tentativeProfit,
+    taxYear,
   );
   const actual = calculateHomeOfficeDeduction(
     { ...homeOffice, method: 'actual' },
     tentativeProfit,
+    taxYear,
   );
 
   return { simplified, actual };

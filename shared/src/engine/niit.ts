@@ -1,5 +1,5 @@
 import { FilingStatus } from '../types/index.js';
-import { NIIT } from '../constants/tax2025.js';
+import { getNiit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -22,10 +22,12 @@ export function calculateNIIT(
   agi: number,
   investmentIncome: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): number {
   if (investmentIncome <= 0 || agi <= 0) return 0;
 
-  const threshold = getNIITThreshold(filingStatus);
+  const NIIT = getNiit(taxYear);
+  const threshold = getNIITThreshold(filingStatus, taxYear);
   const agiExcess = agi - threshold;
 
   if (agiExcess <= 0) return 0;
@@ -34,7 +36,8 @@ export function calculateNIIT(
   return round2(taxableAmount * NIIT.RATE);
 }
 
-function getNIITThreshold(filingStatus: FilingStatus): number {
+function getNIITThreshold(filingStatus: FilingStatus, taxYear: number = 2025): number {
+  const NIIT = getNiit(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
       return NIIT.THRESHOLD_MFJ;

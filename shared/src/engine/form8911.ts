@@ -1,5 +1,5 @@
 import { EVRefuelingCreditInfo, EVRefuelingCreditResult, EVRefuelingProperty } from '../types/index.js';
-import { EV_REFUELING } from '../constants/tax2025.js';
+import { getEvRefueling } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -28,7 +28,8 @@ import { round2 } from './utils.js';
  * @scope Personal-use EV refueling property credit (30% of cost, $1,000/property cap)
  * @limitations Does not compute business-use credit (Form 3800 integration). Assumes user verifies census tract eligibility.
  */
-export function calculateEVRefuelingCredit(info: EVRefuelingCreditInfo): EVRefuelingCreditResult {
+export function calculateEVRefuelingCredit(info: EVRefuelingCreditInfo, taxYear: number = 2025): EVRefuelingCreditResult {
+  const EV_REFUELING = getEvRefueling(taxYear);
   const zero: EVRefuelingCreditResult = {
     totalCost: 0,
     totalCredit: 0,

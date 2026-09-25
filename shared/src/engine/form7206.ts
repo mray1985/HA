@@ -20,14 +20,15 @@
  */
 
 import type { Form7206Input, Form7206Result, FilingStatus } from '../types/index.js';
-import { LTC_PREMIUM_LIMITS_2025 } from '../constants/tax2025.js';
+import { getLtcPremiumLimits } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
  * Look up the per-person LTC premium limit by age at end of tax year.
  * IRC §213(d)(10) — age brackets from Rev. Proc. 2024-40.
  */
-export function getLTCPremiumLimit(age: number | undefined): number {
+export function getLTCPremiumLimit(age: number | undefined, taxYear: number = 2025): number {
+  const LTC_PREMIUM_LIMITS_2025 = getLtcPremiumLimits(taxYear);
   if (age === undefined || age === null) return 0;
   if (age <= 40) return LTC_PREMIUM_LIMITS_2025.AGE_40_OR_UNDER;
   if (age <= 50) return LTC_PREMIUM_LIMITS_2025.AGE_41_TO_50;
@@ -58,6 +59,7 @@ export function calculateForm7206(
   seRetirementContributions: number,
   ptcAdjustmentAmount: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): Form7206Result {
   const zero: Form7206Result = {
     medicalDentalVisionPremiums: 0,
@@ -86,8 +88,8 @@ export function calculateForm7206(
   const medDentalVision = Math.max(0, input.medicalDentalVisionPremiums || 0);
 
   // LTC: cap per person by age, then sum
-  const taxpayerLTCLimit = getLTCPremiumLimit(input.taxpayerAge);
-  const spouseLTCLimit = getLTCPremiumLimit(input.spouseAge);
+  const taxpayerLTCLimit = getLTCPremiumLimit(input.taxpayerAge, taxYear);
+  const spouseLTCLimit = getLTCPremiumLimit(input.spouseAge, taxYear);
 
   let cappedLTC = 0;
   if (input.longTermCarePremiums && input.longTermCarePremiums > 0) {

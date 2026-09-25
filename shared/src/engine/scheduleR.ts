@@ -1,5 +1,5 @@
 import { FilingStatus, ScheduleRInfo, ScheduleRResult } from '../types/index.js';
-import { SCHEDULE_R } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -49,7 +49,9 @@ export function calculateScheduleR(
   info: ScheduleRInfo,
   agi: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): ScheduleRResult {
+  const SCHEDULE_R = getTaxConstants(taxYear).SCHEDULE_R;
   const zero: ScheduleRResult = {
     qualifies: false,
     initialAmount: 0,

@@ -1,5 +1,5 @@
 import { KiddieTaxInfo } from '../types/index.js';
-import { KIDDIE_TAX } from '../constants/tax2025.js';
+import { getKiddieTax } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -28,7 +28,8 @@ export interface KiddieTaxResult {
   additionalTax: number;
 }
 
-export function calculateKiddieTax(info: KiddieTaxInfo): KiddieTaxResult {
+export function calculateKiddieTax(info: KiddieTaxInfo, taxYear: number = 2025): KiddieTaxResult {
+  const KIDDIE_TAX = getKiddieTax(taxYear);
   const zero: KiddieTaxResult = {
     applies: false,
     unearnedIncomeAboveThreshold: 0,

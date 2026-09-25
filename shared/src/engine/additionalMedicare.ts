@@ -1,5 +1,5 @@
 import { FilingStatus } from '../types/index.js';
-import { SE_TAX } from '../constants/tax2025.js';
+import { getSeTax } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -28,10 +28,12 @@ export function calculateAdditionalMedicareTaxW2(
   w2MedicareWages: number,
   seNetEarnings: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): number {
+  const SE_TAX = getSeTax(taxYear);
   if (w2MedicareWages <= 0) return 0;
 
-  const threshold = getThreshold(filingStatus);
+  const threshold = getThreshold(filingStatus, taxYear);
 
   // Combined wages + SE for threshold purposes
   const combinedEarnings = w2MedicareWages + Math.max(0, seNetEarnings);
@@ -50,7 +52,8 @@ export function calculateAdditionalMedicareTaxW2(
   return w2AdditionalMedicare;
 }
 
-function getThreshold(filingStatus: FilingStatus): number {
+function getThreshold(filingStatus: FilingStatus, taxYear: number = 2025): number {
+  const SE_TAX = getSeTax(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
       return SE_TAX.ADDITIONAL_MEDICARE_THRESHOLD_MFJ;

@@ -1,5 +1,5 @@
 import { FilingStatus, ItemizedDeductions, ScheduleAResult, Form8283Result } from '../types/index.js';
-import { SCHEDULE_A, CHARITABLE_AGI_LIMITS } from '../constants/tax2025.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { calculateForm8283 } from './form8283.js';
 import { round2 } from './utils.js';
 
@@ -29,7 +29,11 @@ export function calculateScheduleA(
   deductions: ItemizedDeductions,
   agi: number,
   filingStatus: FilingStatus,
+  taxYear: number = 2025,
 ): ScheduleAResult {
+  const taxConstants = getTaxConstants(taxYear);
+  const SCHEDULE_A = taxConstants.SCHEDULE_A;
+  const CHARITABLE_AGI_LIMITS = taxConstants.CHARITABLE_AGI_LIMITS;
   // Medical: only amount exceeding 7.5% of AGI
   const medicalFloor = round2(agi * SCHEDULE_A.MEDICAL_AGI_THRESHOLD);
   const medicalDeduction = round2(Math.max(0, deductions.medicalExpenses - medicalFloor));

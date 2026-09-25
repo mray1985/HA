@@ -1,5 +1,5 @@
 import { FilingStatus, EstimatedTaxPenaltyResult, AnnualizedIncomeInfo, QuarterlyPenaltyDetail } from '../types/index.js';
-import { ESTIMATED_TAX_PENALTY } from '../constants/tax2025.js';
+import { getEstimatedTaxPenalty } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -38,8 +38,9 @@ export function calculateEstimatedTaxPenalty(
   agi: number,
   filingStatus: FilingStatus,
   annualizedIncome?: AnnualizedIncomeInfo,
+  taxYear: number = 2025,
 ): EstimatedTaxPenaltyResult {
-  const c = ESTIMATED_TAX_PENALTY;
+  const c = getEstimatedTaxPenalty(taxYear);
 
   const zero: EstimatedTaxPenaltyResult = {
     requiredAnnualPayment: 0,
@@ -85,7 +86,7 @@ export function calculateEstimatedTaxPenalty(
   const quarterlyPayment = round2(totalPayments / 4);
   const quarterlyRequired = round2(requiredAnnualPayment / 4);
 
-  const regularResult = calculateDayCountPenalty(quarterlyRequired, quarterlyPayment);
+  const regularResult = calculateDayCountPenalty(quarterlyRequired, quarterlyPayment, taxYear);
   const regularPenalty = regularResult.totalPenalty;
 
   // ─── Annualized Income Installment Method (Schedule AI) ──
@@ -98,6 +99,7 @@ export function calculateEstimatedTaxPenalty(
       currentYearTax,
       requiredAnnualPayment,
       totalPayments,
+      taxYear,
     );
 
     if (annualizedPenalty < regularPenalty) {
@@ -144,8 +146,9 @@ export function calculateEstimatedTaxPenalty(
 function calculateDayCountPenalty(
   quarterlyRequired: number,
   quarterlyPayment: number,
+  taxYear: number,
 ): { totalPenalty: number; quarterlyDetail: QuarterlyPenaltyDetail[] } {
-  const c = ESTIMATED_TAX_PENALTY;
+  const c = getEstimatedTaxPenalty(taxYear);
   const daysMatrix = c.DAYS_MATRIX;
   const periodRates = c.PERIOD_RATES;
 
@@ -208,8 +211,9 @@ function calculateAnnualizedPenalty(
   currentYearTax: number,
   requiredAnnualPayment: number,
   totalPayments: number,
+  taxYear: number,
 ): number {
-  const c = ESTIMATED_TAX_PENALTY;
+  const c = getEstimatedTaxPenalty(taxYear);
   const factors = c.ANNUALIZATION_FACTORS;
   const installPcts = c.QUARTERLY_INSTALLMENT_PERCENTAGES;
   const daysMatrix = c.DAYS_MATRIX;

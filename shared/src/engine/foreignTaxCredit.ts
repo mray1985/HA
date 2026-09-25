@@ -1,5 +1,5 @@
 import { FilingStatus, ForeignTaxCreditResult, ForeignTaxCreditCategory, ForeignTaxCreditCategoryResult } from '../types/index.js';
-import { FOREIGN_TAX_CREDIT } from '../constants/tax2025.js';
+import { getForeignTaxCredit } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -30,6 +30,7 @@ export function calculateForeignTaxCredit(
   usTaxLiability: number,
   filingStatus: FilingStatus,
   categories?: ForeignTaxCreditCategory[],
+  taxYear: number = 2025,
 ): ForeignTaxCreditResult {
   const zero: ForeignTaxCreditResult = { foreignTaxPaid: 0, creditAllowed: 0 };
 
@@ -46,9 +47,10 @@ export function calculateForeignTaxCredit(
   // Simplified election: if foreign tax ≤ threshold, full credit (no Form 1116 required)
   const isMFJ = filingStatus === FilingStatus.MarriedFilingJointly ||
     filingStatus === FilingStatus.QualifyingSurvivingSpouse;
+  const ftc = getForeignTaxCredit(taxYear);
   const simplifiedLimit = isMFJ
-    ? FOREIGN_TAX_CREDIT.SIMPLIFIED_ELECTION_LIMIT_MFJ
-    : FOREIGN_TAX_CREDIT.SIMPLIFIED_ELECTION_LIMIT;
+    ? ftc.SIMPLIFIED_ELECTION_LIMIT_MFJ
+    : ftc.SIMPLIFIED_ELECTION_LIMIT;
 
   if (foreignTaxPaid <= simplifiedLimit && foreignSourceIncome >= foreignTaxPaid) {
     // Simplified election — credit = full foreign tax paid, limited to tax liability

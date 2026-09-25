@@ -1,7 +1,7 @@
 import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb, RGB } from 'pdf-lib';
 import {
   TaxReturn, CalculationResult, FilingStatus,
-  STANDARD_DEDUCTION_2025, getDisplaySSN,
+  getDisplaySSN,
 } from '@telostax/engine';
 
 // ─── Colors ─────────────────────────────────────────

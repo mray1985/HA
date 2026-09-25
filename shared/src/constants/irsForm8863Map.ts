@@ -36,7 +36,7 @@
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
 import type { TaxReturn, CalculationResult, EducationCreditInfo } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
-import { EDUCATION_CREDITS } from './tax2025.js';
+import { getEducationCredits } from './taxConstants.js';
 import { parseDateString } from '../engine/utils.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
@@ -72,8 +72,8 @@ function isMFJOrQSS(tr: TaxReturn): boolean {
 }
 
 /** Compute tentative AOTC per student (pre-phase-out, Form 8863 Part III Lines 27-30). */
-function tentativeAOTC(qualifiedExpenses: number): number {
-  const ec = EDUCATION_CREDITS;
+function tentativeAOTC(qualifiedExpenses: number, taxYear: number): number {
+  const ec = getEducationCredits(taxYear);
   const adjExpenses = Math.min(qualifiedExpenses, 4000); // Line 27 cap
   let credit = Math.min(adjExpenses, ec.AOTC_FIRST_TIER); // first $2,000 at 100%
   credit += Math.min(Math.max(0, adjExpenses - ec.AOTC_FIRST_TIER), ec.AOTC_SECOND_TIER) * 0.25;
@@ -81,12 +81,12 @@ function tentativeAOTC(qualifiedExpenses: number): number {
 }
 
 /** Sum tentative AOTC across all AOTC students (Part I, Line 1). */
-function totalTentativeAOTC(credits: EducationCreditInfo[]): number {
+function totalTentativeAOTC(credits: EducationCreditInfo[], taxYear: number): number {
   let total = 0;
   for (const c of credits) {
     if (c.type !== 'american_opportunity') continue;
     const qe = Math.max(0, c.tuitionPaid - (c.scholarships || 0));
-    total += tentativeAOTC(qe);
+    total += tentativeAOTC(qe, taxYear);
   }
   return total;
 }
@@ -138,10 +138,11 @@ function isAotcRefundableExcluded(tr: TaxReturn): boolean {
 
 // ─── Page 1: Parts I & II ───────────────────────────────────────
 
-function buildPage1Fields(tr: TaxReturn, calc: CalculationResult): IRSFieldMapping[] {
+function buildPage1Fields(tr: TaxReturn, calc: CalculationResult, taxYear: number): IRSFieldMapping[] {
   const credits = tr.educationCredits || [];
   const mfj = isMFJOrQSS(tr);
   const agi = calc.form1040.agi;
+  const EDUCATION_CREDITS = getEducationCredits(taxYear);
 
   // AOTC phase-out values
   const aotcUpperLimit = mfj
@@ -160,7 +161,7 @@ function buildPage1Fields(tr: TaxReturn, calc: CalculationResult): IRSFieldMappi
     : EDUCATION_CREDITS.LLC_PHASE_OUT_RANGE_SINGLE;
 
   // Part I calculations
-  const line1 = totalTentativeAOTC(credits);
+  const line1 = totalTentativeAOTC(credits, taxYear);
   const line2 = aotcUpperLimit;
   const line3 = agi;
   const line4 = Math.max(0, line2 - line3);
@@ -536,13 +537,14 @@ export const FORM_8863_TEMPLATE: IRSFormTemplate = {
     index: number,
     tr: TaxReturn,
     calc: CalculationResult,
+    taxYear?: number,
   ): IRSFieldMapping[] => {
     const fields: IRSFieldMapping[] = [];
 
     // Instance 0: Parts I & II (page 1) + Part III student 0 (page 2)
     // Instance 1+: Part III only (page 2) for subsequent students
     if (index === 0) {
-      fields.push(...buildPage1Fields(tr, calc));
+      fields.push(...buildPage1Fields(tr, calc, taxYear ?? 2025));
     }
 
     fields.push(...buildPage2Fields(index, tr, calc));

@@ -1,5 +1,5 @@
 import { FilingStatus, SocialSecurityResult } from '../types/index.js';
-import { SOCIAL_SECURITY } from '../constants/tax2025.js';
+import { getSocialSecurity } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -37,16 +37,19 @@ export function calculateTaxableSocialSecurity(
   filingStatus: FilingStatus,
   taxExemptInterest: number = 0,
   livedApartFromSpouse: boolean = false,
+  taxYear: number = 2025,
 ): SocialSecurityResult {
   if (totalBenefits <= 0) {
     return { totalBenefits: 0, taxableBenefits: 0, taxablePercentage: 0, provisionalIncome: 0 };
   }
 
+  const SOCIAL_SECURITY = getSocialSecurity(taxYear);
+
   // Provisional income = other income + tax-exempt interest + 50% of SS benefits
   const halfBenefits = totalBenefits * 0.5;
   const provisionalIncome = round2(otherIncome + taxExemptInterest + halfBenefits);
 
-  const { baseAmount, adjustedBase } = getThresholds(filingStatus, livedApartFromSpouse);
+  const { baseAmount, adjustedBase } = getThresholds(filingStatus, livedApartFromSpouse, taxYear);
 
   let taxableBenefits: number;
   let taxablePercentage: number;
@@ -87,7 +90,8 @@ export function calculateTaxableSocialSecurity(
   };
 }
 
-function getThresholds(filingStatus: FilingStatus, livedApartFromSpouse: boolean = false): { baseAmount: number; adjustedBase: number } {
+function getThresholds(filingStatus: FilingStatus, livedApartFromSpouse: boolean = false, taxYear: number = 2025): { baseAmount: number; adjustedBase: number } {
+  const SOCIAL_SECURITY = getSocialSecurity(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingSeparately:
       // IRC §86(c)(1)(C)(ii): MFS filers who lived apart from their spouse for the entire

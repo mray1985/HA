@@ -30,7 +30,7 @@ import {
   Form5329Result,
   Income1099R,
 } from '../types/index.js';
-import { EXCESS_CONTRIBUTION, EARLY_DISTRIBUTION, EMERGENCY_DISTRIBUTION } from '../constants/tax2025.js';
+import { getExcessContribution, getEarlyDistribution, getEmergencyDistribution } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -44,7 +44,12 @@ export function calculateForm5329(
   excessContributions: ExcessContributionInfo,
   income1099R?: Income1099R[],
   emergencyDistributions?: EmergencyDistributionInfo,
+  taxYear: number = 2025,
 ): Form5329Result {
+  const EXCESS_CONTRIBUTION = getExcessContribution(taxYear);
+  const EARLY_DISTRIBUTION = getEarlyDistribution(taxYear);
+  const EMERGENCY_DISTRIBUTION = getEmergencyDistribution(taxYear);
+
   // Part V: Excess contribution penalties (6%)
   const iraExcess = Math.max(0, excessContributions.iraExcessContribution || 0);
   const hsaExcess = Math.max(0, excessContributions.hsaExcessContribution || 0);
