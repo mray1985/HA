@@ -303,17 +303,18 @@ export const DEPRECIATION_TAX_YEAR = 2026;
 // Schedule A / Itemized Deductions
 // Authority: IRC §164(b)(6) — SALT cap; IRC §163(h)(3) — Mortgage interest
 //           IRC §170 — Charitable contributions; IRC §213(a) — Medical expenses
-//           TCJA §11042 / OBBBA — SALT limitation ($40k for 2025-2029); TCJA §11043 — Mortgage limit
+//           TCJA §11042 — SALT limitation reverts to $10k/$5k for 2026+ (OBBBA expires)
+//           TCJA §11043 — Mortgage limit
 // ──────────────────────────────────────────────────
 
 export const SCHEDULE_A = {
-  SALT_CAP: 40000,
-  SALT_CAP_MFS: 20000,
-  SALT_PHASE_DOWN_THRESHOLD: 500000,
-  SALT_PHASE_DOWN_THRESHOLD_MFS: 250000,
-  SALT_PHASE_DOWN_RATE: 0.30,
-  SALT_CAP_FLOOR: 10000,
-  SALT_CAP_FLOOR_MFS: 5000,
+  SALT_CAP: 10000,                // TCJA §11042 — $10,000 SALT cap (OBBBA expires)
+  SALT_CAP_MFS: 5000,             // TCJA §11042 — $5,000 if MFS (OBBBA expires)
+  SALT_PHASE_DOWN_THRESHOLD: Infinity,  // N/A for 2026 — OBBBA phase-down expired
+  SALT_PHASE_DOWN_THRESHOLD_MFS: Infinity,
+  SALT_PHASE_DOWN_RATE: 0,        // N/A for 2026
+  SALT_CAP_FLOOR: 10000,          // TCJA — $10,000 floor (OBBBA expires)
+  SALT_CAP_FLOOR_MFS: 5000,       // TCJA — $5,000 floor if MFS (OBBBA expires)
   MEDICAL_AGI_THRESHOLD: 0.075,
   MORTGAGE_LIMIT: 750000,
   MORTGAGE_LIMIT_MFS: 375000,
@@ -846,33 +847,44 @@ export const DEPENDENT_CARE_FSA = {
 // ──────────────────────────────────────────────────
 // Premium Tax Credit (Form 8962) — 2026
 // Authority: IRC §36B — Refundable credit for coverage under qualified health plan
-//           ACA §1401 — Original PTC; IRA §12001 — Extended enhanced subsidies
+//           ACA §1401 — Original PTC (ARP/IRA enhanced subsidies expire after 2025)
 // Constants: HHS 2025 Federal Poverty Guidelines (used for TY2026)
 // ──────────────────────────────────────────────────
 
 export const PREMIUM_TAX_CREDIT = {
+  // Federal Poverty Level — HHS 2025 guidelines (used for TY2026)
+  // 48 contiguous states + DC
   FPL_BASE_48: 15650,
   FPL_INCREMENT_48: 5570,
+  // Alaska
   FPL_BASE_AK: 19550,
   FPL_INCREMENT_AK: 6950,
+  // Hawaii
   FPL_BASE_HI: 17990,
   FPL_INCREMENT_HI: 6420,
 
+  // Applicable Figure Table — Original ACA rates (IRC §36B(b)(3)(A))
+  // ARP/IRA enhanced subsidies expired after 2025
+  // [fplFloor, fplCeiling, initialPct, finalPct] — percentages of income
   APPLICABLE_FIGURE_TABLE: [
-    { floor: 0, ceiling: 150, initialPct: 0, finalPct: 0 },
-    { floor: 150, ceiling: 200, initialPct: 0, finalPct: 0.02 },
-    { floor: 200, ceiling: 250, initialPct: 0.02, finalPct: 0.04 },
-    { floor: 250, ceiling: 300, initialPct: 0.04, finalPct: 0.06 },
-    { floor: 300, ceiling: 400, initialPct: 0.06, finalPct: 0.085 },
-    { floor: 400, ceiling: Infinity, initialPct: 0.085, finalPct: 0.085 },
+    { floor: 0, ceiling: 133, initialPct: 0.02, finalPct: 0.02 },        // Medicaid expansion population
+    { floor: 133, ceiling: 150, initialPct: 0.03, finalPct: 0.04 },      // 3.0-4.0%
+    { floor: 150, ceiling: 200, initialPct: 0.04, finalPct: 0.063 },     // 4.0-6.3%
+    { floor: 200, ceiling: 250, initialPct: 0.063, finalPct: 0.0805 },   // 6.3-8.05%
+    { floor: 250, ceiling: 300, initialPct: 0.0805, finalPct: 0.095 },   // 8.05-9.5%
+    { floor: 300, ceiling: 400, initialPct: 0.095, finalPct: 0.095 },    // 9.5%
+    { floor: 400, ceiling: Infinity, initialPct: 0, finalPct: 0 },       // No subsidy above 400% FPL
   ] as const,
 
   MIN_FPL_PERCENTAGE: 100,
 
+  // Excess APTC Repayment Caps — Rev. Proc. 2025-32; IRC §36B(f)(2)(B)
+  // 2026 values (inflation-adjusted from 2025)
   REPAYMENT_CAPS: [
     { floor: 0, ceiling: 200, singleCap: 375, otherCap: 750 },
     { floor: 200, ceiling: 300, singleCap: 975, otherCap: 1950 },
     { floor: 300, ceiling: 400, singleCap: 1625, otherCap: 3250 },
+    // 400%+ FPL: no cap (full repayment) — IRC §36B(f)(2)(A)
   ] as const,
 };
 

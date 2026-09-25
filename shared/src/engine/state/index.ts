@@ -85,10 +85,34 @@ function calculateOneState(
     };
   }
 
-  const calculator = getStateCalculator(config.stateCode, taxReturn.taxYear || 2025);
+  const taxYear = taxReturn.taxYear || 2025;
+  const calculator = getStateCalculator(config.stateCode, taxYear);
   if (!calculator) {
-    // Unsupported state — return null
-    return null;
+    // State/year combination not supported — return result with unavailable flag
+    return {
+      stateCode: config.stateCode,
+      stateName: getStateName(config.stateCode),
+      residencyType: config.residencyType,
+      federalAGI: federalResult.form1040.agi,
+      stateAdditions: 0,
+      stateSubtractions: 0,
+      stateAGI: 0,
+      stateDeduction: 0,
+      stateTaxableIncome: 0,
+      stateExemptions: 0,
+      stateIncomeTax: 0,
+      stateCredits: 0,
+      stateTaxAfterCredits: 0,
+      localTax: 0,
+      totalStateTax: 0,
+      stateWithholding: getStateWithholding(taxReturn, config.stateCode),
+      stateEstimatedPayments: 0,
+      stateRefundOrOwed: getStateWithholding(taxReturn, config.stateCode),
+      effectiveStateRate: 0,
+      bracketDetails: [],
+      additionalLines: { unavailable: 1, taxYear },
+      traces: [],
+    };
   }
 
   // ── Income allocation for part-year / nonresident filers ──
