@@ -22,6 +22,7 @@ import { calculateConnecticut } from './ct.js';
 import { calculateMaryland } from './md.js';
 import { calculateAlabama } from './al.js';
 import { calculateHawaii } from './hi.js';
+import { createNHCalculator } from './nh.js';
 
 // Factories
 import { createFlatTaxCalculator } from './flatTax.js';
@@ -49,7 +50,6 @@ export const NO_INCOME_TAX_STATES = [
   'AK', // Alaska
   'FL', // Florida
   'NV', // Nevada
-  'NH', // New Hampshire (Interest & Dividends tax fully repealed effective 1/1/2025)
   'SD', // South Dakota
   'TN', // Tennessee (Hall tax fully repealed 2021)
   'TX', // Texas
@@ -80,62 +80,74 @@ export const PROGRESSIVE_TAX_STATES = [
   'ND', 'NE', 'NM', 'OK', 'OR', 'RI', 'SC', 'VA', 'VT', 'WV',
 ];
 
-/** Registry of implemented state calculators. */
-const CALCULATORS: Record<string, StateCalculator> = {
-  // Custom calculators (complex state-specific rules)
-  CA: { calculate: calculateCalifornia },
-  NY: { calculate: calculateNewYork },
-  NJ: { calculate: calculateNewJersey },
-  OH: { calculate: calculateOhio },
-  WI: { calculate: calculateWisconsin },
-  CT: { calculate: calculateConnecticut },
-  MD: { calculate: calculateMaryland },
-  AL: { calculate: calculateAlabama },
-  HI: { calculate: calculateHawaii },
+/** Registry of implemented state calculators — factories that create calculators per tax year. */
+const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator> = {
+  // Custom calculators (complex state-specific rules) - these need to be wrapped to accept taxYear
+  CA: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateCalifornia(taxReturn, federalResult, config) }),
+  NY: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateNewYork(taxReturn, federalResult, config) }),
+  NJ: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateNewJersey(taxReturn, federalResult, config) }),
+  OH: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateOhio(taxReturn, federalResult, config) }),
+  WI: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateWisconsin(taxReturn, federalResult, config) }),
+  CT: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateConnecticut(taxReturn, federalResult, config) }),
+  MD: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateMaryland(taxReturn, federalResult, config) }),
+  AL: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateAlabama(taxReturn, federalResult, config) }),
+  HI: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateHawaii(taxReturn, federalResult, config) }),
+  NH: (taxYear: number) => createNHCalculator(),
 
   // Flat-tax states
-  PA: createFlatTaxCalculator('PA'),
-  IL: createFlatTaxCalculator('IL'),
-  MA: createFlatTaxCalculator('MA'),
-  NC: createFlatTaxCalculator('NC'),
-  MI: createFlatTaxCalculator('MI'),
-  IN: createFlatTaxCalculator('IN'),
-  CO: createFlatTaxCalculator('CO'),
-  KY: createFlatTaxCalculator('KY'),
-  UT: createFlatTaxCalculator('UT'),
-  GA: createFlatTaxCalculator('GA'),
-  AZ: createFlatTaxCalculator('AZ'),
-  LA: createFlatTaxCalculator('LA'),
-  IA: createFlatTaxCalculator('IA'),
+  PA: (taxYear: number) => createFlatTaxCalculator('PA', taxYear),
+  IL: (taxYear: number) => createFlatTaxCalculator('IL', taxYear),
+  MA: (taxYear: number) => createFlatTaxCalculator('MA', taxYear),
+  NC: (taxYear: number) => createFlatTaxCalculator('NC', taxYear),
+  MI: (taxYear: number) => createFlatTaxCalculator('MI', taxYear),
+  IN: (taxYear: number) => createFlatTaxCalculator('IN', taxYear),
+  CO: (taxYear: number) => createFlatTaxCalculator('CO', taxYear),
+  KY: (taxYear: number) => createFlatTaxCalculator('KY', taxYear),
+  UT: (taxYear: number) => createFlatTaxCalculator('UT', taxYear),
+  GA: (taxYear: number) => createFlatTaxCalculator('GA', taxYear),
+  AZ: (taxYear: number) => createFlatTaxCalculator('AZ', taxYear),
+  LA: (taxYear: number) => createFlatTaxCalculator('LA', taxYear),
+  IA: (taxYear: number) => createFlatTaxCalculator('IA', taxYear),
 
   // Progressive-tax states
-  VA: createProgressiveTaxCalculator(VA_CONFIG),
-  MN: createProgressiveTaxCalculator(MN_CONFIG),
-  OR: createProgressiveTaxCalculator(OR_CONFIG),
-  MO: createProgressiveTaxCalculator(MO_CONFIG),
-  SC: createProgressiveTaxCalculator(SC_CONFIG),
-  MS: createProgressiveTaxCalculator(MS_CONFIG),
-  KS: createProgressiveTaxCalculator(KS_CONFIG),
-  OK: createProgressiveTaxCalculator(OK_CONFIG),
-  AR: createProgressiveTaxCalculator(AR_CONFIG),
-  ID: createProgressiveTaxCalculator(ID_CONFIG),
-  ND: createProgressiveTaxCalculator(ND_CONFIG),
-  RI: createProgressiveTaxCalculator(RI_CONFIG),
-  WV: createProgressiveTaxCalculator(WV_CONFIG),
-  ME: createProgressiveTaxCalculator(ME_CONFIG),
-  NM: createProgressiveTaxCalculator(NM_CONFIG),
-  MT: createProgressiveTaxCalculator(MT_CONFIG),
-  NE: createProgressiveTaxCalculator(NE_CONFIG),
-  VT: createProgressiveTaxCalculator(VT_CONFIG),
-  DE: createProgressiveTaxCalculator(DE_CONFIG),
-  DC: createProgressiveTaxCalculator(DC_CONFIG),
+  VA: (taxYear: number) => createProgressiveTaxCalculator(VA_CONFIG, taxYear),
+  MN: (taxYear: number) => createProgressiveTaxCalculator(MN_CONFIG, taxYear),
+  OR: (taxYear: number) => createProgressiveTaxCalculator(OR_CONFIG, taxYear),
+  MO: (taxYear: number) => createProgressiveTaxCalculator(MO_CONFIG, taxYear),
+  SC: (taxYear: number) => createProgressiveTaxCalculator(SC_CONFIG, taxYear),
+  MS: (taxYear: number) => createProgressiveTaxCalculator(MS_CONFIG, taxYear),
+  KS: (taxYear: number) => createProgressiveTaxCalculator(KS_CONFIG, taxYear),
+  OK: (taxYear: number) => createProgressiveTaxCalculator(OK_CONFIG, taxYear),
+  AR: (taxYear: number) => createProgressiveTaxCalculator(AR_CONFIG, taxYear),
+  ID: (taxYear: number) => createProgressiveTaxCalculator(ID_CONFIG, taxYear),
+  ND: (taxYear: number) => createProgressiveTaxCalculator(ND_CONFIG, taxYear),
+  RI: (taxYear: number) => createProgressiveTaxCalculator(RI_CONFIG, taxYear),
+  WV: (taxYear: number) => createProgressiveTaxCalculator(WV_CONFIG, taxYear),
+  ME: (taxYear: number) => createProgressiveTaxCalculator(ME_CONFIG, taxYear),
+  NM: (taxYear: number) => createProgressiveTaxCalculator(NM_CONFIG, taxYear),
+  MT: (taxYear: number) => createProgressiveTaxCalculator(MT_CONFIG, taxYear),
+  NE: (taxYear: number) => createProgressiveTaxCalculator(NE_CONFIG, taxYear),
+  VT: (taxYear: number) => createProgressiveTaxCalculator(VT_CONFIG, taxYear),
+  DE: (taxYear: number) => createProgressiveTaxCalculator(DE_CONFIG, taxYear),
+  DC: (taxYear: number) => createProgressiveTaxCalculator(DC_CONFIG, taxYear),
 };
 
+/** Cache of calculators by state code and tax year. */
+const CALCULATOR_CACHE = new Map<string, StateCalculator>();
+
 /**
- * Get the calculator for a state. Returns null if the state isn't implemented yet.
+ * Get the calculator for a state and tax year. Returns null if the state isn't implemented yet.
  */
-export function getStateCalculator(stateCode: string): StateCalculator | null {
-  return CALCULATORS[stateCode.toUpperCase()] || null;
+export function getStateCalculator(stateCode: string, taxYear: number = 2025): StateCalculator | null {
+  const key = `${stateCode.toUpperCase()}:${taxYear}`;
+  if (CALCULATOR_CACHE.has(key)) {
+    return CALCULATOR_CACHE.get(key)!;
+  }
+  const factory = CALCULATOR_FACTORIES[stateCode.toUpperCase()];
+  if (!factory) return null;
+  const calc = factory(taxYear);
+  CALCULATOR_CACHE.set(key, calc);
+  return calc;
 }
 
 /**
@@ -143,12 +155,12 @@ export function getStateCalculator(stateCode: string): StateCalculator | null {
  */
 export function isStateSupported(stateCode: string): boolean {
   const code = stateCode.toUpperCase();
-  return NO_INCOME_TAX_STATES.includes(code) || code in CALCULATORS;
+  return NO_INCOME_TAX_STATES.includes(code) || code in CALCULATOR_FACTORIES;
 }
 
 /**
  * Get all supported state codes.
  */
 export function getSupportedStates(): string[] {
-  return [...NO_INCOME_TAX_STATES, ...Object.keys(CALCULATORS)];
+  return [...NO_INCOME_TAX_STATES, ...Object.keys(CALCULATOR_FACTORIES)];
 }

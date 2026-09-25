@@ -85,7 +85,7 @@ function calculateOneState(
     };
   }
 
-  const calculator = getStateCalculator(config.stateCode);
+  const calculator = getStateCalculator(config.stateCode, taxReturn.taxYear || 2025);
   if (!calculator) {
     // Unsupported state — return null
     return null;

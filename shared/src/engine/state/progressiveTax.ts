@@ -131,7 +131,7 @@ export function countExemptions(tr: TaxReturn): number {
  * @returns       A StateCalculator whose `.calculate()` method performs the
  *                full progressive-tax computation.
  */
-export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig): StateCalculator {
+export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig, taxYear: number = 2025): StateCalculator {
   return {
     calculate(
       taxReturn: TaxReturn,
