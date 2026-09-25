@@ -24,7 +24,7 @@
     "@syncfusion/ej2-react-pdfviewer": "^32.2.8",
     "@syncfusion/ej2-react-treemap": "^32.2.3",
     "@tanstack/react-query": "^5.64.0",
-    "@telostax/engine": "*",
+    "@hatax/engine": "*",
     "axios": "^1.7.0",
     "date-fns": "^4.4.0",
     "heic2any": "^0.0.4",

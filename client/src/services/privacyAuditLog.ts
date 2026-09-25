@@ -20,7 +20,7 @@ import {
   getActiveKey,
 } from './crypto';
 
-const DB_NAME = 'telostax-privacy-log';
+const DB_NAME = 'hatax-privacy-log';
 const STORE_NAME = 'entries';
 const DB_VERSION = 1;
 const MAX_ENTRIES = 200;

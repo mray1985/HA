@@ -9,10 +9,10 @@ import { Baby, Trash2, Pencil, ExternalLink, AlertTriangle } from 'lucide-react'
 import AddButton from '../common/AddButton';
 import PillToggle from '../common/PillToggle';
 import { useState } from 'react';
-import type { Dependent, KiddieTaxInfo } from '@telostax/engine';
+import type { Dependent, KiddieTaxInfo } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validateDateOfBirth } from '../../utils/dateValidation';
-import { maskSSN } from '@telostax/engine';
+import { maskSSN } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import SSNInput from '../common/SSNInput';
 import { useItemWarnings } from '../../hooks/useWarnings';

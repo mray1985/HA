@@ -21,7 +21,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
-import type { AIMode } from '@telostax/engine';
+import type { AIMode } from '@hatax/engine';
 import { getTipLinks } from '../../services/stripeService';
 
 interface Props {
@@ -120,7 +120,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
 
         {/* ─── Tip Jar ──────────────────────────── */}
         <div className="rounded-lg border border-telos-orange-400 bg-telos-orange-500/5 p-3">
-          <p className="text-xs text-white font-medium mb-1">Support TelosTax</p>
+          <p className="text-xs text-white font-medium mb-1">Support HATax</p>
           <p className="text-[11px] text-slate-400 mb-2.5">
             Love the app? Leave a tip.
           </p>

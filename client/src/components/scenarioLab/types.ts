@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 
 // ---------------------------------------------------------------------------
 // Scenario Variable Definition

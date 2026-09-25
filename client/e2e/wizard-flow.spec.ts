@@ -46,7 +46,7 @@ test.describe('Wizard Navigation', () => {
   test('renders the wizard welcome page', async ({ page }) => {
     // Should see the welcome message
     await expect(page.getByText('Welcome to')).toBeVisible();
-    await expect(page.getByText('TelosTax').first()).toBeVisible();
+    await expect(page.getByText('HATax').first()).toBeVisible();
     // Should see "Let's Go" button
     await expect(page.getByRole('button', { name: /Let.*Go/i })).toBeVisible();
   });
@@ -152,7 +152,7 @@ test.describe('Filing Status Selection', () => {
 
     // Check localStorage
     const saved = await page.evaluate(() => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('telostax:return:'));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
       if (keys.length === 0) return null;
       return JSON.parse(localStorage.getItem(keys[0])!);
     });
@@ -168,7 +168,7 @@ test.describe('Auto-Save', () => {
     await page.waitForTimeout(1000);
 
     const hasData = await page.evaluate(() => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('telostax:return:'));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
       return keys.length > 0;
     });
 
@@ -180,7 +180,7 @@ test.describe('Auto-Save', () => {
     await page.waitForTimeout(1000);
 
     const returnIds = await page.evaluate(() => {
-      const raw = localStorage.getItem('telostax:returns');
+      const raw = localStorage.getItem('hatax:returns');
       return raw ? JSON.parse(raw) : [];
     });
 
@@ -202,7 +202,7 @@ test.describe('Auto-Save', () => {
 
     // Verify localStorage preserved the filing status
     const filingStatus = await page.evaluate(() => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('telostax:return:'));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
       if (keys.length === 0) return null;
       return JSON.parse(localStorage.getItem(keys[0])!).filingStatus;
     });

@@ -10,7 +10,7 @@
  * across all models and providers.
  */
 
-import type { ChatResponse } from '@telostax/engine';
+import type { ChatResponse } from '@hatax/engine';
 import { useTaxReturnStore } from '../store/taxReturnStore';
 
 // ─── Item Type Detection ─────────────────────────

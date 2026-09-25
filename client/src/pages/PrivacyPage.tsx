@@ -45,7 +45,7 @@ export default function PrivacyPage() {
                 <p className="text-xs text-slate-300 leading-relaxed">
                   This tool is for informational purposes only and does not constitute tax advice.
                   Do not use this app to file your taxes without having your return carefully reviewed
-                  by a qualified tax professional. TelosTax needs vetting by tax experts and human
+                  by a qualified tax professional. HATax needs vetting by tax experts and human
                   coders, which is why it&apos;s available as a free, open-source project. The tax engine
                   may contain errors. If you&apos;re a tax professional or developer who&apos;d like to help
                   stress-test the app, please get in touch.
@@ -58,12 +58,12 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What Tax Data We Collect</h2>
             <p className="font-semibold text-telos-orange-300">None.</p>
             <p>
-              TelosTax runs entirely in your web browser. When you enter tax information — names,
+              HATax runs entirely in your web browser. When you enter tax information — names,
               income, deductions, Social Security Numbers — that data is stored in your browser's <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">localStorage</code> on
               your device. It is never transmitted over the internet.
             </p>
             <p>
-              There is no TelosTax server that receives, processes, or stores your information. The
+              There is no HATax server that receives, processes, or stores your information. The
               application is static HTML, CSS, and JavaScript files served to your browser. After those
               files load, all operations happen locally.
             </p>
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
                     <td className="py-2 text-telos-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">PDF, CSV, JSON, and .telostax exports</td>
+                    <td className="py-2 pr-4">PDF, CSV, JSON, and .hatax exports</td>
                     <td className="py-2 pr-4">Generated in browser, saved to your device</td>
                     <td className="py-2 text-telos-orange-300">Never</td>
                   </tr>
@@ -124,7 +124,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">2a. Passphrase Protection</h2>
             <p>
-              When you set a passphrase, TelosTax encrypts your saved data with AES-256-GCM — the same
+              When you set a passphrase, HATax encrypts your saved data with AES-256-GCM — the same
               standard banks and governments use. Your passphrase is never saved to disk; it is held in
               memory only while the app is unlocked.
             </p>
@@ -141,7 +141,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">2b. Document Import</h2>
             <p>
-              TelosTax can read data from PDFs, scanned documents, photos, broker CSV files, TXF files,
+              HATax can read data from PDFs, scanned documents, photos, broker CSV files, TXF files,
               FDX files, and popular tax software exports. Every one of these imports is processed
               entirely in your browser — nothing is uploaded to any server.
             </p>
@@ -158,7 +158,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">3. Cookies & Tracking</h2>
             <p>
-              TelosTax does not use cookies, analytics scripts, tracking pixels, fingerprinting, or any
+              HATax does not use cookies, analytics scripts, tracking pixels, fingerprinting, or any
               other tracking technology. We do not use Google Analytics, Facebook Pixel, Mixpanel, or
               any similar service.
             </p>
@@ -211,7 +211,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">6. Data Portability</h2>
             <p>
-              TelosTax provides one-click export in four formats: JSON, CSV, PDF, and <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">.telostax</code> (an
+              HATax provides one-click export in four formats: JSON, CSV, PDF, and <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">.hatax</code> (an
               encrypted, password-protected format for safe backup and transfer). You can export your
               complete tax return data at any time from the export page. This data belongs to you and
               can be imported into other tools or kept for your records.
@@ -222,13 +222,13 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">7. IRC Section 7216 Compliance</h2>
             <p>
               IRC Section 7216 prohibits tax return preparers from disclosing or using tax return
-              information for purposes other than preparing the return. Because TelosTax is a self-preparation
+              information for purposes other than preparing the return. Because HATax is a self-preparation
               tool (you prepare your own return), and because your data never leaves your device, the
               traditional 7216 disclosure obligations that apply to paid preparers and cloud-based tax
               software do not apply in the same way.
             </p>
             <p>
-              Nevertheless, we have designed TelosTax to exceed the privacy protections contemplated by
+              Nevertheless, we have designed HATax to exceed the privacy protections contemplated by
               Section 7216: we cannot disclose your data because we never possess it.
             </p>
           </section>
@@ -242,7 +242,7 @@ export default function PrivacyPage() {
               <li>All saved data is encrypted with AES-256-GCM when you set a passphrase</li>
               <li>The app automatically locks after 15 minutes of inactivity and clears your passphrase from memory</li>
               <li>The app makes no outside network connections with your tax data — ever</li>
-              <li>If you install TelosTax as an app (PWA), only static files are cached — never your tax data</li>
+              <li>If you install HATax as an app (PWA), only static files are cached — never your tax data</li>
             </ul>
             <p className="mt-3">
               Because your data also depends on the security of your device and browser, we recommend:
@@ -250,7 +250,7 @@ export default function PrivacyPage() {
             <ul className="list-disc list-inside space-y-1 text-slate-400">
               <li>Using a password or biometric lock on your device</li>
               <li>Keeping your browser and operating system updated</li>
-              <li>Not using TelosTax on shared or public computers</li>
+              <li>Not using HATax on shared or public computers</li>
               <li>Exporting and saving your data before clearing browser data</li>
             </ul>
           </section>
@@ -258,7 +258,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">9. Children's Privacy</h2>
             <p>
-              TelosTax is designed for adults who need to prepare tax returns. We do not knowingly collect
+              HATax is designed for adults who need to prepare tax returns. We do not knowingly collect
               information from children under 13. Since we collect no data at all, this is inherently
               satisfied.
             </p>
@@ -287,14 +287,14 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">12. Contact</h2>
             <p>
-              Questions about this privacy policy? Email us at <a href="mailto:ryan@telos.news" className="text-telos-blue-400 hover:text-telos-blue-300 underline">ryan@telos.news</a> or visit our <a href="https://github.com/telosnews/TelosTax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
+              Questions about this privacy policy? Email us at <a href="mailto:ryan@telos.news" className="text-telos-blue-400 hover:text-telos-blue-300 underline">ryan@telos.news</a> or visit our <a href="https://github.com/telosnews/HATax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">13. AI Features (BYOK Mode)</h2>
             <p>
-              TelosTax includes an optional AI assistant powered by Anthropic's Claude. It is disabled
+              HATax includes an optional AI assistant powered by Anthropic's Claude. It is disabled
               by default (Private Mode). To use it, you must explicitly switch to BYOK (Bring Your Own
               Key) mode and provide your own Anthropic API key.
             </p>

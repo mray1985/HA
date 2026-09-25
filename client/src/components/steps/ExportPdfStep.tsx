@@ -9,8 +9,8 @@ import {
   Smartphone, Calendar,
 } from 'lucide-react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { calculateForm1040, FilingStatus, assessEstimatedPaymentNeed } from '@telostax/engine';
-import type { CalculationResult } from '@telostax/engine';
+import { calculateForm1040, FilingStatus, assessEstimatedPaymentNeed } from '@hatax/engine';
+import type { CalculationResult } from '@hatax/engine';
 import { downloadPDF, downloadIRSFormsPDF, deleteReturn } from '../../api/client';
 import { generateEstimatedTaxVouchersPDF } from '../../services/irsFormFiller';
 import { exportReturnToFile } from '../../services/fileTransfer';
@@ -234,7 +234,7 @@ export default function ExportPdfStep() {
       setIrsDone(false);
       try {
         const blob = await downloadIRSFormsPDF(returnId, pw);
-        triggerDownload(blob, `telostax-filing-packet-${taxReturn?.taxYear || 2025}-${returnId}.pdf`);
+        triggerDownload(blob, `hatax-filing-packet-${taxReturn?.taxYear || 2025}-${returnId}.pdf`);
         setIrsDone(true);
         toast.success(pw ? 'Password-protected filing packet downloaded' : 'Filing packet downloaded');
       } catch (err) {
@@ -249,7 +249,7 @@ export default function ExportPdfStep() {
       setPdfDone(false);
       try {
         const blob = await downloadPDF(returnId, pw);
-        triggerDownload(blob, `telostax-return-${taxReturn?.taxYear || 2025}-${returnId}.pdf`);
+        triggerDownload(blob, `hatax-return-${taxReturn?.taxYear || 2025}-${returnId}.pdf`);
         setPdfDone(true);
         toast.success(pw ? 'Password-protected PDF downloaded' : 'PDF downloaded');
       } catch (err) {
@@ -263,11 +263,11 @@ export default function ExportPdfStep() {
       if (!taxReturn) return;
       if (pw) {
         const blob = await encryptForExport(JSON.stringify(taxReturn, null, 2), pw);
-        triggerDownload(blob, `telostax-return-${taxReturn.taxYear}-${returnId}.json.enc`);
+        triggerDownload(blob, `hatax-return-${taxReturn.taxYear}-${returnId}.json.enc`);
         toast.success('Encrypted JSON exported');
       } else {
         const blob = new Blob([JSON.stringify(taxReturn, null, 2)], { type: 'application/json' });
-        triggerDownload(blob, `telostax-return-${taxReturn.taxYear}-${returnId}.json`);
+        triggerDownload(blob, `hatax-return-${taxReturn.taxYear}-${returnId}.json`);
         toast.success('JSON exported');
       }
     } else if (type === 'csv') {
@@ -275,11 +275,11 @@ export default function ExportPdfStep() {
       const csv = taxReturnToCSV(taxReturn, calcResult ?? undefined);
       if (pw) {
         const blob = await encryptForExport(csv, pw);
-        triggerDownload(blob, `telostax-return-${taxReturn.taxYear}-${returnId}.csv.enc`);
+        triggerDownload(blob, `hatax-return-${taxReturn.taxYear}-${returnId}.csv.enc`);
         toast.success('Encrypted CSV exported');
       } else {
         const blob = new Blob([csv], { type: 'text/csv' });
-        triggerDownload(blob, `telostax-return-${taxReturn.taxYear}-${returnId}.csv`);
+        triggerDownload(blob, `hatax-return-${taxReturn.taxYear}-${returnId}.csv`);
         toast.success('CSV exported');
       }
     } else if (type === 'transfer') {
@@ -287,7 +287,7 @@ export default function ExportPdfStep() {
       const blob = await exportReturnToFile(taxReturn, pw);
       const name = taxReturn.firstName && taxReturn.lastName
         ? `${taxReturn.firstName}-${taxReturn.lastName}` : returnId;
-      triggerDownload(blob, `${name}-${taxReturn.taxYear}.telostax`);
+      triggerDownload(blob, `${name}-${taxReturn.taxYear}.hatax`);
       toast.success('Transfer file saved — import it on your other device');
     } else if (type === '1040es') {
       if (!taxReturn || !calcResult) return;
@@ -296,7 +296,7 @@ export default function ExportPdfStep() {
       try {
         const pdfBytes = await generateEstimatedTaxVouchersPDF(taxReturn, calcResult);
         const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
-        triggerDownload(blob, `telostax-1040es-vouchers-2026-${returnId}.pdf`);
+        triggerDownload(blob, `hatax-1040es-vouchers-2026-${returnId}.pdf`);
         setEsDone(true);
         toast.success('Estimated tax vouchers downloaded');
       } catch {
@@ -547,7 +547,7 @@ export default function ExportPdfStep() {
           <Smartphone className="w-5 h-5 text-telos-orange-400 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-200">Transfer to Another Device</p>
-            <p className="text-xs text-slate-400">Save an encrypted .telostax file you can import on any other device or browser.</p>
+            <p className="text-xs text-slate-400">Save an encrypted .hatax file you can import on any other device or browser.</p>
           </div>
         </button>
 
@@ -575,7 +575,7 @@ export default function ExportPdfStep() {
       {/* ── Disclaimer ─────────────────────────────────────────── */}
       <div className="card mt-6 bg-amber-500/10 border-amber-500/20">
         <p className="text-sm text-amber-300/90 leading-relaxed">
-          <strong>Important:</strong> TelosTax is for informational purposes only and does not constitute tax advice.
+          <strong>Important:</strong> HATax is for informational purposes only and does not constitute tax advice.
           Please review your return with a qualified tax professional before filing with the IRS.
           Your data is stored locally and never leaves your device.
         </p>
@@ -701,7 +701,7 @@ export default function ExportPdfStep() {
             </div>
             <p className="text-xs text-slate-400 mb-4">
               {pendingExportRef.current === 'transfer'
-                ? 'A password is required to encrypt your .telostax transfer file. You\u2019ll need this password to import it on another device.'
+                ? 'A password is required to encrypt your .hatax transfer file. You\u2019ll need this password to import it on another device.'
                 : 'This file contains sensitive tax data (SSN, income). Add a password to encrypt it, or skip to download without protection.'}
             </p>
             <form onSubmit={(e) => { e.preventDefault(); executeExport(exportPassword); }}>

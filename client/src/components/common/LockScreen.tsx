@@ -57,11 +57,11 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
   // Brute-force protection: exponential backoff after 3 failed attempts.
   // Persisted in sessionStorage so refreshing the page doesn't reset the counter.
   const [failCount, setFailCount] = useState(() => {
-    const stored = sessionStorage.getItem('telostax:lock-fails');
+    const stored = sessionStorage.getItem('hatax:lock-fails');
     return stored ? parseInt(stored, 10) || 0 : 0;
   });
   const [lockedUntil, setLockedUntil] = useState(() => {
-    const stored = sessionStorage.getItem('telostax:lock-until');
+    const stored = sessionStorage.getItem('hatax:lock-until');
     const val = stored ? parseInt(stored, 10) || 0 : 0;
     return val > Date.now() ? val : 0;
   });
@@ -69,13 +69,13 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
 
   // Sync to sessionStorage when values change
   useEffect(() => {
-    sessionStorage.setItem('telostax:lock-fails', String(failCount));
+    sessionStorage.setItem('hatax:lock-fails', String(failCount));
   }, [failCount]);
   useEffect(() => {
     if (lockedUntil > 0) {
-      sessionStorage.setItem('telostax:lock-until', String(lockedUntil));
+      sessionStorage.setItem('hatax:lock-until', String(lockedUntil));
     } else {
-      sessionStorage.removeItem('telostax:lock-until');
+      sessionStorage.removeItem('hatax:lock-until');
     }
   }, [lockedUntil]);
 
@@ -145,8 +145,8 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
       } else {
         setFailCount(0);
         setLockedUntil(0);
-        sessionStorage.removeItem('telostax:lock-fails');
-        sessionStorage.removeItem('telostax:lock-until');
+        sessionStorage.removeItem('hatax:lock-fails');
+        sessionStorage.removeItem('hatax:lock-until');
       }
     } catch {
       setError('Something went wrong. Please try again.');

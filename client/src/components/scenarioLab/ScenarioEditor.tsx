@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState } from 'react';
 import { ChevronDown, ChevronRight, Search, RotateCcw, Check, ExternalLink } from 'lucide-react';
-import type { TaxReturn } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
 import { VARIABLE_DEFINITIONS, getVariablesByCategory } from './variableDefinitions';
 import type { Scenario, ScenarioLabAction, ScenarioVariable, VariableCategory } from './types';
 import { CATEGORY_LABELS } from './types';

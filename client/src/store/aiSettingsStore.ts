@@ -6,7 +6,7 @@
  *
  * Security:
  *   - BYOK API keys are encrypted at rest using the vault passphrase (AES-256-GCM).
- *   - The encrypted blob is stored in localStorage['telostax:ai-key-enc'].
+ *   - The encrypted blob is stored in localStorage['hatax:ai-key-enc'].
  *   - The decrypted key is held in memory only while the vault is unlocked.
  *   - On lock, the in-memory key is cleared.
  *   - Keys are NEVER sent to our server for storage — only passed in
@@ -18,15 +18,15 @@ import { persist } from 'zustand/middleware';
 import type {
   AIMode,
   AISettings,
-} from '@telostax/engine';
-import { DEFAULT_AI_SETTINGS } from '@telostax/engine';
+} from '@hatax/engine';
+import { DEFAULT_AI_SETTINGS } from '@hatax/engine';
 import {
   encrypt as encryptStr,
   decrypt as decryptStr,
   getActiveKey,
 } from '../services/crypto';
 
-const ENC_KEY_STORAGE = 'telostax:ai-key-enc';
+const ENC_KEY_STORAGE = 'hatax:ai-key-enc';
 
 interface AISettingsState extends AISettings {
   // ── In-memory only (not persisted) ──
@@ -115,7 +115,7 @@ export const useAISettingsStore = create<AISettingsState>()(
         let oldKey = '';
 
         // Check the migration stash (set by v4→v5 migration before partialize ran)
-        const migrateKey = localStorage.getItem('telostax:ai-key-migrate');
+        const migrateKey = localStorage.getItem('hatax:ai-key-migrate');
         if (migrateKey) {
           oldKey = migrateKey;
         }
@@ -129,7 +129,7 @@ export const useAISettingsStore = create<AISettingsState>()(
         // Check raw localStorage JSON (fallback)
         if (!oldKey) {
           try {
-            const raw = localStorage.getItem('telostax:ai-settings');
+            const raw = localStorage.getItem('hatax:ai-settings');
             if (raw) {
               const parsed = JSON.parse(raw);
               const s = parsed?.state || parsed;
@@ -145,7 +145,7 @@ export const useAISettingsStore = create<AISettingsState>()(
             set({ byokApiKey: '', byokApiKeys: { anthropic: '' }, _decryptedApiKey: oldKey });
           } catch { /* encryption failed */ }
           // Clean up migration stash
-          localStorage.removeItem('telostax:ai-key-migrate');
+          localStorage.removeItem('hatax:ai-key-migrate');
         }
       },
 
@@ -164,7 +164,7 @@ export const useAISettingsStore = create<AISettingsState>()(
       },
     }),
     {
-      name: 'telostax:ai-settings',
+      name: 'hatax:ai-settings',
       version: 5,
       // Exclude _decryptedApiKey and byokApiKey from persistence
       partialize: (state) => {
@@ -196,7 +196,7 @@ export const useAISettingsStore = create<AISettingsState>()(
           // loadApiKey() will pick this up and encrypt it on first unlock.
           const keyToMigrate = persisted.byokApiKey || persisted.byokApiKeys?.anthropic || '';
           if (keyToMigrate) {
-            localStorage.setItem('telostax:ai-key-migrate', keyToMigrate);
+            localStorage.setItem('hatax:ai-key-migrate', keyToMigrate);
           }
         }
         return persisted;

@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
@@ -236,7 +236,7 @@ export default function ExplainTaxesStep() {
       {/* Disclaimer */}
       <p className="text-[10px] text-slate-600 text-center mt-6 mb-2">
         This is an estimate based on the data you've entered. Actual tax liability may differ.
-        TelosTax is not a licensed tax advisor. Consult a CPA for professional tax advice.
+        HATax is not a licensed tax advisor. Consult a CPA for professional tax advice.
       </p>
 
       <StepNavigation continueLabel="Continue to Export" />

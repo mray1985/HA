@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import type { CalculationTrace } from '@telostax/engine';
+import type { CalculationTrace } from '@hatax/engine';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import WarningsSummaryCard from '../common/WarningsSummaryCard';

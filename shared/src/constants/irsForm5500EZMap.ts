@@ -5,7 +5,7 @@
  * Retirement Plan or a Foreign Plan.
  *
  * This form is filed SEPARATELY from Form 1040 (due July 31 for calendar-
- * year plans). TelosTax pre-fills it and includes it in the filing packet
+ * year plans). HATax pre-fills it and includes it in the filing packet
  * as a convenience so the filer doesn't have to fill it out by hand.
  *
  * Required when Solo 401(k) plan assets exceed $250,000 at end of year.

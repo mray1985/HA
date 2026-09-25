@@ -2,7 +2,7 @@
 
 ## This Software Is Not Tax Advice
 
-TelosTax is a tax calculation engine provided for educational, research, and software development purposes. It does **not** constitute tax advice, legal advice, financial advice, or any other form of professional counsel.
+HATax is a tax calculation engine provided for educational, research, and software development purposes. It does **not** constitute tax advice, legal advice, financial advice, or any other form of professional counsel.
 
 ## Consult a Qualified Tax Professional
 
@@ -10,7 +10,7 @@ You should consult a qualified tax professional (CPA, Enrolled Agent, or tax att
 
 ## No Responsibility for Filing Errors
 
-The authors, contributors, and maintainers of TelosTax are **not responsible** for any errors, omissions, or inaccuracies in tax calculations produced by this software. If you use this engine's output in a tax return, you do so entirely at your own risk.
+The authors, contributors, and maintainers of HATax are **not responsible** for any errors, omissions, or inaccuracies in tax calculations produced by this software. If you use this engine's output in a tax return, you do so entirely at your own risk.
 
 ## Not Certified for E-Filing
 

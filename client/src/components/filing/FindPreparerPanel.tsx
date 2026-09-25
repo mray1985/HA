@@ -4,8 +4,8 @@
  * Links to the IRS e-file provider directory and provides
  * guidance on what to bring.
  */
-import type { TaxReturn } from '@telostax/engine';
-import { FILING_URLS } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
+import { FILING_URLS } from '@hatax/engine';
 import {
   ArrowLeft,
   ExternalLink,
@@ -59,7 +59,7 @@ export default function FindPreparerPanel({ taxReturn, onBack }: FindPreparerPan
         <div className="space-y-2.5">
           <BringItem
             icon={<FileText className="w-4 h-4 text-telos-blue-400" />}
-            text="Your TelosTax Filing Packet (printed PDF from the next step)"
+            text="Your HATax Filing Packet (printed PDF from the next step)"
           />
           <BringItem
             icon={<FileText className="w-4 h-4 text-telos-blue-400" />}

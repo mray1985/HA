@@ -13,7 +13,7 @@ import {
   Inject, BarSeries, Category, Tooltip, DataLabel,
   type ITooltipRenderEventArgs, type ITextRenderEventArgs,
 } from '@syncfusion/ej2-react-charts';
-import type { PriorYearSummary, Form1040Result } from '@telostax/engine';
+import type { PriorYearSummary, Form1040Result } from '@hatax/engine';
 
 interface YoYPairedBarsProps {
   priorYear: PriorYearSummary;

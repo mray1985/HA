@@ -13,8 +13,8 @@ import PdfFormViewer from './PdfFormViewer';
 import MergedPdfViewer from './MergedPdfViewer';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { ALL_TEMPLATES, generateSelectedFormsPDF } from '../../services/irsFormFiller';
-import { FORM_1040_TEMPLATE } from '@telostax/engine';
-import type { IRSFormTemplate } from '@telostax/engine';
+import { FORM_1040_TEMPLATE } from '@hatax/engine';
+import type { IRSFormTemplate } from '@hatax/engine';
 
 /** Auto-generated lookup: formId → template. Single source of truth from ALL_TEMPLATES. */
 const TEMPLATE_MAP: Record<string, IRSFormTemplate> = Object.fromEntries(

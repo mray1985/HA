@@ -6,7 +6,7 @@ import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import { HandCoins, AlertTriangle, Info, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { getAgeAtEndOfYear } from '../../utils/dateValidation';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import CalloutCard from '../common/CalloutCard';

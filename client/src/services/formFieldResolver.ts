@@ -4,8 +4,8 @@
  * Extracts the value-resolution logic from irsFormFiller.ts into a reusable
  * module. Used by both the PDF export pipeline and the live Forms Mode viewer.
  */
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
-import type { IRSFieldMapping } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
+import type { IRSFieldMapping } from '@hatax/engine';
 
 /**
  * Walk a dot-path (e.g., "form1040.totalWages") into an object.

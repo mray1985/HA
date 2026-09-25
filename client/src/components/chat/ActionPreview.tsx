@@ -8,7 +8,7 @@
 
 import { Check, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import type { ChatAction } from '@telostax/engine';
+import type { ChatAction } from '@hatax/engine';
 import { executeActions, summarizeExecution } from '../../services/intentExecutor';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 

@@ -37,8 +37,8 @@ export default defineConfig({
         'icons/favicon-32.png',
       ],
       manifest: {
-        name: 'TelosTax — Free Tax Preparation',
-        short_name: 'TelosTax',
+        name: 'HATax — Free Tax Preparation',
+        short_name: 'HATax',
         description: 'Free, private tax preparation that runs entirely in your browser.',
         theme_color: '#0F172A',
         background_color: '#0F172A',

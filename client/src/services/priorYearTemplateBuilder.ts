@@ -15,7 +15,7 @@
  * - W-2G (gambling winnings are not recurring)
  */
 
-import type { TaxReturn } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
 
 // ─── Types ─────────────────────────────────────────
 

@@ -13,7 +13,7 @@ import { HELP_CONTENT } from '../../data/helpContent';
 import CalloutCard from '../common/CalloutCard';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
-import { findNAICSByCode, FilingStatus, type NAICSEntry } from '@telostax/engine';
+import { findNAICSByCode, FilingStatus, type NAICSEntry } from '@hatax/engine';
 
 interface BusinessForm {
   businessName: string;

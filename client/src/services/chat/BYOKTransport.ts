@@ -9,8 +9,8 @@
  * defense-in-depth, but the client should scan first.
  */
 
-import type { ChatContext, ChatMessage, ChatResponse, AIProvider } from '@telostax/engine';
-import { scanForPII } from '@telostax/engine';
+import type { ChatContext, ChatMessage, ChatResponse, AIProvider } from '@hatax/engine';
+import { scanForPII } from '@hatax/engine';
 import type { ChatTransport, ChatTransportStatus } from './types';
 import { logOutboundRequest, consumePiiTypes, buildPiiBlockSummary } from '../privacyAuditLog';
 

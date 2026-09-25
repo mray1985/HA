@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
-import type { CalculationTrace } from '@telostax/engine';
+import type { CalculationTrace } from '@hatax/engine';
 import { formatCurrency } from '../../utils/format';
 
 export default function TraceDisclosure({ trace }: { trace: CalculationTrace }) {

@@ -16,7 +16,7 @@ import { config } from '../config.js';
 import { getSystemPrompt } from '../services/systemPrompt.js';
 import { handleLLMError, handleRouteError } from '../services/errorSanitizer.js';
 import { initRateLimitTable, checkRateLimit as sharedCheckRateLimit, getClientIp, sendRateLimitResponse } from '../services/rateLimiter.js';
-import type { ChatResponse } from '@telostax/engine';
+import type { ChatResponse } from '@hatax/engine';
 
 const router = Router();
 

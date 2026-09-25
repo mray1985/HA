@@ -6,7 +6,7 @@
 
 import { useState, lazy, Suspense } from 'react';
 import { BarChart3, GitBranch } from 'lucide-react';
-import type { Form1040Result, CalculationResult } from '@telostax/engine';
+import type { Form1040Result, CalculationResult } from '@hatax/engine';
 import TaxFlowDiagram from './TaxFlowDiagram';
 
 const TaxSankeyDiagram = lazy(() => import('./TaxSankeyDiagram'));

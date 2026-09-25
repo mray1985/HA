@@ -8,7 +8,7 @@ import SectionIntro from '../common/SectionIntro';
 import { Briefcase, AlertTriangle, CheckCircle2, Info, ChevronDown, ChevronUp, Megaphone, Heart, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
 import CalloutCard from '../common/CalloutCard';
-import type { Form7206Input, Form7206MonthlyEligibility } from '@telostax/engine';
+import type { Form7206Input, Form7206MonthlyEligibility } from '@hatax/engine';
 
 export default function SEDeductionsStep() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();

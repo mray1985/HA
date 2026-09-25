@@ -2,7 +2,7 @@
  * Prior Year Importer — imports prior-year tax data for YoY comparison.
  *
  * Two import paths:
- * 1. TelosTax JSON export — re-runs calculateForm1040() for full computed results
+ * 1. HATax JSON export — re-runs calculateForm1040() for full computed results
  * 2. IRS 1040 PDF — extracts key line items via AcroForm fields (with text fallback)
  *
  * All processing runs client-side. Data never leaves the browser.
@@ -10,8 +10,8 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 import './pdfWorkerInit'; // Ensure worker is configured
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
-import type { TaxReturn, PriorYearSummary } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
+import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
   extractTextBlocks,
@@ -135,13 +135,13 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('Invalid JSON file. Please select a valid TelosTax export (.json).');
+    throw new Error('Invalid JSON file. Please select a valid HATax export (.json).');
   }
 
   // Validate it's a TaxReturn
   const tr = data as Partial<TaxReturn>;
   if (!tr.id || !tr.taxYear || tr.schemaVersion === undefined) {
-    throw new Error('This doesn\'t appear to be a TelosTax export. Missing required fields (id, taxYear, schemaVersion).');
+    throw new Error('This doesn\'t appear to be a HATax export. Missing required fields (id, taxYear, schemaVersion).');
   }
 
   if (tr.taxYear >= 2025) {
@@ -157,7 +157,7 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
   const f = result.form1040;
 
   const summary: PriorYearSummary = {
-    source: 'telostax-json',
+    source: 'hatax-json',
     taxYear: tr.taxYear,
     filingStatus: tr.filingStatus !== undefined ? FilingStatus[tr.filingStatus] : undefined,
     totalIncome: f.totalIncome,

@@ -5,7 +5,7 @@
  * between the marginal bracket rate and the actual effective rate.
  */
 
-import type { Form1040Result } from '@telostax/engine';
+import type { Form1040Result } from '@hatax/engine';
 
 interface EffectiveTaxRateCardProps {
   form1040: Form1040Result;

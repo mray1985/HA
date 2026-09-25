@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
-import { formatSSN, maskSSN, isValidSSN } from '@telostax/engine';
+import { formatSSN, maskSSN, isValidSSN } from '@hatax/engine';
 
 interface SSNInputProps {
   value: string;

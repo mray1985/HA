@@ -175,7 +175,7 @@ export async function assertCalculationInBrowser(page: Page, returnId: string): 
   const result = await page.evaluate(async (id) => {
     try {
       // Access the calculate function from the app
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('telostax:return:'));
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
       if (keys.length === 0) return { error: 'No return in localStorage' };
 
       // The calculation should already be available via the store

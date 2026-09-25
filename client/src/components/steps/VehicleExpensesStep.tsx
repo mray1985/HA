@@ -9,7 +9,7 @@ import SectionIntro from '../common/SectionIntro';
 import { Car, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
 import CalloutCard from '../common/CalloutCard';
 import WhatsNewCard from '../common/WhatsNewCard';
-import { calculateVehicleDetailed, compareVehicleMethods } from '@telostax/engine';
+import { calculateVehicleDetailed, compareVehicleMethods } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validatePlacedInServiceDate } from '../../utils/dateValidation';
 import StepWarningsBanner from '../common/StepWarningsBanner';

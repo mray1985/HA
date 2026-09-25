@@ -13,8 +13,8 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { parseResponse, buildIrsReferenceData } from '@telostax/engine';
-import type { ChatResponse } from '@telostax/engine';
+import { parseResponse, buildIrsReferenceData } from '@hatax/engine';
+import type { ChatResponse } from '@hatax/engine';
 
 /** Claude 3.x models support assistant prefill; 4+ do not. */
 function supportsAssistantPrefill(model: string): boolean {

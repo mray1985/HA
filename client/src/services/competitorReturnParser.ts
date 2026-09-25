@@ -12,7 +12,7 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 import './pdfWorkerInit'; // Ensure worker is configured
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
   extractTextBlocks,

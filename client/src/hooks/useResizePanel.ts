@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-const STORAGE_PREFIX = 'telostax:panel-width:';
+const STORAGE_PREFIX = 'hatax:panel-width:';
 const LG_QUERY = '(min-width: 1024px)';
 
 interface UseResizePanelOptions {

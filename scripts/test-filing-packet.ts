@@ -93,7 +93,7 @@ async function generateCoverPagePDF(
   const cursor: Cursor = { y: PAGE_H - MARGIN_T };
 
   // Header
-  page.drawText('TelosTax Filing Packet', { x: MARGIN_L, y: cursor.y, size: 18, font: fonts.bold, color: ACCENT });
+  page.drawText('HATax Filing Packet', { x: MARGIN_L, y: cursor.y, size: 18, font: fonts.bold, color: ACCENT });
   cursor.y -= 20;
   page.drawText(`Tax Year ${taxReturn.taxYear || 2025}`, { x: MARGIN_L, y: cursor.y, size: 11, font: fonts.regular, color: DARK_GRAY });
   cursor.y -= 16;

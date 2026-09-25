@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
-import type { CalculationTrace } from '@telostax/engine';
+import type { CalculationTrace } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
 import TraceDisclosure from '../common/TraceDisclosure';
 

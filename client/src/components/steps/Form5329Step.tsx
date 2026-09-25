@@ -9,7 +9,7 @@ import { AlertTriangle, ExternalLink, Lightbulb, Info, ArrowRight } from 'lucide
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import CalloutCard from '../common/CalloutCard';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { HSA, IRA } from '@telostax/engine';
+import { HSA, IRA } from '@hatax/engine';
 
 export default function Form5329Step() {
   const { taxReturn, returnId, updateField, goToStep } = useTaxReturnStore();

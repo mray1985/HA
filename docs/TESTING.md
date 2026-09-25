@@ -1,6 +1,6 @@
-# TelosTax Testing Guide
+# HATax Testing Guide
 
-Comprehensive reference for running, understanding, and extending the TelosTax test suite.
+Comprehensive reference for running, understanding, and extending the HATax test suite.
 
 **Total: 139 test files | 6,100+ tests**
 

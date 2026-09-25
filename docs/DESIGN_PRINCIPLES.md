@@ -1,13 +1,13 @@
-# TelosTax Engine: Design Principles
+# HATax Engine: Design Principles
 
-> Architecture and design philosophy for the TelosTax open-source tax engine.
+> Architecture and design philosophy for the HATax open-source tax engine.
 
 ---
 
 ## 1. Ground Truth Hierarchy
 
 Tax law is layered. Not all sources carry equal weight, and conflicts between
-sources must be resolved by deferring to the higher authority. The TelosTax
+sources must be resolved by deferring to the higher authority. The HATax
 engine follows a strict hierarchy when implementing any tax computation:
 
 1. **Internal Revenue Code (IRC)** -- Primary binding authority. Statutory text
@@ -49,7 +49,7 @@ be traceable upward through the hierarchy to its legal source.
 
 ## 2. Pure Function Architecture ("Option B")
 
-The TelosTax engine is built on a strict pure-function architecture. This was a
+The HATax engine is built on a strict pure-function architecture. This was a
 deliberate design choice (referred to internally as "Option B") that separates
 computation from persistence and side effects.
 
@@ -64,9 +64,9 @@ computation from persistence and side effects.
   layer. The engine never reads from or writes to a database. It never makes
   HTTP requests. It never modifies shared state.
 
-- **The engine is a standalone library** (`@telostax/engine`) that can be
+- **The engine is a standalone library** (`@hatax/engine`) that can be
   imported and used independently of any server, UI, or storage layer. A
-  researcher can `import { calculateTax } from '@telostax/engine'` and compute
+  researcher can `import { calculateTax } from '@hatax/engine'` and compute
   a complete federal return in a single function call.
 
 - **The server layer handles persistence and PII.** SQLite storage, user
@@ -91,7 +91,7 @@ computation from persistence and side effects.
 
 A tax engine that produces correct numbers is necessary but not sufficient. Tax
 professionals, academics, and regulators need to verify *why* the engine
-produces those numbers. The TelosTax audit trail is designed to make every
+produces those numbers. The HATax audit trail is designed to make every
 computed value traceable to its legal authority.
 
 ### Authority References in Code
@@ -247,16 +247,16 @@ Revenue Procedure) can be incorporated by updating a single file.
 ## 7. Comparison with Existing Open-Source Tax Engines
 
 The landscape of open-source and publicly available tax computation tools is
-limited. TelosTax occupies a distinct position.
+limited. HATax occupies a distinct position.
 
 | Project                        | Nature                           | Scope                                    | Audit Trail       |
 | ------------------------------ | -------------------------------- | ---------------------------------------- | ------------------ |
 | **IRS Direct File**            | Government-built, closed-source  | Simple returns (W-2, SSA, limited credits) | Not applicable     |
 | **PSLmodels Tax-Calculator**   | Academic microsimulation (Python)| Policy analysis, aggregate statistics     | Policy parameters  |
 | **tax-logic-core**             | Minimal open-source engine       | Limited income types and credits          | Minimal            |
-| **TelosTax Engine**            | Open-source TypeScript library   | Complete individual return (~85-90% filer coverage) | Full authority chain |
+| **HATax Engine**            | Open-source TypeScript library   | Complete individual return (~85-90% filer coverage) | Full authority chain |
 
-### How TelosTax Differentiates
+### How HATax Differentiates
 
 - **Complete individual return coverage.** The engine handles the income types,
   deductions, and credits that cover an estimated 85-90% of individual filers,
@@ -297,7 +297,7 @@ limited. TelosTax occupies a distinct position.
 
 ## Contributing
 
-This document describes the principles that govern the TelosTax engine
+This document describes the principles that govern the HATax engine
 architecture. Contributors should ensure that new code adheres to these
 principles:
 

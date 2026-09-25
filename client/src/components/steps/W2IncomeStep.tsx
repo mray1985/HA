@@ -10,7 +10,7 @@ import SectionIntro from '../common/SectionIntro';
 import CalloutCard from '../common/CalloutCard';
 import { Building2, Trash2, Pencil, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import AddButton from '../common/AddButton';
-import { W2Income, W2Box12Entry, W2Box12Code, W2Box13, getAllStates, FilingStatus } from '@telostax/engine';
+import { W2Income, W2Box12Entry, W2Box12Code, W2Box13, getAllStates, FilingStatus } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import InlineImportButton from '../import/InlineImportButton';
 import InlinePDFImport from '../import/InlinePDFImport';

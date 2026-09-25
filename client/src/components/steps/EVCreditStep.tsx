@@ -10,7 +10,7 @@ import { Leaf, AlertTriangle } from 'lucide-react';
 import CalloutCard from '../common/CalloutCard';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validateTaxYearEventDate } from '../../utils/dateValidation';
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 export default function EVCreditStep() {
   const { taxReturn, returnId, updateField, calculation } = useTaxReturnStore();

@@ -21,7 +21,7 @@ import {
   MACRSPropertyClass,
   calculateForm4562,
   calculateScheduleC,
-} from '@telostax/engine';
+} from '@hatax/engine';
 
 const PROPERTY_CLASS_OPTIONS = [
   { value: '5', label: '5-Year', description: 'Computers, phones, cameras, printers, office machines, vehicles, research equipment' },

@@ -10,7 +10,7 @@ import StepWarningsBanner from '../common/StepWarningsBanner';
 import AddButton from '../common/AddButton';
 import CalloutCard from '../common/CalloutCard';
 import { CalendarClock, Trash2, Pencil } from 'lucide-react';
-import { calculateForm6252 } from '@telostax/engine';
+import { calculateForm6252 } from '@hatax/engine';
 import { validateTaxYearEventDate } from '../../utils/dateValidation';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';

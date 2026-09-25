@@ -16,8 +16,8 @@
  * 4. The SuggestionsBanner component renders it with an "Enable" action
  */
 
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { getAgeAtEndOfYear } from '../utils/dateValidation';
 
 // ---------------------------------------------------------------------------

@@ -4,8 +4,8 @@ import {
   formatDeadlineDate,
   type TaxDeadline,
 } from '../services/taxCalendarService';
-import { FilingStatus } from '@telostax/engine';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 
 // ─── Factories ──────────────────────────────────────
 

@@ -7,7 +7,7 @@ import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import { HandHeart, Pencil, Trash2, Search, ExternalLink, AlertTriangle, Lightbulb, Info } from 'lucide-react';
 import AddButton from '../common/AddButton';
-import type { NonCashDonation } from '@telostax/engine';
+import type { NonCashDonation } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import { HELP_CONTENT } from '../../data/helpContent';

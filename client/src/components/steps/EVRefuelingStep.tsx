@@ -6,7 +6,7 @@ import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import { Fuel, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import AddButton from '../common/AddButton';
-import type { EVRefuelingProperty } from '@telostax/engine';
+import type { EVRefuelingProperty } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import { HELP_CONTENT } from '../../data/helpContent';

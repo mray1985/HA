@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { NAICS_CODES, findNAICSByCode, type NAICSEntry } from '@telostax/engine';
+import { NAICS_CODES, findNAICSByCode, type NAICSEntry } from '@hatax/engine';
 import { Search, X, AlertTriangle } from 'lucide-react';
 
 interface NAICSCodeSearchProps {

@@ -90,7 +90,7 @@ export interface TXFParseResult {
 //   Copy C = Form 1099-B not received (Box C/F)
 
 interface RefCodeDef {
-  /** Which income type this maps to in TelosTax */
+  /** Which income type this maps to in HATax */
   incomeType: string;
   /** Human-readable label for the ref code */
   label: string;
@@ -759,7 +759,7 @@ function mapDividendRecords(records: TXFRecord[], warnings: string[]): TXFMapped
  */
 function mapRetirementRecords(records: TXFRecord[], warnings: string[]): TXFMappedItem[] {
   // Only include codes that are defined in REF_CODES — others (530, 531, 533, 534, 623, 624, 625)
-  // are valid TXF spec codes but not yet mapped in TelosTax. They'll surface in the
+  // are valid TXF spec codes but not yet mapped in HATax. They'll surface in the
   // "unsupported ref codes" warning instead of silently creating empty groups.
   const retCodes = new Set([475, 476, 529, 477, 478, 532]);
 

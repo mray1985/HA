@@ -318,9 +318,9 @@ test.describe('Data Persistence — Auto-Save', () => {
 
     // Check localStorage
     const returnData = await page.evaluate(() => {
-      const ids = JSON.parse(localStorage.getItem('telostax:returns') || '[]');
+      const ids = JSON.parse(localStorage.getItem('hatax:returns') || '[]');
       if (ids.length === 0) return null;
-      return JSON.parse(localStorage.getItem(`telostax:return:${ids[0]}`) || 'null');
+      return JSON.parse(localStorage.getItem(`hatax:return:${ids[0]}`) || 'null');
     });
 
     expect(returnData).toBeTruthy();
@@ -340,9 +340,9 @@ test.describe('Data Persistence — Auto-Save', () => {
 
     // Verify in localStorage
     const filingStatus = await page.evaluate(() => {
-      const ids = JSON.parse(localStorage.getItem('telostax:returns') || '[]');
+      const ids = JSON.parse(localStorage.getItem('hatax:returns') || '[]');
       if (ids.length === 0) return null;
-      const tr = JSON.parse(localStorage.getItem(`telostax:return:${ids[0]}`) || 'null');
+      const tr = JSON.parse(localStorage.getItem(`hatax:return:${ids[0]}`) || 'null');
       return tr?.filingStatus;
     });
 

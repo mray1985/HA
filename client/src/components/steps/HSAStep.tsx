@@ -9,7 +9,7 @@ import { HeartPulse, AlertTriangle, ExternalLink, CircleDollarSign, Info } from 
 import { HELP_CONTENT } from '../../data/helpContent';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import WhatsNewCard from '../common/WhatsNewCard';
-import type { HSAExcessWithdrawal } from '@telostax/engine';
+import type { HSAExcessWithdrawal } from '@hatax/engine';
 
 export default function HSAStep() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();

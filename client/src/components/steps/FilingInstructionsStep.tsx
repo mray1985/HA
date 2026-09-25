@@ -11,9 +11,9 @@
  */
 import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { calculateForm1040, FilingStatus, assessFilingOptions, assessEstimatedPaymentNeed } from '@telostax/engine';
+import { calculateForm1040, FilingStatus, assessFilingOptions, assessEstimatedPaymentNeed } from '@hatax/engine';
 import { generateForm4868PDF } from '../../services/irsFormFiller';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
@@ -335,7 +335,7 @@ function HubView({
             <p className="text-xs text-slate-300 leading-relaxed">
               This tool is for informational purposes only and does not constitute tax advice.
               Do not use this app to file your taxes without having your return carefully reviewed
-              by a qualified tax professional. TelosTax needs vetting by tax experts and human
+              by a qualified tax professional. HATax needs vetting by tax experts and human
               coders, which is why it&apos;s available as a free, open-source project. The tax engine
               may contain errors. If you&apos;re a tax professional or developer who&apos;d like to help
               stress-test the app, please get in touch.

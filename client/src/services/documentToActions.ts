@@ -9,7 +9,7 @@
  * shapes the result into the chat action format.
  */
 
-import type { ChatAction, ChatResponse } from '@telostax/engine';
+import type { ChatAction, ChatResponse } from '@hatax/engine';
 import type { PDFExtractResult } from './pdfImporter';
 import { FORM_TYPE_LABELS, INCOME_TYPE_STEP_MAP } from './pdfImporter';
 

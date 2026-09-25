@@ -16,7 +16,7 @@ import DonationValuationPanel from './DonationValuationPanel';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import { validateContributionDate, validateAcquiredDate } from '../../utils/dateValidation';
-import type { NonCashDonation, ItemizedDeductions, CharitableCarryforward } from '@telostax/engine';
+import type { NonCashDonation, ItemizedDeductions, CharitableCarryforward } from '@hatax/engine';
 
 const emptyItemized: ItemizedDeductions = {
   medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 0,

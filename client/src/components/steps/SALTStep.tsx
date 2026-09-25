@@ -9,7 +9,7 @@ import CalloutCard from '../common/CalloutCard';
 import { Receipt, AlertTriangle, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
 import StepWarningsBanner from '../common/StepWarningsBanner';
-import { ItemizedDeductions } from '@telostax/engine';
+import { ItemizedDeductions } from '@hatax/engine';
 
 const emptyItemized: ItemizedDeductions = {
   medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 0,

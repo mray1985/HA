@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 test.describe('App Routing', () => {
   test('dashboard loads at /', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('TelosTax');
+    await expect(page.locator('h1')).toContainText('HATax');
   });
 
   test('pledge page loads at /pledge', async ({ page }) => {
@@ -43,7 +43,7 @@ test('terms page loads at /terms', async ({ page }) => {
     await page.goto('/nonexistent-page');
     // Should redirect to dashboard
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText('TelosTax');
+    await expect(page.locator('h1')).toContainText('HATax');
   });
 
   test('invalid return ID shows appropriate handling', async ({ page }) => {
@@ -79,6 +79,6 @@ test.describe('Cross-Page Navigation', () => {
 
     // Navigate back to dashboard
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('TelosTax');
+    await expect(page.locator('h1')).toContainText('HATax');
   });
 });

@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { checkForDuplicates, checkBatchForDuplicates } from '../services/duplicateDetection';
-import type { TaxReturn } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
 
 // ─── Helpers ─────────────────────────────────────
 

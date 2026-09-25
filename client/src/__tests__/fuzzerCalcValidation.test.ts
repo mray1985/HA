@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateForm1040 } from '@telostax/engine';
+import { calculateForm1040 } from '@hatax/engine';
 import { generateScenarios } from '../../e2e/scenario-fuzzer/generators';
 
 const FUZZER_COUNT = parseInt(process.env.FUZZER_COUNT || '50', 10);

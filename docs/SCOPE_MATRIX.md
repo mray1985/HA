@@ -1,4 +1,4 @@
-# TelosTax Scope Matrix
+# HATax Scope Matrix
 
 **Tax Year:** 2025 | **Engine Version:** 1.0 | **Last Updated:** 2026-03-20
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-TelosTax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **6,100+ tests** spanning **139 test files**. The engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for federal tax year 2025, with full state tax coverage for **all 50 states + DC**.
+HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **6,100+ tests** spanning **139 test files**. The engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for federal tax year 2025, with full state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 

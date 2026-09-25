@@ -9,7 +9,7 @@ import CalloutCard from '../common/CalloutCard';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import { Package, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { CostOfGoodsSold } from '@telostax/engine';
+import { CostOfGoodsSold } from '@hatax/engine';
 
 export default function CostOfGoodsSoldStep() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();

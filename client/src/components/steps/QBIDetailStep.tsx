@@ -13,7 +13,7 @@ import CalloutCard from '../common/CalloutCard';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { findNAICSByCode } from '@telostax/engine';
+import { findNAICSByCode } from '@hatax/engine';
 
 interface QBIForm {
   businessName: string;

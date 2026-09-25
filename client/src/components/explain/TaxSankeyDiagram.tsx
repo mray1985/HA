@@ -13,7 +13,7 @@ import {
   sankeyLeft,
 } from 'd3-sankey';
 import type { SankeyNode as D3SankeyNode, SankeyLink as D3SankeyLink } from 'd3-sankey';
-import type { Form1040Result, CalculationResult } from '@telostax/engine';
+import type { Form1040Result, CalculationResult } from '@hatax/engine';
 import { buildSankeyData, type SankeyNode, type SankeyLink } from './sankeyDataTransform';
 import { colorForCategory } from './sankeyColors';
 import { useSankeyDimensions } from './useSankeyDimensions';

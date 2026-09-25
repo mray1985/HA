@@ -21,8 +21,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Dashboard Page', () => {
-  test('renders the TelosTax branding', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('TelosTax');
+  test('renders the HATax branding', async ({ page }) => {
+    await expect(page.locator('h1')).toContainText('HATax');
     await expect(page.getByText('2025 Tax Year')).toBeVisible();
     await expect(page.getByText('Free tax preparation')).toBeVisible();
   });

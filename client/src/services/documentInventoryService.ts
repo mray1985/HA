@@ -28,8 +28,8 @@ import type {
   Income1099C,
   Income1099Q,
   RentalProperty,
-} from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+} from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 // ─── Types ──────────────────────────────────────
 

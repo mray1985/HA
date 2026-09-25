@@ -15,7 +15,7 @@ import InlineImportButton from '../import/InlineImportButton';
 import InlinePDFImport from '../import/InlinePDFImport';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
-import { getAllStates } from '@telostax/engine';
+import { getAllStates } from '@hatax/engine';
 
 const stateOptions = getAllStates().map((s) => ({ code: s.code, name: s.name }));
 const emptyForm = { payerName: '', amount: 0, federalTaxWithheld: 0, businessId: '', stateCode: '', stateTaxWithheld: 0 };

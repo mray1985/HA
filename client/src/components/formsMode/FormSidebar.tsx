@@ -15,7 +15,7 @@ import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { useChatStore } from '../../store/chatStore';
 import { ALL_TEMPLATES, fillIRSForm, generateSelectedFormsPDF } from '../../services/irsFormFiller';
 import { searchForms, getFormCompleteness, buildFullReturnReviewPrompt } from '../../services/formsAIService';
-import type { IRSFormTemplate } from '@telostax/engine';
+import type { IRSFormTemplate } from '@hatax/engine';
 
 /** Group labels for sidebar organization */
 function getFormGroup(template: IRSFormTemplate): string {
@@ -116,7 +116,7 @@ export default function FormSidebar() {
 
       if (selCount > 0) {
         pdfBytes = await generateSelectedFormsPDF(getSelections(), taxReturn, calculation);
-        filename = 'TelosTax_Selected_Forms.pdf';
+        filename = 'HATax_Selected_Forms.pdf';
       } else {
         if (!activeTemplate) return;
         pdfBytes = await generateSinglePdf();
@@ -166,7 +166,7 @@ export default function FormSidebar() {
 
       if (selCount > 0) {
         pdfBytes = await generateSelectedFormsPDF(getSelections(), taxReturn, calculation);
-        fallbackFilename = 'TelosTax_Selected_Forms.pdf';
+        fallbackFilename = 'HATax_Selected_Forms.pdf';
       } else {
         if (!activeTemplate) { win?.close(); return; }
         pdfBytes = await generateSinglePdf();

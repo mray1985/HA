@@ -14,7 +14,7 @@ import {
   type ITooltipRenderEventArgs, type IAxisLabelRenderEventArgs,
 } from '@syncfusion/ej2-react-charts';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { TaxReturn } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
 import { VARIABLE_DEFINITIONS } from '../variableDefinitions';
 import type { ScenarioLabAction, SensitivityConfig } from '../types';
 import { useSensitivityData } from './useSensitivityData';

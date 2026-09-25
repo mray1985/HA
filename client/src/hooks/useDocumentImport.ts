@@ -71,7 +71,7 @@ export interface UseDocumentImportReturn {
 // ─── Custom Import Handlers (Category B forms) ─────
 
 type CustomImportHandler = (
-  taxReturn: import('@telostax/engine').TaxReturn,
+  taxReturn: import('@hatax/engine').TaxReturn,
   editData: Record<string, unknown>,
   updateField: (field: string, value: unknown) => void,
 ) => void;

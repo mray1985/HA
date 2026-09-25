@@ -23,8 +23,8 @@ export async function injectAndOpen(page: Page, taxReturn: FuzzerTaxReturn): Pro
 
     // Inject plaintext return (app will encrypt on loadAllReturns)
     await page.evaluate(({ tr, id }) => {
-      localStorage.setItem(`telostax:return:${id}`, JSON.stringify(tr));
-      localStorage.setItem('telostax:returns', JSON.stringify([id]));
+      localStorage.setItem(`hatax:return:${id}`, JSON.stringify(tr));
+      localStorage.setItem('hatax:returns', JSON.stringify([id]));
     }, { tr: taxReturn, id: taxReturn.id });
 
     // Navigate to return — encryption is already configured
@@ -36,8 +36,8 @@ export async function injectAndOpen(page: Page, taxReturn: FuzzerTaxReturn): Pro
   } else {
     // UI path: inject plaintext, let the encryption gate appear, fill it in
     await page.evaluate(({ tr, id }) => {
-      localStorage.setItem(`telostax:return:${id}`, JSON.stringify(tr));
-      localStorage.setItem('telostax:returns', JSON.stringify([id]));
+      localStorage.setItem(`hatax:return:${id}`, JSON.stringify(tr));
+      localStorage.setItem('hatax:returns', JSON.stringify([id]));
     }, { tr: taxReturn, id: taxReturn.id });
 
     // Reload to trigger the encryption gate

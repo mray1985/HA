@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { CalculationResult } from '@telostax/engine';
+import type { CalculationResult } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../../utils/format';
 import type { Scenario } from '../types';
 

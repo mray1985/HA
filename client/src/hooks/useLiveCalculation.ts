@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTaxReturnStore } from '../store/taxReturnStore';
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
 
 /**
  * Recalculates the tax estimate whenever the tax return data changes.

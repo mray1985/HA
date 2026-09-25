@@ -145,8 +145,8 @@
  * not represent IRS scoring and should not be presented as such.
  */
 
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
-import { checkPlausibility, SANCTIONED_COUNTRIES } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
+import { checkPlausibility, SANCTIONED_COUNTRIES } from '@hatax/engine';
 
 // ─── Types ──────────────────────────────────────────
 

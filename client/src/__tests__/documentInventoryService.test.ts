@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TaxReturn } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { buildDocumentInventory } from '../services/documentInventoryService';
 
 // ─── Helpers ─────────────────────────────────────

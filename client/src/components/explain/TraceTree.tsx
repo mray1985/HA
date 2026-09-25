@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import type { CalculationTrace } from '@telostax/engine';
+import type { CalculationTrace } from '@hatax/engine';
 import { ChevronRight, ChevronDown, Scale, Hash, BookOpen, FileText } from 'lucide-react';
 import { resolveFormFromLineId } from '../../services/traceFormLinker';
 

@@ -5,7 +5,7 @@
  * discovery flags are set so that wizard steps remain visible after switching
  * back to interview mode.
  */
-import type { TaxReturn } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
 
 /** Map of formId → discovery flags that should be set when editing that form */
 const FORM_DISCOVERY_MAP: Record<string, Record<string, string>> = {

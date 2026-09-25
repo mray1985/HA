@@ -6,7 +6,7 @@
  */
 
 import type { ReturnContext } from '../../services/deductionFinderTypes';
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { Info } from 'lucide-react';
 
 interface Props {

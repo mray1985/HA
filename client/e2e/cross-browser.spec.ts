@@ -27,9 +27,9 @@ async function createAndOpenReturn(page: Page) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('Cross-Browser — App Rendering', () => {
-  test('dashboard loads with TelosTax branding', async ({ page }) => {
+  test('dashboard loads with HATax branding', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/TelosTax/i).first()).toBeVisible();
+    await expect(page.getByText(/HATax/i).first()).toBeVisible();
   });
 
   test('dashboard has proper layout structure', async ({ page }) => {
@@ -68,7 +68,7 @@ test.describe('Cross-Browser — localStorage', () => {
     await page.waitForURL(/\/return\//);
 
     const ids = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('telostax:returns') || '[]');
+      return JSON.parse(localStorage.getItem('hatax:returns') || '[]');
     });
     expect(ids.length).toBeGreaterThan(0);
   });

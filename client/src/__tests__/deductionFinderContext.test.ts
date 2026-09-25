@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TaxReturn, CalculationResult, Form1040Result } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn, CalculationResult, Form1040Result } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { buildReturnContext } from '../services/deductionFinderContext';
 
 // ─── Helpers ─────────────────────────────────────

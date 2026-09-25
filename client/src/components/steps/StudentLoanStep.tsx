@@ -9,7 +9,7 @@ import { GraduationCap, AlertTriangle, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import WhatsNewCard from '../common/WhatsNewCard';
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 export default function StudentLoanStep() {
   const { taxReturn, returnId, updateField, calculation } = useTaxReturnStore();

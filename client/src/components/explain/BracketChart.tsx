@@ -13,8 +13,8 @@ import {
   Inject, StackingBarSeries, Category, Tooltip, DataLabel, Legend,
   type ITooltipRenderEventArgs,
 } from '@syncfusion/ej2-react-charts';
-import { calculateProgressiveTax } from '@telostax/engine';
-import type { FilingStatus } from '@telostax/engine';
+import { calculateProgressiveTax } from '@hatax/engine';
+import type { FilingStatus } from '@hatax/engine';
 
 interface BracketChartProps {
   taxableIncome: number;

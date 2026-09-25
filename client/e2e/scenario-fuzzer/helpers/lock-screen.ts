@@ -75,7 +75,7 @@ export async function setupEncryptionProgrammatically(page: Page): Promise<void>
     // This works because the module exposes setActiveKey and setupEncryption
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
-    localStorage.setItem('telostax:salt', JSON.stringify(Array.from(salt)));
+    localStorage.setItem('hatax:salt', JSON.stringify(Array.from(salt)));
 
     // Derive key from passphrase
     const enc = new TextEncoder();
@@ -93,9 +93,9 @@ export async function setupEncryptionProgrammatically(page: Page): Promise<void>
     // Encrypt verification token
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv }, key, enc.encode('telostax-verify-v1')
+      { name: 'AES-GCM', iv }, key, enc.encode('hatax-verify-v1')
     );
-    localStorage.setItem('telostax:verify', JSON.stringify({
+    localStorage.setItem('hatax:verify', JSON.stringify({
       iv: Array.from(iv), ct: Array.from(new Uint8Array(ciphertext))
     }));
 

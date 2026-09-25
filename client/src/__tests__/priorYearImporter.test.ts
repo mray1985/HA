@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TaxReturn } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 // Mock pdfjs-dist so we can test PDF import without a real PDF
 vi.mock('pdfjs-dist', () => ({
@@ -70,13 +70,13 @@ function makeFile(content: string, name = 'return.json'): File {
 // ─── JSON Import Tests ───────────────────────────
 
 describe('importPriorYearJSON', () => {
-  it('imports a valid TelosTax JSON export', async () => {
+  it('imports a valid HATax JSON export', async () => {
     const tr = makeTaxReturn();
     const file = makeFile(JSON.stringify(tr));
 
     const result = await importPriorYearJSON(file);
 
-    expect(result.summary.source).toBe('telostax-json');
+    expect(result.summary.source).toBe('hatax-json');
     expect(result.summary.taxYear).toBe(2024);
     expect(result.summary.totalIncome).toBeGreaterThan(0);
     expect(result.summary.agi).toBeGreaterThan(0);

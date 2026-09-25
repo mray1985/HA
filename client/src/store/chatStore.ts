@@ -11,7 +11,7 @@
  */
 
 import { create } from 'zustand';
-import type { ChatAction, ChatResponse } from '@telostax/engine';
+import type { ChatAction, ChatResponse } from '@hatax/engine';
 import {
   sendChatMessage,
   checkChatStatus,

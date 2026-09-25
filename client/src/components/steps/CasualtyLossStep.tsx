@@ -10,8 +10,8 @@ import StepWarningsBanner from '../common/StepWarningsBanner';
 import AddButton from '../common/AddButton';
 import CalloutCard from '../common/CalloutCard';
 import { CloudLightning, Trash2, Pencil, ExternalLink } from 'lucide-react';
-import { calculateForm4684 } from '@telostax/engine';
-import type { CasualtyLossInfo } from '@telostax/engine';
+import { calculateForm4684 } from '@hatax/engine';
+import type { CasualtyLossInfo } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 

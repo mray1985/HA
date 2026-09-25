@@ -7,7 +7,7 @@
  *
  * Security:
  *   - Categorization results are encrypted at rest using the vault passphrase (AES-256-GCM).
- *   - The encrypted blob is stored in localStorage['telostax:expense-scanner-enc'].
+ *   - The encrypted blob is stored in localStorage['hatax:expense-scanner-enc'].
  *   - On vault lock, in-memory categorization data is cleared.
  *   - On vault unlock, the encrypted blob is decrypted and restored.
  *   - Raw transactions are NOT persisted (re-upload is fast).
@@ -28,8 +28,8 @@ import {
   getActiveKey,
 } from '../services/crypto';
 
-const ENC_STORAGE_KEY = 'telostax:expense-scanner-enc';
-const OLD_STORAGE_KEY = 'telostax:expense-scanner';
+const ENC_STORAGE_KEY = 'hatax:expense-scanner-enc';
+const OLD_STORAGE_KEY = 'hatax:expense-scanner';
 
 /** Debounce timer for auto-save. */
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

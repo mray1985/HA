@@ -2,7 +2,7 @@
 
 > **STATUS: FINAL** — All new wizard steps must conform to this guide.
 
-Standardization guide for all wizard step components in TelosTax. Integrates with [DESIGN_PRINCIPLES.md](./DESIGN_PRINCIPLES.md) for architecture. Color conventions are included in the [UI Color Reference](#ui-color-reference) section at the end of this document.
+Standardization guide for all wizard step components in HATax. Integrates with [DESIGN_PRINCIPLES.md](./DESIGN_PRINCIPLES.md) for architecture. Color conventions are included in the [UI Color Reference](#ui-color-reference) section at the end of this document.
 
 ---
 
@@ -489,7 +489,7 @@ Components available for use in all step categories:
 
 ## UI Color Reference
 
-Semantic color conventions for monetary values, text, and interactive elements across the TelosTax UI.
+Semantic color conventions for monetary values, text, and interactive elements across the HATax UI.
 
 ### Monetary Value Colors
 

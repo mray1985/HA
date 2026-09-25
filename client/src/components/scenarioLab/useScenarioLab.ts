@@ -1,6 +1,6 @@
 import { useReducer, useMemo, useRef, useState, useEffect } from 'react';
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import { VARIABLE_DEFINITIONS } from './variableDefinitions';
 import type {
   Scenario, ScenarioLabState, ScenarioLabAction, ScenarioColor,

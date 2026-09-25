@@ -9,7 +9,7 @@
  */
 
 import { Trophy, ArrowDown, ArrowUp, Lock } from 'lucide-react';
-import type { CalculationResult, FilingStatus } from '@telostax/engine';
+import type { CalculationResult, FilingStatus } from '@hatax/engine';
 import type { Scenario, DeltaMap, DeltaEntry } from '../types';
 import { formatCurrency, formatPercent } from '../../../utils/format';
 import DeltaWaterfall from '../charts/DeltaWaterfall';

@@ -17,7 +17,7 @@ import {
   type IPointRenderEventArgs, type ITextRenderEventArgs,
   type ITooltipRenderEventArgs,
 } from '@syncfusion/ej2-react-charts';
-import type { PriorYearSummary, Form1040Result } from '@telostax/engine';
+import type { PriorYearSummary, Form1040Result } from '@hatax/engine';
 
 interface YoYWaterfallProps {
   priorYear: PriorYearSummary;

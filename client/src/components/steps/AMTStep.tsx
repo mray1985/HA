@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { calculateForm1040 } from '@telostax/engine';
-import type { AMTResult } from '@telostax/engine';
+import { calculateForm1040 } from '@hatax/engine';
+import type { AMTResult } from '@hatax/engine';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import CalloutCard from '../common/CalloutCard';

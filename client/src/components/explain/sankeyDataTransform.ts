@@ -7,7 +7,7 @@
  * income stream.
  */
 
-import type { Form1040Result, CalculationResult } from '@telostax/engine';
+import type { Form1040Result, CalculationResult } from '@hatax/engine';
 
 export interface SankeyNode {
   id: string;

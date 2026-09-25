@@ -1508,7 +1508,7 @@ export const HELP_CONTENT: Record<string, StepHelp> = {
       {
         type: 'info',
         title: 'Planning ahead: 2026 estimated tax vouchers',
-        body: 'If your 2025 return shows you owe $1,000 or more after withholding, TelosTax can generate pre-filled Form 1040-ES payment vouchers for 2026. Download them on the Export step. These vouchers are mailed separately from your tax return to a different IRS address.',
+        body: 'If your 2025 return shows you owe $1,000 or more after withholding, HATax can generate pre-filled Form 1040-ES payment vouchers for 2026. Download them on the Export step. These vouchers are mailed separately from your tax return to a different IRS address.',
         irsUrl: 'https://www.irs.gov/forms-pubs/about-form-1040-es',
       },
     ],
@@ -2357,7 +2357,7 @@ export const HELP_CONTENT: Record<string, StepHelp> = {
       {
         type: 'warning',
         title: 'Review before exporting',
-        body: 'Your PDF will contain all data entered in this return. Double-check your personal information, income amounts, and deductions before generating the final document. TelosTax is a preparation tool — you still need to file your return with the IRS.',
+        body: 'Your PDF will contain all data entered in this return. Double-check your personal information, income amounts, and deductions before generating the final document. HATax is a preparation tool — you still need to file your return with the IRS.',
       },
       {
         type: 'tip',

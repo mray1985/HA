@@ -3,17 +3,17 @@
  * No server, no network requests, no tracking. Your data never leaves your computer.
  *
  * Storage key layout:
- *   telostax:returns          → string[] of return IDs
- *   telostax:return:{id}      → encrypted TaxReturn JSON (or plaintext for unencrypted)
- *   telostax:chat:{id}        → encrypted chat history JSON (per-return)
- *   telostax:salt             → PBKDF2 salt for key derivation
- *   telostax:verify           → encrypted verification token
+ *   hatax:returns          → string[] of return IDs
+ *   hatax:return:{id}      → encrypted TaxReturn JSON (or plaintext for unencrypted)
+ *   hatax:chat:{id}        → encrypted chat history JSON (per-return)
+ *   hatax:salt             → PBKDF2 salt for key derivation
+ *   hatax:verify           → encrypted verification token
  *
  * Encryption: When active, returns are encrypted with AES-256-GCM before storage.
  * An in-memory cache holds decrypted returns after unlock for synchronous access.
  */
 
-import { TaxReturn, migrateReturn, needsMigration, CURRENT_SCHEMA_VERSION } from '@telostax/engine';
+import { TaxReturn, migrateReturn, needsMigration, CURRENT_SCHEMA_VERSION } from '@hatax/engine';
 import { toast } from 'sonner';
 import {
   getActiveKey,
@@ -25,8 +25,8 @@ import {
 } from '../services/crypto';
 import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersistence';
 
-const RETURNS_KEY = 'telostax:returns';
-const returnKey = (id: string) => `telostax:return:${id}`;
+const RETURNS_KEY = 'hatax:returns';
+const returnKey = (id: string) => `hatax:return:${id}`;
 
 // ─── In-Memory Cache (populated on unlock) ──────
 
@@ -217,7 +217,7 @@ export function createReturn(): TaxReturn {
   return tr;
 }
 
-/** Import a fully-formed TaxReturn (e.g. from a .telostax file). Saves to localStorage. */
+/** Import a fully-formed TaxReturn (e.g. from a .hatax file). Saves to localStorage. */
 export function importReturn(tr: TaxReturn): TaxReturn {
   if (isEncryptionSetup() && !getActiveKey()) {
     throw new Error('Cannot import while the vault is locked. Please unlock first.');
@@ -239,7 +239,7 @@ export function listReturns(): TaxReturn[] {
 }
 
 /**
- * Export all returns as an encrypted .telostax download (data portability).
+ * Export all returns as an encrypted .hatax download (data portability).
  * Uses PBKDF2 key derivation + AES-256-GCM, same pattern as fileTransfer.ts.
  */
 export async function exportAllData(password: string): Promise<void> {
@@ -277,7 +277,7 @@ export async function exportAllData(password: string): Promise<void> {
   );
 
   const file = {
-    format: 'telostax-export',
+    format: 'hatax-export',
     version: 1,
     exportedAt: new Date().toISOString(),
     salt: Array.from(salt),
@@ -289,7 +289,7 @@ export async function exportAllData(password: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `telostax-export-${new Date().toISOString().slice(0, 10)}.telostax`;
+  a.download = `hatax-export-${new Date().toISOString().slice(0, 10)}.hatax`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -343,7 +343,7 @@ export function deleteReturn(id: string): { success: boolean } {
 }
 
 /**
- * Wipe ALL TelosTax data: localStorage, sessionStorage, IndexedDB,
+ * Wipe ALL HATax data: localStorage, sessionStorage, IndexedDB,
  * service worker caches, and SW registrations.
  * Intended for privacy-critical "delete everything" scenarios.
  */
@@ -354,16 +354,16 @@ export async function wipeAllData(): Promise<void> {
   const ids = getReturnIds();
   for (const id of ids) writeVersions.set(id, Number.MAX_SAFE_INTEGER);
 
-  // 1. Remove all TelosTax localStorage keys (returns + encryption + chat + AI)
+  // 1. Remove all HATax localStorage keys (returns + encryption + chat + AI)
   for (const id of ids) localStorage.removeItem(returnKey(id));
   localStorage.removeItem(RETURNS_KEY);
-  localStorage.removeItem('telostax:salt');
-  localStorage.removeItem('telostax:verify');
-  localStorage.removeItem('telostax:ai-settings');
-  localStorage.removeItem('telostax:expense-scanner');
-  localStorage.removeItem('telostax:ai-key-enc');
-  localStorage.removeItem('telostax:ai-key-migrate');
-  localStorage.removeItem('telostax:expense-scanner-enc');
+  localStorage.removeItem('hatax:salt');
+  localStorage.removeItem('hatax:verify');
+  localStorage.removeItem('hatax:ai-settings');
+  localStorage.removeItem('hatax:expense-scanner');
+  localStorage.removeItem('hatax:ai-key-enc');
+  localStorage.removeItem('hatax:ai-key-migrate');
+  localStorage.removeItem('hatax:expense-scanner-enc');
   deleteAllChatHistory();
 
   // 2. Clear sessionStorage
@@ -912,7 +912,7 @@ export function getExpenseCategories(): ExpenseCategory[] {
 
 // ─── Calculate (client-side via engine) ─────────
 
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
 
 export function calculateReturn(returnId: string) {
   const tr = getReturn(returnId);

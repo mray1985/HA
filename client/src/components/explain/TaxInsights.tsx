@@ -5,7 +5,7 @@
  * non-obvious observations to help the user understand their situation.
  */
 
-import type { Form1040Result, CalculationResult } from '@telostax/engine';
+import type { Form1040Result, CalculationResult } from '@hatax/engine';
 import { Lightbulb, TrendingDown, TrendingUp, Shield, AlertTriangle } from 'lucide-react';
 
 interface TaxInsightsProps {

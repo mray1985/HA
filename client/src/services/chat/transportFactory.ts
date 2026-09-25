@@ -9,7 +9,7 @@
  * BYOK mode uses the Anthropic cloud transport.
  */
 
-import type { AISettings } from '@telostax/engine';
+import type { AISettings } from '@hatax/engine';
 import type { ChatTransport } from './types';
 import { BYOKTransport } from './BYOKTransport';
 import { useAISettingsStore } from '../../store/aiSettingsStore';

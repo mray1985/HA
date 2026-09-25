@@ -4,12 +4,12 @@
  * Generates a personalized list of forward-looking tax deadlines based on
  * a taxpayer's return data. Pure function, no side effects.
  *
- * Context: TelosTax handles the 2025 tax year. Users file in early 2026.
+ * Context: HATax handles the 2025 tax year. Users file in early 2026.
  * All deadlines shown are forward-looking — filing deadlines, contribution
  * deadlines, and 2026 estimated payments derived from the 2025 return.
  */
 
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 
 // ─── Types ──────────────────────────────────────────
 

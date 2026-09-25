@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TaxReturn, CalculationResult, Form1040Result, CreditsResult } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn, CalculationResult, Form1040Result, CreditsResult } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 import {
   getActiveWarnings,
   hasWarningsForStep,

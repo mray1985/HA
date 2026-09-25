@@ -7,7 +7,7 @@
  */
 
 import { FlaskConical, Columns2, SlidersHorizontal, Activity, TrendingUp, TrendingDown } from 'lucide-react';
-import { FilingStatus } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import ToolViewWrapper from '../tools/ToolViewWrapper';
@@ -110,7 +110,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 // Baseline Info (when baseline tab is selected)
 // ---------------------------------------------------------------------------
 
-function BaselineInfo({ baseResult }: { baseResult: import('@telostax/engine').CalculationResult }) {
+function BaselineInfo({ baseResult }: { baseResult: import('@hatax/engine').CalculationResult }) {
   const f = baseResult.form1040;
   const isRefund = f.refundAmount > 0;
 
@@ -155,7 +155,7 @@ export default function ScenarioLabToolView() {
   return <ScenarioLabInner taxReturn={taxReturn} />;
 }
 
-function ScenarioLabInner({ taxReturn }: { taxReturn: import('@telostax/engine').TaxReturn }) {
+function ScenarioLabInner({ taxReturn }: { taxReturn: import('@hatax/engine').TaxReturn }) {
   const { state, dispatch, baseResult, scenarioResults, deltas } = useScenarioLab(taxReturn);
   const activeScenario = state.scenarios.find(s => s.id === state.activeScenarioId) ?? null;
   const activeResult = state.activeScenarioId ? scenarioResults.get(state.activeScenarioId) : null;

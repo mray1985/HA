@@ -10,7 +10,7 @@
  * descriptions; it never decides whether to show a nudge.
  */
 
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import { getSuggestions, type TaxSuggestion } from './suggestionService';
 
 // ─── Types ─────────────────────────────────────────

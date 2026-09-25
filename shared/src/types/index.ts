@@ -1520,7 +1520,7 @@ export interface InvestmentInterestResult {
 
 // Prior-year summary for YoY comparison (LookBack)
 export interface PriorYearSummary {
-  source: 'telostax-json' | '1040-pdf' | 'competitor-pdf';
+  source: 'hatax-json' | '1040-pdf' | 'competitor-pdf';
   taxYear: number;
   filingStatus?: string;
   providerName?: string;           // Detected provider name (e.g. competitor software name)

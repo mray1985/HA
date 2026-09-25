@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getReturn, calculateReturn, listReturns } from '../../api/client';
-import { type TaxReturn } from '@telostax/engine';
+import { type TaxReturn } from '@hatax/engine';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 

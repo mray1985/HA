@@ -6,7 +6,7 @@
  *   - BYOKTransport → User's Anthropic API key, proxied through server
  */
 
-import type { ChatContext, ChatMessage, ChatResponse } from '@telostax/engine';
+import type { ChatContext, ChatMessage, ChatResponse } from '@hatax/engine';
 
 /**
  * Status of a ChatTransport — indicates readiness and loading progress.

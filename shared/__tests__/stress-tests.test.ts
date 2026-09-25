@@ -24,7 +24,7 @@
  *   S18:    Roth conversion pro-rata rule (Form 8606)
  *
  * All assertions use exact engine values (no loose range checks).
- * Consensus accuracy rating: 9/10. These tests push TelosTax to its limits.
+ * Consensus accuracy rating: 9/10. These tests push HATax to its limits.
  */
 
 import { describe, it, expect } from 'vitest';

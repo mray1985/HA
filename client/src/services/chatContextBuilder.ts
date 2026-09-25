@@ -16,9 +16,9 @@
  *   conditions, letting the AI explain "why don't I see Schedule C?"
  */
 
-import type { TaxReturn, CalculationResult, CalculationTrace } from '@telostax/engine';
-import type { ChatContext } from '@telostax/engine';
-import { describeCondition } from '@telostax/engine';
+import type { TaxReturn, CalculationResult, CalculationTrace } from '@hatax/engine';
+import type { ChatContext } from '@hatax/engine';
+import { describeCondition } from '@hatax/engine';
 import type { WizardStep } from '../store/taxReturnStore';
 import { getSuggestions, TaxSuggestion } from './suggestionService';
 import { getActiveWarnings } from './warningService';

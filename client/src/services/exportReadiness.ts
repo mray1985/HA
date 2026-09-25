@@ -11,8 +11,8 @@
  * into a pre-export validation panel.
  */
 
-import type { TaxReturn } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { TaxReturn } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 // ---------------------------------------------------------------------------
 // Types

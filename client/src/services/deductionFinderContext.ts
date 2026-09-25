@@ -5,7 +5,7 @@
  * object for pattern gating. Pure function, no side effects.
  */
 
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import type { ReturnContext } from './deductionFinderTypes';
 
 export function buildReturnContext(

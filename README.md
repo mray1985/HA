@@ -1,10 +1,10 @@
-# TelosTax
+# HATax
 
 Private, browser-based tax preparation powered by an open-source tax engine.
 
-## What is TelosTax?
+## What is HATax?
 
-TelosTax is a free, open-source tax preparation app for the 2025 tax year, built entirely with AI. Your tax data never leaves your browser — all calculations happen client-side using the `@telostax/engine` library, encrypted at rest with AES-256-GCM.
+HATax is a free, open-source tax preparation app for the 2025 tax year, built entirely with AI. Your tax data never leaves your browser — all calculations happen client-side using the `@hatax/engine` library, encrypted at rest with AES-256-GCM.
 
 **Two modes:**
 - **Private Mode** (default) — fully offline, zero data leaves your device
@@ -23,7 +23,7 @@ TelosTax is a free, open-source tax preparation app for the 2025 tax year, built
 
 ```
 tax-project/
-├── shared/   → @telostax/engine (open-source tax calculation library)
+├── shared/   → @hatax/engine (open-source tax calculation library)
 ├── client/   → React 19 + Vite 6 + Tailwind CSS + Zustand 5
 ├── server/   → Express + better-sqlite3 + pdf-lib
 └── docs/     → Project documentation

@@ -11,10 +11,10 @@
  * - On lock/timeout, the key reference is cleared from memory
  */
 
-const SALT_KEY = 'telostax:salt';
-const VERIFY_KEY = 'telostax:verify';
+const SALT_KEY = 'hatax:salt';
+const VERIFY_KEY = 'hatax:verify';
 const PBKDF2_ITERATIONS = 600_000;
-const AAD = new TextEncoder().encode('telostax-v1');
+const AAD = new TextEncoder().encode('hatax-v1');
 
 // ─── Unlock Throttling (UX guard, not security control) ──────
 // Prevents accidental lockout from typos. NOT a brute-force defense —
@@ -92,7 +92,7 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
 // ─── Setup & Unlock ─────────────────────────────────
 
 /** Known plaintext used to verify the passphrase is correct. */
-const VERIFY_PLAINTEXT = 'telostax-verify-v1';
+const VERIFY_PLAINTEXT = 'hatax-verify-v1';
 
 /**
  * First-time setup: derive key from passphrase, store salt + encrypted verify token.

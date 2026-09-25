@@ -9,8 +9,8 @@
  * The old direct fetch calls are replaced by transport.sendMessage().
  */
 
-import type { ChatContext, ChatMessage, ChatResponse, ChatStatus } from '@telostax/engine';
-import { scanForPII } from '@telostax/engine';
+import type { ChatContext, ChatMessage, ChatResponse, ChatStatus } from '@hatax/engine';
+import { scanForPII } from '@hatax/engine';
 import { useAISettingsStore } from '../store/aiSettingsStore';
 import { getTransport } from './chat/transportFactory';
 import type { ChatTransportStatus } from './chat/types';

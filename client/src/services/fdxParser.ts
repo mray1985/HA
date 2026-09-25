@@ -46,7 +46,7 @@ export interface FDXMappedItem {
 }
 
 // ─── Supported Form Type Keys ──────────────────────
-// These are the FDX TaxData property keys we can map to TelosTax income types.
+// These are the FDX TaxData property keys we can map to HATax income types.
 
 interface FormMapper {
   incomeType: string;

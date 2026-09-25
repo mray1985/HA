@@ -7,7 +7,7 @@ import CardSelector from '../common/CardSelector';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
 import { Laptop, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
-import { calculateHomeOfficeDetailed, compareHomeOfficeMethods } from '@telostax/engine';
+import { calculateHomeOfficeDetailed, compareHomeOfficeMethods } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validatePlacedInServiceDate } from '../../utils/dateValidation';
 import CalloutCard from '../common/CalloutCard';

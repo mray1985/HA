@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TrendingUp, TrendingDown, ArrowDown, ArrowUp, ChevronDown, ChevronRight } from 'lucide-react';
-import type { CalculationResult, FilingStatus } from '@telostax/engine';
+import type { CalculationResult, FilingStatus } from '@hatax/engine';
 import type { DeltaMap, DeltaEntry, ScenarioColor } from './types';
 import { formatCurrency, formatPercent } from '../../utils/format';
 import DeltaWaterfall from './charts/DeltaWaterfall';

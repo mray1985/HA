@@ -24,8 +24,8 @@ import {
 import FileDropZone from './FileDropZone';
 import CurrencyInput from '../common/CurrencyInput';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { FilingStatus } from '@telostax/engine';
-import type { TaxReturn, PriorYearSummary, Dependent } from '@telostax/engine';
+import { FilingStatus } from '@hatax/engine';
+import type { TaxReturn, PriorYearSummary, Dependent } from '@hatax/engine';
 import {
   parseCompetitorReturn,
   type CompetitorExtractResult,

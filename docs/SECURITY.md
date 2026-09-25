@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-TelosTax is a browser-first tax preparation application. The core tax engine (`@telostax/engine`) is a pure computation library with no I/O, no network calls, and no filesystem access. The client stores all tax data locally in the browser. An optional Express server provides AI features (chat, document extraction, expense scanning) but stores no user data.
+HATax is a browser-first tax preparation application. The core tax engine (`@hatax/engine`) is a pure computation library with no I/O, no network calls, and no filesystem access. The client stores all tax data locally in the browser. An optional Express server provides AI features (chat, document extraction, expense scanning) but stores no user data.
 
 ## Data Storage
 
@@ -17,7 +17,7 @@ All tax return data lives in the browser and never reaches a server:
 - **Salt** — 16 random bytes, generated once on first setup
 - **IV** — random 12-byte IV per encryption operation
 - **Passphrase** — never stored; derived key held in memory only while vault is unlocked, cleared on lock/timeout
-- **AAD** — AES-GCM additional authenticated data (`telostax-v1`) binds ciphertext to the app context
+- **AAD** — AES-GCM additional authenticated data (`hatax-v1`) binds ciphertext to the app context
 - **Versioned payloads** — encrypted blobs include a version field for forward compatibility
 - **Unlock throttling** — 30-second lockout after 5 failed passphrase attempts (UX guard; PBKDF2 iteration count is the primary brute-force defense)
 
@@ -102,7 +102,7 @@ The project uses `package-lock.json` for deterministic dependency resolution. Th
 
 If you discover a security vulnerability, please report it responsibly:
 
-- **Email:** security@telostax.dev
+- **Email:** security@hatax.dev
 - **GitHub:** Use [GitHub Security Advisories](https://docs.github.com/en/code-security/security-advisories) to submit a private report on this repository
 
 Please do **not** open a public GitHub issue for security vulnerabilities. We will acknowledge your report within 48 hours and aim to triage it within 7 days. Fix timelines depend on severity and complexity.

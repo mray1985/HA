@@ -4,7 +4,7 @@ import { listReturns, createReturn, deleteReturn, getReturn, wipeAllData, export
 import { Plus, FileText, Trash2, CircleDollarSign, Code2, Lock, ArrowRight, Download, Upload, Eye, EyeOff, Loader2, Hourglass, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { importReturnFromFile } from '../services/fileTransfer';
-import { TaxReturn, evaluateCondition } from '@telostax/engine';
+import { TaxReturn, evaluateCondition } from '@hatax/engine';
 import { WIZARD_STEPS, SECTIONS, useTaxReturnStore } from '../store/taxReturnStore';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import LockForm from '../components/common/LockScreen';
@@ -135,7 +135,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
   const consentModalRef = useRef<HTMLDivElement>(null);
   useFocusTrap(consentModalRef, showConsentModal);
 
-  // Import .telostax file state
+  // Import .hatax file state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPassword, setImportPassword] = useState('');
@@ -207,7 +207,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
   // Detect cross-tab localStorage writes and refresh
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key?.startsWith('telostax:')) {
+      if (e.key?.startsWith('hatax:')) {
         refresh();
         toast.info('Data updated in another tab', { id: 'cross-tab-sync', duration: 3000 });
       }
@@ -216,7 +216,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
     return () => window.removeEventListener('storage', handleStorage);
   }, [refresh]);
 
-  const hasConsented = () => localStorage.getItem('telostax:consent') !== null;
+  const hasConsented = () => localStorage.getItem('hatax:consent') !== null;
 
   const handleCreate = () => {
     if (hasConsented()) {
@@ -251,7 +251,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
   const handleConsentConfirm = () => {
     setShowConsentModal(false);
     // Persist record of consent acceptance
-    localStorage.setItem('telostax:consent', JSON.stringify({
+    localStorage.setItem('hatax:consent', JSON.stringify({
       termsVersion: 'March 2026',
       privacyVersion: 'March 2026',
       acceptedAt: new Date().toISOString(),
@@ -274,7 +274,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
     let chatSnapshot: string | null = null;
     try {
       snapshot = getReturn(id);
-      chatSnapshot = localStorage.getItem(`telostax:chat:${id}`);
+      chatSnapshot = localStorage.getItem(`hatax:chat:${id}`);
     } catch { /* return already gone — proceed with delete */ }
 
     deleteReturn(id);
@@ -294,7 +294,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
           importReturn(snapshot);
           // Restore chat history if there was any
           if (chatSnapshot) {
-            localStorage.setItem(`telostax:chat:${snapshot.id}`, chatSnapshot);
+            localStorage.setItem(`hatax:chat:${snapshot.id}`, chatSnapshot);
           }
           refresh();
           toast.success(`Restored ${label}`);
@@ -390,7 +390,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             <span className="text-xs text-slate-400 mt-2 group-hover:text-white transition-colors">Learn more &rarr;</span>
           </button>
           <a
-            href="https://github.com/telosnews/TelosTax"
+            href="https://github.com/telosnews/HATax"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Open Source — View on GitHub (opens in new tab)"
@@ -473,12 +473,12 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
               className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors"
             >
               <Upload className="w-4 h-4" />
-              Import .telostax File
+              Import .hatax File
             </button>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".telostax"
+              accept=".hatax"
               onChange={handleFileSelected}
               className="hidden"
             />
@@ -489,7 +489,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             </p>
           ) : (
             <p className="text-xs text-slate-400 mt-1.5 sm:pl-0.5">
-              Have a .telostax file? These are encrypted backups you can export from any TelosTax session to transfer your return between devices.
+              Have a .hatax file? These are encrypted backups you can export from any HATax session to transfer your return between devices.
             </p>
           )}
         </div>
@@ -664,7 +664,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             </div>
             <div className="text-sm text-slate-300 leading-relaxed space-y-3 mb-5">
               <p>
-                TelosTax is a prototype built with AI. It has not been professionally audited by
+                HATax is a prototype built with AI. It has not been professionally audited by
                 tax experts or human software engineers. The tax engine may contain errors.
               </p>
               <p>
@@ -774,10 +774,10 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
       {/* Import Password Modal */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={dismissImport}>
-          <div ref={importModalRef} role="dialog" aria-modal="true" aria-label="Import .telostax file" className="w-full max-w-sm rounded-xl bg-surface-800 border border-slate-700 p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div ref={importModalRef} role="dialog" aria-modal="true" aria-label="Import .hatax file" className="w-full max-w-sm rounded-xl bg-surface-800 border border-slate-700 p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-3">
               <Lock className="w-4 h-4 text-telos-orange-400" />
-              <h3 className="text-sm font-semibold text-white">Import .telostax File</h3>
+              <h3 className="text-sm font-semibold text-white">Import .hatax File</h3>
             </div>
             <p className="text-xs text-slate-400 mb-1">
               <span className="font-medium text-slate-300">{importFile?.name}</span>

@@ -9,8 +9,8 @@
  * 5. Full-return narrative review
  */
 
-import type { IRSFormTemplate, TaxReturn, CalculationResult, ClassifiedField } from '@telostax/engine';
-import { classifyFields } from '@telostax/engine';
+import type { IRSFormTemplate, TaxReturn, CalculationResult, ClassifiedField } from '@hatax/engine';
+import { classifyFields } from '@hatax/engine';
 import { resolveFieldValue } from './formFieldResolver';
 import { ALL_TEMPLATES } from './irsFormFiller';
 

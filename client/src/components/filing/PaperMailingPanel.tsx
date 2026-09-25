@@ -9,8 +9,8 @@
  * - State Filing section (conditional)
  */
 import { useMemo } from 'react';
-import type { TaxReturn, CalculationResult, FilingInstructions } from '@telostax/engine';
-import { getFilingInstructions, FilingStatus, assessEstimatedPaymentNeed } from '@telostax/engine';
+import type { TaxReturn, CalculationResult, FilingInstructions } from '@hatax/engine';
+import { getFilingInstructions, FilingStatus, assessEstimatedPaymentNeed } from '@hatax/engine';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import DeadlineCard from './DeadlineCard';
 import CalloutCard from '../common/CalloutCard';

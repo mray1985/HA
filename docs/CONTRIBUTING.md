@@ -1,6 +1,6 @@
-# Contributing to TelosTax
+# Contributing to HATax
 
-Thank you for your interest in contributing to TelosTax. This guide explains how to add features, write tests, and maintain the authority-backed standards that make this engine trustworthy.
+Thank you for your interest in contributing to HATax. This guide explains how to add features, write tests, and maintain the authority-backed standards that make this engine trustworthy.
 
 ## Code of Conduct
 
@@ -8,7 +8,7 @@ We are committed to providing a welcoming, inclusive, and harassment-free experi
 
 ## No Authority, No Merge
 
-Every tax computation in TelosTax must trace to a primary legal authority. If a calculation cannot cite an IRC section, Treasury Regulation, Revenue Procedure, or IRS Form/Worksheet, it will not be merged. This is the project's core integrity rule.
+Every tax computation in HATax must trace to a primary legal authority. If a calculation cannot cite an IRC section, Treasury Regulation, Revenue Procedure, or IRS Form/Worksheet, it will not be merged. This is the project's core integrity rule.
 
 Acceptable authority sources:
 
@@ -19,11 +19,11 @@ Acceptable authority sources:
 
 ## Project Structure
 
-TelosTax is a monorepo with three packages:
+HATax is a monorepo with three packages:
 
 ```
 tax-project/
-├── shared/          @telostax/engine — tax calculation engine (pure functions)
+├── shared/          @hatax/engine — tax calculation engine (pure functions)
 ├── client/          React + Vite frontend (wizard-based tax return UI)
 └── server/          Express backend (optional AI features: chat, OCR, expense scanning)
 ```

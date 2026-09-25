@@ -39,7 +39,7 @@ function buildVEvent(deadline: TaxDeadline, stamp: string): string {
 
   const lines = [
     'BEGIN:VEVENT',
-    `UID:telostax-${deadline.id}@telostax.com`,
+    `UID:hatax-${deadline.id}@hatax.com`,
     `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${dateStr}`,
     `DTEND;VALUE=DATE:${endStr}`,
@@ -69,10 +69,10 @@ export function generateICS(deadlines: TaxDeadline[]): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//TelosTax//Tax Calendar//EN',
+    'PRODID:-//HATax//Tax Calendar//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:TelosTax Deadlines',
+    'X-WR-CALNAME:HATax Deadlines',
     'X-WR-TIMEZONE:America/New_York',
     ...deadlines.map(d => buildVEvent(d, stamp)),
     'END:VCALENDAR',
@@ -87,7 +87,7 @@ export function downloadICS(deadlines: TaxDeadline[]): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'telostax-deadlines.ics';
+  a.download = 'hatax-deadlines.ics';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

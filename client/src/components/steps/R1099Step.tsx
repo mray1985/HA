@@ -15,7 +15,7 @@ import InlineImportButton from '../import/InlineImportButton';
 import InlinePDFImport from '../import/InlinePDFImport';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
-import { getAllStates, EARLY_DISTRIBUTION } from '@telostax/engine';
+import { getAllStates, EARLY_DISTRIBUTION } from '@hatax/engine';
 import { Info } from 'lucide-react';
 
 const stateOptions = getAllStates().map((s) => ({ code: s.code, name: s.name }));

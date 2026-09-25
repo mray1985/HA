@@ -6,8 +6,8 @@
 
 import { useMemo } from 'react';
 import { Zap } from 'lucide-react';
-import { calculateForm1040, FilingStatus, IRA, HSA, SOLO_401K } from '@telostax/engine';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import { calculateForm1040, FilingStatus, IRA, HSA, SOLO_401K } from '@hatax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import { getAgeAtEndOfYear } from '../../utils/dateValidation';
 import type { QuickPreset, Scenario, ScenarioLabAction } from './types';
 import { applyOverrides } from './useScenarioLab';

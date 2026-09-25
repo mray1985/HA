@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { TaxReturn, CalculationResult, evaluateCondition, setDeepPath } from '@telostax/engine';
-import type { StepCondition } from '@telostax/engine';
+import { TaxReturn, CalculationResult, evaluateCondition, setDeepPath } from '@hatax/engine';
+import type { StepCondition } from '@hatax/engine';
 import { writeReturn } from '../api/client';
 import { isEncryptionSetup } from '../services/crypto';
 

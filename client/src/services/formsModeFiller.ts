@@ -11,9 +11,9 @@
  * stripping non-alphanumeric characters to match both conventions.
  */
 import type { PdfViewer } from '@syncfusion/ej2-pdfviewer';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
-import type { IRSFormTemplate } from '@telostax/engine';
-import type { ClassifiedField } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
+import type { IRSFormTemplate } from '@hatax/engine';
+import type { ClassifiedField } from '@hatax/engine';
 import { resolveFieldValue } from './formFieldResolver';
 
 /**

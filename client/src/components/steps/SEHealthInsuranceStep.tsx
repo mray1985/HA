@@ -9,7 +9,7 @@ import StepWarningsBanner from '../common/StepWarningsBanner';
 import { Heart, AlertTriangle, ExternalLink } from 'lucide-react';
 import { HELP_CONTENT } from '../../data/helpContent';
 import CalloutCard from '../common/CalloutCard';
-import type { Form7206Input, Form7206MonthlyEligibility } from '@telostax/engine';
+import type { Form7206Input, Form7206MonthlyEligibility } from '@hatax/engine';
 
 export default function SEHealthInsuranceStep() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();

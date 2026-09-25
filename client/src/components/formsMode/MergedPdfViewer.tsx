@@ -51,7 +51,7 @@ export default function MergedPdfViewer({ pdfBytes }: MergedPdfViewerProps) {
           showTooltip: true,
           toolbarItems: ['PageNavigationTool', 'MagnificationTool', 'SearchOption', 'PrintTool', 'DownloadTool'] as never,
         },
-        downloadFileName: 'TelosTax_Selected_Forms.pdf',
+        downloadFileName: 'HATax_Selected_Forms.pdf',
         height: '100%',
         width: '100%',
         documentLoad: () => setStatus('ready'),

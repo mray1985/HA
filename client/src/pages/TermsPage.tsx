@@ -26,25 +26,25 @@ export default function TermsPage() {
           <p className="text-slate-400 text-xs">Last updated: March 22, 2026</p>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What TelosTax Is</h2>
+            <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What HATax Is</h2>
             <p>
-              TelosTax is a free, open-source tax preparation tool that helps you estimate your federal
+              HATax is a free, open-source tax preparation tool that helps you estimate your federal
               and state income tax liability for all 50 states and the District of Columbia. It runs
               entirely in your web browser. All calculations are performed on your device using the
-              open-source <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">@telostax/engine</code> library.
+              open-source <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">@hatax/engine</code> library.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2. What TelosTax Is Not</h2>
+            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2. What HATax Is Not</h2>
             <p>
-              TelosTax is <strong className="text-white">not</strong> a tax preparer, tax advisor, CPA,
+              HATax is <strong className="text-white">not</strong> a tax preparer, tax advisor, CPA,
               enrolled agent, or attorney. It does not provide tax advice, legal advice, or financial
               advice of any kind. It is a tool that performs mathematical calculations based on
               information you provide and IRS-published tax rules.
             </p>
             <p>
-              TelosTax does not file tax returns with the IRS or any state tax authority. In Private
+              HATax does not file tax returns with the IRS or any state tax authority. In Private
               Mode (the default), it does not transmit your data to any third party. In BYOK Mode,
               PII-stripped messages are relayed to Anthropic for AI-powered features (see Section 7a
               below). It generates documents for your personal review and records only.
@@ -65,7 +65,7 @@ export default function TermsPage() {
               <li>Keeping a backup of your data via export in case you clear your browser or lose your device</li>
             </ul>
             <p className="mt-3">
-              Tax law is complex and changes frequently. TelosTax implements the rules as we understand
+              Tax law is complex and changes frequently. HATax implements the rules as we understand
               them for the 2025 tax year, but we make no guarantee that our implementation is complete,
               current, or correct for every situation.
             </p>
@@ -74,7 +74,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">4. No Warranty</h2>
             <p>
-              TelosTax is provided <strong className="text-white">"as is"</strong> and <strong className="text-white">"as available"</strong> without
+              HATax is provided <strong className="text-white">"as is"</strong> and <strong className="text-white">"as available"</strong> without
               warranty of any kind, either express or implied, including but not limited to the implied
               warranties of merchantability, fitness for a particular purpose, and non-infringement.
             </p>
@@ -88,18 +88,18 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">5. Limitation of Liability</h2>
             <p>
-              To the maximum extent permitted by applicable law, TelosTax and its contributors shall
+              To the maximum extent permitted by applicable law, HATax and its contributors shall
               not be liable for any indirect, incidental, special, consequential, or punitive damages,
               including but not limited to: loss of profits, data, or goodwill; tax penalties or
               interest; IRS audit costs; or any other intangible losses resulting from your use of or
-              inability to use TelosTax.
+              inability to use HATax.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">6. Open Source</h2>
             <p>
-              The TelosTax calculation engine is released under the MIT License. You may inspect, modify,
+              The HATax calculation engine is released under the MIT License. You may inspect, modify,
               and redistribute the source code in accordance with that license. The open-source nature
               of the engine means you can independently verify every calculation it performs.
             </p>
@@ -120,17 +120,17 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">7a. AI Features (BYOK Mode)</h2>
             <p>
-              TelosTax includes optional AI-powered features that require you to provide your own
+              HATax includes optional AI-powered features that require you to provide your own
               Anthropic API key ("BYOK Mode"). These features are disabled by default.
             </p>
             <ul className="list-disc list-inside space-y-1 text-slate-400 mt-3">
               <li>
                 <strong className="text-slate-300">Your API key, your account.</strong> AI usage is
-                billed directly to your Anthropic account. TelosTax does not charge for AI features
+                billed directly to your Anthropic account. HATax does not charge for AI features
                 and receives no payment from Anthropic.
               </li>
               <li>
-                <strong className="text-slate-300">TelosTax is not responsible for Anthropic's service.</strong> We
+                <strong className="text-slate-300">HATax is not responsible for Anthropic's service.</strong> We
                 relay your messages but have no control over Anthropic's availability, pricing,
                 rate limits, or model behavior. Anthropic's terms of service govern your use of
                 their API.
@@ -138,7 +138,7 @@ export default function TermsPage() {
               <li>
                 <strong className="text-slate-300">AI responses are not tax advice.</strong> The AI
                 assistant can explain tax concepts and help with data entry, but all tax calculations
-                are performed by our deterministic engine. TelosTax is not responsible for the accuracy,
+                are performed by our deterministic engine. HATax is not responsible for the accuracy,
                 completeness, or reliability of AI-generated responses. You should not rely on AI
                 responses as a substitute for professional tax advice.
               </li>
@@ -158,7 +158,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">8. Eligibility</h2>
             <p>
               You must be at least 18 years old (or the age of majority in your jurisdiction) to use
-              TelosTax. By using this software, you represent that you meet this requirement.
+              HATax. By using this software, you represent that you meet this requirement.
             </p>
           </section>
 
@@ -166,7 +166,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">9. Indemnification</h2>
             <p>
               To the maximum extent permitted by applicable law, you agree to indemnify and hold
-              harmless TelosTax, its author, and its contributors from any claims, losses, damages,
+              harmless HATax, its author, and its contributors from any claims, losses, damages,
               liabilities, or expenses (including reasonable attorneys&apos; fees) arising from your use
               of the software, including but not limited to penalties, interest, or audit costs
               assessed by any taxing authority, or any misuse of the AI features.
@@ -184,7 +184,7 @@ export default function TermsPage() {
             <p>
               To the fullest extent permitted by law, any dispute shall be resolved on an individual
               basis. You waive any right to participate in a class action, class arbitration, or other
-              representative proceeding against TelosTax or its contributors.
+              representative proceeding against HATax or its contributors.
             </p>
           </section>
 
@@ -192,7 +192,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">11. Changes to These Terms</h2>
             <p>
               We may update these terms from time to time. Changes will be reflected on this page
-              with an updated &ldquo;Last updated&rdquo; date. Your continued use of TelosTax after changes
+              with an updated &ldquo;Last updated&rdquo; date. Your continued use of HATax after changes
               constitutes acceptance of the revised terms.
             </p>
           </section>
@@ -211,7 +211,7 @@ export default function TermsPage() {
             <p>
               If you have questions about these terms, find a calculation error, or want to contribute
               to the project, email us at <a href="mailto:ryan@telos.news" className="text-telos-blue-400 hover:text-telos-blue-300 underline">ryan@telos.news</a> or
-              visit our <a href="https://github.com/telosnews/TelosTax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
+              visit our <a href="https://github.com/telosnews/HATax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
             </p>
           </section>
         </div>

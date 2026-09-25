@@ -17,7 +17,7 @@
 
 import { encrypt, decrypt, getActiveKey } from './crypto';
 
-const CHAT_KEY_PREFIX = 'telostax:chat:';
+const CHAT_KEY_PREFIX = 'hatax:chat:';
 
 function chatKey(returnId: string): string {
   return `${CHAT_KEY_PREFIX}${returnId}`;

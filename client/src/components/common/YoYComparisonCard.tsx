@@ -11,8 +11,8 @@ import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import {
   TrendingUp, TrendingDown, ArrowRight, FileInput, X, Trash2, History, Copy,
 } from 'lucide-react';
-import type { PriorYearSummary, TaxReturn } from '@telostax/engine';
-import type { Form1040Result } from '@telostax/engine';
+import type { PriorYearSummary, TaxReturn } from '@hatax/engine';
+import type { Form1040Result } from '@hatax/engine';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { importPriorYearJSON, importPriorYear1040PDF } from '../../services/priorYearImporter';
 import { buildTemplateItems, type TemplateImportManifest } from '../../services/priorYearTemplateBuilder';
@@ -94,7 +94,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
       } else if (ext === 'pdf') {
         result = await importPriorYear1040PDF(file);
       } else {
-        setError('Please select a TelosTax JSON export (.json) or a 1040 PDF (.pdf).');
+        setError('Please select a HATax JSON export (.json) or a 1040 PDF (.pdf).');
         setLoading(false);
         return;
       }
@@ -196,7 +196,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
             {loading ? 'Importing...' : 'Drop a prior-year file here'}
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            TelosTax JSON export or IRS 1040 PDF
+            HATax JSON export or IRS 1040 PDF
           </p>
           <input
             ref={inputRef}
@@ -260,7 +260,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
           <h3 className="font-medium text-telos-blue-300">
             vs. {priorYear.taxYear} Return
             <span className="text-xs text-slate-400 ml-2 font-normal">
-              ({priorYear.source === 'telostax-json' ? 'JSON import' : 'PDF import'})
+              ({priorYear.source === 'hatax-json' ? 'JSON import' : 'PDF import'})
             </span>
           </h3>
         </div>

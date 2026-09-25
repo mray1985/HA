@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ChatAction } from '@telostax/engine';
-import { FilingStatus } from '@telostax/engine';
+import type { ChatAction } from '@hatax/engine';
+import { FilingStatus } from '@hatax/engine';
 
 // ─── Mocks ────────────────────────────────────────
 

@@ -1,9 +1,9 @@
-# TelosTax Known Limitations
+# HATax Known Limitations
 
 **Last Updated:** 2026-03-20
 **Tax Year:** 2025
 
-This document lists tax forms, income types, deductions, credits, and features that TelosTax does **not** currently support. Each item includes a rationale and IRS filer population estimate where available.
+This document lists tax forms, income types, deductions, credits, and features that HATax does **not** currently support. Each item includes a rationale and IRS filer population estimate where available.
 
 ---
 
@@ -70,7 +70,7 @@ These appear in commercial software but are **not deductible** for tax years 201
 | Job-Related / Unreimbursed Employee Expenses | TCJA §11045 suspended (Form 2106 eliminated for most filers) |
 | Other Investment Expenses (advisory fees, etc.) | TCJA §11045 suspended |
 
-Some commercial tax software retains these items in its UI for completeness and to capture data if TCJA provisions expire. TelosTax omits them because they have zero tax impact for TY2025.
+Some commercial tax software retains these items in its UI for completeness and to capture data if TCJA provisions expire. HATax omits them because they have zero tax impact for TY2025.
 
 ---
 

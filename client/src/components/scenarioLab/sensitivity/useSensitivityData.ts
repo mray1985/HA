@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { calculateForm1040, FilingStatus } from '@telostax/engine';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
+import { calculateForm1040, FilingStatus } from '@hatax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
 import { applyOverrides } from '../useScenarioLab';
 import { VARIABLE_DEFINITIONS } from '../variableDefinitions';
 import type { SensitivityConfig } from '../types';

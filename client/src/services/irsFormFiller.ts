@@ -6,52 +6,52 @@
  */
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { PDFPage, PDFFont } from 'pdf-lib';
-import type { TaxReturn, CalculationResult } from '@telostax/engine';
-import type { IRSFieldMapping, IRSFormTemplate } from '@telostax/engine';
+import type { TaxReturn, CalculationResult } from '@hatax/engine';
+import type { IRSFieldMapping, IRSFormTemplate } from '@hatax/engine';
 import { generateStateFormPDF } from './stateFormFiller';
 import { generateStateTaxSummaryPDF } from './pdfService';
-import { getFilingInstructions } from '@telostax/engine';
-import type { FilingInstructions } from '@telostax/engine';
-import { FORM_1040_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_1_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_2_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_3_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_C_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_D_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_SE_TEMPLATE } from '@telostax/engine';
-import { FORM_8949_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_E_TEMPLATE } from '@telostax/engine';
-import { FORM_8962_TEMPLATE } from '@telostax/engine';
-import { FORM_5695_TEMPLATE } from '@telostax/engine';
-import { FORM_8936_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_A_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_B_TEMPLATE } from '@telostax/engine';
-import { FORM_4562_TEMPLATE } from '@telostax/engine';
-import { FORM_1040_ES_TEMPLATE } from '@telostax/engine';
-import { FORM_1040V_TEMPLATE } from '@telostax/engine';
-import { FORM_4868_TEMPLATE } from '@telostax/engine';
-import { FORM_7206_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_F_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_H_TEMPLATE } from '@telostax/engine';
-import { SCHEDULE_R_TEMPLATE } from '@telostax/engine';
-import { FORM_6251_TEMPLATE } from '@telostax/engine';
-import { FORM_4797_TEMPLATE } from '@telostax/engine';
-import { FORM_5329_TEMPLATE } from '@telostax/engine';
-import { FORM_8606_TEMPLATE } from '@telostax/engine';
-import { FORM_4137_TEMPLATE } from '@telostax/engine';
-import { FORM_8283_TEMPLATE } from '@telostax/engine';
-import { FORM_8911_TEMPLATE } from '@telostax/engine';
-import { FORM_8863_TEMPLATE } from '@telostax/engine';
-import { FORM_8889_TEMPLATE } from '@telostax/engine';
-import { FORM_8582_TEMPLATE } from '@telostax/engine';
-import { FORM_2210_TEMPLATE } from '@telostax/engine';
-import { FORM_4952_TEMPLATE } from '@telostax/engine';
-import { FORM_8615_TEMPLATE } from '@telostax/engine';
-import { FORM_8839_TEMPLATE } from '@telostax/engine';
-import { FORM_2555_TEMPLATE } from '@telostax/engine';
-import { FORM_3903_TEMPLATE } from '@telostax/engine';
-import { FORM_982_TEMPLATE } from '@telostax/engine';
-import { FORM_5500_EZ_TEMPLATE } from '@telostax/engine';
+import { getFilingInstructions } from '@hatax/engine';
+import type { FilingInstructions } from '@hatax/engine';
+import { FORM_1040_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_1_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_2_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_3_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_C_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_D_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_SE_TEMPLATE } from '@hatax/engine';
+import { FORM_8949_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_E_TEMPLATE } from '@hatax/engine';
+import { FORM_8962_TEMPLATE } from '@hatax/engine';
+import { FORM_5695_TEMPLATE } from '@hatax/engine';
+import { FORM_8936_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_A_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_B_TEMPLATE } from '@hatax/engine';
+import { FORM_4562_TEMPLATE } from '@hatax/engine';
+import { FORM_1040_ES_TEMPLATE } from '@hatax/engine';
+import { FORM_1040V_TEMPLATE } from '@hatax/engine';
+import { FORM_4868_TEMPLATE } from '@hatax/engine';
+import { FORM_7206_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_F_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_H_TEMPLATE } from '@hatax/engine';
+import { SCHEDULE_R_TEMPLATE } from '@hatax/engine';
+import { FORM_6251_TEMPLATE } from '@hatax/engine';
+import { FORM_4797_TEMPLATE } from '@hatax/engine';
+import { FORM_5329_TEMPLATE } from '@hatax/engine';
+import { FORM_8606_TEMPLATE } from '@hatax/engine';
+import { FORM_4137_TEMPLATE } from '@hatax/engine';
+import { FORM_8283_TEMPLATE } from '@hatax/engine';
+import { FORM_8911_TEMPLATE } from '@hatax/engine';
+import { FORM_8863_TEMPLATE } from '@hatax/engine';
+import { FORM_8889_TEMPLATE } from '@hatax/engine';
+import { FORM_8582_TEMPLATE } from '@hatax/engine';
+import { FORM_2210_TEMPLATE } from '@hatax/engine';
+import { FORM_4952_TEMPLATE } from '@hatax/engine';
+import { FORM_8615_TEMPLATE } from '@hatax/engine';
+import { FORM_8839_TEMPLATE } from '@hatax/engine';
+import { FORM_2555_TEMPLATE } from '@hatax/engine';
+import { FORM_3903_TEMPLATE } from '@hatax/engine';
+import { FORM_982_TEMPLATE } from '@hatax/engine';
+import { FORM_5500_EZ_TEMPLATE } from '@hatax/engine';
 
 // ─── Template Cache ─────────────────────────────────────────────
 // Cache loaded PDF bytes in memory to avoid re-fetching on repeat downloads.
@@ -474,7 +474,7 @@ async function generateCoverPagePDF(
   const cursor: Cursor = { y: PAGE_H - MARGIN_T };
 
   // ── Header ────────────────────────────────────────────────────
-  page.drawText('TelosTax Filing Packet', {
+  page.drawText('HATax Filing Packet', {
     x: MARGIN_L,
     y: cursor.y,
     size: 18,

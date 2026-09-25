@@ -1,12 +1,12 @@
 {
-  "name": "@telostax/engine",
+  "name": "@hatax/engine",
   "version": "0.1.0",
   "description": "Open-source federal tax calculation engine for the 2025 tax year. Pure TypeScript, zero dependencies.",
   "license": "MIT",
-  "author": "TelosTax",
+  "author": "HATax",
   "repository": {
     "type": "git",
-    "url": "https://github.com/telostax/engine"
+    "url": "https://github.com/hatax/engine"
   },
   "keywords": [
     "tax",

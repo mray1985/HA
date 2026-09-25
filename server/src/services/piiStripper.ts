@@ -1,12 +1,12 @@
 /**
  * PII Stripping Service — Server-side defense-in-depth.
  *
- * The core PII scanning logic now lives in @telostax/engine (shared).
+ * The core PII scanning logic now lives in @hatax/engine (shared).
  * This module re-exports stripPII (via scanForPII) and adds server-specific
  * functions: stripContext (allowlist-based) and stripConversationHistory.
  */
 
-import { scanForPII } from '@telostax/engine';
+import { scanForPII } from '@hatax/engine';
 
 // ─── Types (re-export for backwards compatibility) ─
 
