@@ -11,13 +11,15 @@ type TaxModule = Record<string, any>;
 
 /**
  * Get all tax constants for the specified year.
- * Falls back to 2025 if year is not supported.
+ * Throws if year is not supported.
  */
 export function getTaxConstants(year: number): TaxModule {
   switch (year) {
     case 2024: return tax2024;
+    case 2025: return tax2025;
     case 2026: return tax2026;
-    default: return tax2025;
+    default:
+      throw new Error(`Unsupported tax year: ${year}. Supported years: ${SUPPORTED_TAX_YEARS.join(', ')}`);
   }
 }
 

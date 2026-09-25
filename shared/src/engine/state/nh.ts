@@ -73,15 +73,15 @@ export function createNHCalculator(): StateCalculator {
         return zeroResult;
       }
 
-      // TY2024: 4% I&D tax with $2,400 per person exemption
-      const idTaxRate = 0.04;
+      // TY2024: 3% I&D tax with $2,400 per person exemption
+      const idTaxRate = 0.03;
       const exemptionPerPerson = 2400;
       const totalExemption = exemptionPerPerson * numPersons;
 
       // Calculate interest and dividend income from federal result
       const interestIncome = federalResult.form1040.totalInterest || 0;
-      // Ordinary dividends = total dividends - qualified dividends
-      const ordinaryDividends = Math.max(0, (federalResult.form1040.totalDividends || 0) - (federalResult.form1040.qualifiedDividends || 0));
+      // NH I&D tax uses ordinary dividends directly (Line 3b = ordinary dividends, includes qualified)
+      const ordinaryDividends = federalResult.form1040.totalDividends || 0;
       const idIncome = interestIncome + ordinaryDividends;
 
       const taxableIdIncome = Math.max(0, idIncome - totalExemption);
