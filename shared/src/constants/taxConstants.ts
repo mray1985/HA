@@ -27,15 +27,18 @@ export function getTaxConstants(year: number): TaxModule {
 // and return the correct year's value.
 
 export function getTaxBrackets(year: number) {
-  return getTaxConstants(year).TAX_BRACKETS_2025;
+  const constants = getTaxConstants(year);
+  return year === 2026 ? constants.TAX_BRACKETS_2026 : constants.TAX_BRACKETS_2025;
 }
 
 export function getStandardDeduction(year: number) {
-  return getTaxConstants(year).STANDARD_DEDUCTION_2025;
+  const constants = getTaxConstants(year);
+  return year === 2026 ? constants.STANDARD_DEDUCTION_2026 : constants.STANDARD_DEDUCTION_2025;
 }
 
 export function getBonusDepreciationRate(year: number) {
-  return getTaxConstants(year).BONUS_DEPRECIATION_RATE_2025;
+  const constants = getTaxConstants(year);
+  return year === 2026 ? constants.BONUS_DEPRECIATION_RATE_2026 : constants.BONUS_DEPRECIATION_RATE_2025;
 }
 
 export function getDepreciationTaxYear(year: number) {
@@ -43,7 +46,8 @@ export function getDepreciationTaxYear(year: number) {
 }
 
 export function getLtcPremiumLimits(year: number) {
-  return getTaxConstants(year).LTC_PREMIUM_LIMITS_2025;
+  const constants = getTaxConstants(year);
+  return year === 2026 ? constants.LTC_PREMIUM_LIMITS_2026 : constants.LTC_PREMIUM_LIMITS_2025;
 }
 
 // ── Year-neutral re-exports (for constants that already have no year suffix) ──
@@ -319,4 +323,20 @@ export function getEitcBrackets(year: number) {
 
 export function getEitcInvestmentIncomeLimit(year: number) {
   return getTaxConstants(year).INVESTMENT_INCOME_LIMIT;
+}
+
+export function getSchedule1ATips(year: number) {
+  return getTaxConstants(year).SCHEDULE_1A;
+}
+
+export function getSchedule1AOvertime(year: number) {
+  return getTaxConstants(year).SCHEDULE_1A;
+}
+
+export function getSchedule1ACarLoan(year: number) {
+  return getTaxConstants(year).SCHEDULE_1A;
+}
+
+export function getSchedule1ASenior(year: number) {
+  return getTaxConstants(year).SCHEDULE_1A;
 }

@@ -6,7 +6,7 @@ import { FilingStatus, TaxBracket } from '../types/index.js';
 // Constants: Rev. Proc. 2025-32, Section 3.01, Table 1 — Taxable income brackets
 // ──────────────────────────────────────────────────
 
-export const TAX_BRACKETS_2025: Record<FilingStatus, TaxBracket[]> = {
+export const TAX_BRACKETS_2026: Record<FilingStatus, TaxBracket[]> = {
   [FilingStatus.Single]: [
     { min: 0, max: 12400, rate: 0.10 },
     { min: 12400, max: 50400, rate: 0.12 },
@@ -60,7 +60,7 @@ export const TAX_BRACKETS_2025: Record<FilingStatus, TaxBracket[]> = {
 // Constants: Rev. Proc. 2025-32, Section 3.02, Table 5 — Standard deduction amounts
 // ──────────────────────────────────────────────────
 
-export const STANDARD_DEDUCTION_2025: Record<FilingStatus, number> = {
+export const STANDARD_DEDUCTION_2026: Record<FilingStatus, number> = {
   [FilingStatus.Single]: 16100,
   [FilingStatus.MarriedFilingJointly]: 32200,
   [FilingStatus.MarriedFilingSeparately]: 16100,
@@ -294,7 +294,7 @@ export const MACRS_GDS_RATES_MID_QUARTER: Record<number, readonly (readonly numb
 };
 
 /** Bonus depreciation rate for 2026 (100% restored by OBBBA). IRC §168(k). */
-export const BONUS_DEPRECIATION_RATE_2025 = 1.0;
+export const BONUS_DEPRECIATION_RATE_2026 = 1.0;
 
 /** Tax year for MACRS year-index computation. */
 export const DEPRECIATION_TAX_YEAR = 2026;
@@ -1119,7 +1119,7 @@ export const SIMPLE_IRA = {
 // Authority: Rev. Proc. 2025-32 (2026 inflation-adjusted amounts)
 // Per person. Used by Form 7206 to cap deductible LTC premiums by age.
 // ──────────────────────────────────────────────────
-export const LTC_PREMIUM_LIMITS_2025 = {
+export const LTC_PREMIUM_LIMITS_2026 = {
   AGE_40_OR_UNDER: 490,
   AGE_41_TO_50: 920,
   AGE_51_TO_60: 1840,
