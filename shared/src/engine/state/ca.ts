@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Omega AI LLC. All rights reserved.
+// Originally developed as TelosTax. Licensed under MIT.
 /**
  * California State Tax Calculator — Tax Year 2025
  *

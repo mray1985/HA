@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Omega AI LLC. All rights reserved.
+// Originally developed as TelosTax. Licensed under MIT.
 /**
  * Client-side encryption utilities using Web Crypto API.
  *

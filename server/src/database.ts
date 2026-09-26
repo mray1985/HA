@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Omega AI LLC. All rights reserved.
+// Originally developed as TelosTax. Licensed under MIT.
 import Database from 'better-sqlite3';
 import { resolve } from 'path';
 import { mkdirSync } from 'fs';
