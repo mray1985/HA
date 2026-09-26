@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Omega AI LLC. All rights reserved.
-// Originally developed as TelosTax. Licensed under MIT.
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getActiveKey, encrypt as encryptStr } from '../services/crypto';

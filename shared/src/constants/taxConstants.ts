@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Omega AI LLC. All rights reserved.
-// Originally developed as TelosTax. Licensed under MIT.
 import * as tax2024 from './tax2024.js';
 import * as tax2025 from './tax2025.js';
 import * as tax2026 from './tax2026.js';

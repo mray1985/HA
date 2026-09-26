@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Omega AI LLC. All rights reserved.
-// Originally developed as TelosTax. Licensed under MIT.
 import { create } from 'zustand';
 import { TaxReturn, CalculationResult, evaluateCondition, setDeepPath } from '@hatax/engine';
 import type { StepCondition } from '@hatax/engine';

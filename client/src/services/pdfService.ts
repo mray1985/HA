@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Omega AI LLC. All rights reserved.
-// Originally developed as TelosTax. Licensed under MIT.
 import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb, RGB } from 'pdf-lib';
 import {
   TaxReturn, CalculationResult, FilingStatus,

@@ -1,5 +1,3 @@
-// Copyright (c) 2026 Omega AI LLC. All rights reserved.
-// Originally developed as TelosTax. Licensed under MIT.
 /**
  * New York State + NYC Tax Calculator — Tax Year 2025
  *
