@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PreparerDashboardPage from './pages/preparer/PreparerDashboardPage';
 import PreparerClientPage from './pages/preparer/PreparerClientPage';
 import PreparerWizardPage from './pages/preparer/PreparerWizardPage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
 import PledgePage from './pages/PledgePage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -12,6 +14,7 @@ import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useAISettingsStore } from './store/aiSettingsStore';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
+import { useAuthStore } from './store/authStore';
 
 type AppState = 'initializing' | 'lock-setup' | 'lock-unlock' | 'unlocked';
 
@@ -21,6 +24,34 @@ export default function PreparerApp() {
   const [appState, setAppState] = useState<AppState>('initializing');
   const [lockError, setLockError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hiddenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isAuthenticated, fetchMe } = useAuthStore();
+  const location = useLocation();
+
+  const handleUnlock = async (passphrase: string): Promise<boolean> => {
+    setLockError(null);
+    try {
+      if (appState === 'lock-setup') {
+        await setupEncryption(passphrase);
+        await loadAllReturns();
+        await useAISettingsStore.getState().loadApiKey();
+        await useDeductionFinderStore.getState().loadDecrypted?.();
+        setAppState('unlocked');
+        return true;
+      }
+      const ok = await unlock(passphrase);
+      if (ok) {
+        await loadAllReturns();
+        await useAISettingsStore.getState().loadApiKey();
+        await useDeductionFinderStore.getState().loadDecrypted?.();
+        setAppState('unlocked');
+      }
+      return ok;
+    } catch {
+      setLockError('Something went wrong. Please try again.');
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (isUnlocked()) {
@@ -58,8 +89,6 @@ export default function PreparerApp() {
     };
   }, [appState]);
 
-  const hiddenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (appState !== 'unlocked') return;
@@ -83,38 +112,20 @@ export default function PreparerApp() {
     };
   }, [appState, resetTimer]);
 
-  const handleUnlock = async (passphrase: string): Promise<boolean> => {
-    setLockError(null);
-    try {
-      if (appState === 'lock-setup') {
-        await setupEncryption(passphrase);
-        await loadAllReturns();
-        await useAISettingsStore.getState().loadApiKey();
-        await useDeductionFinderStore.getState().loadDecrypted?.();
-        setAppState('unlocked');
-        return true;
-      }
-      const ok = await unlock(passphrase);
-      if (ok) {
-        await loadAllReturns();
-        await useAISettingsStore.getState().loadApiKey();
-        await useDeductionFinderStore.getState().loadDecrypted?.();
-        setAppState('unlocked');
-      }
-      return ok;
-    } catch {
-      setLockError('Something went wrong. Please try again.');
-      return false;
+  useEffect(() => {
+    if (appState === 'unlocked') {
+      fetchMe();
     }
-  };
+  }, [appState, fetchMe]);
 
-  const location = useLocation();
-  const publicPaths = ['/pledge', '/terms', '/privacy'];
+  const publicPaths = ['/pledge', '/terms', '/privacy', '/preparer/login', '/preparer/register'];
   const isPublicPage = publicPaths.includes(location.pathname);
 
   if (isPublicPage) {
     return (
       <Routes>
+        <Route path="/preparer/login" element={<LoginPage />} />
+        <Route path="/preparer/register" element={<RegisterPage />} />
         <Route path="/pledge" element={<PledgePage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
@@ -132,6 +143,22 @@ export default function PreparerApp() {
 
   const isLocked = appState === 'lock-setup' || appState === 'lock-unlock';
 
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (isLocked) {
+      return (
+        <LockScreen
+          mode={appState === 'lock-setup' ? 'setup' : 'unlock'}
+          onUnlock={handleUnlock}
+          error={lockError}
+        />
+      );
+    }
+    if (!isAuthenticated) {
+      return <Navigate to="/preparer/login" replace />;
+    }
+    return <>{children}</>;
+  };
+
   return (
     <>
       <OfflineBanner />
@@ -143,14 +170,40 @@ export default function PreparerApp() {
       </a>
       <main id="main-content">
         <Routes>
-          <Route path="/preparer" element={
-            isLocked
-              ? <PreparerDashboardPage lockMode={appState === 'lock-setup' ? 'setup' : 'unlock'} onUnlock={handleUnlock} lockError={lockError} />
-              : <PreparerDashboardPage />
-          } />
-          <Route path="/preparer/clients" element={isLocked ? <Navigate to="/preparer" replace /> : <PreparerDashboardPage />} />
-          <Route path="/preparer/client/:id" element={isLocked ? <Navigate to="/preparer" replace /> : <PreparerClientPage />} />
-          <Route path="/preparer/return/:id/*" element={isLocked ? <Navigate to="/preparer" replace /> : <PreparerWizardPage />} />
+          <Route path="/preparer/login" element={<LoginPage />} />
+          <Route path="/preparer/register" element={<RegisterPage />} />
+          <Route
+            path="/preparer"
+            element={
+              <ProtectedRoute>
+                <PreparerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/preparer/clients"
+            element={
+              <ProtectedRoute>
+                <PreparerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/preparer/client/:id"
+            element={
+              <ProtectedRoute>
+                <PreparerClientPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/preparer/return/:id/*"
+            element={
+              <ProtectedRoute>
+                <PreparerWizardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/preparer/*" element={<Navigate to="/preparer" replace />} />
           <Route path="/" element={<Navigate to="/preparer" replace />} />
           <Route path="/pledge" element={<PledgePage />} />
