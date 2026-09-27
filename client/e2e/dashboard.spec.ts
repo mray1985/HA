@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
 
 // Helper: clear all localStorage data before each test
 test.beforeEach(async ({ page }) => {
@@ -18,18 +19,18 @@ test.beforeEach(async ({ page }) => {
     localStorage.clear();
   });
   await page.reload();
+  await unlockDashboard(page);
 });
 
 test.describe('Dashboard Page', () => {
   test('renders the HATax branding', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('HATax');
+    await expect(page.locator('h1')).toContainText('HA Tax service');
     await expect(page.getByText('2025 Tax Year')).toBeVisible();
-    await expect(page.getByText('Free tax preparation')).toBeVisible();
+    await expect(page.getByText('Free, private, open-source tax prep.')).toBeVisible();
   });
 
   test('shows empty state when no returns exist', async ({ page }) => {
-    await expect(page.getByText('No tax returns yet')).toBeVisible();
-    await expect(page.getByText('Click the button above')).toBeVisible();
+    await expect(page.getByText('Ready to file your 2025 taxes?')).toBeVisible();
   });
 
   test('creates a new return and navigates to wizard', async ({ page }) => {
@@ -45,8 +46,9 @@ test.describe('Dashboard Page', () => {
     await page.getByRole('button', { name: /Start New Tax Return/i }).click();
     await expect(page).toHaveURL(/\/return\//);
 
-    // Go back to dashboard
+    // Go back to dashboard (a full navigation locks the vault again)
     await page.goto('/');
+    await unlockDashboard(page);
 
     // Should see "Your Returns" heading
     await expect(page.getByText('Your Returns')).toBeVisible();
@@ -60,10 +62,12 @@ test.describe('Dashboard Page', () => {
     // Create first return
     await page.getByRole('button', { name: /Start New Tax Return/i }).click();
     await page.goto('/');
+    await unlockDashboard(page);
 
     // Create second return
     await page.getByRole('button', { name: /Start New Tax Return/i }).click();
     await page.goto('/');
+    await unlockDashboard(page);
 
     // Should see 2 return cards
     await expect(page.getByText('Your Returns')).toBeVisible();
@@ -76,6 +80,7 @@ test.describe('Dashboard Page', () => {
 
     // Go back to dashboard
     await page.goto('/');
+    await unlockDashboard(page);
 
     // Click the return card
     const returnCard = page.locator('.card').filter({ hasText: '2025' }).first();
@@ -89,18 +94,12 @@ test.describe('Dashboard Page', () => {
     // Create a return
     await page.getByRole('button', { name: /Start New Tax Return/i }).click();
     await page.goto('/');
+    await unlockDashboard(page);
     await expect(page.getByText('Your Returns')).toBeVisible();
 
-    // Set up dialog handler to accept the confirmation BEFORE clicking
-    page.on('dialog', dialog => dialog.accept());
-
-    // Click the delete button (has title="Delete return")
     await page.getByTitle('Delete return').click();
+    await page.getByRole('button', { name: 'Yes, delete' }).click();
 
-    // Wait for deletion to process
-    await page.waitForTimeout(500);
-
-    // Should show empty state again
-    await expect(page.getByText('No tax returns yet')).toBeVisible();
+    await expect(page.getByText('Ready to file your 2025 taxes?')).toBeVisible();
   });
 });

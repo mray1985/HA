@@ -20,49 +20,22 @@ const FUZZER_PASSPHRASE = 'fuzzer-test-pass-2025!';
  * - If no gate → already unlocked, proceed
  */
 export async function handleEncryptionGate(page: Page): Promise<void> {
-  // Wait for the page to settle
-  await page.waitForTimeout(1000);
+  const setupButton = page.getByRole('button', { name: /Set Up Encryption/i });
+  const unlockButton = page.getByRole('button', { name: /^Unlock$/i });
+  const gate = setupButton.or(unlockButton).first();
+  const shown = await gate.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false);
+  if (!shown) return;
 
-  // Check if we're on the encryption setup screen
-  const setupButton = page.getByRole('button', { name: /Set Passphrase|Create Passphrase|Protect|Encrypt/i });
-  const unlockButton = page.getByRole('button', { name: /Unlock|Decrypt|Open/i });
-
-  const hasSetup = await setupButton.isVisible().catch(() => false);
-  const hasUnlock = await unlockButton.isVisible().catch(() => false);
-
-  if (hasSetup) {
-    // First-time setup: fill passphrase fields and submit
-    const passwordInputs = page.locator('input[type="password"]');
-    const count = await passwordInputs.count();
-
-    if (count >= 2) {
-      await passwordInputs.nth(0).fill(FUZZER_PASSPHRASE);
-      await passwordInputs.nth(1).fill(FUZZER_PASSPHRASE);
-    } else if (count === 1) {
-      await passwordInputs.nth(0).fill(FUZZER_PASSPHRASE);
-    }
-
+  await page.locator('#passphrase').fill(FUZZER_PASSPHRASE);
+  if (await setupButton.isVisible()) {
+    await page.locator('#confirm').fill(FUZZER_PASSPHRASE);
     await setupButton.click();
-    await page.waitForTimeout(1500);
-  } else if (hasUnlock) {
-    // Returning: enter passphrase and unlock
-    const passwordInput = page.locator('input[type="password"]').first();
-    await passwordInput.fill(FUZZER_PASSPHRASE);
-    await unlockButton.click();
-    await page.waitForTimeout(1500);
   } else {
-    // No gate visible — already unlocked or no encryption needed
-    return;
+    await unlockButton.click();
   }
 
-  // Verify the gate was actually dismissed
-  const gateStillVisible = await page.locator('input[type="password"]')
-    .isVisible({ timeout: 1000 }).catch(() => false);
-  if (gateStillVisible) {
-    throw new Error(
-      'Encryption gate not dismissed after handling — check button label patterns in lock-screen.ts'
-    );
-  }
+  // Key derivation is slow; wait until the passphrase form is gone.
+  await page.locator('#passphrase').waitFor({ state: 'hidden', timeout: 20000 });
 }
 
 /**

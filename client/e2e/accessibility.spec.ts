@@ -14,13 +14,15 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
 import AxeBuilder from '@axe-core/playwright';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function createAndOpenReturn(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: /new.*return|start.*return|create/i }).click();
+  await unlockDashboard(page);
+  await page.getByRole('button', { name: /Start New Tax Return/i }).click();
   await page.waitForURL(/\/return\//);
 }
 
@@ -197,6 +199,7 @@ test.describe('Accessibility — ARIA & Semantics', () => {
 
   test('page has proper heading hierarchy', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByRole('heading').first()).toBeVisible();
 
     // Check heading hierarchy — should have h1 or h2
     const headings = await page.evaluate(() => {
