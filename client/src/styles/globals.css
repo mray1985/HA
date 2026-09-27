@@ -1,11 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Syncfusion — Tailwind Dark theme (chart components) */
+/* @import must come before any other rules, including Tailwind. */
 @import '@syncfusion/ej2-base/styles/tailwind-dark.css';
 @import '@syncfusion/ej2-react-charts/styles/tailwind-dark.css';
 @import '@syncfusion/ej2-react-circulargauge/styles/tailwind-dark.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 
 @layer base {
