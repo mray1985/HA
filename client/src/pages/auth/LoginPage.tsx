@@ -46,7 +46,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-surface-700 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-telos-orange-500 focus:border-transparent"
+                className="w-full bg-surface-700 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-HATaxService-orange-500 focus:border-transparent"
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
@@ -61,7 +61,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-sm text-telos-orange-500 hover:text-telos-orange-400"
+                  className="text-sm text-HATaxService-orange-500 hover:text-HATaxService-orange-400"
                 >
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-surface-700 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-telos-orange-500 focus:border-transparent"
+                className="w-full bg-surface-700 border border-slate-600 text-white placeholder-slate-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-HATaxService-orange-500 focus:border-transparent"
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
@@ -82,7 +82,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-telos-orange-500 hover:bg-telos-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-slate-400 text-sm">
             Don&apos;t have an account?{' '}
-            <Link to="/preparer/register" className="text-telos-orange-500 hover:text-telos-orange-400 font-medium">
+            <Link to="/preparer/register" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
               Create an account
             </Link>
           </p>

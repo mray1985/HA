@@ -36,6 +36,7 @@ export default function PreparerApp() {
         await loadAllReturns();
         await useAISettingsStore.getState().loadApiKey();
         await useDeductionFinderStore.getState().loadDecrypted?.();
+        await useAuthStore.getState().loadDecrypted();
         setAppState('unlocked');
         return true;
       }
@@ -44,6 +45,7 @@ export default function PreparerApp() {
         await loadAllReturns();
         await useAISettingsStore.getState().loadApiKey();
         await useDeductionFinderStore.getState().loadDecrypted?.();
+        await useAuthStore.getState().loadDecrypted();
         setAppState('unlocked');
       }
       return ok;
@@ -58,6 +60,7 @@ export default function PreparerApp() {
       loadAllReturns()
         .then(() => useAISettingsStore.getState().loadApiKey())
         .then(() => useDeductionFinderStore.getState().loadDecrypted?.())
+        .then(() => useAuthStore.getState().loadDecrypted())
         .then(() => setAppState('unlocked'));
     } else if (isEncryptionSetup()) {
       setAppState('lock-unlock');

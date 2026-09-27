@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { getActiveKey, encrypt as encryptStr } from '../services/crypto';
+import { getActiveKey, encrypt as encryptStr, decrypt as decryptStr } from '../services/crypto';
 
 export interface User {
   id: number;
@@ -23,11 +23,19 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setAccessToken: (token: string | null) => void;
   clearError: () => void;
+  /** Restore the encrypted auth blob after the vault is unlocked. */
+  loadDecrypted: () => Promise<void>;
+}
+
+interface PersistedAuth {
+  user: User | null;
+  accessToken: string | null;
+  isAuthenticated: boolean;
 }
 
 const AUTH_ENC_KEY = 'hatax-auth-enc';
 
-function encryptAuthState(state: AuthState): string | null {
+async function encryptAuthState(state: PersistedAuth): Promise<string | null> {
   const key = getActiveKey();
   if (!key) return null;
   try {
@@ -36,28 +44,24 @@ function encryptAuthState(state: AuthState): string | null {
       accessToken: state.accessToken,
       isAuthenticated: state.isAuthenticated,
     });
-    return encryptStr(payload, key);
+    return await encryptStr(payload, key);
   } catch {
     return null;
   }
 }
 
-function decryptAuthState(enc: string | null): AuthState {
+async function decryptAuthState(enc: string): Promise<PersistedAuth | null> {
   const key = getActiveKey();
-  if (!enc || !key) {
-    return { user: null, accessToken: null, isAuthenticated: false, isLoading: false, error: null };
-  }
+  if (!key) return null;
   try {
-    const payload = JSON.parse(decryptStr(enc, key));
+    const payload = JSON.parse(await decryptStr(enc, key));
     return {
       user: payload.user || null,
       accessToken: payload.accessToken || null,
-      isAuthenticated: payload.isAuthenticated ?? false,
-      isLoading: false,
-      error: null,
+      isAuthenticated: Boolean(payload.isAuthenticated),
     };
   } catch {
-    return { user: null, accessToken: null, isAuthenticated: false, isLoading: false, error: null };
+    return null;
   }
 }
 
@@ -93,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
           };
 
           // Encrypt and store if vault is unlocked
-          const enc = encryptAuthState(newState);
+          const enc = await encryptAuthState(newState);
           if (enc) {
             localStorage.setItem(AUTH_ENC_KEY, enc);
           }
@@ -128,7 +132,7 @@ export const useAuthStore = create<AuthState>()(
           };
 
           // Encrypt and store if vault is unlocked
-          const enc = encryptAuthState(newState);
+          const enc = await encryptAuthState(newState);
           if (enc) {
             localStorage.setItem(AUTH_ENC_KEY, enc);
           }
@@ -176,19 +180,19 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const data = await res.json();
-          const newState = {
+          const persisted: PersistedAuth = {
             user: data.data.user,
+            accessToken: get().accessToken,
             isAuthenticated: true,
-            isLoading: false,
           };
 
           // Encrypt and store if vault is unlocked
-          const enc = encryptAuthState(newState);
+          const enc = await encryptAuthState(persisted);
           if (enc) {
             localStorage.setItem(AUTH_ENC_KEY, enc);
           }
 
-          set(newState);
+          set({ ...persisted, isLoading: false });
         } catch {
           set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
         }
@@ -199,6 +203,18 @@ export const useAuthStore = create<AuthState>()(
       setAccessToken: (token: string | null) => set({ accessToken: token, isAuthenticated: !!token }),
 
       clearError: () => set({ error: null }),
+
+      loadDecrypted: async () => {
+        const enc = localStorage.getItem(AUTH_ENC_KEY);
+        if (!enc) return;
+        const decrypted = await decryptAuthState(enc);
+        if (!decrypted) return;
+        set({
+          user: decrypted.user,
+          accessToken: decrypted.accessToken,
+          isAuthenticated: decrypted.isAuthenticated,
+        });
+      },
     }),
     {
       name: 'hatax-auth',
@@ -208,19 +224,6 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
-      // On load, decrypt any previously encrypted auth data
-      onPersist: (persistedState) => {
-        const enc = localStorage.getItem(AUTH_ENC_KEY);
-        if (enc) {
-          const decrypted = decryptAuthState(enc);
-          // Merge decrypted values into the store, preserving non-auth state
-          set({
-            user: decrypted.user,
-            accessToken: decrypted.accessToken,
-            isAuthenticated: decrypted.isAuthenticated,
-          });
-        }
-      },
     }
   )
 );
