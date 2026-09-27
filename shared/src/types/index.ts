@@ -2025,8 +2025,13 @@ export interface ScheduleDResult {
   netLongTerm: number;
   netGainOrLoss: number;
   /**
+   * 28% rate gain before the net-long-term cap. Section 1231 gain is long-term
+   * and is applied after Schedule D, so the cap is recomputed against that total.
+   */
+  collectiblesRateGain: number;
+  /**
    * Long-term collectibles gain taxed at the 28% maximum (IRC §1(h)(4)).
-   * Lesser of net long-term collectibles gain and net long-term gain.
+   * Lesser of the 28% rate gain and net long-term gain, including section 1231.
    * Zero when that net is not a gain. Section 1202 gain is not included.
    */
   collectiblesGain: number;

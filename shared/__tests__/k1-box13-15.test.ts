@@ -734,6 +734,61 @@ describe('K-1 section 1231', () => {
       makeReturn({ unrecapturedSection1250Gain: 1000 }),
     )).toBe('1000');
   });
+
+  it('applies a long-term capital-loss carryforward to a standalone section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const land = (salesPrice: number) => ({
+      id: 'land',
+      description: 'Land',
+      dateAcquired: '2020-01-01',
+      dateSold: '2025-06-01',
+      salesPrice,
+      costBasis: 0,
+      depreciationAllowed: 0,
+    });
+    const withCarry = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 4000,
+      form4797Properties: [land(10000)],
+    }));
+    const smallerGain = calculateForm1040(makeReturn({
+      w2Income: wages,
+      form4797Properties: [land(6000)],
+    }));
+
+    expect(withCarry.scheduleD?.capitalLossDeduction).toBe(0);
+    expect(withCarry.scheduleD?.capitalLossCarryforward).toBe(0);
+    expect(withCarry.form1040.capitalGainOrLoss).toBe(6000);
+    expect(withCarry.form1040.totalIncome).toBe(smallerGain.form1040.totalIncome);
+    expect(withCarry.form1040.incomeTax).toBe(smallerGain.form1040.incomeTax);
+  });
+
+  it('keeps the $3,000 loss deduction when a carryforward exceeds section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const carryOnly = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 10000,
+    }));
+    const withGain = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 10000,
+      form4797Properties: [{
+        id: 'land',
+        description: 'Land',
+        dateAcquired: '2020-01-01',
+        dateSold: '2025-06-01',
+        salesPrice: 2000,
+        costBasis: 0,
+        depreciationAllowed: 0,
+      }],
+    }));
+
+    expect(carryOnly.form1040.capitalLossDeduction).toBe(3000);
+    expect(carryOnly.scheduleD?.capitalLossCarryforwardLT).toBe(7000);
+    expect(withGain.form1040.capitalLossDeduction).toBe(3000);
+    expect(withGain.scheduleD?.capitalLossCarryforwardLT).toBe(5000);
+    expect(withGain.form1040.totalIncome).toBe(carryOnly.form1040.totalIncome);
+  });
 });
 
 function scheduleDLine(label: string) {

@@ -111,19 +111,11 @@ export function calculateScheduleD(
   const netGainOrLoss = round2(netShortTerm + netLongTerm);
   // 2025 Schedule D 28% Rate Gain Worksheet: start from net collectibles,
   // then subtract a net short-term loss and the long-term capital-loss
-  // carryover. The result cannot exceed net long-term gain.
+  // carryover. The result cannot exceed net long-term gain. Section 1231
+  // gain is added later and the cap is applied again against that total.
   const netCollectibles = round2(collectiblesLongTermGain - collectiblesLongTermLoss);
-  let rateGain = netCollectibles;
-  if (netShortTerm < 0) {
-    rateGain = round2(rateGain - Math.abs(netShortTerm));
-  }
-  if (cfLT > 0) {
-    rateGain = round2(rateGain - cfLT);
-  }
-  rateGain = Math.max(0, rateGain);
-  const collectiblesGain = netLongTerm > 0
-    ? Math.max(0, Math.min(rateGain, netLongTerm))
-    : 0;
+  const collectiblesRateGain = collectibles28RateGain(netCollectibles, netShortTerm, cfLT);
+  const collectiblesGain = capCollectiblesGain(collectiblesRateGain, netLongTerm);
 
   const limited = limitCapitalLoss(netShortTerm, netLongTerm, filingStatus, taxYear);
 
@@ -135,12 +127,37 @@ export function calculateScheduleD(
     longTermLoss: round2(longTermLoss),
     netLongTerm,
     netGainOrLoss,
+    collectiblesRateGain,
     collectiblesGain,
     capitalLossDeduction: limited.capitalLossDeduction,
     capitalLossCarryforward: limited.capitalLossCarryforward,
     capitalLossCarryforwardST: limited.capitalLossCarryforwardST,
     capitalLossCarryforwardLT: limited.capitalLossCarryforwardLT,
   };
+}
+
+/**
+ * 28% Rate Gain Worksheet amount before the net-long-term cap: net
+ * collectibles, minus a net short-term loss and the long-term carryover.
+ */
+export function collectibles28RateGain(
+  netCollectibles: number,
+  netShortTerm: number,
+  ltCarryover: number,
+): number {
+  let rateGain = netCollectibles;
+  if (netShortTerm < 0) {
+    rateGain = round2(rateGain - Math.abs(netShortTerm));
+  }
+  if (ltCarryover > 0) {
+    rateGain = round2(rateGain - ltCarryover);
+  }
+  return Math.max(0, rateGain);
+}
+
+/** Cap the 28% rate gain at net long-term gain. Zero when that net is not a gain. */
+export function capCollectiblesGain(rateGain: number, netLongTerm: number): number {
+  return netLongTerm > 0 ? Math.max(0, Math.min(rateGain, netLongTerm)) : 0;
 }
 
 /**

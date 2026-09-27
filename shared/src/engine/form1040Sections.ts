@@ -47,7 +47,7 @@ import { calculateEstimatedQuarterly } from './estimatedTax.js';
 import { calculateEITC } from './eitc.js';
 import { calculateNIIT } from './niit.js';
 import { calculateAdditionalMedicareTaxW2 } from './additionalMedicare.js';
-import { calculateScheduleD, limitCapitalLoss } from './scheduleD.js';
+import { calculateScheduleD, capCollectiblesGain, limitCapitalLoss } from './scheduleD.js';
 import { calculateTaxableSocialSecurity } from './socialSecurity.js';
 import { calculateScheduleE } from './scheduleE.js';
 import { calculateDependentCareCredit } from './dependentCare.js';
@@ -974,10 +974,15 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
 
   const allScheduleDTransactions = [...(taxReturn.income1099B || []), ...digitalAssetTransactions, ...badDebtTransactions];
 
-  // Schedule D
+  // Schedule D. A prior-year capital-loss carryforward is a Schedule D loss
+  // even when this year has no 1099-B, so it can offset section 1231 gain
+  // and still produce the §1211(b) deduction.
   const has1099B = allScheduleDTransactions.length > 0;
   const hasCapGainDist = ctx.totalCapitalGainDistributions > 0;
-  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist)
+  const hasCapitalLossCarryforward = Math.abs(safeNum(taxReturn.capitalLossCarryforward))
+    + Math.abs(safeNum(taxReturn.capitalLossCarryforwardST))
+    + Math.abs(safeNum(taxReturn.capitalLossCarryforwardLT)) > 0;
+  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward)
     ? calculateScheduleD(
         allScheduleDTransactions,
         safeNum(taxReturn.capitalLossCarryforward),
@@ -1026,6 +1031,13 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   const netLTWith1231 = round2(schedNetLT + section1231Ltcg);
   const netWith1231 = round2(schedNetST + netLTWith1231);
   if (section1231Ltcg > 0 && ctx.scheduleD) {
+    // The 28% worksheet uses Schedule D line 15, which includes this gain.
+    // A long-term loss that zeroed collectibles before the gain was added
+    // must be re-capped once the combined long-term result is a gain.
+    ctx.scheduleD.collectiblesGain = capCollectiblesGain(
+      ctx.scheduleD.collectiblesRateGain || 0,
+      netLTWith1231,
+    );
     const limited = limitCapitalLoss(schedNetST, netLTWith1231, filingStatus, _taxYear);
     ctx.scheduleD.capitalLossDeduction = limited.capitalLossDeduction;
     ctx.scheduleD.capitalLossCarryforward = limited.capitalLossCarryforward;
