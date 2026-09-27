@@ -324,6 +324,7 @@ function computeSchedule1A(
   status: StatusKey,
 ): { tipsDeduction: number; overtimeDeduction: number; seniorDeduction: number; totalDeduction: number } {
   const isMFJ = status === 'MFJ' || status === 'QSS';
+  const seniorIsJoint = status === 'MFJ';
   const phaseOutThreshold = isMFJ ? TIPS_OT_PHASE_OUT_MFJ : TIPS_OT_PHASE_OUT_SINGLE;
   const otCap = isMFJ ? OT_CAP_MFJ : OT_CAP_SINGLE;
 
@@ -343,15 +344,14 @@ function computeSchedule1A(
   const otBase = Math.min(overtime, otCap);
   const overtimeDeduction = Math.max(0, otBase - phaseOutReduction);
 
-  // Senior deduction (6% of excess MAGI phase-out)
-  const seniorPhaseOutThreshold = isMFJ ? SENIOR_PHASE_OUT_MFJ : SENIOR_PHASE_OUT_SINGLE;
+  // Senior deduction: 6% of the excess reduces the combined amount once.
+  // $150,000 only for MFJ.
+  const seniorPhaseOutThreshold = seniorIsJoint ? SENIOR_PHASE_OUT_MFJ : SENIOR_PHASE_OUT_SINGLE;
   const seniorBase = seniorCount * SENIOR_AMOUNT;
-  let seniorDeduction = seniorBase;
-  if (agi > seniorPhaseOutThreshold) {
-    const excess = agi - seniorPhaseOutThreshold;
-    const reduction = round2(excess * SENIOR_PHASE_OUT_RATE);
-    seniorDeduction = Math.max(0, seniorBase - reduction);
-  }
+  const seniorReduction = agi > seniorPhaseOutThreshold
+    ? round2((agi - seniorPhaseOutThreshold) * SENIOR_PHASE_OUT_RATE)
+    : 0;
+  const seniorDeduction = round2(Math.max(0, seniorBase - seniorReduction));
 
   const totalDeduction = tipsDeduction + overtimeDeduction + seniorDeduction;
   return { tipsDeduction, overtimeDeduction, seniorDeduction, totalDeduction };
@@ -1491,8 +1491,10 @@ describe('IRS Oracle — Stress Test Cross-Validation', () => {
       expect(result.form1040.taxableIncome).toBe(286790.29);
     });
 
-    it('Oracle: totalTax = $47,707.60', () => {
-      expect(result.form1040.totalTax).toBe(47707.6);
+    it('Oracle: totalTax = $48,157.60', () => {
+      // $450 above the prior snapshot: the $5,000 short-term loss is taxed at
+      // 24% instead of 15%.
+      expect(result.form1040.totalTax).toBe(48157.6);
     });
 
     it('Oracle: standard deduction = $34,700 (MFJ + 2 × age 65+)', () => {

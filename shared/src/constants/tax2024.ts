@@ -115,6 +115,7 @@ export const SE_TAX = {
 export const QBI = {
   RATE: 0.20,                     // IRC §199A(a) — 20% deduction rate
   THRESHOLD_SINGLE: 191950,       // Rev. Proc. 2023-34 §3.29 — Single/HoH threshold
+  THRESHOLD_MFS: 191950,          // Half of the joint threshold; same as single for 2024
   THRESHOLD_MFJ: 383900,         // Rev. Proc. 2023-34 §3.29 — MFJ threshold
   PHASE_IN_RANGE_SINGLE: 50000,  // IRC §199A(e)(2)(A) — $50k phase-in range (Single)
   PHASE_IN_RANGE_MFJ: 100000,    // IRC §199A(e)(2)(B) — $100k phase-in range (MFJ)
@@ -935,10 +936,10 @@ export const PREMIUM_TAX_CREDIT = {
   FPL_INCREMENT_48: 5140,                     // HHS 2023 FPL — Per additional person
   // Alaska
   FPL_BASE_AK: 18210,                        // HHS 2023 FPL — Alaska family size 1
-  FPL_INCREMENT_AK: 6440,                    // HHS 2023 FPL — Alaska per additional person
+  FPL_INCREMENT_AK: 6430,                    // 2024 Instructions for Form 8962, Table 1-2
   // Hawaii
   FPL_BASE_HI: 16770,                        // HHS 2023 FPL — Hawaii family size 1
-  FPL_INCREMENT_HI: 5920,                    // HHS 2023 FPL — Hawaii per additional person
+  FPL_INCREMENT_HI: 5910,                    // 2024 Instructions for Form 8962, Table 1-3
 
   // Applicable Figure Table — Rev. Proc. 2023-34
   // Enhanced ARP/IRA rates for 2024 — IRC §36B(b)(3)(A), IRA §12001
@@ -1169,7 +1170,7 @@ export const SCHEDULE_R = {
 export const SOLO_401K = {
   EMPLOYEE_DEFERRAL_LIMIT: 23000,          // IRC §402(g)(1) — 2024 elective deferral limit
   CATCH_UP_50_PLUS: 7500,                  // IRC §414(v)(2)(B)(i) — Age 50+ catch-up ($7,500 for 2024)
-  SUPER_CATCH_UP_60_63: 11250,             // IRC §414(v)(2)(E) — Ages 60-63 super catch-up (SECURE 2.0, $11,250 for 2024)
+  SUPER_CATCH_UP_60_63: 0,                 // Notice 2024-80 sets $11,250 for 2025, not 2024. Ages 60-63 use the regular catch-up.
   EMPLOYER_CONTRIBUTION_RATE: 0.25,         // IRC §404(a)(8)(C) — 25% of compensation
   // For self-employed: effective rate is ~20% due to circular calculation
   // IRC §401(d)(1): net SE earnings reduced by the contribution itself

@@ -1570,7 +1570,9 @@ describe('S19 — Capital Loss Limitation + Carryforward', () => {
 
   it('computes correct taxable income and tax', () => {
     expect(f.taxableIncome).toBeCloseTo(71250, 0);
-    expect(f.incomeTax).toBeCloseTo(9889, 0);
+    // The $10,000 long-term gain is wiped out by the net capital loss, so none
+    // of it is taxed at 15%. Taxing that $10,000 at 22% instead adds $700.
+    expect(f.incomeTax).toBeCloseTo(10589, 0);
   });
 });
 

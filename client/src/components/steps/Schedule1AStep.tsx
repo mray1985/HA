@@ -40,7 +40,7 @@ export default function Schedule1AStep() {
         { title: 'No Tax on Tips: Up to $25,000', description: 'Qualified tips in IRS-recognized tipped occupations can be deducted from taxable income. Self-employed tips also qualify if not an SSTB.' },
         { title: 'No Tax on Overtime: Up to $25,000', description: 'The premium portion of overtime pay (the extra "half" in time-and-a-half) is deductible for FLSA non-exempt employees. $12,500 if MFS.' },
         { title: 'Car Loan Interest: Up to $10,000', description: 'Interest on auto loans for vehicles manufactured or assembled in the U.S. is deductible. $5,000 if MFS.' },
-        { title: 'Enhanced Senior Deduction: $4,000', description: 'An additional above-the-line deduction for taxpayers aged 65+ with income under $75,000 ($150,000 MFJ). $2,000 if MFS.' },
+        { title: 'Enhanced Senior Deduction: $6,000', description: 'An additional $6,000 deduction for each person age 65 or older. It phases out by 6% of income over $75,000, or $150,000 if married filing jointly. Married filing separately cannot claim it.' },
       ]} />
 
       <div className="space-y-3 mt-4 mb-6">

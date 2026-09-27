@@ -150,7 +150,12 @@ function buildSectionData(fs: FilingStatus, isMFS: boolean, section: string, tax
         ? SE.ADDITIONAL_MEDICARE_THRESHOLD_MFJ
         : isMFS ? SE.ADDITIONAL_MEDICARE_THRESHOLD_MFS : SE.ADDITIONAL_MEDICARE_THRESHOLD_SINGLE;
       lines.push(`Additional Medicare Tax: 0.9% on SE income above ${$(addlThreshold)}`);
-      lines.push(`QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of qualified business income. SSTB threshold: ${$(isMFS ? Q.THRESHOLD_SINGLE : (fs === FilingStatus.MarriedFilingJointly ? Q.THRESHOLD_MFJ : Q.THRESHOLD_SINGLE))}`);
+      const qbiThreshold = isMFS
+        ? Q.THRESHOLD_MFS
+        : (fs === FilingStatus.MarriedFilingJointly || fs === FilingStatus.QualifyingSurvivingSpouse)
+          ? Q.THRESHOLD_MFJ
+          : Q.THRESHOLD_SINGLE;
+      lines.push(`QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of qualified business income. SSTB threshold: ${$(qbiThreshold)}`);
       // Capital gains for investment income
       const cg0 = CG.THRESHOLD_0[fs];
       const cg15 = CG.THRESHOLD_15[fs];
@@ -280,7 +285,12 @@ function buildConditionalData(
   // Self-employment
   if (has(discovery, '1099nec', '1099k')) {
     addOnce('se', `SE Tax: ${(SE.RATE * 100).toFixed(1)}% (OASDI up to ${$(SE.SS_WAGE_BASE)} + Medicare). Min threshold: ${$(SE.MINIMUM_EARNINGS_THRESHOLD)}`);
-    addOnce('qbi', `QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of QBI. SSTB threshold: ${$(fs === FilingStatus.MarriedFilingJointly ? Q.THRESHOLD_MFJ : Q.THRESHOLD_SINGLE)}`);
+    const qbiThreshold = fs === FilingStatus.MarriedFilingSeparately
+      ? Q.THRESHOLD_MFS
+      : (fs === FilingStatus.MarriedFilingJointly || fs === FilingStatus.QualifyingSurvivingSpouse)
+        ? Q.THRESHOLD_MFJ
+        : Q.THRESHOLD_SINGLE;
+    addOnce('qbi', `QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of QBI. SSTB threshold: ${$(qbiThreshold)}`);
     addOnce('homeoffice', `Home Office (Simplified): ${$(HO.SIMPLIFIED_RATE)}/sq ft, max ${$(HO.SIMPLIFIED_MAX_DEDUCTION)}`);
   }
 

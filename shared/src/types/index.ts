@@ -298,7 +298,7 @@ export interface IncomeK1 {
   box13CharitableCash?: number;           // Codes A/B: Cash charitable contributions
   box13CharitableNonCash?: number;        // Codes C/D/E/F: Non-cash charitable contributions
   box13InvestmentInterestExpense?: number; // Code H: Investment interest expense
-  box131231Loss?: number;                  // Code K: Section 1231 loss (net)
+  box131231Loss?: number;                  // Unused for section 1231. Box 13 code K is excess business interest, not a section 1231 loss.
   box13OtherDeductions?: number;          // Codes I-L: Other deductions (royalty, portfolio, etc.)
 
   // Box 15 — Partner's credits
@@ -2430,6 +2430,8 @@ export interface CalculationResult {
   scholarshipCredit?: ScholarshipCreditResult;
   form4562?: Form4562Result;
   form4797?: Form4797Result;
+  /** Positive combined section 1231 gain taxed as long-term. Already in total income. */
+  section1231LongTermGain?: number;
   form4137?: Form4137Result;
   scheduleF?: ScheduleFResult;
   scheduleR?: ScheduleRResult;

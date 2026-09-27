@@ -956,14 +956,16 @@ describe('S15 — Kitchen Sink: Maximum Provision Interaction (MFJ, complex)', (
     expect(result.form1040.taxableIncome).toBe(286790.29);
   });
 
-  it('income tax = $52,183.67', () => {
-    expect(result.form1040.incomeTax).toBe(52183.67);
+  it('income tax = $52,633.67', () => {
+    // $5,000 net short-term loss reduces the 15% long-term base. That $5,000
+    // is taxed at 24% instead: 5000 * 0.09 = $450 above the prior snapshot.
+    expect(result.form1040.incomeTax).toBe(52633.67);
   });
 
-  it('total tax = $47,707.60', () => {
-    // income tax $52,183.67 + SE $1,419.42 + NIIT $1,064 + AdditionalMedicare $440.51
-    // - credits (non-refundable $7,400) = $47,707.60
-    expect(result.form1040.totalTax).toBe(47707.6);
+  it('total tax = $48,157.60', () => {
+    // income tax $52,633.67 + SE $1,419.42 + NIIT $1,064 + AdditionalMedicare $440.51
+    // - credits (non-refundable $7,400) = $48,157.60
+    expect(result.form1040.totalTax).toBe(48157.6);
   });
 
   it('refund XOR amountOwed (not both)', () => {
@@ -1011,8 +1013,8 @@ describe('S15 — Kitchen Sink: Maximum Provision Interaction (MFJ, complex)', (
     expect(result.form1040.qbiDeduction).toBe(8000);
   });
 
-  it('refund = $3,392.40', () => {
-    expect(result.form1040.refundAmount).toBe(3392.4);
+  it('refund = $2,942.40', () => {
+    expect(result.form1040.refundAmount).toBe(2942.4);
     expect(result.form1040.amountOwed).toBe(0);
   });
 

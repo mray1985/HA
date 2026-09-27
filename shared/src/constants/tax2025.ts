@@ -118,6 +118,7 @@ export const SE_TAX = {
 export const QBI = {
   RATE: 0.20,                     // IRC §199A(a) — 20% deduction rate
   THRESHOLD_SINGLE: 197300,       // Rev. Proc. 2024-40 §3.29 — Single/HoH threshold
+  THRESHOLD_MFS: 197300,          // Half of the joint threshold; same as single for 2025
   THRESHOLD_MFJ: 394600,         // Rev. Proc. 2024-40 §3.29 — MFJ threshold
   PHASE_IN_RANGE_SINGLE: 50000,  // IRC §199A(e)(2)(A) — $50k phase-in range (Single)
   PHASE_IN_RANGE_MFJ: 100000,    // IRC §199A(e)(2)(B) — $100k phase-in range (MFJ)

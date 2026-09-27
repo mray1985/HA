@@ -163,6 +163,8 @@ function getQBIThreshold(filingStatus: FilingStatus, taxYear: number = 2025): nu
     case FilingStatus.MarriedFilingJointly:
     case FilingStatus.QualifyingSurvivingSpouse:
       return QBI.THRESHOLD_MFJ;
+    case FilingStatus.MarriedFilingSeparately:
+      return QBI.THRESHOLD_MFS;
     default:
       return QBI.THRESHOLD_SINGLE;
   }
