@@ -70,7 +70,7 @@ export default function StudentLoanStep() {
           </div>
         )}
 
-        <a href="https://www.irs.gov/taxtopics/tc456" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/taxtopics/tc456" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       <StepNavigation onContinue={save} />

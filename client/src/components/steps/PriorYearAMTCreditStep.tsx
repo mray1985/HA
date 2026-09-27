@@ -55,7 +55,7 @@ export default function PriorYearAMTCreditStep() {
       <div className="mt-6 space-y-4">
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
-            <Calculator className="w-5 h-5 text-telos-blue-400" />
+            <Calculator className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Prior Year AMT Data</h3>
           </div>
 
@@ -89,7 +89,7 @@ export default function PriorYearAMTCreditStep() {
         {totalAvailable > 0 && form8801Result && (
           <div className="card bg-surface-800">
             <div className="flex items-center gap-3 mb-3">
-              <Info className="w-5 h-5 text-telos-blue-400" />
+              <Info className="w-5 h-5 text-HATaxService-blue-400" />
               <h3 className="font-medium text-slate-200">Credit Calculation</h3>
             </div>
             <div className="space-y-1.5 text-sm">
@@ -126,7 +126,7 @@ export default function PriorYearAMTCreditStep() {
         href="https://www.irs.gov/forms-pubs/about-form-8801"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

@@ -155,13 +155,13 @@ export default function B1099Step() {
       </FormField>
       <FormField label="Cost basis reported to IRS (Box 12)" helpText="Covered security — broker reported basis. Uncheck if basis was not reported.">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={form.basisReportedToIRS} onChange={(e) => setForm({ ...form, basisReportedToIRS: e.target.checked })} className="rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500" />
+          <input type="checkbox" checked={form.basisReportedToIRS} onChange={(e) => setForm({ ...form, basisReportedToIRS: e.target.checked })} className="rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500" />
           <span className="text-sm text-slate-300">Cost basis reported to IRS (Box 12)</span>
         </label>
       </FormField>
       <FormField label="Collectible (28% rate gain)" helpText="Art, antiques, metals, gems, stamps, coins, etc. Subject to 28% maximum capital gains rate.">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={form.isCollectible} onChange={(e) => setForm({ ...form, isCollectible: e.target.checked })} className="rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500" />
+          <input type="checkbox" checked={form.isCollectible} onChange={(e) => setForm({ ...form, isCollectible: e.target.checked })} className="rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500" />
           <span className="text-sm text-slate-300">Collectible (28% rate gain)</span>
         </label>
       </FormField>
@@ -223,7 +223,7 @@ export default function B1099Step() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function B1099Step() {
       {/* Prior-year carryforwards */}
       <div className="card mt-6">
         <div className="flex items-center gap-3 mb-3">
-          <History className="w-5 h-5 text-telos-blue-400" />
+          <History className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Prior-Year Capital Loss Carryforward</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -275,7 +275,7 @@ export default function B1099Step() {
           href="https://www.irs.gov/taxtopics/tc409"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+          className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Learn more on IRS.gov
@@ -285,7 +285,7 @@ export default function B1099Step() {
       {/* Qualified Opportunity Zone (Form 8997) */}
       <div className="card mt-4">
         <div className="flex items-center gap-3 mb-3">
-          <BarChart3 className="w-5 h-5 text-telos-blue-400" />
+          <BarChart3 className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Qualified Opportunity Zone Deferral</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -325,7 +325,7 @@ export default function B1099Step() {
           href="https://www.irs.gov/credits-deductions/opportunity-zones-frequently-asked-questions"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+          className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Learn more on IRS.gov

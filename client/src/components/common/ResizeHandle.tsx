@@ -18,7 +18,7 @@ export default function ResizeHandle({ isDragging, onMouseDown, onDoubleClick }:
       aria-orientation="vertical"
       aria-label="Resize panel"
       className={`hidden lg:flex items-center justify-center w-1.5 cursor-col-resize shrink-0 h-full
-                  group select-none z-10 ${isDragging ? 'bg-telos-blue-500/5' : 'hover:bg-slate-700/30'}`}
+                  group select-none z-10 ${isDragging ? 'bg-HATaxService-blue-500/5' : 'hover:bg-slate-700/30'}`}
       onMouseDown={onMouseDown}
       onTouchStart={onMouseDown}
       onDoubleClick={onDoubleClick}
@@ -26,7 +26,7 @@ export default function ResizeHandle({ isDragging, onMouseDown, onDoubleClick }:
       <div
         className={`w-px rounded-full transition-all duration-150
                     ${isDragging
-                      ? 'h-16 bg-telos-blue-400'
+                      ? 'h-16 bg-HATaxService-blue-400'
                       : 'h-8 bg-slate-600 group-hover:h-12 group-hover:bg-slate-400'
                     }`}
       />

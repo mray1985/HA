@@ -57,7 +57,7 @@ export default function CreditsChartSwitcher({ items, onSliceClick }: CreditsCha
       {/* Legend — shown for both views */}
       <div className="flex items-center gap-4 mb-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-telos-orange-400" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-HATaxService-orange-400" />
           <span className="text-[10px] text-slate-400">Nonrefundable</span>
         </div>
         <div className="flex items-center gap-1.5">

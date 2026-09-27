@@ -306,7 +306,7 @@ export default function DeductionsOverviewStep() {
             isActive ? 'bg-surface-800' : 'bg-surface-900 hover:bg-surface-800'
           }`}
         >
-          <div className={`${isActive ? 'text-telos-orange-400' : 'text-slate-400'}`}>
+          <div className={`${isActive ? 'text-HATaxService-orange-400' : 'text-slate-400'}`}>
             {q.icon}
           </div>
           <div className="flex-1 min-w-0">
@@ -330,7 +330,7 @@ export default function DeductionsOverviewStep() {
             {isActive && hasData && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(q.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Revisit
               </button>
@@ -338,7 +338,7 @@ export default function DeductionsOverviewStep() {
             {isActive && !hasData && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(q.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Start
               </button>
@@ -360,13 +360,13 @@ export default function DeductionsOverviewStep() {
               onChange={(val) => setAnswer(q.key, val)}
             />
             {answer === 'yes' && !hasData && (
-              <p className="text-xs text-telos-blue-400 mt-2 flex items-center gap-1">
+              <p className="text-xs text-HATaxService-blue-400 mt-2 flex items-center gap-1">
                 <PenLine className="w-3 h-3" />
                 Click "Start" above or continue to the next step to enter your data.
               </p>
             )}
             {answer === 'yes' && hasData && (
-              <p className="text-xs text-telos-orange-400 mt-2 flex items-center gap-1">
+              <p className="text-xs text-HATaxService-orange-400 mt-2 flex items-center gap-1">
                 <Check className="w-3 h-3" />
                 Data entered. Click "Revisit" to make changes.
               </p>
@@ -398,23 +398,23 @@ export default function DeductionsOverviewStep() {
 
 
       {/* Consolidated info callout */}
-      <div className="rounded-lg border border-telos-blue-600/30 bg-telos-blue-600/10 mt-4 mb-4 p-4">
+      <div className="rounded-lg border border-HATaxService-blue-600/30 bg-HATaxService-blue-600/10 mt-4 mb-4 p-4">
         <div className="flex items-start gap-2.5">
-          <Info className="w-4 h-4 mt-0.5 shrink-0 text-telos-blue-300" />
+          <Info className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-blue-300" />
           <div className="text-sm text-slate-400 leading-relaxed space-y-2">
             <p>
-              <span className="font-medium text-telos-blue-300">How deductions work:</span>{' '}
+              <span className="font-medium text-HATaxService-blue-300">How deductions work:</span>{' '}
               Deductions reduce the amount of income subject to tax. This page covers all types — select "Yes" for any that apply.
             </p>
             <p>
               <span className="font-medium text-slate-300">Above-the-line (adjustments)</span> — HSA, student loan interest, IRA contributions, educator expenses, and estimated payments reduce your AGI regardless of whether you itemize.{' '}
-              <a href="https://www.irs.gov/taxtopics/tc451" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+              <a href="https://www.irs.gov/taxtopics/tc451" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                 <ExternalLink className="w-3 h-3" />Learn more on IRS.gov
               </a>
             </p>
             <p>
               <span className="font-medium text-slate-300">Below-the-line (itemized)</span> — Mortgage interest, SALT, charitable donations, medical expenses, and gambling losses are Schedule A deductions. These only reduce your tax if your total itemized deductions exceed the standard deduction ($15,750 single / $31,500 MFJ for 2025).{' '}
-              <a href="https://www.irs.gov/taxtopics/tc501" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+              <a href="https://www.irs.gov/taxtopics/tc501" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                 <ExternalLink className="w-3 h-3" />Learn more on IRS.gov
               </a>
             </p>
@@ -427,9 +427,9 @@ export default function DeductionsOverviewStep() {
 
       {/* Status callout */}
       {yesCount > 0 && (
-        <div className="card mt-4 text-center bg-telos-orange-500/5 border-telos-orange-500/20">
+        <div className="card mt-4 text-center bg-HATaxService-orange-500/5 border-HATaxService-orange-500/20">
           <p className="text-sm text-slate-300">
-            <span className="text-telos-orange-400 font-bold">{yesCount}</span>{' '}
+            <span className="text-HATaxService-orange-400 font-bold">{yesCount}</span>{' '}
             {yesCount === 1 ? 'deduction' : 'deductions'} selected
           </p>
           {hasItemizedIndicators && (
@@ -482,7 +482,7 @@ export default function DeductionsOverviewStep() {
                     {group.label}
                   </span>
                   {activeCount > 0 && (
-                    <span className="text-xs text-telos-orange-400 bg-telos-orange-500/10 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-HATaxService-orange-400 bg-HATaxService-orange-500/10 px-2 py-0.5 rounded-full">
                       {activeCount}
                     </span>
                   )}

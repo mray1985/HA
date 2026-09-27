@@ -56,7 +56,7 @@ export default function ResourcesPanel({ open, onClose }: ResourcesPanelProps) {
         {/* Header */}
         <div className="sticky top-0 bg-surface-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-telos-blue-400" />
+            <BookOpen className="w-5 h-5 text-HATaxService-blue-400" />
             <h2 className="font-semibold text-white">Tax Resources</h2>
           </div>
           <button
@@ -91,7 +91,7 @@ export default function ResourcesPanel({ open, onClose }: ResourcesPanelProps) {
                     ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                   }
-                  <CategoryIcon className="w-4 h-4 text-telos-blue-400" />
+                  <CategoryIcon className="w-4 h-4 text-HATaxService-blue-400" />
                   <span className="text-sm font-medium text-slate-200">{category.label}</span>
                   <span className="ml-auto text-xs text-slate-600">{category.resources.length}</span>
                 </button>
@@ -110,11 +110,11 @@ export default function ResourcesPanel({ open, onClose }: ResourcesPanelProps) {
                           rel="noopener noreferrer"
                           className="flex items-start gap-2.5 px-4 pl-11 py-2 hover:bg-surface-700 transition-colors group"
                         >
-                          <ResourceIcon className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0 group-hover:text-telos-blue-400 transition-colors" />
+                          <ResourceIcon className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0 group-hover:text-HATaxService-blue-400 transition-colors" />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-slate-300 group-hover:text-white transition-colors flex items-center gap-1">
                               <span className="truncate">{resource.title}</span>
-                              <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-telos-blue-400" />
+                              <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-HATaxService-blue-400" />
                             </div>
                             <div className="text-xs text-slate-400 mt-0.5 leading-relaxed">
                               {resource.description}

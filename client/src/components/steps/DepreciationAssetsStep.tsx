@@ -296,7 +296,7 @@ export default function DepreciationAssetsStep() {
                     )}
                   </div>
                   {detail && detail.totalDepreciation > 0 && (
-                    <div className="text-xs text-telos-orange-400 mt-1">
+                    <div className="text-xs text-HATaxService-orange-400 mt-1">
                       Depreciation: ${detail.totalDepreciation.toLocaleString()}
                       {detail.section179Amount > 0 && (
                         <span className="text-slate-400"> (§179: ${detail.section179Amount.toLocaleString()})</span>
@@ -311,7 +311,7 @@ export default function DepreciationAssetsStep() {
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
                   <button
                     onClick={(e) => { e.stopPropagation(); startEdit(asset); }}
-                    className="p-2 text-slate-400 hover:text-telos-blue-400"
+                    className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                     title="Edit asset"
                   >
                     <Pencil className="w-4 h-4" />
@@ -341,8 +341,8 @@ export default function DepreciationAssetsStep() {
 
       {/* Depreciation Summary */}
       {form4562Result && form4562Result.totalDepreciation > 0 && (
-        <div className="rounded-xl border p-6 mt-6 bg-telos-orange-500/10 border-telos-orange-500/20">
-          <h4 className="text-sm font-medium text-telos-orange-300 mb-3 flex items-center gap-2">
+        <div className="rounded-xl border p-6 mt-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+          <h4 className="text-sm font-medium text-HATaxService-orange-300 mb-3 flex items-center gap-2">
             <Calculator className="w-4 h-4" />
             Form 4562 Depreciation Summary
             <span className="ml-auto text-xs font-normal text-slate-400">
@@ -379,9 +379,9 @@ export default function DepreciationAssetsStep() {
                 <span className="text-slate-200">${form4562Result.macrsPriorYears.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between pt-2 border-t border-telos-orange-500/20 font-medium">
-              <span className="text-telos-orange-300">Total → Schedule C Line 13</span>
-              <span className="text-telos-orange-400">${form4562Result.totalDepreciation.toLocaleString()}</span>
+            <div className="flex justify-between pt-2 border-t border-HATaxService-orange-500/20 font-medium">
+              <span className="text-HATaxService-orange-300">Total → Schedule C Line 13</span>
+              <span className="text-HATaxService-orange-400">${form4562Result.totalDepreciation.toLocaleString()}</span>
             </div>
             {form4562Result.section179Carryforward > 0 && (
               <div className="flex justify-between text-amber-400 text-xs mt-1">

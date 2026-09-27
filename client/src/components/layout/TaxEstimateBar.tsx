@@ -48,8 +48,8 @@ export default function TaxEstimateBar({ onExplainToggle, explainOpen }: TaxEsti
           {/* QBI Savings */}
           {f.qbiDeduction > 0 && (
             <div className="hidden xl:flex items-center gap-2">
-              <PiggyBank className="w-4 h-4 text-telos-orange-500" />
-              <span className="text-telos-orange-400">QBI Savings: -${f.qbiDeduction.toLocaleString()}</span>
+              <PiggyBank className="w-4 h-4 text-HATaxService-orange-500" />
+              <span className="text-HATaxService-orange-400">QBI Savings: -${f.qbiDeduction.toLocaleString()}</span>
             </div>
           )}
         </div>
@@ -67,7 +67,7 @@ export default function TaxEstimateBar({ onExplainToggle, explainOpen }: TaxEsti
           {onExplainToggle && (
             <button
               onClick={onExplainToggle}
-              className="flex items-center gap-1.5 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline font-medium">Explain my taxes</span>

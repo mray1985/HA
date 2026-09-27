@@ -194,14 +194,14 @@ export default function R1099Step() {
           <button
             type="button"
             onClick={() => setForm({ ...form, isIRA: true })}
-            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-colors ${form.isIRA ? 'bg-telos-blue-600/20 text-telos-blue-300 border-telos-blue-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-colors ${form.isIRA ? 'bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border-HATaxService-blue-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
           >
             IRA / SEP / SIMPLE
           </button>
           <button
             type="button"
             onClick={() => setForm({ ...form, isIRA: false })}
-            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-colors ${!form.isIRA ? 'bg-telos-blue-600/20 text-telos-blue-300 border-telos-blue-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-colors ${!form.isIRA ? 'bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border-HATaxService-blue-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-300'}`}
           >
             Employer Plan (401k, pension, etc.)
           </button>
@@ -210,7 +210,7 @@ export default function R1099Step() {
       <label className="flex items-center gap-3 mt-2 ml-1 cursor-pointer">
         <input
           type="checkbox"
-          className="accent-telos-orange-400"
+          className="accent-HATaxService-orange-400"
           checked={form.isRothIRA}
           onChange={(e) => setForm({ ...form, isRothIRA: e.target.checked, rothContributionBasis: e.target.checked ? form.rothContributionBasis : 0 })}
         />
@@ -235,7 +235,7 @@ export default function R1099Step() {
           <label className="flex items-start gap-3 mt-3 ml-1 cursor-pointer">
             <input
               type="checkbox"
-              className="mt-0.5 accent-telos-orange-400"
+              className="mt-0.5 accent-HATaxService-orange-400"
               checked={form.useSimplifiedMethod}
               onChange={(e) => setForm({
                 ...form,
@@ -251,7 +251,7 @@ export default function R1099Step() {
             </div>
           </label>
           {form.useSimplifiedMethod && (
-            <div className="ml-4 border-l-2 border-telos-blue-500/30 pl-4 mt-2 space-y-3">
+            <div className="ml-4 border-l-2 border-HATaxService-blue-500/30 pl-4 mt-2 space-y-3">
               <FormField label="Total After-Tax Contributions" tooltip="Total employee contributions (after-tax, non-deductible) to the pension plan. Found in your plan statement or HR records." irsRef="IRS Pub 939; Form 1040 Instructions — Simplified Method Worksheet">
                 <CurrencyInput
                   value={form.simplifiedMethod.totalContributions}
@@ -271,7 +271,7 @@ export default function R1099Step() {
               <label className="flex items-center gap-3 ml-1 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="accent-telos-orange-400"
+                  className="accent-HATaxService-orange-400"
                   checked={form.simplifiedMethod.isJointAndSurvivor}
                   onChange={(e) => setForm({ ...form, simplifiedMethod: { ...form.simplifiedMethod, isJointAndSurvivor: e.target.checked, combinedAge: e.target.checked ? form.simplifiedMethod.combinedAge : 0 } })}
                 />
@@ -374,7 +374,7 @@ export default function R1099Step() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit">
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit">
                 <Pencil className="w-4 h-4" />
               </button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove">

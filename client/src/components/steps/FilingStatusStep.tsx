@@ -164,7 +164,7 @@ export default function FilingStatusStep() {
             <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
               <input
                 type="checkbox"
-                className="mt-0.5 accent-telos-orange-400"
+                className="mt-0.5 accent-HATaxService-orange-400"
                 checked={!!taxReturn.spouseIsLegallyBlind}
                 onChange={(e) => updateField('spouseIsLegallyBlind', e.target.checked)}
               />
@@ -177,7 +177,7 @@ export default function FilingStatusStep() {
                   href="https://www.irs.gov/taxtopics/tc551"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   Learn more on IRS.gov
@@ -188,7 +188,7 @@ export default function FilingStatusStep() {
             <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
               <input
                 type="checkbox"
-                className="mt-0.5 accent-telos-orange-400"
+                className="mt-0.5 accent-HATaxService-orange-400"
                 checked={!!taxReturn.spousePresidentialCampaignFund}
                 onChange={(e) => updateField('spousePresidentialCampaignFund', e.target.checked)}
               />
@@ -201,7 +201,7 @@ export default function FilingStatusStep() {
                   href="https://www.irs.gov/taxtopics/tc505"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   Learn more on IRS.gov
@@ -236,7 +236,7 @@ export default function FilingStatusStep() {
             <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
               <input
                 type="checkbox"
-                className="mt-0.5 accent-telos-orange-400"
+                className="mt-0.5 accent-HATaxService-orange-400"
                 checked={!!taxReturn.isDeceasedSpouseReturn}
                 onChange={(e) => updateField('isDeceasedSpouseReturn', e.target.checked)}
               />
@@ -249,7 +249,7 @@ export default function FilingStatusStep() {
                   href="https://www.irs.gov/publications/p501"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   Learn more on IRS.gov
@@ -280,7 +280,7 @@ export default function FilingStatusStep() {
           <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
             <input
               type="checkbox"
-              className="mt-0.5 accent-telos-orange-400"
+              className="mt-0.5 accent-HATaxService-orange-400"
               checked={!!taxReturn.livedApartFromSpouse}
               onChange={(e) => updateField('livedApartFromSpouse', e.target.checked)}
             />
@@ -293,7 +293,7 @@ export default function FilingStatusStep() {
                 href="https://www.irs.gov/publications/p504"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 Learn more on IRS.gov
@@ -310,7 +310,7 @@ export default function FilingStatusStep() {
           <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
             <input
               type="checkbox"
-              className="mt-0.5 accent-telos-orange-400"
+              className="mt-0.5 accent-HATaxService-orange-400"
               checked={!!taxReturn.paidOverHalfHouseholdCost}
               onChange={(e) => updateField('paidOverHalfHouseholdCost', e.target.checked)}
             />
@@ -323,7 +323,7 @@ export default function FilingStatusStep() {
                 href="https://www.irs.gov/publications/p501#en_US_2025_publink1000220775"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 Learn more on IRS.gov

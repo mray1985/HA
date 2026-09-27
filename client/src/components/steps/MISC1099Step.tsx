@@ -184,7 +184,7 @@ export default function MISC1099Step() {
               <div className="text-sm text-slate-400">{summarizeItem(item)}</div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit">
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit">
                 <Pencil className="w-4 h-4" />
               </button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove">

@@ -292,7 +292,7 @@ export default function ExpenseCategoriesStep() {
         })}
       </div>
 
-      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

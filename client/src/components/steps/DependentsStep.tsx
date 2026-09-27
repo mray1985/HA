@@ -178,7 +178,7 @@ export default function DependentsStep() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="accent-telos-orange-400"
+              className="accent-HATaxService-orange-400"
               checked={form.isStudent}
               onChange={(e) => setForm({ ...form, isStudent: e.target.checked })}
             />
@@ -187,7 +187,7 @@ export default function DependentsStep() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              className="accent-telos-orange-400"
+              className="accent-HATaxService-orange-400"
               checked={form.isDisabled}
               onChange={(e) => setForm({ ...form, isDisabled: e.target.checked })}
             />
@@ -282,7 +282,7 @@ export default function DependentsStep() {
                     {(dep.ssn || dep.ssnLastFour) && <span> &middot; SSN {dep.ssn ? maskSSN(dep.ssn) : `···${dep.ssnLastFour}`}</span>}
                     {dep.dateOfBirth && <span> &middot; DOB {dep.dateOfBirth}</span>}
                     {dep.monthsLivedWithYou < 12 && <span> &middot; {dep.monthsLivedWithYou}mo</span>}
-                    {dep.isStudent && <span className="ml-1 text-xs bg-telos-blue-600/30 text-telos-blue-300 px-1.5 py-0.5 rounded">Student</span>}
+                    {dep.isStudent && <span className="ml-1 text-xs bg-HATaxService-blue-600/30 text-HATaxService-blue-300 px-1.5 py-0.5 rounded">Student</span>}
                     {dep.isDisabled && <span className="ml-1 text-xs bg-purple-600/30 text-purple-300 px-1.5 py-0.5 rounded">Disabled</span>}
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export default function DependentsStep() {
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
                   <button
                     onClick={(e) => { e.stopPropagation(); startEdit(dep); }}
-                    className="p-2 text-slate-400 hover:text-telos-blue-400"
+                    className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                     title="Edit dependent"
                   >
                     <Pencil className="w-4 h-4" />
@@ -447,7 +447,7 @@ function KiddieTaxSection() {
         </div>
         <div className="flex-1 flex items-end pb-2">
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-telos-orange-400" checked={!!kiddieForm.isFullTimeStudent} onChange={(e) => setKiddieForm({ ...kiddieForm, isFullTimeStudent: e.target.checked })} />
+            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!kiddieForm.isFullTimeStudent} onChange={(e) => setKiddieForm({ ...kiddieForm, isFullTimeStudent: e.target.checked })} />
             <span className="text-sm text-slate-300">Full-time student (extends age limit to 24)</span>
           </label>
         </div>
@@ -491,7 +491,7 @@ function KiddieTaxSection() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={(e) => { e.stopPropagation(); startKiddieEdit(entry); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); startKiddieEdit(entry); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeKiddieEntry(entry.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -512,7 +512,7 @@ function KiddieTaxSection() {
         href="https://www.irs.gov/forms-pubs/about-form-8615"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

@@ -264,7 +264,7 @@ export default function ChatInput({ onSend, onAttachFile, disabled, isLoading, o
       <div
         className={`relative rounded-2xl bg-surface-900 border transition-colors ${
           isDragOver
-            ? 'border-telos-blue-500 bg-telos-blue-500/5'
+            ? 'border-HATaxService-blue-500 bg-HATaxService-blue-500/5'
             : 'border-slate-600/50 focus-within:border-slate-500'
         }`}
         onDragEnter={handleDragEnter}
@@ -275,8 +275,8 @@ export default function ChatInput({ onSend, onAttachFile, disabled, isLoading, o
         {/* Drop overlay */}
         {isDragOver && (
           <div className="absolute inset-0 z-10 rounded-2xl flex items-center justify-center
-                          bg-telos-blue-500/10 border-2 border-dashed border-telos-blue-500/40 pointer-events-none">
-            <div className="flex items-center gap-2 text-telos-blue-400 text-sm font-medium">
+                          bg-HATaxService-blue-500/10 border-2 border-dashed border-HATaxService-blue-500/40 pointer-events-none">
+            <div className="flex items-center gap-2 text-HATaxService-blue-400 text-sm font-medium">
               <Upload className="w-4 h-4" />
               Drop tax document here
             </div>

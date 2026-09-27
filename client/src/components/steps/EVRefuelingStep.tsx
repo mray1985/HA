@@ -99,7 +99,7 @@ export default function EVRefuelingStep() {
           onClick={() => setForm({ ...form, isBusinessUse: !form.isBusinessUse })}
           className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors ${
             form.isBusinessUse
-              ? 'bg-telos-blue-600 text-white'
+              ? 'bg-HATaxService-blue-600 text-white'
               : 'bg-surface-800 text-slate-400'
           }`}
         >
@@ -168,7 +168,7 @@ export default function EVRefuelingStep() {
                   e.stopPropagation();
                   startEdit(item);
                 }}
-                className="p-2 text-slate-400 hover:text-telos-blue-400"
+                className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                 title="Edit"
               >
                 <Pencil className="w-4 h-4" />
@@ -197,10 +197,10 @@ export default function EVRefuelingStep() {
       )}
 
       {totalCost > 0 && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-orange-500/10 border-telos-orange-500/20">
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
           <div className="flex justify-between items-center">
             <div>
-              <span className="text-telos-orange-300 font-medium">
+              <span className="text-HATaxService-orange-300 font-medium">
                 Estimated Credit: ${Math.round(estimatedCredit).toLocaleString()}
               </span>
               <p className="text-xs text-slate-400 mt-1">
@@ -211,7 +211,7 @@ export default function EVRefuelingStep() {
         </div>
       )}
 
-      <a href="https://www.irs.gov/forms-pubs/about-form-8911" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/forms-pubs/about-form-8911" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

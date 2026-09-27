@@ -31,7 +31,7 @@ function getPasswordStrength(pw: string): StrengthResult {
     0: { label: 'Too short', color: 'text-red-400', bgColor: 'bg-red-500' },
     1: { label: 'Weak', color: 'text-red-400', bgColor: 'bg-red-500' },
     2: { label: 'Fair', color: 'text-amber-400', bgColor: 'bg-amber-500' },
-    3: { label: 'Good', color: 'text-telos-blue-400', bgColor: 'bg-telos-blue-500' },
+    3: { label: 'Good', color: 'text-HATaxService-blue-400', bgColor: 'bg-HATaxService-blue-500' },
     4: { label: 'Strong', color: 'text-emerald-400', bgColor: 'bg-emerald-500' },
   };
 
@@ -161,7 +161,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
       <div className="flex justify-center mb-3">
         <div className="w-12 h-12 rounded-full bg-surface-700 border border-slate-600 flex items-center justify-center">
           {mode === 'setup'
-            ? <Shield className="w-5 h-5 text-telos-blue-400" />
+            ? <Shield className="w-5 h-5 text-HATaxService-blue-400" />
             : <Lock className="w-5 h-5 text-slate-400" />
           }
         </div>
@@ -195,7 +195,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
               type={showPassword ? 'text' : 'password'}
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none pr-10"
+              className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none pr-10"
               placeholder={mode === 'setup' ? 'At least 8 characters' : 'Enter passphrase'}
               autoComplete={mode === 'setup' ? 'new-password' : 'current-password'}
               disabled={loading}
@@ -238,7 +238,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
               type={showPassword ? 'text' : 'password'}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none"
+              className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none"
               placeholder="Re-enter passphrase"
               autoComplete="new-password"
               disabled={loading}
@@ -285,8 +285,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold">
-            <span className="text-telos-orange-400">Telos</span>
-            <span className="text-telos-blue-400">Tax</span>
+            HA Tax service
           </h1>
           <p className="text-slate-400 text-sm mt-1">Free, private, open-source tax prep.</p>
         </div>

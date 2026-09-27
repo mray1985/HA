@@ -446,7 +446,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
       {status === 'loading' && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-800 pointer-events-none">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-telos-blue-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-HATaxService-blue-400 border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-slate-400">Loading {template.displayName}...</p>
           </div>
         </div>
@@ -460,7 +460,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
         </div>
       )}
 
-      {/* ─── Clicked-field "Ask TelosAI" tooltip (portaled to body for z-index) ──── */}
+      {/* ─── Clicked-field "Ask HA Tax service" tooltip (portaled to body for z-index) ──── */}
       {clickedField && createPortal(
         <div
           ref={clickedFieldRef}
@@ -489,20 +489,20 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
                 setClickedField(null);
               }}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                         border border-transparent hover:border-telos-orange-500/50
+                         border border-transparent hover:border-HATaxService-orange-500/50
                          bg-surface-600 hover:bg-surface-500
                          shadow-sm hover:shadow-md hover:shadow-black/20
                          transition-all duration-200"
             >
-              <Sparkles size={12} className="text-telos-orange-400 ai-sparkle" />
-              <span>Ask <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span></span>
+              <Sparkles size={12} className="text-HATaxService-orange-400 ai-sparkle" />
+              <span>Ask HA Tax service</span>
             </button>
           </div>
         </div>,
         document.body,
       )}
 
-      {/* ─── AI Floating Toolbar — styled to match TelosAIButton ──── */}
+      {/* ─── AI Floating Toolbar — styled to match HATaxServiceButton ──── */}
       {status === 'ready' && taxReturn && calculation && (
         <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2">
           {/* Field selector dropdown (renders above the toolbar) */}
@@ -526,7 +526,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
                   placeholder="Search fields..."
                   value={fieldSearch}
                   onChange={e => setFieldSearch(e.target.value)}
-                  className="w-full bg-surface-800 border border-surface-500 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-telos-blue-400 transition-colors"
+                  className="w-full bg-surface-800 border border-surface-500 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-HATaxService-blue-400 transition-colors"
                   autoFocus
                 />
               </div>
@@ -563,7 +563,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
                           bg-surface-700 border border-slate-600/50
                           shadow-lg shadow-black/30
                           hover:shadow-xl hover:shadow-black/40
-                          hover:border-telos-orange-500/40
+                          hover:border-HATaxService-orange-500/40
                           transition-all duration-200 ease-out">
             {/* Action buttons — slide out on hover */}
             <div className="max-w-0 overflow-hidden whitespace-nowrap
@@ -574,12 +574,12 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
                   onClick={() => { setFieldSelectorOpen(prev => !prev); setFieldSearch(''); }}
                   className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold transition-colors ${
                     fieldSelectorOpen
-                      ? 'bg-telos-blue-500/20 text-telos-blue-300'
+                      ? 'bg-HATaxService-blue-500/20 text-HATaxService-blue-300'
                       : 'text-slate-300 hover:bg-surface-600 hover:text-white'
                   }`}
                   title="Ask AI about a specific field"
                 >
-                  <span>Ask <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span></span>
+                  <span>Ask HA Tax service</span>
                   <ChevronDown size={14} className={`transition-transform ${fieldSelectorOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -618,7 +618,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
               aria-label={chatOpen ? 'Close AI chat' : 'Open AI chat'}
               title={chatOpen ? 'Close AI chat' : 'Open AI chat'}
             >
-              <Sparkles className="w-7 h-7 text-telos-orange-400 ai-sparkle" />
+              <Sparkles className="w-7 h-7 text-HATaxService-orange-400 ai-sparkle" />
             </button>
           </div>
 

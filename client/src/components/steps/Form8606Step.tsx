@@ -69,17 +69,17 @@ export default function Form8606Step() {
         <FormField label="Year-End Traditional IRA Balance" helpText="Total balance of ALL traditional IRA accounts as of December 31 (needed for pro-rata calculation)" tooltip={help?.fields['Year-End Traditional IRA Balance']?.tooltip} irsRef={help?.fields['Year-End Traditional IRA Balance']?.irsRef}>
           <CurrencyInput value={f.traditionalIRABalance || 0} onChange={(v) => update('traditionalIRABalance', v)} />
         </FormField>
-        <a href="https://www.irs.gov/forms-pubs/about-form-8606" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/forms-pubs/about-form-8606" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {hasConversion && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/10 border-telos-blue-600/30">
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
           <div className="text-center mb-2">
             <p className="text-sm text-slate-400">Taxable Conversion Amount (estimated)</p>
             <p className="text-2xl font-bold text-white">${taxableConversion.toLocaleString()}</p>
           </div>
           <div className="flex items-start gap-2 mt-2">
-            <AlertTriangle className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <p className="text-xs text-slate-400">
               The pro-rata rule means you can't convert only the nondeductible portion.
               Your basis ratio is {(taxFreeRatio * 100).toFixed(1)}% — so {((1 - taxFreeRatio) * 100).toFixed(1)}% of the conversion is taxable.

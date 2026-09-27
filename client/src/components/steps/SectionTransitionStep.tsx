@@ -42,7 +42,7 @@ export default function SectionTransitionStep() {
 
   return (
     <div className="max-w-lg mx-auto text-center py-12">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-telos-blue-600/20 text-telos-blue-400 mb-6">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-400 mb-6">
         <ArrowRight className="w-8 h-8" />
       </div>
 

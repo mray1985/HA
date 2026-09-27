@@ -192,14 +192,14 @@ export default function W2IncomeStep() {
           <div className="flex gap-3">
             <button
               type="button"
-              className={`py-1.5 px-4 rounded text-sm ${!form.isSpouse ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+              className={`py-1.5 px-4 rounded text-sm ${!form.isSpouse ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
               onClick={() => setForm({ ...form, isSpouse: false })}
             >
               Taxpayer
             </button>
             <button
               type="button"
-              className={`py-1.5 px-4 rounded text-sm ${form.isSpouse ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+              className={`py-1.5 px-4 rounded text-sm ${form.isSpouse ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
               onClick={() => setForm({ ...form, isSpouse: true })}
             >
               Spouse
@@ -250,7 +250,7 @@ export default function W2IncomeStep() {
                   type="checkbox"
                   checked={form.box13.statutoryEmployee || false}
                   onChange={(e) => setForm({ ...form, box13: { ...form.box13, statutoryEmployee: e.target.checked } })}
-                  className="rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+                  className="rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
                 />
                 Statutory employee
               </label>
@@ -259,7 +259,7 @@ export default function W2IncomeStep() {
                   type="checkbox"
                   checked={form.box13.retirementPlan || false}
                   onChange={(e) => setForm({ ...form, box13: { ...form.box13, retirementPlan: e.target.checked } })}
-                  className="rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+                  className="rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
                 />
                 Retirement plan
               </label>
@@ -268,7 +268,7 @@ export default function W2IncomeStep() {
                   type="checkbox"
                   checked={form.box13.thirdPartySickPay || false}
                   onChange={(e) => setForm({ ...form, box13: { ...form.box13, thirdPartySickPay: e.target.checked } })}
-                  className="rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+                  className="rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
                 />
                 Third-party sick pay
               </label>
@@ -315,7 +315,7 @@ export default function W2IncomeStep() {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, box12: [...form.box12, { ...emptyBox12Entry }] })}
-                className="flex items-center gap-1 text-sm text-telos-blue-400 hover:text-telos-blue-300 mt-1"
+                className="flex items-center gap-1 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 mt-1"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Box 12 entry
               </button>
@@ -376,7 +376,7 @@ export default function W2IncomeStep() {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEdit(w2); } }}
               >
                 <div>
-                  <div className="font-medium">{w2.employerName || 'Unnamed Employer'}{w2.isSpouse && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-telos-blue-600/20 text-telos-blue-400 border border-telos-blue-500/30">Spouse</span>}{w2.employerEin ? <span className="text-xs text-slate-500 ml-2">EIN: {w2.employerEin}</span> : ''}</div>
+                  <div className="font-medium">{w2.employerName || 'Unnamed Employer'}{w2.isSpouse && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-HATaxService-blue-600/20 text-HATaxService-blue-400 border border-HATaxService-blue-500/30">Spouse</span>}{w2.employerEin ? <span className="text-xs text-slate-500 ml-2">EIN: {w2.employerEin}</span> : ''}</div>
                   <div className="text-sm text-slate-400">
                     Wages: ${(w2.wages ?? 0).toLocaleString()} &middot; Federal withheld: ${(w2.federalTaxWithheld ?? 0).toLocaleString()}
                     {w2.stateTaxWithheld ? ` · ${w2.state || '??'} withheld: $${w2.stateTaxWithheld.toLocaleString()}` : ''}
@@ -406,7 +406,7 @@ export default function W2IncomeStep() {
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
                   <button
                     onClick={(e) => { e.stopPropagation(); startEdit(w2); }}
-                    className="p-2 text-slate-400 hover:text-telos-blue-400"
+                    className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                     title="Edit"
                   >
                     <Pencil className="w-4 h-4" />

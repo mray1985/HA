@@ -77,7 +77,7 @@ export default function MergedPdfViewer({ pdfBytes }: MergedPdfViewerProps) {
       {status === 'loading' && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-surface-800 pointer-events-none">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-telos-blue-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-HATaxService-blue-400 border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-slate-400">Loading selected forms...</p>
           </div>
         </div>

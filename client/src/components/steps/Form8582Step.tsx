@@ -260,7 +260,7 @@ function ActivityRow({ activity: act }: { activity: PassiveActivityDetail }) {
             </span>
           )}
           {act.type === 'rental' && act.activeParticipation && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-telos-blue-500/20 text-telos-blue-400">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-HATaxService-blue-500/20 text-HATaxService-blue-400">
               Active
             </span>
           )}

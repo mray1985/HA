@@ -108,7 +108,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                 Want AI-powered features? Add your Anthropic API key with{' '}
                 <button
                   onClick={(e) => { e.stopPropagation(); handleModeChange('byok'); }}
-                  className="text-telos-blue-400 hover:text-telos-blue-300 font-medium transition-colors"
+                  className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 font-medium transition-colors"
                 >
                   BYOK mode
                 </button>
@@ -119,7 +119,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
         </ModeCard>
 
         {/* ─── Tip Jar ──────────────────────────── */}
-        <div className="rounded-lg border border-telos-orange-400 bg-telos-orange-500/5 p-3">
+        <div className="rounded-lg border border-HATaxService-orange-400 bg-HATaxService-orange-500/5 p-3">
           <p className="text-xs text-white font-medium mb-1">Support HATax</p>
           <p className="text-[11px] text-slate-400 mb-2.5">
             Love the app? Leave a tip.
@@ -134,8 +134,8 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                 key={label}
                 onClick={() => link && window.open(link, '_blank', 'noopener,noreferrer')}
                 disabled={!link}
-                className="flex-1 text-[11px] px-2 py-1.5 rounded-md border border-telos-orange-400
-                           text-telos-orange-300 hover:text-white hover:bg-telos-orange-600 hover:border-telos-orange-500
+                className="flex-1 text-[11px] px-2 py-1.5 rounded-md border border-HATaxService-orange-400
+                           text-HATaxService-orange-300 hover:text-white hover:bg-HATaxService-orange-600 hover:border-HATaxService-orange-500
                            transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {label}
@@ -155,7 +155,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
           icon={<Key className="w-4 h-4" />}
           title="Bring Your Own Key"
           badge="Free"
-          badgeColor="text-telos-blue-400 bg-telos-blue-400/10"
+          badgeColor="text-HATaxService-blue-400 bg-HATaxService-blue-400/10"
           description="You provide your own Anthropic API key. Messages pass through our server (we can't read them) and go to Anthropic, billed to your account."
           features={[
             'Everything in Private Mode, plus:',
@@ -181,7 +181,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                       placeholder="sk-ant-..."
                       className="w-full bg-surface-900 border border-slate-600 rounded-md px-2.5 py-1.5 pr-8
                                  text-xs text-white font-mono
-                                 focus:outline-none focus:ring-2 focus:ring-telos-blue-500"
+                                 focus:outline-none focus:ring-2 focus:ring-HATaxService-blue-500"
                     />
                     <button
                       onClick={() => setShowApiKey(!showApiKey)}
@@ -194,7 +194,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                   <button
                     onClick={handleSaveApiKey}
                     disabled={!apiKeyInput || apiKeyInput === settings._decryptedApiKey}
-                    className="px-3 py-1.5 rounded-md bg-telos-blue-600 hover:bg-telos-blue-500 text-white
+                    className="px-3 py-1.5 rounded-md bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white
                                text-[11px] font-medium transition-colors
                                disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -213,7 +213,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                   value={settings.byokModel}
                   onChange={(e) => settings.setBYOKModel(e.target.value)}
                   className="mt-1 w-full bg-surface-900 border border-slate-600 rounded-md px-2.5 py-1.5
-                             text-xs text-white focus:outline-none focus:ring-2 focus:ring-telos-blue-500"
+                             text-xs text-white focus:outline-none focus:ring-2 focus:ring-HATaxService-blue-500"
                 >
                   <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (fast, affordable)</option>
                   <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (balanced)</option>
@@ -230,7 +230,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
                     href="https://console.anthropic.com/settings/keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-telos-blue-400 hover:text-telos-blue-300 inline-flex items-center gap-0.5"
+                    className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 inline-flex items-center gap-0.5"
                   >
                     console.anthropic.com <ExternalLink className="w-2.5 h-2.5" />
                   </a>
@@ -241,7 +241,7 @@ export default function AISettingsPanel({ onBack, onOpenPrivacyLog }: Props) {
               {/* ─── Learn More (expandable) ────────── */}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowBYOKInfo(!showBYOKInfo); }}
-                className="flex items-center gap-1.5 text-[11px] text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="flex items-center gap-1.5 text-[11px] text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <Key className="w-3 h-3" />
                 <span>How BYOK works, what gets sent, and what it costs</span>
@@ -307,7 +307,7 @@ function ModeCard({
     <div
       className={`rounded-lg border p-3 transition-colors cursor-pointer ${
         active
-          ? 'border-telos-blue-500/50 bg-telos-blue-500/5'
+          ? 'border-HATaxService-blue-500/50 bg-HATaxService-blue-500/5'
           : 'border-slate-700 hover:border-slate-600 bg-surface-700/30'
       }`}
       onClick={() => !active && onSelect()}
@@ -315,7 +315,7 @@ function ModeCard({
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className={`${active ? 'text-telos-blue-400' : 'text-slate-500'}`}>
+          <div className={`${active ? 'text-HATaxService-blue-400' : 'text-slate-500'}`}>
             {icon}
           </div>
           <span className="text-xs font-semibold text-slate-200">{title}</span>

@@ -173,11 +173,11 @@ export default function ExpenseScannerSetup({ transactionCount, onStartScan }: P
 
       {/* Quick-select bundles (for sparse context) — matches CalloutCard info style */}
       {showBundles && (
-        <div className="rounded-lg border p-4 bg-telos-blue-600/10 border-telos-blue-600/30">
+        <div className="rounded-lg border p-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
           <div className="flex items-start gap-2.5">
-            <Info className="w-4 h-4 mt-0.5 shrink-0 text-telos-blue-300" />
+            <Info className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-blue-300" />
             <div className="flex-1">
-              <div className="text-sm font-medium text-telos-blue-300 mb-3">Tell us about yourself</div>
+              <div className="text-sm font-medium text-HATaxService-blue-300 mb-3">Tell us about yourself</div>
               <div className="space-y-3">
                 {QUICK_BUNDLES.map((bundle) => (
                   <div key={bundle.key} className="flex items-center justify-between">
@@ -187,7 +187,7 @@ export default function ExpenseScannerSetup({ transactionCount, onStartScan }: P
                         onClick={() => toggleBundle(bundle, contextHints[bundle.key] === true ? undefined : true)}
                         className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
                           contextHints[bundle.key] === true
-                            ? 'bg-telos-blue-500 text-white'
+                            ? 'bg-HATaxService-blue-500 text-white'
                             : 'bg-surface-700 text-slate-400 hover:text-white hover:bg-surface-600'
                         }`}
                       >
@@ -197,7 +197,7 @@ export default function ExpenseScannerSetup({ transactionCount, onStartScan }: P
                         onClick={() => toggleBundle(bundle, contextHints[bundle.key] === false ? undefined : false)}
                         className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
                           contextHints[bundle.key] === false
-                            ? 'bg-telos-blue-500 text-white'
+                            ? 'bg-HATaxService-blue-500 text-white'
                             : 'bg-surface-700 text-slate-400 hover:text-white hover:bg-surface-600'
                         }`}
                       >
@@ -260,7 +260,7 @@ export default function ExpenseScannerSetup({ transactionCount, onStartScan }: P
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          Scan {enabledCount} {enabledCount === 1 ? 'category' : 'categories'} with{' '}<span><span className="text-telos-orange-300">Telos</span><span className="text-telos-blue-300">AI</span></span>
+          Scan {enabledCount} {enabledCount === 1 ? 'category' : 'categories'} with{' '}<span>HA Tax service</span>
         </button>
       </div>
     </div>

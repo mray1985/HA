@@ -20,11 +20,11 @@ export default function PrivacyDisclaimer({ onAccept }: Props) {
     <div className="flex flex-col items-center justify-center h-full px-6 py-8">
       <div className="max-w-sm text-center">
         {/* Icon */}
-        <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-telos-blue-600/20">
+        <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-HATaxService-blue-600/20">
           {mode === 'private' ? (
             <Lock className="w-7 h-7 text-emerald-400" />
           ) : (
-            <Key className="w-7 h-7 text-telos-blue-400" />
+            <Key className="w-7 h-7 text-HATaxService-blue-400" />
           )}
         </div>
 
@@ -132,7 +132,7 @@ function BYOKDisclaimer() {
           href="https://www.anthropic.com/privacy"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-telos-blue-400 hover:text-telos-blue-300 inline-flex items-center gap-1"
+          className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 inline-flex items-center gap-1"
         >
           Privacy policy <ExternalLink className="w-3 h-3" />
         </a>

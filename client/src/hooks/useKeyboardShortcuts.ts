@@ -2,7 +2,7 @@
  * Global Keyboard Shortcuts
  *
  * Centralized handler for all app-wide keyboard shortcuts.
- * Individual shortcuts (⌘K in useCommandPalette, ⌘J in TelosAIButton)
+ * Individual shortcuts (⌘K in useCommandPalette, ⌘J in HATaxServiceButton)
  * remain in their own hooks/components for now — this hook handles the
  * new navigation and utility shortcuts.
  *

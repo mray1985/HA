@@ -161,7 +161,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
         {/* Header */}
         <div className="sticky top-0 bg-surface-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-telos-blue-400" />
+            <BookOpen className="w-5 h-5 text-HATaxService-blue-400" />
             <h2 className="font-semibold text-white">Donation Value Lookup</h2>
           </div>
           <button
@@ -282,7 +282,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
                     </div>
                     <button
                       type="button"
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300"
                       onClick={() => setSelectedItem(null)}
                     >
                       Change
@@ -318,7 +318,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
                   {/* Estimated FMV */}
                   <div className="text-center py-2">
                     <div className="text-xs text-slate-400">Estimated FMV</div>
-                    <div className="text-2xl font-semibold text-telos-orange-400">
+                    <div className="text-2xl font-semibold text-HATaxService-orange-400">
                       ${lookupFMV.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  className="text-sm text-telos-blue-400 hover:text-telos-blue-300 underline underline-offset-2"
+                  className="text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline underline-offset-2"
                   onClick={onClose}
                 >
                   Enter manually instead
@@ -387,7 +387,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
                 <div className="rounded-lg border border-slate-700 p-4 space-y-3 bg-surface-900/50">
                   <div className="text-center">
                     <div className="text-xs text-slate-400">Estimated FMV</div>
-                    <div className="text-2xl font-semibold text-telos-orange-400">
+                    <div className="text-2xl font-semibold text-HATaxService-orange-400">
                       ${calcResult.estimatedFMV.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </div>
                     <div className="text-xs text-slate-500 mt-1">
@@ -409,7 +409,7 @@ export default function DonationValuationPanel({ onSelect, onClose }: DonationVa
               <div className="text-center pt-2">
                 <button
                   type="button"
-                  className="text-sm text-telos-blue-400 hover:text-telos-blue-300 underline underline-offset-2"
+                  className="text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline underline-offset-2"
                   onClick={onClose}
                 >
                   Enter manually instead

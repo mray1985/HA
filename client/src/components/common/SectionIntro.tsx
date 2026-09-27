@@ -17,7 +17,7 @@ export default function SectionIntro({ title, description, icon, transition }: S
         </div>
       )}
       {icon && (
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-telos-blue-600/20 text-telos-blue-400 mb-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-400 mb-6">
           {icon}
         </div>
       )}

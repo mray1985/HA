@@ -333,7 +333,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
               <div className="mt-3">
                 <button
                   onClick={() => setShowInstructions(!showInstructions)}
-                  className="flex items-center gap-1.5 text-sm text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   {showInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   How to download your return from {provider.name}
@@ -372,7 +372,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
       {/* ── EXTRACTING STATE ── */}
       {state === 'extracting' && (
         <div className="card bg-surface-800 border-slate-700 text-center py-8">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-slate-300">Analyzing your tax return...</p>
           <p className="text-sm text-slate-500 mt-1">Extracting personal info and financial data</p>
         </div>
@@ -396,7 +396,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {/* Detection info */}
           <div className="flex flex-wrap gap-2">
             {result.detectedProvider && (
-              <span className="text-xs px-2 py-1 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+              <span className="text-xs px-2 py-1 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                 Detected: {getProvider(result.detectedProvider).name}
               </span>
             )}
@@ -413,7 +413,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                 onClick={() => setImportMode('current-year')}
                 className={`p-3 rounded-lg border text-left transition-colors ${
                   importMode === 'current-year'
-                    ? 'bg-telos-blue-600/15 border-telos-blue-500/40 text-telos-blue-300'
+                    ? 'bg-HATaxService-blue-600/15 border-HATaxService-blue-500/40 text-HATaxService-blue-300'
                     : 'bg-surface-700 border-slate-600 text-slate-400 hover:border-slate-500'
                 }`}
               >
@@ -424,7 +424,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                 onClick={() => setImportMode('prior-year')}
                 className={`p-3 rounded-lg border text-left transition-colors ${
                   importMode === 'prior-year'
-                    ? 'bg-telos-blue-600/15 border-telos-blue-500/40 text-telos-blue-300'
+                    ? 'bg-HATaxService-blue-600/15 border-HATaxService-blue-500/40 text-HATaxService-blue-300'
                     : 'bg-surface-700 border-slate-600 text-slate-400 hover:border-slate-500'
                 }`}
               >
@@ -438,7 +438,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {importMode === 'current-year' && (
             <div className="card bg-surface-800 border-slate-700">
               <div className="flex items-center gap-2 mb-3">
-                <User className="w-5 h-5 text-telos-blue-400" />
+                <User className="w-5 h-5 text-HATaxService-blue-400" />
                 <h4 className="text-base font-medium text-slate-200">Personal Information</h4>
               </div>
 
@@ -456,7 +456,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                         type="checkbox"
                         checked={fieldOverrides[key] ?? false}
                         onChange={(e) => setFieldOverrides(prev => ({ ...prev, [key]: e.target.checked }))}
-                        className="accent-telos-blue-500 shrink-0"
+                        className="accent-HATaxService-blue-500 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -492,7 +492,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                         type="checkbox"
                         checked={fieldOverrides[key] ?? false}
                         onChange={(e) => setFieldOverrides(prev => ({ ...prev, [key]: e.target.checked }))}
-                        className="accent-telos-blue-500 shrink-0"
+                        className="accent-HATaxService-blue-500 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -524,7 +524,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                       type="checkbox"
                       checked={fieldOverrides['filingStatus'] ?? false}
                       onChange={(e) => setFieldOverrides(prev => ({ ...prev, filingStatus: e.target.checked }))}
-                      className="accent-telos-blue-500 shrink-0"
+                      className="accent-HATaxService-blue-500 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -560,7 +560,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                         spouseFirstName: e.target.checked,
                         spouseLastName: e.target.checked,
                       }))}
-                      className="accent-telos-blue-500 shrink-0"
+                      className="accent-HATaxService-blue-500 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -594,7 +594,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {importMode === 'current-year' && result.dependents.length > 0 && (
             <div className="card bg-surface-800 border-slate-700">
               <div className="flex items-center gap-2 mb-3">
-                <Users className="w-5 h-5 text-telos-blue-400" />
+                <Users className="w-5 h-5 text-HATaxService-blue-400" />
                 <h4 className="text-base font-medium text-slate-200">
                   Dependents ({result.dependents.length})
                 </h4>
@@ -625,7 +625,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {/* ── Financial Summary Section (both modes) ── */}
           <div className="card bg-surface-800 border-slate-700">
             <div className="flex items-center gap-2 mb-3">
-              <DollarSign className="w-5 h-5 text-telos-blue-400" />
+              <DollarSign className="w-5 h-5 text-HATaxService-blue-400" />
               <h4 className="text-base font-medium text-slate-200">
                 {importMode === 'current-year' ? 'Financial Reference' : 'Financial Summary'}
               </h4>
@@ -682,7 +682,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
       {/* ── IMPORTING STATE ── */}
       {state === 'importing' && (
         <div className="card bg-surface-800 border-slate-700 text-center py-8">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-slate-300">Importing data...</p>
         </div>
       )}

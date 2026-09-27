@@ -66,7 +66,7 @@ export default function SelfEmploymentSummaryStep() {
   const editBtn = (stepId: string) => (
     <button
       onClick={() => goToStep(stepId)}
-      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
     >
       Edit
     </button>
@@ -121,7 +121,7 @@ export default function SelfEmploymentSummaryStep() {
         <div className="card mt-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium text-slate-200 flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-telos-orange-400" />
+              <Briefcase className="w-4 h-4 text-HATaxService-orange-400" />
               {businesses.length === 1 ? 'Your Business' : 'Your Businesses'}
             </h3>
             {editBtn('business_info')}
@@ -144,7 +144,7 @@ export default function SelfEmploymentSummaryStep() {
       {/* Schedule C Breakdown */}
       <div className="card mt-4">
         <h3 className="font-medium text-slate-200 mb-3 flex items-center gap-2">
-          <Receipt className="w-4 h-4 text-telos-orange-400" />
+          <Receipt className="w-4 h-4 text-HATaxService-orange-400" />
           Schedule C Breakdown
         </h3>
         <div className="space-y-0 divide-y divide-slate-700/50">
@@ -202,7 +202,7 @@ export default function SelfEmploymentSummaryStep() {
       {(seHealthInsurance > 0 || seRetirement > 0 || seTaxDeductible > 0) && (
         <div className="card mt-4">
           <h3 className="font-medium text-slate-200 mb-3 flex items-center gap-2">
-            <Cog className="w-4 h-4 text-telos-orange-400" />
+            <Cog className="w-4 h-4 text-HATaxService-orange-400" />
             SE Deductions (Above-the-Line)
           </h3>
           <p className="text-xs text-slate-400 mb-3">These reduce your AGI — they're not part of Schedule C but are computed from your self-employment income.</p>
@@ -269,7 +269,7 @@ export default function SelfEmploymentSummaryStep() {
                 <span className="text-sm text-slate-400">{s.label}</span>
                 <button
                   onClick={() => goToStep(s.stepId)}
-                  className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                  className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                 >
                   Enter
                 </button>

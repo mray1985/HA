@@ -54,7 +54,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
       {/* Back to hub */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-telos-blue-400 transition-colors mb-4"
+        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-HATaxService-blue-400 transition-colors mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Filing Options
@@ -83,10 +83,10 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
               onClick={() => navigateToFormLine(form.formId)}
               className="flex items-center gap-3 w-full text-left group py-0.5 -mx-1 px-1 rounded hover:bg-surface-700/50 transition-colors"
             >
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-surface-700 text-xs font-medium text-slate-400 group-hover:bg-telos-blue-600/30 group-hover:text-telos-blue-400 transition-colors">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-surface-700 text-xs font-medium text-slate-400 group-hover:bg-HATaxService-blue-600/30 group-hover:text-HATaxService-blue-400 transition-colors">
                 {i + 1}
               </span>
-              <span className="text-sm text-slate-300 group-hover:text-telos-blue-400 transition-colors">{form.displayName}</span>
+              <span className="text-sm text-slate-300 group-hover:text-HATaxService-blue-400 transition-colors">{form.displayName}</span>
             </button>
           ))}
         </div>
@@ -99,20 +99,20 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
       <Section icon={<CheckSquare className="w-5 h-5" />} title="Before You Mail">
         <div className="space-y-3">
           <ChecklistItem>
-            <PenLine className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+            <PenLine className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <span>{instructions.signatureLines}</span>
           </ChecklistItem>
 
           {instructions.attachments.length > 0 && (
             <>
               <div className="flex items-center gap-2 mt-2">
-                <Paperclip className="w-4 h-4 text-telos-blue-400 shrink-0" />
+                <Paperclip className="w-4 h-4 text-HATaxService-blue-400 shrink-0" />
                 <span className="text-sm font-medium text-slate-300">Attach to the front of your return:</span>
               </div>
               <ul className="ml-8 space-y-1.5">
                 {instructions.attachments.map((item, i) => (
                   <li key={i} className="text-sm text-slate-400 flex items-start gap-2">
-                    <span className="text-telos-blue-400 mt-0.5">&bull;</span>
+                    <span className="text-HATaxService-blue-400 mt-0.5">&bull;</span>
                     {item}
                   </li>
                 ))}
@@ -121,7 +121,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
           )}
 
           <ChecklistItem>
-            <FileText className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+            <FileText className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <span>Do <strong className="text-slate-300">not</strong> staple or paper-clip your payment to the return. Place it loosely in the envelope.</span>
           </ChecklistItem>
         </div>
@@ -156,7 +156,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
               href="https://directpay.irs.gov"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Pay online via IRS Direct Pay
@@ -182,7 +182,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
                 href="https://www.irs.gov/refunds"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 irs.gov/refunds
               </a>{' '}
@@ -207,7 +207,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
               <div key={sr.stateCode} className="card bg-surface-800 border-slate-700 mb-2">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-xs">
                       {sr.stateCode}
                     </div>
                     <div>
@@ -247,7 +247,7 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
                         href={addr!.onlinePaymentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                        className="mt-1.5 inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                       >
                         <ExternalLink className="w-3 h-3" />
                         Pay online
@@ -279,11 +279,11 @@ export default function PaperMailingPanel({ taxReturn, result, onBack }: PaperMa
 
       {/* Estimated Tax Voucher Awareness */}
       {estimatedRec.recommended && (
-        <div className="mt-6 rounded-xl border border-telos-blue-500/20 bg-telos-blue-500/5 p-4">
+        <div className="mt-6 rounded-xl border border-HATaxService-blue-500/20 bg-HATaxService-blue-500/5 p-4">
           <div className="flex items-start gap-3">
-            <Calendar className="w-5 h-5 text-telos-blue-400 shrink-0 mt-0.5" />
+            <Calendar className="w-5 h-5 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-telos-blue-300">Estimated Tax Payments Recommended</p>
+              <p className="text-sm font-medium text-HATaxService-blue-300">Estimated Tax Payments Recommended</p>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                 Based on your return, you may need to make estimated tax payments of{' '}
                 <span className="text-white font-medium">${estimatedRec.quarterlyAmount.toLocaleString()}</span> per
@@ -304,7 +304,7 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <div className="mt-6">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-telos-blue-400">{icon}</span>
+        <span className="text-HATaxService-blue-400">{icon}</span>
         <h3 className="text-lg font-semibold text-white">{title}</h3>
       </div>
       {children}

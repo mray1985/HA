@@ -89,10 +89,10 @@ export default function StateOverviewStep() {
 
       {/* Auto-detect prompt */}
       {detectedState && stateReturns.length === 0 && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-blue-500/5 border-telos-blue-500/20">
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-500/5 border-HATaxService-blue-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-telos-blue-400" />
+              <MapPin className="w-5 h-5 text-HATaxService-blue-400" />
               <div>
                 <p className="text-sm text-slate-200">
                   Based on your address, it looks like you live in <strong>{getStateName(detectedState)}</strong>.
@@ -126,7 +126,7 @@ export default function StateOverviewStep() {
           <div key={sr.stateCode} className="card mt-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-sm">
+                <div className="w-10 h-10 rounded-lg bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-sm">
                   {sr.stateCode}
                 </div>
                 <div>
@@ -163,7 +163,7 @@ export default function StateOverviewStep() {
                       onClick={() => updateResidency(sr.stateCode, rt)}
                       className={`px-4 py-2 text-sm rounded-lg transition-colors ${
                         sr.residencyType === rt
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -211,7 +211,7 @@ export default function StateOverviewStep() {
                       }}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                         sr.stateSpecificData?.nycResident === true
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -221,7 +221,7 @@ export default function StateOverviewStep() {
                       onClick={() => updateStateData('NY', { nycResident: false })}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                         sr.stateSpecificData?.nycResident === false
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -237,7 +237,7 @@ export default function StateOverviewStep() {
                         onClick={() => updateStateData('NY', { yonkersResident: true })}
                         className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                           sr.stateSpecificData?.yonkersResident === true
-                            ? 'bg-telos-blue-600 text-white'
+                            ? 'bg-HATaxService-blue-600 text-white'
                             : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                         }`}
                       >
@@ -247,7 +247,7 @@ export default function StateOverviewStep() {
                         onClick={() => updateStateData('NY', { yonkersResident: false })}
                         className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                           sr.stateSpecificData?.yonkersResident === false
-                            ? 'bg-telos-blue-600 text-white'
+                            ? 'bg-HATaxService-blue-600 text-white'
                             : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                         }`}
                       >
@@ -328,13 +328,13 @@ export default function StateOverviewStep() {
                     <span className="text-slate-400 ml-2">{state.name}</span>
                   </span>
                   <span className="text-xs">
-                    {alreadyAdded && <span className="text-telos-blue-400">Added</span>}
+                    {alreadyAdded && <span className="text-HATaxService-blue-400">Added</span>}
                     {!alreadyAdded && !state.hasIncomeTax && <span className="text-emerald-500">No income tax</span>}
                     {!alreadyAdded && state.hasIncomeTax && !isStateSupported(state.code) && (
                       <span className="text-slate-400">Coming soon</span>
                     )}
                     {!alreadyAdded && state.hasIncomeTax && isStateSupported(state.code) && (
-                      <span className="text-telos-blue-400">Supported</span>
+                      <span className="text-HATaxService-blue-400">Supported</span>
                     )}
                   </span>
                 </button>
@@ -345,7 +345,7 @@ export default function StateOverviewStep() {
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="w-full mt-4 py-3 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-telos-blue-500/50 hover:text-telos-blue-400 transition-colors flex items-center justify-center gap-2 text-sm"
+          className="w-full mt-4 py-3 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-HATaxService-blue-500/50 hover:text-HATaxService-blue-400 transition-colors flex items-center justify-center gap-2 text-sm"
         >
           <Plus className="w-4 h-4" />
           {stateReturns.length === 0 ? 'Add a State' : 'Add Another State'}

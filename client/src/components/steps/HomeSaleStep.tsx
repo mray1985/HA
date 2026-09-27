@@ -97,7 +97,7 @@ export default function HomeSaleStep() {
         <label className="flex items-center gap-3 mt-3 cursor-pointer">
           <input
             type="checkbox"
-            className="accent-telos-orange-400"
+            className="accent-HATaxService-orange-400"
             checked={!!hs.priorExclusionUsedWithin2Years}
             onChange={(e) => update('priorExclusionUsedWithin2Years', e.target.checked)}
           />

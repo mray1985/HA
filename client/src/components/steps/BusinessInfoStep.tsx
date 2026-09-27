@@ -170,7 +170,7 @@ export default function BusinessInfoStep() {
       )}
 
       <label className="flex items-center gap-3 mt-3 cursor-pointer">
-        <input type="checkbox" className="accent-telos-orange-400" checked={form.didStartThisYear} onChange={(e) => setForm({ ...form, didStartThisYear: e.target.checked })} />
+        <input type="checkbox" className="accent-HATaxService-orange-400" checked={form.didStartThisYear} onChange={(e) => setForm({ ...form, didStartThisYear: e.target.checked })} />
         <span className="text-sm text-slate-300">Business started this year</span>
         <span className="text-xs text-slate-500 ml-1">Schedule C, Line I</span>
       </label>
@@ -220,7 +220,7 @@ export default function BusinessInfoStep() {
                   <div className="text-sm text-slate-400">
                     {biz.businessDescription || 'No description'}
                     {biz.principalBusinessCode && (
-                      <span className="ml-2 text-xs font-mono text-telos-blue-400">{biz.principalBusinessCode}</span>
+                      <span className="ml-2 text-xs font-mono text-HATaxService-blue-400">{biz.principalBusinessCode}</span>
                     )}
                     <span className="ml-2 text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">
                       {biz.accountingMethod === 'accrual' ? 'Accrual' : 'Cash'}
@@ -240,7 +240,7 @@ export default function BusinessInfoStep() {
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
                   <button
                     onClick={(e) => { e.stopPropagation(); startEdit(biz); }}
-                    className="p-2 text-slate-400 hover:text-telos-blue-400"
+                    className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                     title="Edit"
                   >
                     <Pencil className="w-4 h-4" />
@@ -270,7 +270,7 @@ export default function BusinessInfoStep() {
         )
       )}
 
-      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

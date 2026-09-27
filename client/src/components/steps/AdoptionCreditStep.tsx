@@ -52,7 +52,7 @@ export default function AdoptionCreditStep() {
 
       <div className="rounded-lg border border-slate-700 bg-surface-800 mt-4 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-700/60 flex items-center gap-2">
-          <Info className="w-4 h-4 text-telos-blue-400" />
+          <Info className="w-4 h-4 text-HATaxService-blue-400" />
           <span className="text-sm font-medium text-slate-200">Key Details</span>
         </div>
         <div className="p-4 space-y-2">
@@ -63,7 +63,7 @@ export default function AdoptionCreditStep() {
             <li>Non-refundable — unused credit can be carried forward up to 5 years</li>
             <li>Cannot claim for a child of your spouse (stepchild adoption)</li>
           </ul>
-          <a href="https://www.irs.gov/forms-pubs/about-form-8839" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+          <a href="https://www.irs.gov/forms-pubs/about-form-8839" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
         </div>
       </div>
 
@@ -73,7 +73,7 @@ export default function AdoptionCreditStep() {
             {[1, 2, 3].map((n) => (
               <button
                 key={n}
-                className={`py-1.5 px-4 rounded text-sm font-medium transition-colors ${children === n ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
+                className={`py-1.5 px-4 rounded text-sm font-medium transition-colors ${children === n ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
                 onClick={() => update('numberOfChildren', n)}
               >
                 {n}
@@ -84,8 +84,8 @@ export default function AdoptionCreditStep() {
 
         <FormField label="Special Needs Adoption?" tooltip="If the child is a U.S. citizen or resident with special needs, you receive the full credit ($17,280) regardless of actual expenses.">
           <div className="flex gap-3">
-            <button className={`py-1.5 px-4 rounded text-sm ${info.isSpecialNeeds ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpecialNeeds', true)}>Yes</button>
-            <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpecialNeeds ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpecialNeeds', false)}>No</button>
+            <button className={`py-1.5 px-4 rounded text-sm ${info.isSpecialNeeds ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpecialNeeds', true)}>Yes</button>
+            <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpecialNeeds ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpecialNeeds', false)}>No</button>
           </div>
         </FormField>
 
@@ -96,8 +96,8 @@ export default function AdoptionCreditStep() {
         )}
 
         {estimatedCredit > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
-            <span className="text-telos-orange-300 font-medium">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+            <span className="text-HATaxService-orange-300 font-medium">
               Estimated Credit: ${estimatedCredit.toLocaleString()}
             </span>
             <p className="text-xs text-slate-400 mt-1">

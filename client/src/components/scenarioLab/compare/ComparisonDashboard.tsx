@@ -17,22 +17,22 @@ import BracketComparison from '../charts/BracketComparison';
 import DrillDownTable from './DrillDownTable';
 
 const COLOR_BG: Record<string, string> = {
-  orange: 'bg-telos-orange-500/10 border-telos-orange-500/30',
-  blue: 'bg-telos-blue-500/10 border-telos-blue-500/30',
+  orange: 'bg-HATaxService-orange-500/10 border-HATaxService-orange-500/30',
+  blue: 'bg-HATaxService-blue-500/10 border-HATaxService-blue-500/30',
   violet: 'bg-violet-500/10 border-violet-500/30',
   emerald: 'bg-emerald-500/10 border-emerald-500/30',
 };
 
 const COLOR_TEXT: Record<string, string> = {
-  orange: 'text-telos-orange-400',
-  blue: 'text-telos-blue-400',
+  orange: 'text-HATaxService-orange-400',
+  blue: 'text-HATaxService-blue-400',
   violet: 'text-violet-400',
   emerald: 'text-emerald-400',
 };
 
 const COLOR_DOT: Record<string, string> = {
-  orange: 'bg-telos-orange-500',
-  blue: 'bg-telos-blue-500',
+  orange: 'bg-HATaxService-orange-500',
+  blue: 'bg-HATaxService-blue-500',
   violet: 'bg-violet-500',
   emerald: 'bg-emerald-500',
 };

@@ -73,7 +73,7 @@ function TraceNode({ trace, depth, onNavigateToForm }: { trace: CalculationTrace
             tabIndex={0}
             onClick={(e) => { e.stopPropagation(); onNavigateToForm(trace.lineId); }}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onNavigateToForm(trace.lineId); } }}
-            className="text-[10px] font-mono text-telos-blue-400 bg-surface-900 px-1.5 py-0.5 rounded shrink-0 inline-flex items-center gap-1 cursor-pointer hover:underline hover:bg-surface-800 transition-colors"
+            className="text-[10px] font-mono text-HATaxService-blue-400 bg-surface-900 px-1.5 py-0.5 rounded shrink-0 inline-flex items-center gap-1 cursor-pointer hover:underline hover:bg-surface-800 transition-colors"
           >
             <FileText className="w-2.5 h-2.5" />
             {trace.lineId}
@@ -133,7 +133,7 @@ function TraceNode({ trace, depth, onNavigateToForm }: { trace: CalculationTrace
                     className="w-full flex justify-between items-center text-xs px-2 py-0.5 rounded bg-surface-900/30 hover:bg-surface-800/50 cursor-pointer transition-colors text-left group"
                   >
                     <span className="text-slate-400">
-                      <span className="font-mono text-[10px] text-telos-blue-400 mr-1.5 group-hover:underline inline-flex items-center gap-0.5">
+                      <span className="font-mono text-[10px] text-HATaxService-blue-400 mr-1.5 group-hover:underline inline-flex items-center gap-0.5">
                         <FileText className="w-2.5 h-2.5 inline" />
                         {input.lineId}
                       </span>

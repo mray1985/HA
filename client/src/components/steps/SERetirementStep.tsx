@@ -122,7 +122,7 @@ export default function SERetirementStep() {
               ))}
             </div>
           )}
-          <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simplified-employee-pension-plan-sep" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SEP-IRA on IRS.gov</a>
+          <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simplified-employee-pension-plan-sep" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SEP-IRA on IRS.gov</a>
         </div>
 
         {/* ─── Solo 401(k) Section ─────────────────── */}
@@ -134,7 +134,7 @@ export default function SERetirementStep() {
 
           {/* Adjusted net SE income context */}
           {solo401k && hasSEIncome && (
-            <div className="flex items-start gap-2 text-xs text-telos-blue-400 bg-telos-blue-600/10 rounded-lg px-3 py-2 mb-4">
+            <div className="flex items-start gap-2 text-xs text-HATaxService-blue-400 bg-HATaxService-blue-600/10 rounded-lg px-3 py-2 mb-4">
               <Info className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Adjusted net SE income: <strong>${solo401k.adjustedNetSEIncome.toLocaleString()}</strong>
@@ -214,7 +214,7 @@ export default function SERetirementStep() {
               </div>
               <div className="flex justify-between text-sm border-t border-slate-700 pt-1 mt-1">
                 <span className="text-slate-200 font-medium">Total contribution:</span>
-                <span className="text-telos-orange-400 font-mono font-semibold">${solo401k.totalContribution.toLocaleString()}</span>
+                <span className="text-HATaxService-orange-400 font-mono font-semibold">${solo401k.totalContribution.toLocaleString()}</span>
               </div>
               {solo401k.appliedRothDeferral > 0 && (
                 <div className="flex justify-between text-xs mt-1">
@@ -252,7 +252,7 @@ export default function SERetirementStep() {
           <div className="mt-4 pt-4 border-t border-slate-700">
             <button
               onClick={() => setShowPlanDetails(!showPlanDetails)}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               {showPlanDetails ? '- Hide' : '+ Show'} plan balance &amp; Form 5500-EZ details
             </button>
@@ -330,7 +330,7 @@ export default function SERetirementStep() {
                             />
                           </FormField>
                         </div>
-                        <a href="https://www.irs.gov/forms-pubs/about-form-5500-ez" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 5500-EZ on IRS.gov</a>
+                        <a href="https://www.irs.gov/forms-pubs/about-form-5500-ez" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 5500-EZ on IRS.gov</a>
                       </div>
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export default function SERetirementStep() {
             )}
           </div>
 
-          <a href="https://www.irs.gov/retirement-plans/one-participant-401k-plans" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Solo 401(k) on IRS.gov</a>
+          <a href="https://www.irs.gov/retirement-plans/one-participant-401k-plans" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Solo 401(k) on IRS.gov</a>
         </div>
 
         {/* ─── SIMPLE IRA Section ──────────────────── */}
@@ -356,7 +356,7 @@ export default function SERetirementStep() {
             />
           </FormField>
           {(sed.simpleIraContributions || 0) > 0 && (
-            <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simple-ira-plan" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SIMPLE IRA on IRS.gov</a>
+            <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simple-ira-plan" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SIMPLE IRA on IRS.gov</a>
           )}
         </div>
 

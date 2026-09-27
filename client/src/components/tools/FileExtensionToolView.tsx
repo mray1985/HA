@@ -128,7 +128,7 @@ export default function FileExtensionToolView() {
                 href="https://www.irs.gov/forms-pubs/extension-of-time-to-file-your-tax-return"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 E-file your extension at irs.gov/extensions
@@ -170,7 +170,7 @@ export default function FileExtensionToolView() {
         {/* Filing Status (read-only display) */}
         {taxReturn.filingStatus && (
           <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-surface-700/50 border border-slate-700/50">
-            <CheckCircle2 className="w-3.5 h-3.5 text-telos-blue-400 shrink-0" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-HATaxService-blue-400 shrink-0" />
             <span className="text-xs text-slate-300">
               Filing as <span className="font-medium text-white">{FILING_STATUS_LABELS[taxReturn.filingStatus] || 'Unknown'}</span>
             </span>
@@ -352,7 +352,7 @@ export default function FileExtensionToolView() {
               href="https://www.irs.gov/forms-pubs/extension-of-time-to-file-your-tax-return"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               E-file your extension at irs.gov/extensions

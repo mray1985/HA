@@ -27,7 +27,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
     <>
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <mark key={i} className="bg-telos-blue-600/30 text-white rounded-sm px-0.5">{part}</mark>
+          <mark key={i} className="bg-HATaxService-blue-600/30 text-white rounded-sm px-0.5">{part}</mark>
         ) : (
           part
         ),
@@ -831,12 +831,12 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                         ${item.disabled
                           ? 'text-slate-600 cursor-not-allowed'
                           : isActive
-                            ? 'bg-telos-blue-600/20 text-white cursor-pointer'
+                            ? 'bg-HATaxService-blue-600/20 text-white cursor-pointer'
                             : 'text-slate-300 hover:bg-surface-700 cursor-pointer'
                         }
                       `}
                     >
-                      <span className={`shrink-0 ${item.disabled ? 'opacity-40' : isActive ? 'text-telos-blue-400' : 'text-slate-400'}`}>
+                      <span className={`shrink-0 ${item.disabled ? 'opacity-40' : isActive ? 'text-HATaxService-blue-400' : 'text-slate-400'}`}>
                         {item.icon ?? CATEGORY_ICONS[item.category]}
                       </span>
                       <span className={`flex-1 truncate ${item.disabled ? 'opacity-40' : ''}`}>
@@ -850,7 +850,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                       {item.navHint && (
                         <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
                           item.navHint === 'PDF'
-                            ? 'text-telos-blue-400 bg-telos-blue-600/15'
+                            ? 'text-HATaxService-blue-400 bg-HATaxService-blue-600/15'
                             : 'text-slate-500 bg-surface-700'
                         }`}>
                           {item.navHint}
@@ -860,7 +860,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                         <span className="text-[10px] text-slate-600 shrink-0">{item.disabledReason}</span>
                       )}
                       {isActive && !item.disabled && (
-                        <ArrowRight className="w-3 h-3 text-telos-blue-400 shrink-0" />
+                        <ArrowRight className="w-3 h-3 text-HATaxService-blue-400 shrink-0" />
                       )}
                     </div>
                   );

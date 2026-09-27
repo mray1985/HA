@@ -115,7 +115,7 @@ export default function Form5329Step() {
         <FormField label="Coverdell ESA Excess Contribution" optional helpText="Amount over the $2,000 annual limit per beneficiary" tooltip={help?.fields['Coverdell ESA Excess Contribution']?.tooltip} irsRef={help?.fields['Coverdell ESA Excess Contribution']?.irsRef}>
           <CurrencyInput value={ec.esaExcessContribution || 0} onChange={(v) => update('esaExcessContribution', v)} />
         </FormField>
-        <a href="https://www.irs.gov/forms-pubs/about-form-5329" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/forms-pubs/about-form-5329" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {/* ── HSA Excess Summary (full advisory lives on HSA step) ── */}
@@ -155,7 +155,7 @@ export default function Form5329Step() {
               <button
                 type="button"
                 onClick={() => goToStep('hsa_contributions')}
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 Change on HSA Contributions step <ArrowRight className="w-3 h-3" />
               </button>
@@ -201,7 +201,7 @@ export default function Form5329Step() {
               <button
                 type="button"
                 onClick={() => goToStep('ira_contribution_ded')}
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 Change on IRA Contributions step <ArrowRight className="w-3 h-3" />
               </button>

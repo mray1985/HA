@@ -53,7 +53,7 @@ export default function FreeEfilingPanel({ taxReturn, result, onBack }: FreeEfil
       {/* Back to hub */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-telos-blue-400 transition-colors mb-4"
+        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-HATaxService-blue-400 transition-colors mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Filing Options
@@ -66,9 +66,9 @@ export default function FreeEfilingPanel({ taxReturn, result, onBack }: FreeEfil
 
       <div className="space-y-3">
         {/* A. Free Fillable Forms + Transfer Guide */}
-        <div className="card bg-surface-800 border-slate-700 hover:border-telos-blue-600/40 transition-colors">
+        <div className="card bg-surface-800 border-slate-700 hover:border-HATaxService-blue-600/40 transition-colors">
           <div className="flex items-start gap-3">
-            <span className="text-telos-blue-400 mt-0.5">
+            <span className="text-HATaxService-blue-400 mt-0.5">
               <ClipboardCopy className="w-5 h-5" />
             </span>
             <div className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ export default function FreeEfilingPanel({ taxReturn, result, onBack }: FreeEfil
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => setView('transfer-guide')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-telos-blue-600/20 text-telos-blue-400 hover:bg-telos-blue-600/30 text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-HATaxService-blue-600/20 text-HATaxService-blue-400 hover:bg-HATaxService-blue-600/30 text-xs font-medium transition-colors"
                 >
                   <ClipboardCopy className="w-3.5 h-3.5" />
                   Open Transfer Guide
@@ -157,7 +157,7 @@ function OptionCard({
   return (
     <div className="card bg-surface-800 border-slate-700">
       <div className="flex items-start gap-3">
-        <span className="text-telos-blue-400 mt-0.5">{icon}</span>
+        <span className="text-HATaxService-blue-400 mt-0.5">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-white">{title}</h3>
@@ -170,7 +170,7 @@ function OptionCard({
             href={actionUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             {actionLabel}

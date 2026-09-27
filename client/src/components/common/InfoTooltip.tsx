@@ -66,7 +66,7 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
                       href={text.irsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                      className="inline-flex items-center gap-1 text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="w-3 h-3" />

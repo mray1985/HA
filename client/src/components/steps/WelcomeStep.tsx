@@ -7,7 +7,7 @@ export default function WelcomeStep() {
       {/* Hero */}
       <div className="text-center pt-4 pb-8">
         <h1 className="text-4xl sm:text-5xl font-bold mb-4">
-          <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">Tax</span>
+          HA Tax service
         </h1>
         <p className="text-xl text-slate-300 max-w-lg mx-auto leading-relaxed">
           Let's prepare your 2025 tax return.
@@ -21,39 +21,39 @@ export default function WelcomeStep() {
           We'll walk you through your tax return one section at a time. First we'll collect some basic info about you, then move through your income sources, deductions, and credits. If anything doesn't apply to you, we'll skip it automatically.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-1 text-xs text-slate-400 mb-4">
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30 whitespace-nowrap">Your Info</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30 whitespace-nowrap">Your Info</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30">Income</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30">Income</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30">Deductions</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30">Deductions</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30">Credits</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30">Credits</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30 whitespace-nowrap">State Taxes</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30 whitespace-nowrap">State Taxes</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30">Review</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30">Review</span>
           <ArrowRight className="w-3 h-3 shrink-0" />
-          <span className="px-2 py-1 rounded-full bg-telos-blue-600/20 text-telos-blue-300 border border-telos-blue-500/30">File</span>
+          <span className="px-2 py-1 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-300 border border-HATaxService-blue-500/30">File</span>
         </div>
         <ul className="text-sm text-slate-400 space-y-2">
           <li className="flex items-start gap-2.5">
-            <HardDrive className="w-4 h-4 text-telos-orange-400 shrink-0 mt-0.5" />
+            <HardDrive className="w-4 h-4 text-HATaxService-orange-400 shrink-0 mt-0.5" />
             <span><strong className="text-slate-300">Your progress saves automatically</strong> — close the tab and come back anytime. You'll pick up right where you left off.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <Calculator className="w-4 h-4 text-telos-orange-400 shrink-0 mt-0.5" />
+            <Calculator className="w-4 h-4 text-HATaxService-orange-400 shrink-0 mt-0.5" />
             <span><strong className="text-slate-300">Your tax estimate updates live</strong> as you enter data, so you can see your refund (or amount owed) change in real time at the top of the screen.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <Compass className="w-4 h-4 text-telos-orange-400 shrink-0 mt-0.5" />
+            <Compass className="w-4 h-4 text-HATaxService-orange-400 shrink-0 mt-0.5" />
             <span><strong className="text-slate-300">You can jump around</strong> using the sidebar on the left. Nothing is locked — go back to any section and make changes whenever you want.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <Wrench className="w-4 h-4 text-telos-orange-400 shrink-0 mt-0.5" />
+            <Wrench className="w-4 h-4 text-HATaxService-orange-400 shrink-0 mt-0.5" />
             <span><strong className="text-slate-300">Built-in tools help you understand your taxes</strong> — run what-if scenarios, check your audit risk profile, compare year-over-year changes, and get a plain-English breakdown of how every number on your return was calculated.</span>
           </li>
           <li className="flex items-start gap-2.5">
-            <HardDrive className="w-4 h-4 text-telos-orange-400 shrink-0 mt-0.5" />
+            <HardDrive className="w-4 h-4 text-HATaxService-orange-400 shrink-0 mt-0.5" />
             <span><strong className="text-slate-300">No account needed. Your data stays in your browser,</strong> encrypted with a passphrase only you know. If you enable AI features (BYOK mode), only PII-stripped messages pass through our relay server — and nothing is stored.</span>
           </li>
         </ul>

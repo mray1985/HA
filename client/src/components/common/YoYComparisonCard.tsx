@@ -185,13 +185,13 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
           className={`
             border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
             ${dragging
-              ? 'border-telos-blue-400 bg-telos-blue-500/10'
+              ? 'border-HATaxService-blue-400 bg-HATaxService-blue-500/10'
               : 'border-slate-700 hover:border-slate-600 bg-surface-800/50'
             }
             ${loading ? 'opacity-50 cursor-wait' : ''}
           `}
         >
-          <FileInput className={`w-6 h-6 mx-auto mb-2 ${dragging ? 'text-telos-blue-400' : 'text-slate-400'}`} />
+          <FileInput className={`w-6 h-6 mx-auto mb-2 ${dragging ? 'text-HATaxService-blue-400' : 'text-slate-400'}`} />
           <p className="text-sm text-slate-300 font-medium">
             {loading ? 'Importing...' : 'Drop a prior-year file here'}
           </p>
@@ -218,7 +218,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
   // ─── Template panel mode ──────────────────────────
   if (showTemplate && templateManifest) {
     return (
-      <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/5 border-telos-blue-600/20">
+      <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/5 border-HATaxService-blue-600/20">
         <PriorYearTemplatePanel
           manifest={templateManifest}
           onBack={() => setShowTemplate(false)}
@@ -253,11 +253,11 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
   }
 
   return (
-    <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/5 border-telos-blue-600/20">
+    <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/5 border-HATaxService-blue-600/20">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <History className="w-5 h-5 text-telos-blue-400" />
-          <h3 className="font-medium text-telos-blue-300">
+          <History className="w-5 h-5 text-HATaxService-blue-400" />
+          <h3 className="font-medium text-HATaxService-blue-300">
             vs. {priorYear.taxYear} Return
             <span className="text-xs text-slate-400 ml-2 font-normal">
               ({priorYear.source === 'hatax-json' ? 'JSON import' : 'PDF import'})
@@ -330,8 +330,8 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
         <button
           onClick={handleShowTemplate}
           className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg
-            text-sm text-telos-blue-400 border border-telos-blue-600/30
-            hover:bg-telos-blue-600/10 hover:border-telos-blue-600/50 transition-colors"
+            text-sm text-HATaxService-blue-400 border border-HATaxService-blue-600/30
+            hover:bg-HATaxService-blue-600/10 hover:border-HATaxService-blue-600/50 transition-colors"
         >
           <Copy className="w-4 h-4" />
           Import as Template

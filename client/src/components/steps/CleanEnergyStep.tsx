@@ -110,10 +110,10 @@ export default function CleanEnergyStep() {
         )}
 
         {totalExpenses > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
             <div className="flex justify-between items-center">
               <div>
-                <span className="text-telos-orange-300 font-medium">
+                <span className="text-HATaxService-orange-300 font-medium">
                   Estimated Credit: ${estimatedCredit.toLocaleString()}
                 </span>
                 <p className="text-xs text-slate-400 mt-1">

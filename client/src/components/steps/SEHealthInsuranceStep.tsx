@@ -101,7 +101,7 @@ export default function SEHealthInsuranceStep() {
         {/* Health Insurance Section (Form 7206) */}
         <div className="card mb-4 bg-surface-800">
           <div className="flex items-center gap-2 mb-3">
-            <Heart className="w-5 h-5 text-telos-orange-400" />
+            <Heart className="w-5 h-5 text-HATaxService-orange-400" />
             <h3 className="font-medium text-slate-200">Health Insurance Premiums</h3>
             <span className="text-xs text-slate-400">(Form 7206)</span>
           </div>
@@ -136,7 +136,7 @@ export default function SEHealthInsuranceStep() {
                   });
                 }
               }}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors mb-2"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors mb-2"
             >
               + Add LTC, Medicare, or monthly eligibility details
             </button>
@@ -186,7 +186,7 @@ export default function SEHealthInsuranceStep() {
                         updateField('selfEmploymentDeductions', { ...sed, form7206: rest });
                       }
                     }}
-                    className="rounded border-slate-600 bg-surface-900 text-telos-orange-500 focus:ring-telos-orange-500"
+                    className="rounded border-slate-600 bg-surface-900 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500"
                   />
                   Were you eligible for an employer health plan in any month of 2025?
                 </label>
@@ -205,7 +205,7 @@ export default function SEHealthInsuranceStep() {
                           type="checkbox"
                           checked={sed.form7206?.monthlyEligibility?.taxpayerEligibleForEmployerPlan?.[idx] || false}
                           onChange={() => toggleEmployerPlanMonth(idx, false)}
-                          className="rounded border-slate-600 bg-surface-800 text-telos-orange-500 focus:ring-telos-orange-500 w-3.5 h-3.5"
+                          className="rounded border-slate-600 bg-surface-800 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500 w-3.5 h-3.5"
                         />
                         {label}
                       </label>
@@ -221,7 +221,7 @@ export default function SEHealthInsuranceStep() {
                               type="checkbox"
                               checked={sed.form7206?.monthlyEligibility?.spouseEligibleForEmployerPlan?.[idx] || false}
                               onChange={() => toggleEmployerPlanMonth(idx, true)}
-                              className="rounded border-slate-600 bg-surface-800 text-telos-orange-500 focus:ring-telos-orange-500 w-3.5 h-3.5"
+                              className="rounded border-slate-600 bg-surface-800 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500 w-3.5 h-3.5"
                             />
                             {label}
                           </label>
@@ -243,7 +243,7 @@ export default function SEHealthInsuranceStep() {
               </div>
               <div className="flex justify-between text-sm border-t border-slate-700 pt-1 mt-1">
                 <span className="text-slate-200 font-medium">SE health insurance deduction:</span>
-                <span className="text-telos-orange-400 font-mono font-semibold">${form7206.finalDeduction.toLocaleString()}</span>
+                <span className="text-HATaxService-orange-400 font-mono font-semibold">${form7206.finalDeduction.toLocaleString()}</span>
               </div>
             </div>
           )}
@@ -259,7 +259,7 @@ export default function SEHealthInsuranceStep() {
               ))}
             </div>
           )}
-          <a href="https://www.irs.gov/forms-pubs/about-form-7206" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 7206 on IRS.gov</a>
+          <a href="https://www.irs.gov/forms-pubs/about-form-7206" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 7206 on IRS.gov</a>
         </div>
       </div>
 

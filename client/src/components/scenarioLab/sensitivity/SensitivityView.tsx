@@ -122,7 +122,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
           <select
             value={selectedVar}
             onChange={(e) => setSelectedVar(e.target.value)}
-            className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-telos-orange-500"
+            className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-HATaxService-orange-500"
           >
             {sliderVars.map(v => (
               <option key={v.key} value={v.key}>{v.label}</option>
@@ -135,7 +135,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
           <select
             value={outputMetric}
             onChange={(e) => setOutputMetric(e.target.value)}
-            className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-telos-orange-500"
+            className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-HATaxService-orange-500"
           >
             {OUTPUT_METRICS.map(m => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -148,7 +148,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
       {isComputing && (
         <div className="h-1 bg-surface-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-telos-orange-500 transition-all duration-150"
+            className="h-full bg-HATaxService-orange-500 transition-all duration-150"
             style={{ width: `${progress * 100}%` }}
           />
         </div>
@@ -220,7 +220,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
           </ChartComponent>
           <div className="flex justify-between items-center text-[10px] mt-1">
             <span className="text-slate-500">{formatCurrency(activeConfig.min)}</span>
-            <span className="text-telos-blue-400 font-medium">
+            <span className="text-HATaxService-blue-400 font-medium">
               At current ({formatCurrency(currentValue)}): {formatOutput(currentOutput)}
             </span>
             <span className="text-slate-500">{formatCurrency(activeConfig.max)}</span>
@@ -252,7 +252,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
                   {data.map((pt, i) => {
                     const isCurrentRow = Math.abs(pt.input - currentValue) < (activeConfig ? (activeConfig.max - activeConfig.min) / activeConfig.steps / 2 : 1);
                     return (
-                      <tr key={i} className={isCurrentRow ? 'bg-telos-blue-500/10' : ''}>
+                      <tr key={i} className={isCurrentRow ? 'bg-HATaxService-blue-500/10' : ''}>
                         <td className="px-4 py-1.5 text-slate-300 font-mono tabular-nums">
                           {varDef?.format === 'currency' ? formatCurrency(pt.input) : pt.input.toLocaleString()}
                         </td>

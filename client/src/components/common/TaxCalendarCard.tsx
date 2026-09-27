@@ -50,13 +50,13 @@ export default function TaxCalendarCard({ alwaysOpen = false }: { alwaysOpen?: b
     ? 'bg-red-500/10 border-red-500/30'
     : hasDueSoon
       ? 'bg-amber-500/10 border-amber-500/30'
-      : 'bg-telos-blue-600/10 border-telos-blue-600/30';
+      : 'bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30';
 
   const iconColor = hasOverdue
     ? 'text-red-400'
     : hasDueSoon
       ? 'text-amber-400'
-      : 'text-telos-blue-400';
+      : 'text-HATaxService-blue-400';
 
   return (
     <div className={`card mt-4 ${cardColor}`}>
@@ -140,7 +140,7 @@ export default function TaxCalendarCard({ alwaysOpen = false }: { alwaysOpen?: b
           <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-slate-700/30">
             <button
               onClick={() => downloadICS(deadlines)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300 transition-colors bg-telos-blue-500/10 hover:bg-telos-blue-500/20 px-3 py-1.5 rounded-lg border border-telos-blue-500/30"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20 px-3 py-1.5 rounded-lg border border-HATaxService-blue-500/30"
             >
               <Download className="w-3.5 h-3.5" />
               Add to Calendar
@@ -149,7 +149,7 @@ export default function TaxCalendarCard({ alwaysOpen = false }: { alwaysOpen?: b
               href="https://www.irs.gov/payments/direct-pay"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               IRS Direct Pay
@@ -158,7 +158,7 @@ export default function TaxCalendarCard({ alwaysOpen = false }: { alwaysOpen?: b
               href="https://www.eftps.gov"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               EFTPS
@@ -167,7 +167,7 @@ export default function TaxCalendarCard({ alwaysOpen = false }: { alwaysOpen?: b
               href="https://www.irs.gov/forms-pubs/about-form-4868"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Form 4868 (Extension)

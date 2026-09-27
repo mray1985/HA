@@ -103,9 +103,9 @@ export default function InstallmentSaleStep() {
       </FormField>
 
       {preview && (
-        <div className="mt-3 p-3 rounded-lg bg-telos-blue-600/10 border border-telos-blue-500/30 text-xs text-slate-300 space-y-1">
+        <div className="mt-3 p-3 rounded-lg bg-HATaxService-blue-600/10 border border-HATaxService-blue-500/30 text-xs text-slate-300 space-y-1">
           <p>Gross Profit Ratio: {(preview.grossProfitRatio * 100).toFixed(1)}%</p>
-          <p>Reportable Income This Year: <span className="font-medium text-telos-blue-300">${preview.installmentSaleIncome.toLocaleString()}</span></p>
+          <p>Reportable Income This Year: <span className="font-medium text-HATaxService-blue-300">${preview.installmentSaleIncome.toLocaleString()}</span></p>
         </div>
       )}
 
@@ -139,7 +139,7 @@ export default function InstallmentSaleStep() {
                 </div>
                 <div className="flex items-center gap-1">
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
                   <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>

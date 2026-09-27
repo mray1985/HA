@@ -16,7 +16,7 @@ HATax is a free, open-source tax preparation app for the 2025 tax year, built en
 - Full Form 1040 with Schedules A-H, SE, D, and 30+ supplemental forms
 - 41 IRS PDF templates + 43 state PDF templates with auto-populated field mapping
 - Every computation traced to IRC, Treasury Regulations, or Revenue Procedures
-- 6,100+ tests across 139 test files
+- 5,025 tests across 96 test files (`npm test`)
 - Offline-capable — installable on desktop and mobile
 
 ## Architecture
@@ -29,21 +29,25 @@ tax-project/
 └── docs/     → Project documentation
 ```
 
-**Tech stack:** TypeScript throughout. React 19 with Vite 6. Zustand 5 for state. Tailwind CSS with Telos brand colors. Vitest for testing. pdf-lib for IRS form generation.
+**Tech stack:** TypeScript throughout. React 19 with Vite 6. Zustand 5 for state. Tailwind CSS with HA Tax service brand colors. Vitest for testing. pdf-lib for IRS form generation.
 
 **Engine design:** Pure functions only — no side effects, no database access, no network calls. Given a `TaxReturn` input, the engine produces a deterministic `CalculationResult`. See [Design Principles](docs/DESIGN_PRINCIPLES.md).
 
 ## Quick Start
 
 ```bash
-# Install dependencies
+# Install dependencies (from repo root)
 npm install
 
-# Run the client dev server
-npm run dev --prefix client
+# Consumer PWA only (Private Mode — no API key, no server required)
+npm run dev:client
+# → http://127.0.0.1:5173
 
-# Run tests
-npx vitest run --prefix shared
+# Optional: client + BYOK Express server together
+# npm run dev
+
+# Engine tests
+npm test
 ```
 
 ## Tax Coverage

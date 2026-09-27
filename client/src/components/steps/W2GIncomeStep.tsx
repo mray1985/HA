@@ -132,7 +132,7 @@ export default function W2GIncomeStep() {
             </div>
             <div className="flex items-center gap-1">
               <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default function W2GIncomeStep() {
         href="https://www.irs.gov/forms-pubs/about-form-w-2g"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

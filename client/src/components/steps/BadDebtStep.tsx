@@ -95,7 +95,7 @@ export default function BadDebtStep() {
                 </div>
                 <div className="flex items-center gap-1">
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
                   <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function BadDebtStep() {
 
       {adding ? renderForm(addItem, 'Add Bad Debt') : !editingId && <AddButton onClick={startAdd}>Add Bad Debt</AddButton>}
 
-      <a href="https://www.irs.gov/taxtopics/tc453" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/taxtopics/tc453" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

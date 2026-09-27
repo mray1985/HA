@@ -21,7 +21,7 @@ export default function ToolViewWrapper({ children }: ToolViewWrapperProps) {
     <div>
       <button
         onClick={() => setActiveTool(null)}
-        className="flex items-center gap-2 text-sm text-slate-400 hover:text-telos-blue-400 transition-colors mb-4"
+        className="flex items-center gap-2 text-sm text-slate-400 hover:text-HATaxService-blue-400 transition-colors mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to {currentStep?.label || 'wizard'}

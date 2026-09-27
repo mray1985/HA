@@ -253,7 +253,7 @@ export default function FormSidebar() {
             {allKeys.length > 0 && (
               <button
                 onClick={handleSelectAll}
-                className="text-[10px] text-slate-500 hover:text-telos-blue-400 transition-colors px-1"
+                className="text-[10px] text-slate-500 hover:text-HATaxService-blue-400 transition-colors px-1"
               >
                 {allSelected ? 'Clear' : 'Select All'}
               </button>
@@ -262,7 +262,7 @@ export default function FormSidebar() {
               onClick={handlePrint}
               disabled={printing || (selCount === 0 && !activeTemplate)}
               title={printTitle}
-              className="p-1 rounded text-slate-400 hover:text-telos-blue-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
+              className="p-1 rounded text-slate-400 hover:text-HATaxService-blue-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
             >
               {printing
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -272,7 +272,7 @@ export default function FormSidebar() {
               onClick={handleDownload}
               disabled={downloading || (selCount === 0 && !activeTemplate)}
               title={downloadTitle}
-              className="p-1 rounded text-slate-400 hover:text-telos-blue-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
+              className="p-1 rounded text-slate-400 hover:text-HATaxService-blue-400 hover:bg-surface-700 transition-colors disabled:opacity-50"
             >
               {downloading
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -290,7 +290,7 @@ export default function FormSidebar() {
           placeholder="Search forms..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          className="w-full pl-7 pr-7 py-1.5 rounded-md bg-surface-700 border border-surface-600 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500/30 transition-colors"
+          className="w-full pl-7 pr-7 py-1.5 rounded-md bg-surface-700 border border-surface-600 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500/30 transition-colors"
         />
         {searchQuery && (
           <button
@@ -322,19 +322,19 @@ export default function FormSidebar() {
                       <div
                         className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors ${
                           isActive
-                            ? 'bg-telos-blue-600/20 text-telos-blue-400 font-medium'
+                            ? 'bg-HATaxService-blue-600/20 text-HATaxService-blue-400 font-medium'
                             : isChecked
-                              ? 'bg-telos-blue-600/10 text-slate-300'
+                              ? 'bg-HATaxService-blue-600/10 text-slate-300'
                               : 'text-slate-300 hover:bg-surface-700 hover:text-white'
                         }`}
                       >
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleFormSelection(key); }}
-                          className="shrink-0 text-slate-500 hover:text-telos-blue-400 transition-colors"
+                          className="shrink-0 text-slate-500 hover:text-HATaxService-blue-400 transition-colors"
                           aria-label={`Select ${template.displayName}`}
                         >
                           {isChecked
-                            ? <CheckSquare className="w-3.5 h-3.5 text-telos-blue-400" />
+                            ? <CheckSquare className="w-3.5 h-3.5 text-HATaxService-blue-400" />
                             : <Square className="w-3.5 h-3.5" />}
                         </button>
                         <button
@@ -344,7 +344,7 @@ export default function FormSidebar() {
                           <FileText className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{template.displayName}</span>
                           {renderBadge(template.formId, 0)}
-                          {isActive && !searchResults && <ChevronRight className="w-3 h-3 shrink-0 text-telos-blue-400" />}
+                          {isActive && !searchResults && <ChevronRight className="w-3 h-3 shrink-0 text-HATaxService-blue-400" />}
                         </button>
                       </div>
                       {searchReason && (
@@ -364,19 +364,19 @@ export default function FormSidebar() {
                       <div
                         className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors ${
                           isActive
-                            ? 'bg-telos-blue-600/20 text-telos-blue-400 font-medium'
+                            ? 'bg-HATaxService-blue-600/20 text-HATaxService-blue-400 font-medium'
                             : isChecked
-                              ? 'bg-telos-blue-600/10 text-slate-300'
+                              ? 'bg-HATaxService-blue-600/10 text-slate-300'
                               : 'text-slate-300 hover:bg-surface-700 hover:text-white'
                         }`}
                       >
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleFormSelection(key); }}
-                          className="shrink-0 text-slate-500 hover:text-telos-blue-400 transition-colors"
+                          className="shrink-0 text-slate-500 hover:text-HATaxService-blue-400 transition-colors"
                           aria-label={`Select ${template.displayName} (${idx + 1})`}
                         >
                           {isChecked
-                            ? <CheckSquare className="w-3.5 h-3.5 text-telos-blue-400" />
+                            ? <CheckSquare className="w-3.5 h-3.5 text-HATaxService-blue-400" />
                             : <Square className="w-3.5 h-3.5" />}
                         </button>
                         <button
@@ -386,7 +386,7 @@ export default function FormSidebar() {
                           <FileText className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{template.displayName} ({idx + 1})</span>
                           {renderBadge(template.formId, idx)}
-                          {isActive && !searchResults && <ChevronRight className="w-3 h-3 shrink-0 text-telos-blue-400" />}
+                          {isActive && !searchResults && <ChevronRight className="w-3 h-3 shrink-0 text-HATaxService-blue-400" />}
                         </button>
                       </div>
                       {idx === 0 && searchReason && (
@@ -414,7 +414,7 @@ export default function FormSidebar() {
         <div className="mt-4 pt-3 border-t border-surface-700">
           <button
             onClick={() => { const { message, context } = buildFullReturnReviewPrompt(taxReturn, calculation); openWithPrompt(message, context); }}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-telos-blue-400 bg-telos-blue-600/10 hover:bg-telos-blue-600/20 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-HATaxService-blue-400 bg-HATaxService-blue-600/10 hover:bg-HATaxService-blue-600/20 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
             Review Entire Return

@@ -26,7 +26,7 @@ import { checkForPII } from './chatService';
 import { sanitizeMerchant } from './merchantClassifier';
 import { logOutboundRequest, buildPiiBlockSummary } from './privacyAuditLog';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
 /** Sub-category descriptions for the AI prompt, keyed by TransactionCategory. */
 const CATEGORY_SUB_DESCRIPTIONS: Partial<Record<TransactionCategory, string>> = {

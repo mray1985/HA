@@ -81,11 +81,11 @@ export default function YoYPairedBars({ priorYear, current }: YoYPairedBarsProps
         </h4>
         <div className="flex items-center gap-3 text-[10px]">
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-telos-blue-500/30" />
+            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-HATaxService-blue-500/30" />
             <span className="text-slate-500">{priorYear.taxYear}</span>
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-telos-blue-500" />
+            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-HATaxService-blue-500" />
             <span className="text-slate-500">2025</span>
           </span>
         </div>

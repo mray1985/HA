@@ -148,7 +148,7 @@ export default function InlinePDFImport({ expectedFormType, onClose, onImported 
   const formTypeMismatch = result?.formType && result.formType !== expectedFormType;
 
   return (
-    <div className="card bg-surface-800/80 border-telos-blue-500/30 mt-2 mb-4 relative">
+    <div className="card bg-surface-800/80 border-HATaxService-blue-500/30 mt-2 mb-4 relative">
       {/* Close button */}
       <button
         onClick={onClose}
@@ -183,7 +183,7 @@ export default function InlinePDFImport({ expectedFormType, onClose, onImported 
       {/* ─── EXTRACTING ─────────────────────────── */}
       {state === 'extracting' && (
         <div className="text-center py-8">
-          <Loader2 className="w-6 h-6 text-telos-blue-400 animate-spin mx-auto mb-2" />
+          <Loader2 className="w-6 h-6 text-HATaxService-blue-400 animate-spin mx-auto mb-2" />
           <p className="text-xs text-slate-300">Analyzing your PDF...</p>
         </div>
       )}
@@ -314,7 +314,7 @@ export default function InlinePDFImport({ expectedFormType, onClose, onImported 
             </button>
             <button
               onClick={handleImport}
-              className="px-3 py-1.5 text-xs font-medium bg-telos-orange-500 hover:bg-telos-orange-400 text-white rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white rounded-lg transition-colors"
             >
               Add to My Return
             </button>
@@ -325,7 +325,7 @@ export default function InlinePDFImport({ expectedFormType, onClose, onImported 
       {/* ─── IMPORTING ──────────────────────────── */}
       {state === 'importing' && (
         <div className="text-center py-8">
-          <Loader2 className="w-6 h-6 text-telos-blue-400 animate-spin mx-auto mb-2" />
+          <Loader2 className="w-6 h-6 text-HATaxService-blue-400 animate-spin mx-auto mb-2" />
           <p className="text-xs text-slate-300">Adding to your return...</p>
         </div>
       )}
@@ -347,7 +347,7 @@ export default function InlinePDFImport({ expectedFormType, onClose, onImported 
             </button>
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-medium bg-telos-blue-600 hover:bg-telos-blue-500 text-white rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white rounded-lg transition-colors"
             >
               Done
             </button>

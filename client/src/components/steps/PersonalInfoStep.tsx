@@ -173,7 +173,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.canBeClaimedAsDependent}
             onChange={(e) => {
               updateField('canBeClaimedAsDependent', e.target.checked);
@@ -191,7 +191,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/publications/p501"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -204,7 +204,7 @@ export default function PersonalInfoStep() {
           <label className="flex items-start gap-3 p-3 ml-6 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
             <input
               type="checkbox"
-              className="mt-0.5 accent-telos-orange-400"
+              className="mt-0.5 accent-HATaxService-orange-400"
               checked={!!taxReturn.isClaimedAsDependent}
               onChange={(e) => updateField('isClaimedAsDependent', e.target.checked)}
             />
@@ -220,7 +220,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.isFullTimeStudent}
             onChange={(e) => updateField('isFullTimeStudent', e.target.checked)}
           />
@@ -236,7 +236,7 @@ export default function PersonalInfoStep() {
           <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
             <input
               type="checkbox"
-              className="mt-0.5 accent-telos-orange-400"
+              className="mt-0.5 accent-HATaxService-orange-400"
               checked={!!taxReturn.isSpouseFullTimeStudent}
               onChange={(e) => updateField('isSpouseFullTimeStudent', e.target.checked)}
             />
@@ -252,7 +252,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.isLegallyBlind}
             onChange={(e) => updateField('isLegallyBlind', e.target.checked)}
           />
@@ -265,7 +265,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/taxtopics/tc551"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -276,7 +276,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.isActiveDutyMilitary}
             onChange={(e) => {
               updateField('isActiveDutyMilitary', e.target.checked);
@@ -296,7 +296,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/individuals/military"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -306,8 +306,8 @@ export default function PersonalInfoStep() {
 
         {/* Conditional military fields */}
         {taxReturn.isActiveDutyMilitary && (
-          <div className="ml-6 space-y-3 border-l-2 border-telos-blue-500/30 pl-4">
-            <div className="flex items-center gap-2 text-xs text-telos-blue-400 mb-2">
+          <div className="ml-6 space-y-3 border-l-2 border-HATaxService-blue-500/30 pl-4">
+            <div className="flex items-center gap-2 text-xs text-HATaxService-blue-400 mb-2">
               <Shield className="w-3.5 h-3.5" />
               <span className="font-medium uppercase tracking-wider">Military Tax Benefits</span>
             </div>
@@ -352,7 +352,7 @@ export default function PersonalInfoStep() {
               <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800/50 border border-slate-700/30 cursor-pointer hover:border-slate-600/50 transition-colors">
                 <input
                   type="checkbox"
-                  className="mt-0.5 accent-telos-orange-400"
+                  className="mt-0.5 accent-HATaxService-orange-400"
                   checked={!!taxReturn.includeCombatPayForEITC}
                   onChange={(e) => updateField('includeCombatPayForEITC', e.target.checked)}
                 />
@@ -370,7 +370,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.digitalAssetActivity}
             onChange={(e) => updateField('digitalAssetActivity', e.target.checked)}
           />
@@ -383,7 +383,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/individuals/digital-assets"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -394,7 +394,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.presidentialCampaignFund}
             onChange={(e) => updateField('presidentialCampaignFund', e.target.checked)}
           />
@@ -407,7 +407,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/taxtopics/tc505"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -418,7 +418,7 @@ export default function PersonalInfoStep() {
         <label className="flex items-start gap-3 p-3 rounded-lg bg-surface-800 border border-slate-700/50 cursor-pointer hover:border-slate-600/50 transition-colors">
           <input
             type="checkbox"
-            className="mt-0.5 accent-telos-orange-400"
+            className="mt-0.5 accent-HATaxService-orange-400"
             checked={!!taxReturn.extensionFiled}
             onChange={(e) => updateField('extensionFiled', e.target.checked)}
           />
@@ -432,7 +432,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/forms-pubs/about-form-4868"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov
@@ -470,7 +470,7 @@ export default function PersonalInfoStep() {
               href="https://www.irs.gov/identity-theft-fraud-scams/get-an-identity-protection-pin"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov

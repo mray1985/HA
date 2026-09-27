@@ -177,7 +177,7 @@ function getBracketThreshold(rate: number): string {
 function getInsightStyle(icon: Insight['icon']): string {
   switch (icon) {
     case 'savings': return 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-200';
-    case 'info': return 'bg-telos-blue-600/10 border border-telos-blue-600/20 text-telos-blue-200';
+    case 'info': return 'bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/20 text-HATaxService-blue-200';
     case 'warning': return 'bg-amber-500/10 border border-amber-500/20 text-amber-200';
     case 'opportunity': return 'bg-violet-500/10 border border-violet-500/20 text-violet-200';
   }
@@ -186,7 +186,7 @@ function getInsightStyle(icon: Insight['icon']): string {
 function getInsightIcon(icon: Insight['icon']) {
   switch (icon) {
     case 'savings': return <TrendingDown className="w-4 h-4 text-emerald-400" />;
-    case 'info': return <Lightbulb className="w-4 h-4 text-telos-blue-400" />;
+    case 'info': return <Lightbulb className="w-4 h-4 text-HATaxService-blue-400" />;
     case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-400" />;
     case 'opportunity': return <Shield className="w-4 h-4 text-violet-400" />;
   }

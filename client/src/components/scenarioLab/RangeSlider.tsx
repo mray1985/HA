@@ -111,17 +111,17 @@ export default function RangeSlider({ value, min, max, step, format = 'currency'
           <div className="absolute inset-x-0 h-2 rounded-full bg-slate-700" />
           {/* Filled portion */}
           <div
-            className="absolute left-0 h-2 rounded-full bg-telos-orange-500"
+            className="absolute left-0 h-2 rounded-full bg-HATaxService-orange-500"
             style={{ width: `${pct}%` }}
           />
           {/* Thumb */}
           <div
-            className={`absolute w-5 h-5 rounded-full bg-telos-orange-500 border-[3px] border-surface-900 shadow-lg transition-transform ${
+            className={`absolute w-5 h-5 rounded-full bg-HATaxService-orange-500 border-[3px] border-surface-900 shadow-lg transition-transform ${
               dragging ? 'scale-110' : 'group-hover:scale-110'
-            } group-focus-visible:ring-2 group-focus-visible:ring-telos-orange-500/40`}
+            } group-focus-visible:ring-2 group-focus-visible:ring-HATaxService-orange-500/40`}
             style={{
               left: `calc(${pct}% - 10px)`,
-              boxShadow: '0 0 0 2px rgba(var(--color-telos-orange-500), 0.3), 0 2px 6px rgba(0,0,0,0.4)',
+              boxShadow: '0 0 0 2px rgba(var(--color-HATaxService-orange-500), 0.3), 0 2px 6px rgba(0,0,0,0.4)',
             }}
           />
         </div>
@@ -138,7 +138,7 @@ export default function RangeSlider({ value, min, max, step, format = 'currency'
         min={min}
         max={max}
         step={step}
-        className="w-28 bg-surface-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-white tabular-nums text-right focus:outline-none focus:border-telos-orange-500 focus:ring-1 focus:ring-telos-orange-500/30"
+        className="w-28 bg-surface-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-white tabular-nums text-right focus:outline-none focus:border-HATaxService-orange-500 focus:ring-1 focus:ring-HATaxService-orange-500/30"
         aria-label={label ? `${label} input` : undefined}
       />
     </div>

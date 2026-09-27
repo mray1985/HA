@@ -123,12 +123,12 @@ export default function RefundPaymentStep() {
               onClick={() => setWantDirectDeposit(true)}
               className={`rounded-lg border p-4 text-left transition-all ${
                 wantDirectDeposit
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 hover:border-slate-600'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <Building2 className="w-4 h-4 text-telos-blue-400" />
+                <Building2 className="w-4 h-4 text-HATaxService-blue-400" />
                 <span className="text-sm font-medium text-white">Direct Deposit</span>
               </div>
               <p className="text-xs text-slate-400">Fastest — typically 21 days</p>
@@ -144,7 +144,7 @@ export default function RefundPaymentStep() {
               }}
               className={`rounded-lg border p-4 text-left transition-all ${
                 !wantDirectDeposit
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 hover:border-slate-600'
               }`}
             >
@@ -161,7 +161,7 @@ export default function RefundPaymentStep() {
         {wantDirectDeposit && (
           <div className="rounded-lg border border-slate-700 bg-surface-800 p-5 space-y-4">
             <h3 className="text-sm font-medium text-white flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-telos-blue-400" />
+              <Building2 className="w-4 h-4 text-HATaxService-blue-400" />
               Bank Account Information
             </h3>
 
@@ -198,7 +198,7 @@ export default function RefundPaymentStep() {
                   onClick={() => setAccountType('checking')}
                   className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
                     accountType === 'checking'
-                      ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                      ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                       : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
                   }`}
                 >
@@ -209,7 +209,7 @@ export default function RefundPaymentStep() {
                   onClick={() => setAccountType('savings')}
                   className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
                     accountType === 'savings'
-                      ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                      ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                       : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
                   }`}
                 >
@@ -230,7 +230,7 @@ export default function RefundPaymentStep() {
         {/* Apply refund to next year's estimated tax */}
         <div className="rounded-lg border border-slate-700 bg-surface-800 p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <ArrowRight className="w-4 h-4 text-telos-blue-400" />
+            <ArrowRight className="w-4 h-4 text-HATaxService-blue-400" />
             <p className="text-sm font-medium text-white">Apply to Next Year's Estimated Tax</p>
           </div>
           <p className="text-xs text-slate-400">
@@ -243,7 +243,7 @@ export default function RefundPaymentStep() {
               onClick={() => { setApplyToNextYear(false); setApplyAmount(0); }}
               className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
                 !applyToNextYear
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
               }`}
             >
@@ -254,7 +254,7 @@ export default function RefundPaymentStep() {
               onClick={() => { setApplyToNextYear(true); setApplyAmount(refundAmount); }}
               className={`flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
                 applyToNextYear
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
               }`}
             >
@@ -316,8 +316,8 @@ export default function RefundPaymentStep() {
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-telos-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-telos-blue-400">1</span>
+              <div className="w-6 h-6 rounded-full bg-HATaxService-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-HATaxService-blue-400">1</span>
               </div>
               <div>
                 <p className="text-sm font-medium text-white">IRS Direct Pay (Recommended)</p>
@@ -328,7 +328,7 @@ export default function RefundPaymentStep() {
                   href="https://www.irs.gov/payments/direct-pay"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-1.5 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1 mt-1.5 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
                   irs.gov/directpay
@@ -337,8 +337,8 @@ export default function RefundPaymentStep() {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-telos-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-xs font-bold text-telos-blue-400">2</span>
+              <div className="w-6 h-6 rounded-full bg-HATaxService-blue-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-HATaxService-blue-400">2</span>
               </div>
               <div>
                 <p className="text-sm font-medium text-white">Check or Money Order</p>

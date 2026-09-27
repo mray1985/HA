@@ -110,7 +110,7 @@ export default function HomeOfficeStep() {
                 max={300}
               />
             </FormField>
-            <div className="text-sm text-telos-orange-400 mt-2">
+            <div className="text-sm text-HATaxService-orange-400 mt-2">
               Deduction: ${((Math.min(ho.squareFeet || 0, 300)) * 5).toLocaleString()}
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function HomeOfficeStep() {
             {/* Part I: Business Percentage */}
             <div className="card mt-4">
               <h4 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-                <span className="text-xs bg-telos-blue-600/30 text-telos-blue-300 px-2 py-0.5 rounded">Part I</span>
+                <span className="text-xs bg-HATaxService-blue-600/30 text-HATaxService-blue-300 px-2 py-0.5 rounded">Part I</span>
                 Business Use Percentage
               </h4>
               <div className="flex gap-3">
@@ -138,7 +138,7 @@ export default function HomeOfficeStep() {
                 </div>
               </div>
               {businessPct > 0 && (
-                <div className="text-sm text-telos-orange-400 mt-2 font-medium">
+                <div className="text-sm text-HATaxService-orange-400 mt-2 font-medium">
                   Business use: {(businessPct * 100).toFixed(1)}%
                 </div>
               )}
@@ -231,7 +231,7 @@ export default function HomeOfficeStep() {
               </FormField>
               {detailedResult?.depreciationComputed != null && detailedResult.depreciationComputed > 0 && (
                 <div className="text-xs text-slate-400 mt-2 pt-2 border-t border-slate-700/50 flex items-center gap-1.5">
-                  <Calculator className="w-3 h-3 text-telos-blue-400" />
+                  <Calculator className="w-3 h-3 text-HATaxService-blue-400" />
                   <span>Computed depreciation: <span className="text-purple-400 font-medium">${detailedResult.depreciationComputed.toLocaleString()}</span></span>
                   <span className="text-slate-400 ml-1">— subject to income limit</span>
                 </div>
@@ -272,8 +272,8 @@ export default function HomeOfficeStep() {
 
             {/* Deduction Summary (preview) */}
             {detailedResult && businessPct > 0 && (detailedResult.tier1Total || detailedResult.tier2Total || detailedResult.tier3Total) ? (
-              <div className="rounded-xl border p-6 mt-4 bg-surface-900 border-telos-orange-500/30">
-                <h4 className="text-sm font-semibold text-telos-orange-300 mb-3 flex items-center gap-2">
+              <div className="rounded-xl border p-6 mt-4 bg-surface-900 border-HATaxService-orange-500/30">
+                <h4 className="text-sm font-semibold text-HATaxService-orange-300 mb-3 flex items-center gap-2">
                   <Calculator className="w-4 h-4" />
                   Deduction Preview (Form 8829)
                 </h4>
@@ -301,7 +301,7 @@ export default function HomeOfficeStep() {
                   )}
                   <div className="flex justify-between border-t border-slate-600 pt-1.5 mt-1.5">
                     <span className="text-slate-200 font-semibold">Estimated deduction</span>
-                    <span className="text-telos-orange-400 font-bold">${detailedResult.totalDeduction.toLocaleString()}</span>
+                    <span className="text-HATaxService-orange-400 font-bold">${detailedResult.totalDeduction.toLocaleString()}</span>
                   </div>
                   {(detailedResult.operatingExpenseCarryover || detailedResult.depreciationCarryover) ? (
                     <div className="flex justify-between text-xs text-slate-400 pt-1">
@@ -319,16 +319,16 @@ export default function HomeOfficeStep() {
 
         {/* Method comparison */}
         {comparison && ho.method && (
-          <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/10 border-telos-blue-600/30">
-            <h4 className="text-sm font-medium text-telos-blue-300 mb-2">Method Comparison</h4>
+          <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
+            <h4 className="text-sm font-medium text-HATaxService-blue-300 mb-2">Method Comparison</h4>
             <div className="flex gap-4 text-sm">
               <div>
                 <span className="text-slate-400">Simplified: </span>
-                <span className={ho.method === 'simplified' ? 'text-telos-orange-400 font-medium' : 'text-slate-400'}>${comparison.simplified.toLocaleString()}</span>
+                <span className={ho.method === 'simplified' ? 'text-HATaxService-orange-400 font-medium' : 'text-slate-400'}>${comparison.simplified.toLocaleString()}</span>
               </div>
               <div>
                 <span className="text-slate-400">Actual: </span>
-                <span className={ho.method === 'actual' ? 'text-telos-orange-400 font-medium' : 'text-slate-400'}>${comparison.actual.toLocaleString()}</span>
+                <span className={ho.method === 'actual' ? 'text-HATaxService-orange-400 font-medium' : 'text-slate-400'}>${comparison.actual.toLocaleString()}</span>
               </div>
             </div>
           </div>

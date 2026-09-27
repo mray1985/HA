@@ -26,7 +26,7 @@ export default function EffectiveTaxRateCard({ form1040: f }: EffectiveTaxRateCa
         {/* Effective rate */}
         <div className="bg-surface-900 rounded-lg p-4 text-center border border-slate-700">
           <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Effective Rate</p>
-          <p className="text-3xl font-bold text-telos-blue-400">{effectivePct.toFixed(1)}%</p>
+          <p className="text-3xl font-bold text-HATaxService-blue-400">{effectivePct.toFixed(1)}%</p>
           <p className="text-[10px] text-slate-400 mt-1">What you actually pay</p>
         </div>
 
@@ -53,15 +53,15 @@ export default function EffectiveTaxRateCard({ form1040: f }: EffectiveTaxRateCa
           />
           {/* Effective rate fill */}
           <div
-            className="h-full rounded-full bg-gradient-to-r from-telos-blue-500 to-telos-blue-400 transition-all duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-HATaxService-blue-500 to-HATaxService-blue-400 transition-all duration-700"
             style={{ width: `${Math.min(effectivePct / 40 * 100, 100)}%` }}
           />
         </div>
       </div>
 
       {/* Plain English */}
-      <div className="bg-telos-blue-600/10 border border-telos-blue-600/20 rounded-lg p-3">
-        <p className="text-sm text-telos-blue-200 leading-relaxed">
+      <div className="bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/20 rounded-lg p-3">
+        <p className="text-sm text-HATaxService-blue-200 leading-relaxed">
           You're in the <strong>{marginalPct.toFixed(0)}% tax bracket</strong>, but your effective
           federal tax rate is only <strong>{effectivePct.toFixed(1)}%</strong>.
           {effectivePct > 0 && (

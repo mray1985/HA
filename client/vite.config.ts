@@ -10,12 +10,13 @@ function cspPlugin(): Plugin {
       order: 'pre',
       handler(html, ctx) {
         const apiOrigin = process.env.VITE_API_ORIGIN || process.env.VITE_API_BASE || '';
-        // In dev mode, allow localhost:3001; in production, only 'self' + optional API origin
+        // Always keep blob: (PDF/worker fetch). Dev allows optional local BYOK server.
+        // Production defaults to local-first ('self' + blob); add API origin only when set.
         const connectSrc = ctx.server
-          ? "'self' http://localhost:3001"
+          ? "'self' blob: http://localhost:3001 http://127.0.0.1:3001"
           : apiOrigin
-            ? `'self' ${apiOrigin}`
-            : "'self'";
+            ? `'self' blob: ${apiOrigin}`
+            : "'self' blob:";
         return html.replace(
           /connect-src\s+'self'[^;]*/,
           `connect-src ${connectSrc}`,

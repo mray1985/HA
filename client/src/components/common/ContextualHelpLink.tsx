@@ -29,10 +29,10 @@ export default function ContextualHelpLink({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 text-sm text-telos-blue-400 hover:text-telos-blue-300 transition-colors group ${className}`}
+        className={`inline-flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors group ${className}`}
       >
         <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
-        <span className="underline underline-offset-2 decoration-telos-blue-400/40 group-hover:decoration-telos-blue-300/60">
+        <span className="underline underline-offset-2 decoration-HATaxService-blue-400/40 group-hover:decoration-HATaxService-blue-300/60">
           {label}
         </span>
       </button>

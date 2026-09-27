@@ -148,8 +148,8 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
         <div className="px-3 pt-3 pb-1">
           <button
             onClick={() => navigate('/pledge')}
-            className="w-full px-3 py-2 text-xs font-bold tracking-wider text-telos-orange-400 hover:text-telos-orange-300
-                       border border-telos-orange-500/30 hover:border-telos-orange-500/50 bg-telos-orange-500/5 hover:bg-telos-orange-500/10
+            className="w-full px-3 py-2 text-xs font-bold tracking-wider text-HATaxService-orange-400 hover:text-HATaxService-orange-300
+                       border border-HATaxService-orange-500/30 hover:border-HATaxService-orange-500/50 bg-HATaxService-orange-500/5 hover:bg-HATaxService-orange-500/10
                        rounded-lg transition-colors text-center uppercase"
           >
             Learn more about this project
@@ -174,11 +174,11 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
                   onClick={() => toggleSection(section.id)}
                   aria-expanded={isExpanded}
                   aria-controls={`section-${section.id}`}
-                  className={`w-full px-4 py-2.5 flex items-center justify-between text-left transition-colors cursor-pointer bg-surface-700/30 hover:bg-surface-700/60 focus-visible:ring-2 focus-visible:ring-telos-blue-500 focus-visible:ring-inset focus-visible:outline-none ${
+                  className={`w-full px-4 py-2.5 flex items-center justify-between text-left transition-colors cursor-pointer bg-surface-700/30 hover:bg-surface-700/60 focus-visible:ring-2 focus-visible:ring-HATaxService-blue-500 focus-visible:ring-inset focus-visible:outline-none ${
                     isSectionActive
-                      ? 'text-telos-blue-400'
+                      ? 'text-HATaxService-blue-400'
                       : isSectionComplete
-                        ? 'text-telos-orange-500'
+                        ? 'text-HATaxService-orange-500'
                         : 'text-slate-400'
                   }`}
                 >
@@ -220,9 +220,9 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
                       className={`
                         w-full text-left pl-9 pr-4 py-1.5 text-sm flex items-center gap-2
                         transition-colors duration-150 border-l-2 cursor-pointer
-                        focus-visible:ring-2 focus-visible:ring-telos-blue-500 focus-visible:ring-inset focus-visible:outline-none
+                        focus-visible:ring-2 focus-visible:ring-HATaxService-blue-500 focus-visible:ring-inset focus-visible:outline-none
                         ${isActive
-                          ? 'text-white bg-telos-blue-600/20 border-telos-blue-400'
+                          ? 'text-white bg-HATaxService-blue-600/20 border-HATaxService-blue-400'
                           : isPast
                             ? 'text-slate-400 hover:text-slate-200 hover:bg-surface-700 border-transparent'
                             : isUnreached
@@ -231,8 +231,8 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
                         }
                       `}
                     >
-                      {isPast && <Check className="w-3 h-3 text-telos-orange-500 shrink-0" />}
-                      {isActive && <Circle className="w-2 h-2 text-telos-blue-400 fill-telos-blue-400 shrink-0" />}
+                      {isPast && <Check className="w-3 h-3 text-HATaxService-orange-500 shrink-0" />}
+                      {isActive && <Circle className="w-2 h-2 text-HATaxService-blue-400 fill-HATaxService-blue-400 shrink-0" />}
                       <span className={`truncate ${isUnreached ? 'opacity-60' : ''}`}>{step.label}</span>
                       {warningsByStepId.has(step.id) && (
                         <WarningPopover warnings={warningsByStepId.get(step.id)!.warnings}>
@@ -250,7 +250,7 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
           <div className="mt-3 pt-3 border-t-2 border-slate-600/60">
             <div className="px-4 py-2.5 flex items-center justify-between bg-surface-700/50 rounded-sm mx-1">
               <div className="flex items-center gap-2">
-                <Wrench className="w-3.5 h-3.5 text-telos-blue-400" />
+                <Wrench className="w-3.5 h-3.5 text-HATaxService-blue-400" />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tools</span>
               </div>
               <span className="text-[10px] text-slate-400">Use anytime</span>
@@ -279,16 +279,16 @@ export default function StepSidebar({ onStepClick }: StepSidebarProps) {
                     className={`
                       w-full text-left pl-9 pr-4 py-1.5 text-sm flex items-center gap-2
                       transition-colors duration-150 border-l-2
-                      focus-visible:ring-2 focus-visible:ring-telos-blue-500 focus-visible:ring-inset focus-visible:outline-none
+                      focus-visible:ring-2 focus-visible:ring-HATaxService-blue-500 focus-visible:ring-inset focus-visible:outline-none
                       ${isDisabled
                         ? 'text-slate-600 border-transparent cursor-not-allowed'
                         : isActive
-                          ? 'text-white bg-telos-blue-600/20 border-telos-blue-400 cursor-pointer'
+                          ? 'text-white bg-HATaxService-blue-600/20 border-HATaxService-blue-400 cursor-pointer'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-surface-700 border-transparent cursor-pointer'
                       }
                     `}
                   >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isDisabled ? 'opacity-40' : isActive ? 'text-telos-blue-400' : ''}`} />
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isDisabled ? 'opacity-40' : isActive ? 'text-HATaxService-blue-400' : ''}`} />
                     <span className={isDisabled ? 'opacity-40' : ''}>{tool.label}</span>
                   </button>
                   {/* Tooltip for disabled tools */}

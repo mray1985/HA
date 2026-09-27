@@ -211,7 +211,7 @@ function HubView({
                 </span>
               </div>
               <div className="flex items-center gap-1.5 mt-2">
-                <Zap className="w-3.5 h-3.5 text-telos-blue-400" />
+                <Zap className="w-3.5 h-3.5 text-HATaxService-blue-400" />
                 <span className="text-xs text-slate-400">
                   E-filing with direct deposit is the fastest way to get your refund.
                 </span>
@@ -264,15 +264,15 @@ function HubView({
 
       {/* Estimated Tax Payments — forward-looking guidance for next year */}
       {estimatedRec.recommended && (
-        <div className="mt-5 rounded-xl border border-telos-blue-500/30 bg-telos-blue-500/10 p-5">
+        <div className="mt-5 rounded-xl border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/10 p-5">
           <div className="flex items-start gap-3">
-            <Calendar className="w-5 h-5 text-telos-blue-400 shrink-0 mt-0.5" />
+            <Calendar className="w-5 h-5 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-telos-blue-300">Plan Ahead: 2026 Estimated Tax Payments</p>
+              <p className="text-sm font-semibold text-HATaxService-blue-300">Plan Ahead: 2026 Estimated Tax Payments</p>
               <ul className="mt-2 space-y-1">
                 {estimatedRec.reasons.map((r, i) => (
                   <li key={i} className="text-xs text-slate-300 leading-relaxed flex items-start gap-1.5">
-                    <span className="text-telos-blue-400 mt-0.5">&bull;</span>
+                    <span className="text-HATaxService-blue-400 mt-0.5">&bull;</span>
                     {r}
                   </li>
                 ))}
@@ -287,7 +287,7 @@ function HubView({
                 href="https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 Learn more on IRS.gov
@@ -314,7 +314,7 @@ function HubView({
                 href="https://www.irs.gov/businesses/small-businesses-self-employed/report-of-foreign-bank-and-financial-accounts-fbar"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               >
                 <ExternalLink className="w-3 h-3" />
                 Learn more on IRS.gov
@@ -342,7 +342,7 @@ function HubView({
             </p>
             <button
               onClick={() => navigate('/pledge')}
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               Learn more about this project &rarr;
             </button>
@@ -439,7 +439,7 @@ function ExtensionCard({
             href="https://www.irs.gov/forms-pubs/extension-of-time-to-file-your-tax-return"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
             E-file your extension at irs.gov/extensions
@@ -470,7 +470,7 @@ function PathwayCard({
       onClick={onClick}
       className="card-selectable w-full text-left flex items-center gap-4 py-4 group"
     >
-      <span className="text-telos-blue-400 shrink-0">{icon}</span>
+      <span className="text-HATaxService-blue-400 shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-white">{title}</span>
@@ -482,7 +482,7 @@ function PathwayCard({
         </div>
         <p className="text-xs text-slate-400 mt-0.5">{description}</p>
       </div>
-      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-telos-blue-400 transition-colors shrink-0" />
+      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-HATaxService-blue-400 transition-colors shrink-0" />
     </button>
   );
 }

@@ -139,7 +139,7 @@ export default function QuickPresets({ taxReturn, baseResult, activeScenarioId, 
   return (
     <div className="mb-4">
       <div className="flex items-center gap-1.5 mb-2">
-        <Zap className="w-3.5 h-3.5 text-telos-orange-400" />
+        <Zap className="w-3.5 h-3.5 text-HATaxService-orange-400" />
         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Quick Presets</span>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ export default function QuickPresets({ taxReturn, baseResult, activeScenarioId, 
                 scenarioId: activeScenarioId,
                 overrides: p.getOverrides(taxReturn),
               })}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-800 border border-slate-700/50 hover:border-telos-orange-500/40 hover:bg-telos-orange-500/5 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-800 border border-slate-700/50 hover:border-HATaxService-orange-500/40 hover:bg-HATaxService-orange-500/5 transition-colors"
               title={p.description}
             >
               <span className="text-slate-200">{p.label}</span>

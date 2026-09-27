@@ -74,7 +74,7 @@ function ViewModeSwitcher({ current, onChange, canCompare }: ViewModeSwitcherPro
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="text-center py-10 max-w-lg mx-auto">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-telos-orange-500/10 text-telos-orange-400 mb-4">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-HATaxService-orange-500/10 text-HATaxService-orange-400 mb-4">
         <FlaskConical className="w-8 h-8" />
       </div>
       <h1 className="text-3xl font-bold text-white mb-3">Tax Scenario Lab</h1>
@@ -89,7 +89,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           { step: '3', title: 'Compare scenarios', desc: 'Side-by-side up to 4 options' },
         ].map(s => (
           <div key={s.step} className="rounded-lg bg-surface-800 border border-slate-700/50 p-4">
-            <div className="text-telos-orange-400 text-sm font-bold mb-1.5">Step {s.step}</div>
+            <div className="text-HATaxService-orange-400 text-sm font-bold mb-1.5">Step {s.step}</div>
             <p className="text-base font-medium text-white">{s.title}</p>
             <p className="text-sm text-slate-500 mt-0.5">{s.desc}</p>
           </div>
@@ -98,7 +98,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
       <button
         onClick={onAdd}
-        className="px-6 py-3 bg-telos-orange-500 hover:bg-telos-orange-600 text-white rounded-lg text-base font-medium transition-colors"
+        className="px-6 py-3 bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded-lg text-base font-medium transition-colors"
       >
         Create Your First Scenario
       </button>

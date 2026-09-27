@@ -62,7 +62,7 @@ export default function ExplainTaxesToolView() {
       {/* Insights */}
       <div className="mt-6">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">1</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">1</span>
           Key Insights
         </h3>
         <TaxInsights form1040={f} calculation={result} />
@@ -71,7 +71,7 @@ export default function ExplainTaxesToolView() {
       {/* Tax Flow */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">2</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">2</span>
           How Your Tax Flows
         </h3>
         <TaxFlowSwitcher form1040={f} calculation={result} />
@@ -80,7 +80,7 @@ export default function ExplainTaxesToolView() {
       {/* Bracket Breakdown */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">3</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">3</span>
           Tax Bracket Breakdown
         </h3>
         <div className="card">
@@ -95,7 +95,7 @@ export default function ExplainTaxesToolView() {
       {/* Effective Tax Rate */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">4</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">4</span>
           Your Tax Rate
         </h3>
         <EffectiveTaxRateCard form1040={f} />
@@ -105,9 +105,9 @@ export default function ExplainTaxesToolView() {
       <div className="mt-8">
         <button
           onClick={() => setShowTraces(!showTraces)}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-3 hover:text-telos-blue-300 transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-3 hover:text-HATaxService-blue-300 transition-colors"
         >
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">5</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">5</span>
           Calculation Audit Trail
           {showTraces ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>

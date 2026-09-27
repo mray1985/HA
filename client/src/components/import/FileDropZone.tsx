@@ -128,7 +128,7 @@ export default function FileDropZone({
   if (selectedFile) {
     return (
       <div className="border border-slate-600 bg-surface-800 rounded-xl p-4 flex items-center gap-3">
-        <Icon className="w-6 h-6 text-telos-blue-400 shrink-0" />
+        <Icon className="w-6 h-6 text-HATaxService-blue-400 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm text-slate-200 font-medium truncate">{selectedFile.name}</p>
           <p className="text-xs text-slate-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
@@ -154,18 +154,18 @@ export default function FileDropZone({
         className={`
           border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
           ${dragging
-            ? 'border-telos-blue-400 bg-telos-blue-500/10'
+            ? 'border-HATaxService-blue-400 bg-HATaxService-blue-500/10'
             : 'border-slate-600 hover:border-slate-500 bg-surface-800/50'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        <FileInput className={`w-8 h-8 mx-auto mb-3 ${dragging ? 'text-telos-blue-400' : 'text-slate-400'}`} />
+        <FileInput className={`w-8 h-8 mx-auto mb-3 ${dragging ? 'text-HATaxService-blue-400' : 'text-slate-400'}`} />
         <p className="text-sm text-slate-300 font-medium">{label}</p>
         {sublabel && <p className="text-xs text-slate-400 mt-1">{sublabel}</p>}
         <button
           type="button"
-          className="mt-3 text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+          className="mt-3 text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           tabIndex={-1}
         >
           Browse files

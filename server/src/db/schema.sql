@@ -1,4 +1,4 @@
--- TelosTax Server Schema
+-- HA Tax service Server Schema
 -- The only actively used table is rate_limits (for API rate limiting).
 -- All tax data is stored client-side in localStorage.
 

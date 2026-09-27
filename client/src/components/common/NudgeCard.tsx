@@ -16,15 +16,15 @@ interface NudgeCardProps {
 }
 
 const VARIANT_STYLES = {
-  tip: 'bg-telos-orange-500/10 border-telos-orange-500/20',
-  info: 'bg-telos-blue-600/10 border-telos-blue-600/30',
+  tip: 'bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20',
+  info: 'bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30',
 } as const;
 
 export default function NudgeCard({ nudge, onEnableAndGo, onAskAI, onDismiss }: NudgeCardProps) {
   return (
     <div className={`rounded-lg border p-4 ${VARIANT_STYLES[nudge.variant]} animate-in fade-in slide-in-from-top-2 duration-300`}>
       <div className="flex items-start gap-2.5">
-        <Sparkles className="w-4 h-4 mt-0.5 shrink-0 text-telos-orange-400" />
+        <Sparkles className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-orange-400" />
         <div className="flex-1 min-w-0">
           {/* Title row with benefit badge */}
           <div className="flex items-center gap-2">
@@ -47,8 +47,8 @@ export default function NudgeCard({ nudge, onEnableAndGo, onAskAI, onDismiss }: 
             {nudge.discoveryKey && nudge.stepId && (
               <button
                 onClick={() => onEnableAndGo(nudge)}
-                className="flex items-center gap-1 text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300
-                           bg-telos-blue-500/10 hover:bg-telos-blue-500/20 border border-telos-blue-500/30
+                className="flex items-center gap-1 text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300
+                           bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20 border border-HATaxService-blue-500/30
                            px-2.5 py-1.5 rounded transition-colors"
               >
                 Enable
@@ -58,12 +58,12 @@ export default function NudgeCard({ nudge, onEnableAndGo, onAskAI, onDismiss }: 
             <button
               onClick={() => onAskAI(nudge)}
               className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full
-                         border border-transparent hover:border-telos-orange-500/50
+                         border border-transparent hover:border-HATaxService-orange-500/50
                          bg-surface-700 hover:bg-surface-600
                          transition-all duration-200"
             >
-              <Sparkles size={11} className="text-telos-orange-400" />
-              <span>Ask <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span></span>
+              <Sparkles size={11} className="text-HATaxService-orange-400" />
+              <span>Ask HA Tax service</span>
             </button>
           </div>
         </div>

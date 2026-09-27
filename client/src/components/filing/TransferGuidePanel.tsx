@@ -70,7 +70,7 @@ export default function TransferGuidePanel({ taxReturn, result, onBack }: Transf
           href={FILING_URLS.freeFileForms}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white text-sm font-medium transition-colors"
         >
           <ExternalLink className="w-4 h-4" />
           Open Free Fillable Forms
@@ -124,7 +124,7 @@ function FormSection({ form, defaultExpanded }: { form: TransferGuideForm; defau
           <div className="flex justify-end mb-2">
             <button
               onClick={handleCopyAll}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-telos-blue-400 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-HATaxService-blue-400 transition-colors"
             >
               {copiedAll
                 ? <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -216,7 +216,7 @@ function BackButton({ onClick, label }: { onClick: () => void; label: string }) 
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-telos-blue-400 transition-colors mb-4"
+      className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-HATaxService-blue-400 transition-colors mb-4"
     >
       <ArrowLeft className="w-4 h-4" />
       {label}

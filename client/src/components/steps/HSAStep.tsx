@@ -140,7 +140,7 @@ export default function HSAStep() {
           </div>
         )}
 
-        <a href="https://www.irs.gov/publications/p969" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/publications/p969" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {/* ── Excess Contribution Advisory ── */}
@@ -244,7 +244,7 @@ export default function HSAStep() {
           {(withdrawalChoice === 'full' || withdrawalChoice === 'partial') && (
             <div className="ml-8 mt-4 p-3 rounded-lg bg-surface-700/40 border border-slate-700">
               <div className="flex items-start gap-2 mb-2">
-                <Info className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-slate-300 font-medium">Earnings on the excess</p>
                   <p className="text-xs text-slate-400 mt-1">

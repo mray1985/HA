@@ -170,7 +170,7 @@ export default function DIV1099Step() {
                   <ItemWarningBadge warnings={itemWarnings.get(idx)} />
                   <button
                     onClick={(e) => { e.stopPropagation(); startEdit(item); }}
-                    className="p-2 text-slate-400 hover:text-telos-blue-400"
+                    className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                     title="Edit"
                   >
                     <Pencil className="w-4 h-4" />

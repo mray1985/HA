@@ -32,15 +32,15 @@ export default function InlineImportButton({ importType, formLabel, onClick }: I
     <button
       onClick={onClick}
       className="mt-2 mb-4 w-full flex items-center justify-center gap-2 py-2.5 px-4
-                 border border-dashed border-telos-blue-500/40 rounded-lg
-                 bg-telos-blue-500/5 hover:bg-telos-blue-500/10
-                 hover:border-telos-blue-400/60
-                 text-telos-blue-400 hover:text-telos-blue-300
+                 border border-dashed border-HATaxService-blue-500/40 rounded-lg
+                 bg-HATaxService-blue-500/5 hover:bg-HATaxService-blue-500/10
+                 hover:border-HATaxService-blue-400/60
+                 text-HATaxService-blue-400 hover:text-HATaxService-blue-300
                  transition-all text-sm font-medium group"
     >
       <FileInput className="w-4 h-4 group-hover:scale-110 transition-transform" />
       <span>{label}</span>
-      <Icon className="w-3.5 h-3.5 text-telos-blue-400/60" />
+      <Icon className="w-3.5 h-3.5 text-HATaxService-blue-400/60" />
     </button>
   );
 }

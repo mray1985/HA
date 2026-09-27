@@ -1,5 +1,5 @@
 /**
- * Global "Ask TelosAI" context menu for the Interview view.
+ * Global "Ask HA Tax service" context menu for the Interview view.
  *
  * Right-click any element in the wizard to get an AI explanation.
  * Walks up the DOM from the click target to find the nearest meaningful
@@ -118,7 +118,7 @@ function buildPrompt(target: ExplainerTarget, stepLabel: string | undefined): { 
 }
 
 /**
- * Hook: attach to a container ref to enable right-click → "Ask TelosAI" on any element.
+ * Hook: attach to a container ref to enable right-click → "Ask HA Tax service" on any element.
  * Returns a portal element to render in the component tree.
  */
 export function useContextExplainer(containerRef: React.RefObject<HTMLElement | null>) {
@@ -216,13 +216,13 @@ export function useContextExplainer(containerRef: React.RefObject<HTMLElement | 
             <button
               onClick={handleExplain}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                         border border-transparent hover:border-telos-orange-500/50
+                         border border-transparent hover:border-HATaxService-orange-500/50
                          bg-surface-600 hover:bg-surface-500
                          shadow-sm hover:shadow-md hover:shadow-black/20
                          transition-all duration-200"
             >
-              <Sparkles size={12} className="text-telos-orange-400 ai-sparkle" />
-              <span>Ask <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span></span>
+              <Sparkles size={12} className="text-HATaxService-orange-400 ai-sparkle" />
+              <span>Ask HA Tax service</span>
             </button>
           </div>
         </div>,

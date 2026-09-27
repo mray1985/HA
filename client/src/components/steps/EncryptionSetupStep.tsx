@@ -63,7 +63,7 @@ export default function EncryptionSetupStep() {
               type={showPassword ? 'text' : 'password'}
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              className="w-full px-3 py-2.5 bg-surface-800 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none pr-10"
+              className="w-full px-3 py-2.5 bg-surface-800 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none pr-10"
               placeholder="At least 8 characters"
               autoComplete="new-password"
               disabled={loading}
@@ -89,7 +89,7 @@ export default function EncryptionSetupStep() {
             type={showPassword ? 'text' : 'password'}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-3 py-2.5 bg-surface-800 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none"
+            className="w-full px-3 py-2.5 bg-surface-800 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none"
             placeholder="Re-enter passphrase"
             autoComplete="new-password"
             disabled={loading}

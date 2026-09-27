@@ -87,14 +87,14 @@ export default function ProgressBar() {
               section.state === 'active'
                 ? 'text-white font-semibold'
                 : section.state === 'completed'
-                  ? 'text-telos-orange-400'
+                  ? 'text-HATaxService-orange-400'
                   : 'text-slate-400';
 
             return (
               <button
                 key={section.id}
                 onClick={() => handleClick(section.id)}
-                className="flex flex-col items-center gap-1 sm:gap-1.5 cursor-pointer group min-w-0 focus-visible:ring-2 focus-visible:ring-telos-blue-500 focus-visible:rounded focus-visible:outline-none"
+                className="flex flex-col items-center gap-1 sm:gap-1.5 cursor-pointer group min-w-0 focus-visible:ring-2 focus-visible:ring-HATaxService-blue-500 focus-visible:rounded focus-visible:outline-none"
                 style={{ flex: section.stepCount }}
                 aria-current={section.state === 'active' ? 'true' : undefined}
                 aria-label={`${section.label}, ${section.stepCount} steps, ${section.state === 'completed' ? 'completed' : section.state === 'active' ? 'in progress' : 'not started'}`}
@@ -112,7 +112,7 @@ export default function ProgressBar() {
                     className={`h-full rounded-full transition-all duration-500 ${
                       section.state === 'future'
                         ? 'bg-transparent'
-                        : 'bg-telos-orange-500'
+                        : 'bg-HATaxService-orange-500'
                     }`}
                     style={{ width: `${section.fillPercent}%` }}
                   />
@@ -127,17 +127,17 @@ export default function ProgressBar() {
           <button
             onClick={toggleChat}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg shrink-0
-                       bg-gradient-to-r from-telos-orange-500/15 to-telos-blue-500/15
-                       border border-telos-orange-500/30
-                       hover:from-telos-orange-500/25 hover:to-telos-blue-500/25
-                       hover:border-telos-orange-500/50
+                       bg-gradient-to-r from-HATaxService-orange-500/15 to-HATaxService-blue-500/15
+                       border border-HATaxService-orange-500/30
+                       hover:from-HATaxService-orange-500/25 hover:to-HATaxService-blue-500/25
+                       hover:border-HATaxService-orange-500/50
                        transition-all duration-200 text-sm group"
             aria-label="Toggle AI assistant"
             title="AI Assistant"
           >
-            <Sparkles className="w-4 h-4 text-telos-orange-400 group-hover:text-telos-orange-300 transition-colors" />
+            <Sparkles className="w-4 h-4 text-HATaxService-orange-400 group-hover:text-HATaxService-orange-300 transition-colors" />
             <span className="hidden sm:inline text-sm font-semibold">
-              <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span> <span className="text-slate-300">Assistant</span>
+              HA Tax service <span className="text-slate-300">Assistant</span>
             </span>
           </button>
         )}

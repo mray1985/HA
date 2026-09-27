@@ -196,7 +196,7 @@ export default function IncomeSummaryStep() {
           <p className="text-slate-400 mb-3">No income types selected yet.</p>
           <button
             onClick={() => goToStep('income_overview')}
-            className="inline-flex items-center gap-1.5 text-sm text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Go back to Income Overview
@@ -235,7 +235,7 @@ export default function IncomeSummaryStep() {
                   const total = row.getTotal(taxReturn);
                   return (
                     <div key={row.key} className="flex items-center gap-3 py-2.5">
-                      <div className="text-telos-orange-400 shrink-0">{row.icon}</div>
+                      <div className="text-HATaxService-orange-400 shrink-0">{row.icon}</div>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm text-slate-200">{row.label}</span>
                         <span className="text-xs text-slate-400 ml-2">
@@ -247,7 +247,7 @@ export default function IncomeSummaryStep() {
                       </div>
                       <button
                         onClick={() => goToStep(row.stepId)}
-                        className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+                        className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
                       >
                         Edit
                       </button>
@@ -272,7 +272,7 @@ export default function IncomeSummaryStep() {
                     <span className="text-sm text-slate-400 flex-1">{row.label}</span>
                     <button
                       onClick={() => goToStep(row.stepId)}
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
                     >
                       Enter
                     </button>
@@ -298,7 +298,7 @@ export default function IncomeSummaryStep() {
       {showScheduleBPartIII && (
         <div className="card mt-6">
           <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5 text-telos-blue-400" />
+            <Globe className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Schedule B — Foreign Accounts</h3>
           </div>
           <p className="text-sm text-slate-400 mb-4">
@@ -314,13 +314,13 @@ export default function IncomeSummaryStep() {
             <div className="flex gap-3">
               <button
                 onClick={() => updatePartIII({ hasForeignAccounts: true })}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignAccounts === true ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignAccounts === true ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
               >
                 Yes
               </button>
               <button
                 onClick={() => updatePartIII({ hasForeignAccounts: false, requireFBAR: undefined, foreignAccountCountries: undefined })}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignAccounts === false ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignAccounts === false ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
               >
                 No
               </button>
@@ -329,20 +329,20 @@ export default function IncomeSummaryStep() {
 
           {/* Line 7a follow-up: FBAR requirement */}
           {partIII.hasForeignAccounts === true && (
-            <div className="mb-4 ml-4 pl-4 border-l-2 border-telos-blue-500/30">
+            <div className="mb-4 ml-4 pl-4 border-l-2 border-HATaxService-blue-500/30">
               <label className="block text-sm text-slate-300 mb-2">
                 Are you required to file FinCEN Form 114 (FBAR) to report that financial interest or signature authority?
               </label>
               <div className="flex gap-3">
                 <button
                   onClick={() => updatePartIII({ requireFBAR: true })}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.requireFBAR === true ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.requireFBAR === true ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
                 >
                   Yes
                 </button>
                 <button
                   onClick={() => updatePartIII({ requireFBAR: false })}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.requireFBAR === false ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.requireFBAR === false ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
                 >
                   No
                 </button>
@@ -372,13 +372,13 @@ export default function IncomeSummaryStep() {
             <div className="flex gap-3">
               <button
                 onClick={() => updatePartIII({ hasForeignTrust: true })}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignTrust === true ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignTrust === true ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
               >
                 Yes
               </button>
               <button
                 onClick={() => updatePartIII({ hasForeignTrust: false })}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignTrust === false ? 'bg-telos-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${partIII.hasForeignTrust === false ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-700 text-slate-400 hover:text-slate-200'}`}
               >
                 No
               </button>

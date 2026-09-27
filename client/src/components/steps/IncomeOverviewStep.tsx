@@ -566,7 +566,7 @@ export default function IncomeOverviewStep() {
             isActive ? 'bg-surface-800' : 'bg-surface-900 hover:bg-surface-800'
           }`}
         >
-          <div className={`${isActive ? 'text-telos-orange-400' : 'text-slate-400'}`}>
+          <div className={`${isActive ? 'text-HATaxService-orange-400' : 'text-slate-400'}`}>
             {cat.icon}
           </div>
           <div className="flex-1 min-w-0">
@@ -580,7 +580,7 @@ export default function IncomeOverviewStep() {
                 </span>
               )}
               {hasData && (
-                <span className="text-xs text-telos-orange-400 bg-telos-orange-500/10 px-2 py-0.5 rounded-full">
+                <span className="text-xs text-HATaxService-orange-400 bg-HATaxService-orange-500/10 px-2 py-0.5 rounded-full">
                   {count} {count === 1 ? 'form' : 'forms'}
                 </span>
               )}
@@ -595,7 +595,7 @@ export default function IncomeOverviewStep() {
             {hasData && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(cat.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Revisit
               </button>
@@ -603,7 +603,7 @@ export default function IncomeOverviewStep() {
             {isActive && !hasData && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(cat.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Start
               </button>
@@ -624,7 +624,7 @@ export default function IncomeOverviewStep() {
               <button
                 type="button"
                 onClick={() => setLearnMoreOpen(cat.learnMore!)}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors flex items-center gap-1 mb-3"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors flex items-center gap-1 mb-3"
               >
                 <Info className="w-3 h-3" />
                 Learn more
@@ -636,13 +636,13 @@ export default function IncomeOverviewStep() {
               onChange={(val) => setAnswer(cat.key, val)}
             />
             {answer === 'yes' && !hasData && (
-              <p className="text-xs text-telos-blue-400 mt-2 flex items-center gap-1">
+              <p className="text-xs text-HATaxService-blue-400 mt-2 flex items-center gap-1">
                 <PenLine className="w-3 h-3" />
                 Click "Start" above or continue to the next step to enter your data.
               </p>
             )}
             {answer === 'yes' && hasData && (
-              <p className="text-xs text-telos-orange-400 mt-2 flex items-center gap-1">
+              <p className="text-xs text-HATaxService-orange-400 mt-2 flex items-center gap-1">
                 <Check className="w-3 h-3" />
                 Data entered. Click "Revisit" to make changes.
               </p>
@@ -735,7 +735,7 @@ export default function IncomeOverviewStep() {
                     {group.label}
                   </span>
                   {activeCount > 0 && (
-                    <span className="text-xs text-telos-orange-400 bg-telos-orange-500/10 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-HATaxService-orange-400 bg-HATaxService-orange-500/10 px-2 py-0.5 rounded-full">
                       {activeCount}
                     </span>
                   )}

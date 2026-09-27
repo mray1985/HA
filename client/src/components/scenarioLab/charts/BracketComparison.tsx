@@ -14,7 +14,7 @@ import type { ScenarioColor } from '../types';
 // Map tax rates to consistent colors — avoids index-shift when brackets are filtered
 const RATE_COLOR_MAP = new Map<number, string>([
   [0.10, 'bg-emerald-500'],
-  [0.12, 'bg-telos-blue-500'],
+  [0.12, 'bg-HATaxService-blue-500'],
   [0.22, 'bg-blue-500'],
   [0.24, 'bg-indigo-500'],
   [0.32, 'bg-violet-500'],
@@ -27,8 +27,8 @@ function colorForRate(rate: number): string {
 }
 
 const SCENARIO_TEXT_COLORS: Record<ScenarioColor, string> = {
-  orange: 'text-telos-orange-400',
-  blue: 'text-telos-blue-400',
+  orange: 'text-HATaxService-orange-400',
+  blue: 'text-HATaxService-blue-400',
   violet: 'text-violet-400',
   emerald: 'text-emerald-400',
 };

@@ -68,7 +68,7 @@ export default function Form8582DataStep() {
             type="checkbox"
             checked={!!data.realEstateProfessional}
             onChange={(e) => update('realEstateProfessional', e.target.checked)}
-            className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+            className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
           />
           <div>
             <span className="text-sm text-slate-200 group-hover:text-white">
@@ -91,9 +91,9 @@ export default function Form8582DataStep() {
         phasing out between $100,000–$150,000 AGI.
       </CalloutCard>
 
-      <div className="mt-4 p-3 rounded-lg bg-telos-blue-500/10 border border-telos-blue-500/20">
+      <div className="mt-4 p-3 rounded-lg bg-HATaxService-blue-500/10 border border-HATaxService-blue-500/20">
         <div className="flex items-start gap-2">
-          <Info className="w-4 h-4 text-telos-blue-400 mt-0.5 shrink-0" />
+          <Info className="w-4 h-4 text-HATaxService-blue-400 mt-0.5 shrink-0" />
           <p className="text-xs text-slate-400">
             Active participation status and property dispositions are configured on each
             rental property and K-1 entry. You can edit those settings on the Rental

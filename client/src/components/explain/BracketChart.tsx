@@ -24,7 +24,7 @@ interface BracketChartProps {
 
 const BRACKET_COLORS = [
   '#10B981', // emerald-500  — 10%
-  '#1D6FAD', // telos-blue-500 — 12%
+  '#1D6FAD', // HATaxService-blue-500 — 12%
   '#3B82F6', // blue-500    — 22%
   '#6366F1', // indigo-500  — 24%
   '#8B5CF6', // violet-500  — 32%

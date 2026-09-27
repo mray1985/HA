@@ -177,7 +177,7 @@ export default function AMTStep() {
       {amt.usedPartIII && amt.partIII && (
         <div className="card mt-4">
           <div className="flex items-center gap-2 mb-1">
-            <TrendingDown className="w-4 h-4 text-telos-blue-400" />
+            <TrendingDown className="w-4 h-4 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200 text-sm uppercase tracking-wide">
               Part III — Capital Gains Rates for AMT
             </h3>
@@ -207,10 +207,10 @@ export default function AMTStep() {
             <div className="border-t border-slate-700/50 my-2" />
 
             <div className="flex items-center justify-between py-1">
-              <span className="font-semibold text-telos-blue-400">
+              <span className="font-semibold text-HATaxService-blue-400">
                 TMT (lesser of special vs flat)
               </span>
-              <span className="font-bold font-mono text-xs text-telos-blue-400">
+              <span className="font-bold font-mono text-xs text-HATaxService-blue-400">
                 ${amt.partIII.tentativeMinimumTax.toLocaleString()}
               </span>
             </div>
@@ -228,7 +228,7 @@ export default function AMTStep() {
       {amt.applies && (
         <div className="card mt-4">
           <div className="flex items-center gap-2 mb-3">
-            <Info className="w-5 h-5 text-telos-blue-400" />
+            <Info className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200 text-sm">Ways to Potentially Reduce AMT</h3>
           </div>
           <ul className="text-sm text-slate-400 space-y-2 list-disc pl-5">

@@ -1,5 +1,5 @@
 /**
- * Telos AI Button — floating sparkle + expandable toolbar in the bottom-right.
+ * HA Tax service Button — floating sparkle + expandable toolbar in the bottom-right.
  *
  * Collapsed: sparkle icon toggles chat panel open/close.
  * Hover: pill expands left to show "Guide me" action button.
@@ -14,7 +14,7 @@ import { useChatStore } from '../../store/chatStore';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { getGuidePrompt } from '../../data/starterPrompts';
 
-export default function TelosAIButton() {
+export default function HATaxServiceButton() {
   const { isOpen: chatOpen, togglePanel, openWithPrompt } = useChatStore();
   const activeToolId = useTaxReturnStore((s) => s.activeToolId);
   const viewMode = useTaxReturnStore((s) => s.viewMode);
@@ -60,7 +60,7 @@ export default function TelosAIButton() {
                       bg-surface-700 border border-slate-600/50
                       shadow-lg shadow-black/30
                       hover:shadow-xl hover:shadow-black/40
-                      hover:border-telos-orange-500/40
+                      hover:border-HATaxService-orange-500/40
                       transition-all duration-200 ease-out">
         {/* Guide me action — slides out on hover */}
         <div className="max-w-0 overflow-hidden whitespace-nowrap
@@ -73,7 +73,7 @@ export default function TelosAIButton() {
                          text-slate-300 hover:bg-surface-600 hover:text-white transition-colors"
               title="Ask AI about this step"
             >
-              <span>Guide me with <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span></span>
+              <span>Guide me with HA Tax service</span>
             </button>
           </div>
         </div>
@@ -86,7 +86,7 @@ export default function TelosAIButton() {
           aria-label={chatOpen ? 'Close AI chat' : 'Open AI chat'}
           title={chatOpen ? 'Close AI chat' : 'Open AI chat'}
         >
-          <Sparkles className="w-7 h-7 text-telos-orange-400 ai-sparkle" />
+          <Sparkles className="w-7 h-7 text-HATaxService-orange-400 ai-sparkle" />
         </button>
       </div>
 

@@ -16,8 +16,8 @@ export default function TermsPage() {
         </button>
 
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-telos-blue-500/10 rounded-lg">
-            <FileText className="w-6 h-6 text-telos-blue-400" />
+          <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg">
+            <FileText className="w-6 h-6 text-HATaxService-blue-400" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Terms of Service</h1>
         </div>
@@ -31,7 +31,7 @@ export default function TermsPage() {
               HATax is a free, open-source tax preparation tool that helps you estimate your federal
               and state income tax liability for all 50 states and the District of Columbia. It runs
               entirely in your web browser. All calculations are performed on your device using the
-              open-source <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">@hatax/engine</code> library.
+              open-source <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">@hatax/engine</code> library.
             </p>
           </section>
 
@@ -112,7 +112,7 @@ export default function TermsPage() {
               device, encrypted with your passphrase when one is set. Documents you import (PDFs, CSVs,
               photos, and other files) are processed entirely in your browser and never uploaded. We have
               no servers that receive, store, or process your tax information. See
-              our <button onClick={() => navigate('/privacy')} className="text-telos-blue-400 hover:text-telos-blue-300 underline">Privacy Policy</button> for
+              our <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button> for
               full details.
             </p>
           </section>
@@ -149,7 +149,7 @@ export default function TermsPage() {
               </li>
             </ul>
             <p className="mt-3">
-              See our <button onClick={() => navigate('/privacy')} className="text-telos-blue-400 hover:text-telos-blue-300 underline">Privacy Policy</button> (Section 13) for
+              See our <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button> (Section 13) for
               full details on what data is sent, how PII is blocked, and how our relay server works.
             </p>
           </section>
@@ -210,8 +210,8 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">13. Contact</h2>
             <p>
               If you have questions about these terms, find a calculation error, or want to contribute
-              to the project, email us at <a href="mailto:ryan@telos.news" className="text-telos-blue-400 hover:text-telos-blue-300 underline">ryan@telos.news</a> or
-              visit our <a href="https://github.com/telosnews/HATax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
+              to the project, email us at {/* TODO: replace stub contact link */}<a href="mailto:contact@example.com" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">contact@example.com</a> or
+              visit our {/* TODO: replace stub contact link */}<a href="#" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Source</a>.
             </p>
           </section>
         </div>

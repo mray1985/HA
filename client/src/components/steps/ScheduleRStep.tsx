@@ -88,19 +88,19 @@ export default function ScheduleRStep() {
         {/* Filer qualification */}
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
-            <User className="w-5 h-5 text-telos-blue-400" />
+            <User className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Your Qualification</h3>
           </div>
 
           <FormField label="Are you age 65 or older?" tooltip="You were age 65 or older at the end of the tax year (born before January 2, 1961 for TY2025)." irsRef={help?.fields['Age 65 or Older']?.irsRef}>
             {filerAgeFromDOB !== undefined && (
-              <p className="text-xs text-telos-blue-400 mb-2">
+              <p className="text-xs text-HATaxService-blue-400 mb-2">
                 Pre-filled from your date of birth. You can override if needed.
               </p>
             )}
             <div className="flex gap-3">
-              <button className={`py-1.5 px-4 rounded text-sm ${info.isAge65OrOlder ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isAge65OrOlder', true)}>Yes</button>
-              <button className={`py-1.5 px-4 rounded text-sm ${!info.isAge65OrOlder ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isAge65OrOlder', false)}>No</button>
+              <button className={`py-1.5 px-4 rounded text-sm ${info.isAge65OrOlder ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isAge65OrOlder', true)}>Yes</button>
+              <button className={`py-1.5 px-4 rounded text-sm ${!info.isAge65OrOlder ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isAge65OrOlder', false)}>No</button>
             </div>
             {filerAgeFromDOB !== undefined && info.isAge65OrOlder !== filerAgeFromDOB && (
               <div className="flex items-start gap-2 mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -117,8 +117,8 @@ export default function ScheduleRStep() {
           {!info.isAge65OrOlder && (
             <FormField label="Are you permanently and totally disabled?" tooltip="You retired on permanent and total disability and received taxable disability income during the year." irsRef={help?.fields['Disabled']?.irsRef}>
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.isDisabled ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isDisabled', true)}>Yes</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.isDisabled ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isDisabled', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.isDisabled ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isDisabled', true)}>Yes</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.isDisabled ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isDisabled', false)}>No</button>
               </div>
             </FormField>
           )}
@@ -134,19 +134,19 @@ export default function ScheduleRStep() {
         {isMFJ && (
           <div className="card">
             <div className="flex items-center gap-3 mb-3">
-              <Users className="w-5 h-5 text-telos-blue-400" />
+              <Users className="w-5 h-5 text-HATaxService-blue-400" />
               <h3 className="font-medium text-slate-200">Spouse's Qualification</h3>
             </div>
 
             <FormField label="Is your spouse age 65 or older?" tooltip="Your spouse was age 65 or older at the end of the tax year.">
               {spouseAgeFromDOB !== undefined && (
-                <p className="text-xs text-telos-blue-400 mb-2">
+                <p className="text-xs text-HATaxService-blue-400 mb-2">
                   Pre-filled from your spouse's date of birth. You can override if needed.
                 </p>
               )}
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.isSpouseAge65OrOlder ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseAge65OrOlder', true)}>Yes</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpouseAge65OrOlder ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseAge65OrOlder', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.isSpouseAge65OrOlder ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseAge65OrOlder', true)}>Yes</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpouseAge65OrOlder ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseAge65OrOlder', false)}>No</button>
               </div>
               {spouseAgeFromDOB !== undefined && info.isSpouseAge65OrOlder !== spouseAgeFromDOB && (
                 <div className="flex items-start gap-2 mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
@@ -163,8 +163,8 @@ export default function ScheduleRStep() {
             {!info.isSpouseAge65OrOlder && (
               <FormField label="Is your spouse permanently and totally disabled?" tooltip="Your spouse retired on permanent and total disability.">
                 <div className="flex gap-3">
-                  <button className={`py-1.5 px-4 rounded text-sm ${info.isSpouseDisabled ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseDisabled', true)}>Yes</button>
-                  <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpouseDisabled ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseDisabled', false)}>No</button>
+                  <button className={`py-1.5 px-4 rounded text-sm ${info.isSpouseDisabled ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseDisabled', true)}>Yes</button>
+                  <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpouseDisabled ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('isSpouseDisabled', false)}>No</button>
                 </div>
               </FormField>
             )}
@@ -181,7 +181,7 @@ export default function ScheduleRStep() {
         {(qualifiesFiler || qualifiesSpouse) && (
           <div className="card">
             <div className="flex items-center gap-3 mb-3">
-              <Banknote className="w-5 h-5 text-telos-blue-400" />
+              <Banknote className="w-5 h-5 text-HATaxService-blue-400" />
               <h3 className="font-medium text-slate-200">Nontaxable Income (reduces credit base)</h3>
             </div>
 

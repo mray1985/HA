@@ -11,7 +11,7 @@ export default function CreditsTransitionStep() {
   if (!taxReturn || !calculation) {
     return (
       <div className="max-w-lg mx-auto text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-telos-blue-600/20 text-telos-blue-400 mb-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-HATaxService-blue-600/20 text-HATaxService-blue-400 mb-6">
           <ArrowRight className="w-8 h-8" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-3">Making great progress!</h1>
@@ -56,12 +56,12 @@ export default function CreditsTransitionStep() {
       <div className="card">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-            <FileCheck className="w-4 h-4 text-telos-orange-400" />
+            <FileCheck className="w-4 h-4 text-HATaxService-orange-400" />
             {isItemized ? 'Itemized Deductions' : 'Standard Deduction'}
           </h3>
           <button
             onClick={() => goToStep('deduction_method')}
-            className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             Change
           </button>
@@ -109,12 +109,12 @@ export default function CreditsTransitionStep() {
         <div className="card mt-3">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-telos-orange-400" />
+              <Receipt className="w-4 h-4 text-HATaxService-orange-400" />
               Adjustments to Income
             </h3>
             <button
               onClick={() => goToStep('adjustments')}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               Edit
             </button>

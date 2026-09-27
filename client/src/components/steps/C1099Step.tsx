@@ -136,7 +136,7 @@ export default function C1099Step() {
             </div>
             <div className="flex items-center gap-1">
               <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function C1099Step() {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="accent-telos-orange-400"
+                className="accent-HATaxService-orange-400"
                 checked={!!taxReturn.form982?.isBankruptcy}
                 onChange={(e) => updateField('form982', { ...taxReturn.form982, isBankruptcy: e.target.checked })}
               />
@@ -170,7 +170,7 @@ export default function C1099Step() {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="accent-telos-orange-400"
+                className="accent-HATaxService-orange-400"
                 checked={!!taxReturn.form982?.isInsolvent}
                 onChange={(e) => updateField('form982', { ...taxReturn.form982, isInsolvent: e.target.checked })}
               />
@@ -179,7 +179,7 @@ export default function C1099Step() {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="accent-telos-orange-400"
+                className="accent-HATaxService-orange-400"
                 checked={!!taxReturn.form982?.isQualifiedFarmDebt}
                 onChange={(e) => updateField('form982', { ...taxReturn.form982, isQualifiedFarmDebt: e.target.checked })}
               />
@@ -188,7 +188,7 @@ export default function C1099Step() {
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                className="accent-telos-orange-400"
+                className="accent-HATaxService-orange-400"
                 checked={!!taxReturn.form982?.isQualifiedPrincipalResidence}
                 onChange={(e) => updateField('form982', { ...taxReturn.form982, isQualifiedPrincipalResidence: e.target.checked })}
               />
@@ -228,7 +228,7 @@ export default function C1099Step() {
             href="https://www.irs.gov/forms-pubs/about-form-982"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
             Learn more on IRS.gov
@@ -240,7 +240,7 @@ export default function C1099Step() {
         href="https://www.irs.gov/forms-pubs/about-form-1099-c"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more about 1099-C on IRS.gov

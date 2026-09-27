@@ -195,7 +195,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
       {/* ─── State: EXTRACTING ─────────────────────────── */}
       {state === 'extracting' && (
         <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-sm text-slate-300">Analyzing your PDF...</p>
           <p className="text-xs text-slate-400 mt-1">Extracting text and identifying form fields</p>
         </div>
@@ -264,7 +264,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
       {/* ─── State: AI ENHANCING ───────────────────────── */}
       {state === 'ai-enhancing' && (
         <div className="text-center py-8">
-          <Sparkles className="w-8 h-8 text-telos-blue-400 animate-pulse mx-auto mb-3" />
+          <Sparkles className="w-8 h-8 text-HATaxService-blue-400 animate-pulse mx-auto mb-3" />
           <p className="text-sm text-slate-300">AI is reading your document...</p>
           <p className="text-xs text-slate-400 mt-1">PII has been stripped. Only sanitized text is sent.</p>
         </div>
@@ -306,11 +306,11 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
 
           {/* AI-enhanced success banner */}
           {aiEnhanced && (
-            <div className="rounded-xl border bg-telos-blue-500/10 border-telos-blue-500/30 p-3">
+            <div className="rounded-xl border bg-HATaxService-blue-500/10 border-HATaxService-blue-500/30 p-3">
               <div className="flex items-start gap-2">
-                <Sparkles className="w-5 h-5 text-telos-blue-400 shrink-0 mt-0.5" />
+                <Sparkles className="w-5 h-5 text-HATaxService-blue-400 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-telos-blue-300">AI-enhanced extraction</p>
+                  <p className="text-sm font-medium text-HATaxService-blue-300">AI-enhanced extraction</p>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Values cross-validated against OCR. Green = high confidence, yellow = verify, red = needs attention.
                   </p>
@@ -321,18 +321,18 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
 
           {/* Enhance with AI button */}
           {aiEligible && (
-            <div className="rounded-xl border bg-telos-blue-500/10 border-telos-blue-500/30 p-4">
+            <div className="rounded-xl border bg-HATaxService-blue-500/10 border-HATaxService-blue-500/30 p-4">
               <div className="flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-telos-blue-400 shrink-0 mt-0.5" />
+                <Sparkles className="w-5 h-5 text-HATaxService-blue-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold text-telos-blue-300 mb-1">Enhance with AI</h4>
+                  <h4 className="text-sm font-semibold text-HATaxService-blue-300 mb-1">Enhance with AI</h4>
                   <p className="text-xs text-slate-300 mb-3">
                     Send the extracted text to your AI provider for improved accuracy.
                     PII (SSN, addresses, etc.) is automatically stripped before sending.
                   </p>
                   <button
                     onClick={handleEnhanceWithAI}
-                    className="px-4 py-2 text-sm font-medium bg-telos-blue-600 hover:bg-telos-blue-500 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white rounded-lg transition-colors"
                   >
                     Enhance Extraction
                   </button>
@@ -352,7 +352,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
           {/* Detected form type */}
           <div className="card bg-surface-800 border-slate-700 p-3">
             <p className="text-sm text-slate-400">Detected form:</p>
-            <p className="text-lg font-semibold text-telos-blue-400">
+            <p className="text-lg font-semibold text-HATaxService-blue-400">
               {result.formType ? FORM_TYPE_LABELS[result.formType] : 'Unknown'}
             </p>
             {result.payerName && (
@@ -464,7 +464,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 duplicateCheck?.hasDuplicates
                   ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                  : 'bg-telos-orange-500 hover:bg-telos-orange-400 text-white'
+                  : 'bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white'
               }`}
             >
               {duplicateCheck?.hasDuplicates ? 'Import Anyway' : 'Add to My Return'}
@@ -476,7 +476,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
       {/* ─── State: IMPORTING ──────────────────────────── */}
       {state === 'importing' && (
         <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-sm text-slate-300">Adding to your return...</p>
         </div>
       )}

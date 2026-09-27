@@ -112,7 +112,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
     : 0;
 
   return (
-    <div className="card bg-surface-800/80 border-telos-blue-500/30 mt-2 mb-4 relative">
+    <div className="card bg-surface-800/80 border-HATaxService-blue-500/30 mt-2 mb-4 relative">
       {/* Close button */}
       <button
         onClick={onClose}
@@ -161,7 +161,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
 
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-slate-400">Detected format:</span>
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-telos-blue-500/20 text-telos-blue-400 border border-telos-blue-500/30">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 border border-HATaxService-blue-500/30">
               {result.detectedFormat === 'generic' ? 'Generic' : result.detectedFormat.charAt(0).toUpperCase() + result.detectedFormat.slice(1)}
             </span>
             <span className="text-[10px] text-slate-400">{result.rawRowCount} rows</span>
@@ -185,7 +185,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
             </button>
             <button
               onClick={() => setState('preview')}
-              className="px-3 py-1.5 text-xs font-medium bg-telos-orange-500 hover:bg-telos-orange-400 text-white rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white rounded-lg transition-colors"
             >
               Preview
             </button>
@@ -201,7 +201,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-surface-900/50 border border-slate-700 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-telos-blue-400">{result.validCount}</div>
+              <div className="text-lg font-bold text-HATaxService-blue-400">{result.validCount}</div>
               <div className="text-[10px] text-slate-400">Ready</div>
             </div>
             <div className="bg-surface-900/50 border border-slate-700 rounded-lg p-2 text-center">
@@ -215,7 +215,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
           </div>
 
           {existingCount > 0 && (
-            <div className="bg-telos-blue-600/10 border border-telos-blue-600/30 rounded-lg p-2 text-xs text-telos-blue-300">
+            <div className="bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/30 rounded-lg p-2 text-xs text-HATaxService-blue-300">
               You already have <strong>{existingCount}</strong> {formLabel} transactions.
               These <strong>{result.validCount}</strong> new ones will be added.
             </div>
@@ -284,7 +284,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
             <button
               onClick={handleImport}
               disabled={result.validCount === 0}
-              className="px-3 py-1.5 text-xs font-medium bg-telos-orange-500 hover:bg-telos-orange-400 text-white rounded-lg transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white rounded-lg transition-colors disabled:opacity-50"
             >
               Import {result.validCount} Transaction{result.validCount !== 1 ? 's' : ''}
             </button>
@@ -295,7 +295,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
       {/* ─── IMPORTING ──────────────────────────── */}
       {state === 'importing' && (
         <div className="text-center py-8">
-          <Loader2 className="w-6 h-6 text-telos-blue-400 animate-spin mx-auto mb-2" />
+          <Loader2 className="w-6 h-6 text-HATaxService-blue-400 animate-spin mx-auto mb-2" />
           <p className="text-xs text-slate-300">Importing transactions...</p>
         </div>
       )}
@@ -317,7 +317,7 @@ export default function InlineCSVImport({ targetType, formLabel, onClose, onImpo
             </button>
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-medium bg-telos-blue-600 hover:bg-telos-blue-500 text-white rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white rounded-lg transition-colors"
             >
               Done
             </button>

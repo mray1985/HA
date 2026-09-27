@@ -1422,7 +1422,7 @@ const STEP_FIELD_EXTRACTORS: Record<string, (tr: TaxReturn, calc?: CalculationRe
   },
 
   expense_scanner: (_tr, _calc) => {
-    return 'User is viewing the "Smart Expense Scanner" page where they upload bank/credit card transaction exports and TelosAI categorizes them by tax relevance (business expenses, medical, charitable, home office, etc.). See deductionFinderContext for categorization results.';
+    return 'User is viewing the "Smart Expense Scanner" page where they upload bank/credit card transaction exports and HA Tax service categorizes them by tax relevance (business expenses, medical, charitable, home office, etc.). See deductionFinderContext for categorization results.';
   },
 
   document_inventory: (_tr, _calc) => {

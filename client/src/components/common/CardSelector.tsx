@@ -43,16 +43,16 @@ export default function CardSelector<T extends string | number>({
           >
             <div className="flex items-start gap-3">
               {option.icon && (
-                <div className={`shrink-0 ${isSelected ? 'text-telos-orange-400' : 'text-slate-400'}`}>
+                <div className={`shrink-0 ${isSelected ? 'text-HATaxService-orange-400' : 'text-slate-400'}`}>
                   {option.icon}
                 </div>
               )}
               <div className="flex-1 text-left">
                 <div className="flex items-center justify-between">
-                  <span className={`font-medium ${isSelected ? 'text-telos-orange-300' : 'text-slate-200'}`}>
+                  <span className={`font-medium ${isSelected ? 'text-HATaxService-orange-300' : 'text-slate-200'}`}>
                     {option.label}
                   </span>
-                  {isSelected && <Check className="w-5 h-5 text-telos-orange-400 shrink-0" />}
+                  {isSelected && <Check className="w-5 h-5 text-HATaxService-orange-400 shrink-0" />}
                 </div>
                 {option.description && (
                   <p className="text-sm text-slate-400 mt-1">{option.description}</p>

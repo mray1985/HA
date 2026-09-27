@@ -35,13 +35,13 @@ interface PillToggleProps<T extends string = string> {
 function getSelectedStyle(value: string): string {
   switch (value) {
     case 'yes':
-      return 'bg-telos-orange-600/20 text-telos-orange-300 border-telos-orange-500 shadow-sm shadow-telos-orange-500/10';
+      return 'bg-HATaxService-orange-600/20 text-HATaxService-orange-300 border-HATaxService-orange-500 shadow-sm shadow-HATaxService-orange-500/10';
     case 'no':
       return 'bg-slate-700/80 text-slate-200 border-slate-500';
     case 'later':
       return 'bg-amber-600/20 text-amber-300 border-amber-500';
     default:
-      return 'bg-telos-orange-600/20 text-telos-orange-300 border-telos-orange-500';
+      return 'bg-HATaxService-orange-600/20 text-HATaxService-orange-300 border-HATaxService-orange-500';
   }
 }
 

@@ -137,7 +137,7 @@ export default function Form8283Step() {
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium bg-telos-blue-600/15 text-telos-blue-300 border border-telos-blue-600/30 hover:bg-telos-blue-600/25 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium bg-HATaxService-blue-600/15 text-HATaxService-blue-300 border border-HATaxService-blue-600/30 hover:bg-HATaxService-blue-600/25 transition-colors whitespace-nowrap"
             onClick={() => setShowValuation(true)}
           >
             <Search className="w-3.5 h-3.5" />
@@ -208,7 +208,7 @@ export default function Form8283Step() {
 
       <div className="rounded-lg border border-slate-700 bg-surface-800 mt-4 mb-4 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-700/60 flex items-center gap-2">
-          <Info className="w-4 h-4 text-telos-blue-400" />
+          <Info className="w-4 h-4 text-HATaxService-blue-400" />
           <span className="text-sm font-medium text-slate-200">When do you need Form 8283?</span>
         </div>
         <div className="p-4 space-y-4">
@@ -220,17 +220,17 @@ export default function Form8283Step() {
             <div className="text-sm text-slate-400 leading-relaxed">
               <span className="font-medium text-amber-300">Appraisal requirements:</span>{' '}
               Items or groups valued over $5,000 require a qualified appraisal by a certified appraiser. Vehicles, boats, and airplanes over $500 need a Form 1098-C from the charity.
-              <a href="https://www.irs.gov/forms-pubs/about-form-8283" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1.5 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+              <a href="https://www.irs.gov/forms-pubs/about-form-8283" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1.5 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                 <ExternalLink className="w-3 h-3" />Learn more on IRS.gov
               </a>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
-            <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-telos-orange-400" />
+            <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-orange-400" />
             <div className="text-sm text-slate-400 leading-relaxed">
-              <span className="font-medium text-telos-orange-300">Valuing donations:</span>{' '}
+              <span className="font-medium text-HATaxService-orange-300">Valuing donations:</span>{' '}
               Clothing and household items must be in "good used condition or better" to be deductible. Keep photos and written descriptions for higher-value items. Check thrift stores, consignment shops, or IRS Publication 561 for guidelines.
-              <a href="https://www.irs.gov/publications/p561" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1.5 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+              <a href="https://www.irs.gov/publications/p561" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1.5 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                 <ExternalLink className="w-3 h-3" />Learn more on IRS.gov
               </a>
             </div>
@@ -241,13 +241,13 @@ export default function Form8283Step() {
       <button
         type="button"
         onClick={() => setShowValuation(true)}
-        className="w-full mt-4 rounded-lg border border-telos-blue-500/30 bg-telos-blue-500/10 hover:bg-telos-blue-500/15 transition-colors p-4 text-left flex items-center gap-3"
+        className="w-full mt-4 rounded-lg border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/15 transition-colors p-4 text-left flex items-center gap-3"
       >
-        <div className="rounded-full p-2 bg-telos-blue-500/20 shrink-0">
-          <Search className="w-5 h-5 text-telos-blue-400" />
+        <div className="rounded-full p-2 bg-HATaxService-blue-500/20 shrink-0">
+          <Search className="w-5 h-5 text-HATaxService-blue-400" />
         </div>
         <div>
-          <h4 className="text-sm font-medium text-telos-blue-300">Donation Value Lookup</h4>
+          <h4 className="text-sm font-medium text-HATaxService-blue-300">Donation Value Lookup</h4>
           <p className="text-xs text-slate-400 mt-0.5">
             Look up fair market values from Salvation Army and Goodwill guides, or estimate from original price using depreciation rates.
           </p>
@@ -279,7 +279,7 @@ export default function Form8283Step() {
                   e.stopPropagation();
                   startEdit(item);
                 }}
-                className="p-2 text-slate-400 hover:text-telos-blue-400"
+                className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                 title="Edit"
               >
                 <Pencil className="w-4 h-4" />

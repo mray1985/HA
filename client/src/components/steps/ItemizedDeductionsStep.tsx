@@ -65,7 +65,7 @@ export default function ItemizedDeductionsStep() {
           <div className="space-y-0 divide-y divide-slate-700/50">
             {lineItems.map((li) => (
               <div key={li.label} className="flex items-center gap-3 py-3">
-                <div className="text-telos-orange-400 shrink-0">{li.icon}</div>
+                <div className="text-HATaxService-orange-400 shrink-0">{li.icon}</div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-slate-200">{li.label}</span>
                 </div>
@@ -74,7 +74,7 @@ export default function ItemizedDeductionsStep() {
                 </span>
                 <button
                   onClick={() => goToStep(li.stepId)}
-                  className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+                  className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
                 >
                   Edit
                 </button>
@@ -98,7 +98,7 @@ export default function ItemizedDeductionsStep() {
         </div>
       )}
 
-      <a href="https://www.irs.gov/forms-pubs/about-schedule-a-form-1040" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/forms-pubs/about-schedule-a-form-1040" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

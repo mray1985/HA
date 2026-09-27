@@ -25,7 +25,7 @@ export default function FindPreparerPanel({ taxReturn, onBack }: FindPreparerPan
       {/* Back to hub */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-telos-blue-400 transition-colors mb-4"
+        className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-HATaxService-blue-400 transition-colors mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Filing Options
@@ -42,7 +42,7 @@ export default function FindPreparerPanel({ taxReturn, onBack }: FindPreparerPan
           href={FILING_URLS.efileProviders}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white text-sm font-medium transition-colors"
         >
           <ExternalLink className="w-4 h-4" />
           Find Authorized E-File Providers
@@ -58,23 +58,23 @@ export default function FindPreparerPanel({ taxReturn, onBack }: FindPreparerPan
         <h3 className="text-base font-semibold text-white mb-3">What to Bring</h3>
         <div className="space-y-2.5">
           <BringItem
-            icon={<FileText className="w-4 h-4 text-telos-blue-400" />}
+            icon={<FileText className="w-4 h-4 text-HATaxService-blue-400" />}
             text="Your HATax Filing Packet (printed PDF from the next step)"
           />
           <BringItem
-            icon={<FileText className="w-4 h-4 text-telos-blue-400" />}
+            icon={<FileText className="w-4 h-4 text-HATaxService-blue-400" />}
             text="W-2 forms from all employers"
           />
           <BringItem
-            icon={<FileText className="w-4 h-4 text-telos-blue-400" />}
+            icon={<FileText className="w-4 h-4 text-HATaxService-blue-400" />}
             text="1099 forms (interest, dividends, freelance income, retirement)"
           />
           <BringItem
-            icon={<Fingerprint className="w-4 h-4 text-telos-blue-400" />}
+            icon={<Fingerprint className="w-4 h-4 text-HATaxService-blue-400" />}
             text="Photo ID and Social Security cards for you (and spouse / dependents)"
           />
           <BringItem
-            icon={<CreditCard className="w-4 h-4 text-telos-blue-400" />}
+            icon={<CreditCard className="w-4 h-4 text-HATaxService-blue-400" />}
             text="Bank routing and account numbers (for direct deposit)"
           />
         </div>

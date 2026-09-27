@@ -168,7 +168,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
 
           {/* Header info */}
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-telos-blue-500/20 text-telos-blue-400 border border-telos-blue-500/30">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 border border-HATaxService-blue-500/30">
               {result.header.version}
             </span>
             {result.header.programName && (
@@ -184,7 +184,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="card bg-surface-800 border-slate-700 p-3 text-center">
-              <div className="text-2xl font-bold text-telos-blue-400">{result.validCount}</div>
+              <div className="text-2xl font-bold text-HATaxService-blue-400">{result.validCount}</div>
               <div className="text-xs text-slate-400">Ready to import</div>
             </div>
             <div className="card bg-surface-800 border-slate-700 p-3 text-center">
@@ -247,7 +247,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
                     className="w-full flex items-center justify-between p-3 text-left hover:bg-surface-700/50 transition-colors rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-mono px-2.5 py-1 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+                      <span className="text-sm font-mono px-2.5 py-1 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                         {group.label.split(' ')[0]}
                       </span>
                       <div>
@@ -404,7 +404,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 totalDupes > 0
                   ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                  : 'bg-telos-orange-500 hover:bg-telos-orange-400 text-white'
+                  : 'bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white'
               }`}
             >
               {totalDupes > 0
@@ -419,7 +419,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
       {/* ─── State: IMPORTING ──────────────────────────── */}
       {state === 'importing' && (
         <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-sm text-slate-300">Importing tax data...</p>
         </div>
       )}

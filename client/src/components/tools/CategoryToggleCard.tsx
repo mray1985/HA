@@ -42,7 +42,7 @@ export default function CategoryToggleCard({ category, meta, enabled, autoDetect
     >
       {/* Toggle switch */}
       <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${
-        enabled ? 'bg-telos-blue-500' : 'bg-slate-600'
+        enabled ? 'bg-HATaxService-blue-500' : 'bg-slate-600'
       }`}>
         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
           enabled ? 'translate-x-4' : 'translate-x-0.5'

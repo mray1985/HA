@@ -251,8 +251,8 @@ export default function PriorYearTemplatePanel({
       </div>
 
       {/* Info banner */}
-      <div className="flex items-start gap-2 p-3 rounded-lg bg-telos-blue-600/10 border border-telos-blue-600/20">
-        <Copy className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/20">
+        <Copy className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
         <p className="text-xs text-slate-300">
           Templates copy payer/employer names with zeroed amounts.
           You&apos;ll update the amounts when you reach each income page.
@@ -265,7 +265,7 @@ export default function PriorYearTemplatePanel({
           {totalSelected} of {manifest.totalCount + manifest.businesses.length} selected
         </span>
         <div className="flex gap-2">
-          <button onClick={selectAll} className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+          <button onClick={selectAll} className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
             Select All
           </button>
           <span className="text-slate-600">|</span>
@@ -296,9 +296,9 @@ export default function PriorYearTemplatePanel({
                   checked={allSelected}
                   onChange={(e) => { e.stopPropagation(); toggleTypeGroup(type); }}
                   onClick={(e) => e.stopPropagation()}
-                  className="rounded border-slate-600 bg-surface-700 text-telos-blue-500 focus:ring-telos-blue-500 focus:ring-offset-0"
+                  className="rounded border-slate-600 bg-surface-700 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500 focus:ring-offset-0"
                 />
-                <span className="text-sm font-mono px-2 py-0.5 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+                <span className="text-sm font-mono px-2 py-0.5 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                   {getTypeLabel(type)}
                 </span>
                 <span className="text-sm text-slate-400">
@@ -330,7 +330,7 @@ export default function PriorYearTemplatePanel({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleItem(idx)}
-                        className="rounded border-slate-600 bg-surface-700 text-telos-blue-500 focus:ring-telos-blue-500 focus:ring-offset-0"
+                        className="rounded border-slate-600 bg-surface-700 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500 focus:ring-offset-0"
                       />
                       <span className={`text-sm ${checked ? 'text-slate-200' : 'text-slate-500'}`}>
                         {item.payerName}
@@ -348,7 +348,7 @@ export default function PriorYearTemplatePanel({
       {manifest.businesses.length > 0 && (
         <div className="card bg-surface-800 border-slate-700 p-0 overflow-hidden">
           <div className="flex items-center gap-2 p-3">
-            <Briefcase className="w-4 h-4 text-telos-blue-400" />
+            <Briefcase className="w-4 h-4 text-HATaxService-blue-400" />
             <span className="text-sm font-medium text-slate-200">Schedule C Businesses</span>
             <span className="text-sm text-slate-400">
               {manifest.businesses.length} business{manifest.businesses.length !== 1 ? 'es' : ''}
@@ -366,7 +366,7 @@ export default function PriorYearTemplatePanel({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleBiz(i)}
-                    className="rounded border-slate-600 bg-surface-700 text-telos-blue-500 focus:ring-telos-blue-500 focus:ring-offset-0"
+                    className="rounded border-slate-600 bg-surface-700 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500 focus:ring-offset-0"
                   />
                   <span className={`text-sm ${checked ? 'text-slate-200' : 'text-slate-500'}`}>
                     {biz.label}

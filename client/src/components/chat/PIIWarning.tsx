@@ -46,7 +46,7 @@ export default function PIIWarning({ warning }: Props) {
       <div className="flex items-center gap-2 ml-6">
         <button
           onClick={sendSanitizedMessage}
-          className="text-[11px] px-3 py-1.5 rounded-md bg-telos-orange-600 hover:bg-telos-orange-500
+          className="text-[11px] px-3 py-1.5 rounded-md bg-HATaxService-orange-600 hover:bg-HATaxService-orange-500
                      text-white font-medium transition-colors"
         >
           Send without PII

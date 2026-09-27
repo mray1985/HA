@@ -205,7 +205,7 @@ export default function RoyaltyIncomeStep() {
       <button
         type="button"
         onClick={() => setShowExpenses(!showExpenses)}
-        className="flex items-center gap-2 text-sm text-telos-blue-400 hover:text-telos-blue-300 mt-2 mb-2"
+        className="flex items-center gap-2 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 mt-2 mb-2"
       >
         {showExpenses ? (
           <ChevronUp className="w-4 h-4" />
@@ -323,7 +323,7 @@ export default function RoyaltyIncomeStep() {
                   e.stopPropagation();
                   startEdit(item);
                 }}
-                className="p-2 text-slate-400 hover:text-telos-blue-400"
+                className="p-2 text-slate-400 hover:text-HATaxService-blue-400"
                 title="Edit"
               >
                 <Edit3 className="w-4 h-4" />
@@ -354,7 +354,7 @@ export default function RoyaltyIncomeStep() {
         href="https://www.irs.gov/forms-pubs/about-schedule-e-form-1040"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

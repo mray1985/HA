@@ -76,7 +76,7 @@ export default function EnergyEfficiencyStep() {
         {/* Category A: Heat Pump Items ($2,000 limit) */}
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Flame className="w-5 h-5 text-telos-blue-400" />
+            <Flame className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Heat Pump Items (up to $2,000/year)</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -89,7 +89,7 @@ export default function EnergyEfficiencyStep() {
         {/* Category B: Non-Heat-Pump Items ($1,200 limit) */}
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Home className="w-5 h-5 text-telos-blue-400" />
+            <Home className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Other Improvements (up to $1,200/year)</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -128,8 +128,8 @@ export default function EnergyEfficiencyStep() {
         </div>
 
         {estimatedCredit > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
-            <span className="text-telos-orange-300 font-medium">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+            <span className="text-HATaxService-orange-300 font-medium">
               Estimated Credit: ${estimatedCredit.toLocaleString()}
             </span>
             <p className="text-xs text-slate-400 mt-1">

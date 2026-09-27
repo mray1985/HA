@@ -80,7 +80,7 @@ export default function SALTStep() {
               onClick={() => update('saltMethod', 'income_tax' as any)}
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
                 (items.saltMethod || 'income_tax') === 'income_tax'
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
               }`}
             >
@@ -91,7 +91,7 @@ export default function SALTStep() {
               onClick={() => update('saltMethod', 'sales_tax' as any)}
               className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
                 items.saltMethod === 'sales_tax'
-                  ? 'border-telos-blue-500 bg-telos-blue-600/10 text-telos-blue-300 ring-1 ring-telos-blue-500/50'
+                  ? 'border-HATaxService-blue-500 bg-HATaxService-blue-600/10 text-HATaxService-blue-300 ring-1 ring-HATaxService-blue-500/50'
                   : 'border-slate-700 bg-surface-800 text-slate-400 hover:border-slate-600'
               }`}
             >
@@ -129,7 +129,7 @@ export default function SALTStep() {
           </div>
         )}
 
-        <a href="https://www.irs.gov/taxtopics/tc503" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/taxtopics/tc503" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {saltTotal > 0 && (

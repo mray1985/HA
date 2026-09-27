@@ -89,7 +89,7 @@ export default function VehicleExpensesStep() {
             <FormField label="Business Miles Driven" tooltip={f('Business Miles Driven')?.tooltip} helpText="Don't include commuting miles" irsRef={f('Business Miles Driven')?.irsRef}>
               <input type="number" className="input-field" value={vh.businessMiles || ''} onChange={(e) => updateVH('businessMiles', parseInt(e.target.value) || 0)} />
             </FormField>
-            <div className="text-sm text-telos-orange-400 mt-2">
+            <div className="text-sm text-HATaxService-orange-400 mt-2">
               Deduction: ${((vh.businessMiles || 0) * 0.70).toLocaleString()}
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function VehicleExpensesStep() {
             {/* Card 1: Miles & Business Use */}
             <div className="card mt-4">
               <h4 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-                <span className="text-xs bg-telos-blue-600/30 text-telos-blue-300 px-2 py-0.5 rounded">Miles</span>
+                <span className="text-xs bg-HATaxService-blue-600/30 text-HATaxService-blue-300 px-2 py-0.5 rounded">Miles</span>
                 Business Use Percentage
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -119,7 +119,7 @@ export default function VehicleExpensesStep() {
                 </FormField>
               </div>
               {businessPct > 0 && (
-                <div className="text-sm text-telos-orange-400 mt-2 font-medium">
+                <div className="text-sm text-HATaxService-orange-400 mt-2 font-medium">
                   Business use: {(businessPct * 100).toFixed(1)}%
                 </div>
               )}
@@ -270,7 +270,7 @@ export default function VehicleExpensesStep() {
                       onClick={() => updateVH('availableForPersonalUse', !vh.availableForPersonalUse)}
                       className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors ${
                         vh.availableForPersonalUse
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400'
                       }`}
                     >
@@ -286,7 +286,7 @@ export default function VehicleExpensesStep() {
                       onClick={() => updateVH('hasAnotherVehicle', !vh.hasAnotherVehicle)}
                       className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors ${
                         vh.hasAnotherVehicle
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400'
                       }`}
                     >
@@ -302,7 +302,7 @@ export default function VehicleExpensesStep() {
                       onClick={() => updateVH('writtenEvidence', !vh.writtenEvidence)}
                       className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors ${
                         vh.writtenEvidence
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400'
                       }`}
                     >
@@ -318,7 +318,7 @@ export default function VehicleExpensesStep() {
                       onClick={() => updateVH('writtenEvidenceContemporaneous', !vh.writtenEvidenceContemporaneous)}
                       className={`shrink-0 px-3 py-1 rounded text-xs font-medium transition-colors ${
                         vh.writtenEvidenceContemporaneous
-                          ? 'bg-telos-blue-600 text-white'
+                          ? 'bg-HATaxService-blue-600 text-white'
                           : 'bg-surface-800 text-slate-400'
                       }`}
                     >
@@ -331,8 +331,8 @@ export default function VehicleExpensesStep() {
 
             {/* ── Deduction Preview ────────────────────────────────── */}
             {detailed && detailed.totalDeduction > 0 && (
-              <div className="rounded-xl border p-6 mt-4 bg-telos-orange-500/10 border-telos-orange-500/20">
-                <h4 className="text-sm font-medium text-telos-orange-300 mb-3 flex items-center gap-2">
+              <div className="rounded-xl border p-6 mt-4 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+                <h4 className="text-sm font-medium text-HATaxService-orange-300 mb-3 flex items-center gap-2">
                   <Calculator className="w-4 h-4" />
                   Deduction Preview — Actual Expenses
                 </h4>
@@ -351,9 +351,9 @@ export default function VehicleExpensesStep() {
                       <span className="text-slate-200">${detailed.depreciationAllowed.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2 border-t border-telos-orange-500/20 font-medium">
-                    <span className="text-telos-orange-300">Total Vehicle Deduction</span>
-                    <span className="text-telos-orange-400">${detailed.totalDeduction.toLocaleString()}</span>
+                  <div className="flex justify-between pt-2 border-t border-HATaxService-orange-500/20 font-medium">
+                    <span className="text-HATaxService-orange-300">Total Vehicle Deduction</span>
+                    <span className="text-HATaxService-orange-400">${detailed.totalDeduction.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -363,18 +363,18 @@ export default function VehicleExpensesStep() {
 
         {/* ── Method Comparison ─────────────────────────────────── */}
         {comparison && vh.method && (
-          <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/10 border-telos-blue-600/30">
-            <h4 className="text-sm font-medium text-telos-blue-300 mb-2">Method Comparison</h4>
+          <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
+            <h4 className="text-sm font-medium text-HATaxService-blue-300 mb-2">Method Comparison</h4>
             <div className="flex gap-4 text-sm">
               <div>
                 <span className="text-slate-400">Standard Mileage: </span>
-                <span className={vh.method === 'standard_mileage' ? 'text-telos-orange-400 font-medium' : 'text-slate-400'}>
+                <span className={vh.method === 'standard_mileage' ? 'text-HATaxService-orange-400 font-medium' : 'text-slate-400'}>
                   ${comparison.standardMileage.toLocaleString()}
                 </span>
               </div>
               <div>
                 <span className="text-slate-400">Actual: </span>
-                <span className={vh.method === 'actual' ? 'text-telos-orange-400 font-medium' : 'text-slate-400'}>
+                <span className={vh.method === 'actual' ? 'text-HATaxService-orange-400 font-medium' : 'text-slate-400'}>
                   ${comparison.actual.toLocaleString()}
                 </span>
               </div>

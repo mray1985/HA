@@ -31,14 +31,14 @@ export default function ImportDataStep() {
             className="card-selectable w-full text-left"
           >
             <div className="flex items-center gap-3 mb-3">
-              <ArrowRightLeft className="w-8 h-8 text-telos-orange-400 shrink-0" />
+              <ArrowRightLeft className="w-8 h-8 text-HATaxService-orange-400 shrink-0" />
               <div className="text-lg font-medium text-slate-200">Switch from Another Provider</div>
             </div>
 
             <div className="ml-10">
               <div className="flex flex-wrap gap-2 mb-2">
                 {['TurboTax', 'H&R Block', 'TaxAct', 'FreeTaxUSA', 'Cash App Taxes'].map((name) => (
-                  <span key={name} className="text-sm px-2.5 py-1 rounded bg-telos-orange-600/15 text-telos-orange-400 border border-telos-orange-600/20">
+                  <span key={name} className="text-sm px-2.5 py-1 rounded bg-HATaxService-orange-600/15 text-HATaxService-orange-400 border border-HATaxService-orange-600/20">
                     {name}
                   </span>
                 ))}
@@ -55,7 +55,7 @@ export default function ImportDataStep() {
             className="card-selectable w-full text-left"
           >
             <div className="flex items-center gap-3 mb-3">
-              <FileText className="w-8 h-8 text-telos-blue-400 shrink-0" />
+              <FileText className="w-8 h-8 text-HATaxService-blue-400 shrink-0" />
               <div className="text-lg font-medium text-slate-200">PDF and Image Import</div>
             </div>
 
@@ -64,7 +64,7 @@ export default function ImportDataStep() {
               <p className="text-base text-slate-300 font-medium mb-2">Supported IRS Forms</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {['W-2', '1099-INT', '1099-DIV', '1099-R', '1099-NEC', '1099-MISC', '1099-G', '1099-B', '1099-K', 'SSA-1099', '1099-SA', '1099-Q', '1098', '1098-T', '1098-E', '1095-A', 'K-1', 'W-2G', '1099-C', '1099-S'].map((form) => (
-                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                     {form}
                   </span>
                 ))}
@@ -89,7 +89,7 @@ export default function ImportDataStep() {
             className="card-selectable w-full text-left"
           >
             <div className="flex items-center gap-3 mb-3">
-              <FileSpreadsheet className="w-8 h-8 text-telos-blue-400 shrink-0" />
+              <FileSpreadsheet className="w-8 h-8 text-HATaxService-blue-400 shrink-0" />
               <div className="text-lg font-medium text-slate-200">CSV Import</div>
             </div>
 
@@ -98,7 +98,7 @@ export default function ImportDataStep() {
               <p className="text-base text-slate-300 font-medium mb-2">Supported IRS Forms</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {['1099-B', '1099-DA'].map((form) => (
-                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                     {form}
                   </span>
                 ))}
@@ -114,7 +114,7 @@ export default function ImportDataStep() {
 
               {/* Tip */}
               <p className="text-sm text-slate-400 flex items-start gap-1.5 mt-2">
-                <Info className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
                 Other brokerages can be imported using manual column mapping.
               </p>
             </div>
@@ -123,7 +123,7 @@ export default function ImportDataStep() {
           {/* ── Financial Data Import (TXF + FDX) ──── */}
           <div className="card bg-surface-800 border-slate-700">
             <div className="flex items-center gap-3 mb-3 p-4 pb-0">
-              <FileCode2 className="w-8 h-8 text-telos-blue-400 shrink-0" />
+              <FileCode2 className="w-8 h-8 text-HATaxService-blue-400 shrink-0" />
               <div className="text-lg font-medium text-slate-200">Financial Data Import</div>
             </div>
 
@@ -131,7 +131,7 @@ export default function ImportDataStep() {
               <p className="text-base text-slate-300 font-medium mb-2">Supported IRS Forms</p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {['W-2', '1099-B', '1099-INT', '1099-DIV', '1099-R', '1099-NEC', '1099-MISC', '1099-G', '1099-K', '1099-SA', '1099-Q'].map((form) => (
-                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-telos-blue-600/15 text-telos-blue-400 border border-telos-blue-600/20">
+                  <span key={form} className="text-sm font-mono px-2.5 py-1 rounded bg-HATaxService-blue-600/15 text-HATaxService-blue-400 border border-HATaxService-blue-600/20">
                     {form}
                   </span>
                 ))}
@@ -163,7 +163,7 @@ export default function ImportDataStep() {
 
               {/* Tip */}
               <p className="text-sm text-slate-400 flex items-start gap-1.5 mt-3">
-                <Info className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
                 Check your brokerage or tax software&apos;s export/download section for TXF or FDX files.
               </p>
             </div>

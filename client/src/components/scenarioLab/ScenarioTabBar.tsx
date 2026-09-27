@@ -3,8 +3,8 @@ import { Plus, X, Lock, Pencil } from 'lucide-react';
 import type { Scenario, ScenarioLabAction } from './types';
 
 const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string; activeBg: string }> = {
-  orange: { bg: 'bg-telos-orange-500/10', border: 'border-telos-orange-500/40', text: 'text-telos-orange-400', activeBg: 'bg-telos-orange-500/20' },
-  blue: { bg: 'bg-telos-blue-500/10', border: 'border-telos-blue-500/40', text: 'text-telos-blue-400', activeBg: 'bg-telos-blue-500/20' },
+  orange: { bg: 'bg-HATaxService-orange-500/10', border: 'border-HATaxService-orange-500/40', text: 'text-HATaxService-orange-400', activeBg: 'bg-HATaxService-orange-500/20' },
+  blue: { bg: 'bg-HATaxService-blue-500/10', border: 'border-HATaxService-blue-500/40', text: 'text-HATaxService-blue-400', activeBg: 'bg-HATaxService-blue-500/20' },
   violet: { bg: 'bg-violet-500/10', border: 'border-violet-500/40', text: 'text-violet-400', activeBg: 'bg-violet-500/20' },
   emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', activeBg: 'bg-emerald-500/20' },
 };

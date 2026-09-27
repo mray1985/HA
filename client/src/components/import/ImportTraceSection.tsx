@@ -62,7 +62,7 @@ export default function ImportTraceSection({ trace }: ImportTraceSectionProps) {
             {trace.formDetection.matchedKeywords.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {trace.formDetection.matchedKeywords.map((kw, i) => (
-                  <span key={i} className="text-[10px] bg-telos-blue-500/10 text-telos-blue-400 border border-telos-blue-500/20 rounded px-1.5 py-0.5">
+                  <span key={i} className="text-[10px] bg-HATaxService-blue-500/10 text-HATaxService-blue-400 border border-HATaxService-blue-500/20 rounded px-1.5 py-0.5">
                     {kw}
                   </span>
                 ))}

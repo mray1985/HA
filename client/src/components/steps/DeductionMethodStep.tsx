@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { updateReturn } from '../../api/client';
-import { STANDARD_DEDUCTION_2025, ADDITIONAL_STANDARD_DEDUCTION, FilingStatus } from '@hatax/engine';
+import { getStandardDeduction, getAdditionalStandardDeduction, FilingStatus } from '@hatax/engine';
 import CardSelector from '../common/CardSelector';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
@@ -29,12 +29,14 @@ export default function DeductionMethodStep() {
   const help = HELP_CONTENT['deduction_method'];
 
   const filingStatus = taxReturn.filingStatus || FilingStatus.Single;
-  const baseStdAmount = STANDARD_DEDUCTION_2025[filingStatus];
+  const taxYear = taxReturn.taxYear || 2025;
+  const baseStdAmount = getStandardDeduction(taxYear)[filingStatus];
 
   // Calculate additional standard deduction for age 65+ and/or blindness
   const { additionalAmount, additionalDetails } = useMemo(() => {
     const isMarried = filingStatus === FilingStatus.MarriedFilingJointly || filingStatus === FilingStatus.MarriedFilingSeparately;
-    const perQualification = isMarried ? ADDITIONAL_STANDARD_DEDUCTION.MARRIED : ADDITIONAL_STANDARD_DEDUCTION.UNMARRIED;
+    const additional = getAdditionalStandardDeduction(taxYear);
+    const perQualification = isMarried ? additional.MARRIED : additional.UNMARRIED;
     let extra = 0;
     const details: string[] = [];
 
@@ -57,7 +59,7 @@ export default function DeductionMethodStep() {
       }
     }
     return { additionalAmount: extra, additionalDetails: details };
-  }, [filingStatus, taxReturn.dateOfBirth, taxReturn.spouseDateOfBirth, taxReturn.isLegallyBlind, taxReturn.spouseIsLegallyBlind, taxReturn.taxYear]);
+  }, [filingStatus, taxYear, taxReturn.dateOfBirth, taxReturn.spouseDateOfBirth, taxReturn.isLegallyBlind, taxReturn.spouseIsLegallyBlind]);
 
   const stdAmount = baseStdAmount + additionalAmount;
 
@@ -97,10 +99,10 @@ export default function DeductionMethodStep() {
       </div>
 
       {/* Consolidated explainer card */}
-      <div className="rounded-lg border p-4 mt-4 bg-telos-blue-600/10 border-telos-blue-600/30">
+      <div className="rounded-lg border p-4 mt-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
         <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-telos-blue-400 shrink-0 mt-0.5" />
-          <div className="text-sm text-telos-blue-300">
+          <Info className="w-5 h-5 text-HATaxService-blue-400 shrink-0 mt-0.5" />
+          <div className="text-sm text-HATaxService-blue-300">
             <p>
               Choose the method that gives you the larger deduction. Your standard deduction is{' '}
               <strong className="text-white">${stdAmount.toLocaleString()}</strong> ({FILING_STATUS_LABELS[filingStatus]}).
@@ -129,7 +131,7 @@ export default function DeductionMethodStep() {
                 <p className="text-xs">
                   About 87% of filers take the standard deduction. You're more likely to benefit from itemizing if you have a large mortgage, live in a high-tax state, or make significant charitable contributions.
                 </p>
-                <a href="https://www.irs.gov/taxtopics/tc501" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+                <a href="https://www.irs.gov/taxtopics/tc501" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                   <ExternalLink className="w-3 h-3" />
                   Learn more on IRS.gov
                 </a>
@@ -137,7 +139,7 @@ export default function DeductionMethodStep() {
             )}
             <button
               onClick={() => setShowMore(!showMore)}
-              className="mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               {showMore ? 'Show less' : 'Show more'}
             </button>
@@ -170,33 +172,33 @@ export default function DeductionMethodStep() {
         <div className="card mt-4 bg-surface-900">
           <h4 className="text-sm font-medium text-slate-300 mb-3">Side-by-Side Comparison</h4>
           <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center text-center">
-            <div className={`rounded-lg p-3 ${recommendStandard ? 'bg-telos-orange-500/10 border border-telos-orange-500/30' : 'bg-surface-800 border border-slate-700'}`}>
+            <div className={`rounded-lg p-3 ${recommendStandard ? 'bg-HATaxService-orange-500/10 border border-HATaxService-orange-500/30' : 'bg-surface-800 border border-slate-700'}`}>
               <div className="text-xs text-slate-400 mb-1">Standard</div>
-              <div className={`text-lg font-bold ${recommendStandard ? 'text-telos-orange-400' : 'text-slate-300'}`}>
+              <div className={`text-lg font-bold ${recommendStandard ? 'text-HATaxService-orange-400' : 'text-slate-300'}`}>
                 ${stdAmount.toLocaleString()}
               </div>
-              {recommendStandard && <div className="text-xs text-telos-orange-400 mt-1 font-medium">Recommended</div>}
+              {recommendStandard && <div className="text-xs text-HATaxService-orange-400 mt-1 font-medium">Recommended</div>}
             </div>
             <div className="text-slate-600">
               <span className="text-xs">vs</span>
             </div>
-            <div className={`rounded-lg p-3 ${!recommendStandard ? 'bg-telos-orange-500/10 border border-telos-orange-500/30' : 'bg-surface-800 border border-slate-700'}`}>
+            <div className={`rounded-lg p-3 ${!recommendStandard ? 'bg-HATaxService-orange-500/10 border border-HATaxService-orange-500/30' : 'bg-surface-800 border border-slate-700'}`}>
               <div className="text-xs text-slate-400 mb-1">Itemized</div>
-              <div className={`text-lg font-bold ${!recommendStandard ? 'text-telos-orange-400' : 'text-slate-300'}`}>
+              <div className={`text-lg font-bold ${!recommendStandard ? 'text-HATaxService-orange-400' : 'text-slate-300'}`}>
                 ${itemizedTotal.toLocaleString()}
               </div>
-              {!recommendStandard && <div className="text-xs text-telos-orange-400 mt-1 font-medium">Recommended</div>}
+              {!recommendStandard && <div className="text-xs text-HATaxService-orange-400 mt-1 font-medium">Recommended</div>}
             </div>
           </div>
 
           {/* Dollar savings callout */}
           {difference > 0 && (
-            <div className="mt-3 flex items-center gap-2 bg-telos-orange-500/10 rounded-lg px-3 py-2">
-              <TrendingDown className="w-4 h-4 text-telos-orange-400 shrink-0" />
-              <p className="text-sm text-telos-orange-300">
+            <div className="mt-3 flex items-center gap-2 bg-HATaxService-orange-500/10 rounded-lg px-3 py-2">
+              <TrendingDown className="w-4 h-4 text-HATaxService-orange-400 shrink-0" />
+              <p className="text-sm text-HATaxService-orange-300">
                 {recommendStandard ? 'Standard' : 'Itemizing'} saves you{' '}
                 <span className="font-bold">${difference.toLocaleString()}</span> more in deductions.
-                {difference > 2000 && <span className="text-telos-orange-400/70"> That could lower your tax by ${Math.round(difference * 0.22).toLocaleString()} or more.</span>}
+                {difference > 2000 && <span className="text-HATaxService-orange-400/70"> That could lower your tax by ${Math.round(difference * 0.22).toLocaleString()} or more.</span>}
               </p>
             </div>
           )}
@@ -210,8 +212,8 @@ export default function DeductionMethodStep() {
       ) : null}
 
       {additionalDetails.length > 0 && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-orange-500/10 border-telos-orange-500/20 text-sm">
-          <p className="text-telos-orange-300 font-medium">Your standard deduction includes additional amounts:</p>
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20 text-sm">
+          <p className="text-HATaxService-orange-300 font-medium">Your standard deduction includes additional amounts:</p>
           <p className="text-xs text-slate-400 mt-1">
             Base: ${baseStdAmount.toLocaleString()} {additionalDetails.join(' ')} = <span className="font-semibold text-slate-300">${stdAmount.toLocaleString()}</span>
           </p>

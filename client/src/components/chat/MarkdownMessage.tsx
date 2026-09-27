@@ -41,7 +41,7 @@ const sanitizeSchema = {
 };
 
 const LINK_CLASS =
-  'inline text-telos-blue-400 hover:text-telos-blue-300 underline underline-offset-2 decoration-telos-blue-400/40 hover:decoration-telos-blue-300/60 transition-colors cursor-pointer';
+  'inline text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline underline-offset-2 decoration-HATaxService-blue-400/40 hover:decoration-HATaxService-blue-300/60 transition-colors cursor-pointer';
 
 /** Build component overrides — needs store actions for navigation. */
 function buildComponents(
@@ -97,11 +97,11 @@ function buildComponents(
       const isBlock = className?.startsWith('language-');
       if (isBlock) {
         return (
-          <code className="text-xs font-mono text-telos-blue-300">{children}</code>
+          <code className="text-xs font-mono text-HATaxService-blue-300">{children}</code>
         );
       }
       return (
-        <code className="bg-surface-900 text-telos-blue-300 px-1 py-0.5 rounded text-xs font-mono">
+        <code className="bg-surface-900 text-HATaxService-blue-300 px-1 py-0.5 rounded text-xs font-mono">
           {children}
         </code>
       );

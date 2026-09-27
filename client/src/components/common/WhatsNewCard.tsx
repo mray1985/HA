@@ -36,7 +36,7 @@ export default function WhatsNewCard({ items }: WhatsNewCardProps) {
           <ul className="space-y-1.5 text-sm text-slate-400">
             {items.map((item, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className={`mt-0.5 ${item.marker === '⚠' ? 'text-amber-400' : 'text-telos-orange-400'}`}>
+                <span className={`mt-0.5 ${item.marker === '⚠' ? 'text-amber-400' : 'text-HATaxService-orange-400'}`}>
                   {item.marker || '+'}
                 </span>
                 <span>

@@ -130,7 +130,7 @@ export default function ThinkingIndicator({ userMessage = '', section = '' }: Pr
                 } : undefined}
               >
                 {isActive ? (
-                  <Loader2 className="w-3 h-3 text-telos-blue-400 animate-spin flex-shrink-0" />
+                  <Loader2 className="w-3 h-3 text-HATaxService-blue-400 animate-spin flex-shrink-0" />
                 ) : (
                   <Check className="w-3 h-3 text-slate-500 flex-shrink-0" />
                 )}

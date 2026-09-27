@@ -135,17 +135,17 @@ export default function ChatMessage({
       <div
         className={`group relative max-w-[85%] rounded-xl px-3.5 py-2.5 ${
           isUser
-            ? 'bg-telos-blue-600/30 border border-telos-blue-600/20 text-slate-100'
+            ? 'bg-HATaxService-blue-600/30 border border-HATaxService-blue-600/20 text-slate-100'
             : 'bg-surface-700 border border-slate-600/50 text-slate-200'
         }`}
       >
         {/* Attachment card (user messages with documents) */}
         {isUser && message.attachment && (
           <div className="mb-2 flex items-center gap-2 text-xs">
-            <FileText className="w-4 h-4 text-telos-blue-400 flex-shrink-0" />
+            <FileText className="w-4 h-4 text-HATaxService-blue-400 flex-shrink-0" />
             <span className="text-slate-300 truncate max-w-[160px]">{message.attachment.fileName}</span>
             {message.attachment.status === 'extracting' && (
-              <Loader2 className="w-3.5 h-3.5 text-telos-blue-400 animate-spin flex-shrink-0" />
+              <Loader2 className="w-3.5 h-3.5 text-HATaxService-blue-400 animate-spin flex-shrink-0" />
             )}
             {message.attachment.status === 'ocr-processing' && (
               <span className="text-[10px] text-amber-400 flex-shrink-0">
@@ -225,8 +225,8 @@ export default function ChatMessage({
                 key={idx}
                 onClick={() => onFollowUp(chip)}
                 className="text-[11px] px-2.5 py-1 rounded-full
-                           bg-telos-blue-500/10 border border-telos-blue-500/25
-                           text-telos-blue-300 hover:bg-telos-blue-500/20 hover:border-telos-blue-500/40
+                           bg-HATaxService-blue-500/10 border border-HATaxService-blue-500/25
+                           text-HATaxService-blue-300 hover:bg-HATaxService-blue-500/20 hover:border-HATaxService-blue-500/40
                            transition-colors cursor-pointer"
               >
                 {chip}
@@ -273,7 +273,7 @@ export default function ChatMessage({
                   onClick={handleSpeak}
                   className={`p-1 rounded transition-all ${
                     isSpeaking
-                      ? 'text-telos-blue-400 opacity-100'
+                      ? 'text-HATaxService-blue-400 opacity-100'
                       : 'text-slate-500 opacity-0 group-hover:opacity-100 hover:text-slate-300'
                   }`}
                   aria-label={isSpeaking ? 'Stop speaking' : 'Read aloud'}
@@ -315,12 +315,12 @@ export default function ChatMessage({
           /* User message: timestamp, retry, edit, copy */
           !isEditing && (
           <div className="flex items-center justify-end gap-0.5 mt-1.5">
-            <span className="text-[10px] text-telos-blue-400/60 mr-0.5">
+            <span className="text-[10px] text-HATaxService-blue-400/60 mr-0.5">
               {formatTime(message.timestamp)}
             </span>
             <button
               onClick={() => onRetry(message.id)}
-              className="p-0.5 rounded text-telos-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-telos-blue-300 transition-all"
+              className="p-0.5 rounded text-HATaxService-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-HATaxService-blue-300 transition-all"
               aria-label="Retry this message"
               title="Retry"
             >
@@ -328,7 +328,7 @@ export default function ChatMessage({
             </button>
             <button
               onClick={startEditing}
-              className="p-0.5 rounded text-telos-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-telos-blue-300 transition-all"
+              className="p-0.5 rounded text-HATaxService-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-HATaxService-blue-300 transition-all"
               aria-label="Edit message"
               title="Edit"
             >
@@ -336,7 +336,7 @@ export default function ChatMessage({
             </button>
             <button
               onClick={handleCopy}
-              className="p-0.5 rounded text-telos-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-telos-blue-300 transition-all"
+              className="p-0.5 rounded text-HATaxService-blue-400/40 opacity-0 group-hover:opacity-100 hover:text-HATaxService-blue-300 transition-all"
               aria-label="Copy message"
               title="Copy to clipboard"
             >

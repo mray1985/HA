@@ -209,7 +209,7 @@ export default function CategoryDetailGrid({
 
       {/* Tips */}
       <div className="rounded-lg border border-slate-700/50 bg-surface-800/50 px-4 py-3 flex items-start gap-2.5">
-        <Info className="w-4 h-4 text-telos-blue-400 mt-0.5 shrink-0" />
+        <Info className="w-4 h-4 text-HATaxService-blue-400 mt-0.5 shrink-0" />
         <div className="text-xs text-slate-400 space-y-1">
           <p><span className="text-slate-300 font-medium">Click</span> any row to select it. <span className="text-slate-300 font-medium">Shift+click</span> to select a range.</p>
           <p>Use <span className="text-slate-300 font-medium">Move to...</span> to reclassify selected transactions in bulk, or change individual rows with the dropdown.</p>
@@ -219,7 +219,7 @@ export default function CategoryDetailGrid({
       {/* Batch action bar — always visible */}
       <div className="sticky top-0 z-10 rounded-lg border border-slate-700 bg-surface-800
                       backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 shadow-lg">
-        <span className={`text-xs font-medium ${selectedIndices.size > 0 ? 'text-telos-blue-300' : 'text-slate-500'}`}>
+        <span className={`text-xs font-medium ${selectedIndices.size > 0 ? 'text-HATaxService-blue-300' : 'text-slate-500'}`}>
           {selectedIndices.size > 0 ? `${selectedIndices.size} selected` : 'None selected'}
         </span>
         <div className="h-4 w-px bg-slate-600" />
@@ -228,7 +228,7 @@ export default function CategoryDetailGrid({
         <div className="relative">
           <select
             className="bg-surface-700 border border-slate-600 rounded-md text-xs text-slate-300
-                       pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-telos-blue-500
+                       pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-HATaxService-blue-500
                        cursor-pointer hover:border-slate-500 transition-colors appearance-none
                        disabled:opacity-40 disabled:cursor-not-allowed"
             value=""
@@ -249,7 +249,7 @@ export default function CategoryDetailGrid({
         <div className="flex-1" />
         <button
           onClick={selectAll}
-          className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+          className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
         >
           Select all
         </button>
@@ -361,7 +361,7 @@ function SubCategorySection({
             )}
             <button
               onClick={() => onSelectGroup(group)}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               Select all
             </button>
@@ -435,7 +435,7 @@ function TransactionRow({
   return (
     <div
       className={`flex items-center px-4 py-2 border-b border-slate-800/50 cursor-pointer select-none transition-colors ${
-        isSelected ? 'bg-telos-blue-500/10' : 'hover:bg-surface-700/30'
+        isSelected ? 'bg-HATaxService-blue-500/10' : 'hover:bg-surface-700/30'
       }`}
       onClick={(e) => onRowClick(ct.transactionIndex, e.shiftKey)}
     >
@@ -444,7 +444,7 @@ function TransactionRow({
         <div
           className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
             isSelected
-              ? 'bg-telos-blue-500 border-telos-blue-500'
+              ? 'bg-HATaxService-blue-500 border-HATaxService-blue-500'
               : 'border-slate-600'
           }`}
         >
@@ -476,8 +476,8 @@ function TransactionRow({
         <div className="relative">
           <select
             className="w-full bg-transparent border border-slate-700/50 rounded-md text-[11px] text-slate-400
-                       pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-telos-blue-500
-                       focus:border-telos-blue-500 cursor-pointer hover:border-slate-500 hover:text-slate-300
+                       pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-HATaxService-blue-500
+                       focus:border-HATaxService-blue-500 cursor-pointer hover:border-slate-500 hover:text-slate-300
                        transition-colors appearance-none"
             value={ct.subCategory}
             onChange={(e) => {

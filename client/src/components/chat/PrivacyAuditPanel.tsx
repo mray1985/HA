@@ -124,7 +124,7 @@ export default function PrivacyAuditPanel({ onBack }: Props) {
         <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
           This log shows what HATax sent. It cannot verify what the AI provider retains or deletes on their end.
           Anthropic&apos;s API data is not used for model training and is deleted after 7 days per their{' '}
-          <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300">data policy</a>.
+          <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener noreferrer" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300">data policy</a>.
         </p>
       </div>
 
@@ -158,7 +158,7 @@ export default function PrivacyAuditPanel({ onBack }: Props) {
                       ? <ChevronDown className="w-3 h-3 text-slate-500 shrink-0" />
                       : <ChevronRight className="w-3 h-3 text-slate-500 shrink-0" />
                     }
-                    <span className="text-xs font-medium text-telos-blue-400">
+                    <span className="text-xs font-medium text-HATaxService-blue-400">
                       {FEATURE_LABELS[entry.feature] || entry.feature}
                     </span>
                     <span className="text-xs text-slate-500">&middot;</span>

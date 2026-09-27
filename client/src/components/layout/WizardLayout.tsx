@@ -3,7 +3,7 @@ import StepSidebar from './StepSidebar';
 import ProgressBar from './ProgressBar';
 import SaveIndicator from '../common/SaveIndicator';
 import ResizeHandle from '../common/ResizeHandle';
-import TelosAIButton from '../common/TelosAIButton';
+import HATaxServiceButton from '../common/HATaxServiceButton';
 import FormsSkeleton from '../formsMode/FormsSkeleton';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { useChatStore } from '../../store/chatStore';
@@ -111,7 +111,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
     >
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-telos-blue-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-HATaxService-blue-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
       >
         Skip to main content
       </a>
@@ -132,8 +132,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
             onClick={() => navigate('/')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
           >
-            <span className="font-bold text-xl sm:hidden"><span className="text-telos-orange-400">T</span><span className="text-telos-blue-400">T</span></span>
-            <span className="font-bold text-xl hidden sm:inline"><span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">Tax</span></span>
+            <span className="font-bold text-lg sm:text-xl">HA Tax service</span>
           </button>
           <span className="text-slate-400 hidden sm:inline shrink-0">2025 Tax Year</span>
 
@@ -167,7 +166,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
               onClick={handleExplainToggle}
               aria-expanded={explainOpen}
               aria-controls="explain-taxes-panel"
-              className="hidden sm:flex items-center gap-1.5 text-telos-blue-400 hover:text-telos-blue-300 transition-colors shrink-0"
+              className="hidden sm:flex items-center gap-1.5 text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors shrink-0"
             >
               <Calculator className="w-4 h-4" />
               <span className="font-medium">Explain my taxes</span>
@@ -183,7 +182,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
               onClick={handleExplainToggle}
               aria-expanded={explainOpen}
               aria-controls="explain-taxes-panel"
-              className="sm:hidden p-1.5 text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="sm:hidden p-1.5 text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
               aria-label="Explain my taxes"
             >
               <Calculator className="w-5 h-5" />
@@ -242,7 +241,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
                   title="Step-by-step guided Q&A to enter your tax data"
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                     viewMode === 'wizard'
-                      ? 'bg-telos-blue-600 text-white'
+                      ? 'bg-HATaxService-blue-600 text-white'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -255,7 +254,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
                   title="View and edit your return on the actual IRS forms"
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                     viewMode === 'forms'
-                      ? 'bg-telos-blue-600 text-white'
+                      ? 'bg-HATaxService-blue-600 text-white'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -336,8 +335,8 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
         </Suspense>
       )}
 
-      {/* Floating Telos AI button */}
-      {chatAvailable && <TelosAIButton />}
+      {/* Floating HA Tax service button */}
+      {chatAvailable && <HATaxServiceButton />}
 
       {/* Chat panel overlay */}
       {chatAvailable && (

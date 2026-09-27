@@ -87,8 +87,8 @@ export default function SaversCreditStep() {
         </FormField>
 
         {(info.totalContributions || 0) > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
-            <span className="text-telos-orange-300 font-medium">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+            <span className="text-HATaxService-orange-300 font-medium">
               Estimated Credit: up to ${Math.round(estimatedCredit).toLocaleString()}-${Math.round(estimatedCredit * 5).toLocaleString()}
             </span>
             <p className="text-xs text-slate-400 mt-1">
@@ -114,7 +114,7 @@ export default function SaversCreditStep() {
         })()}
 
         <div className="card bg-surface-800 border-slate-700 text-sm text-slate-400">
-          <div className="flex items-center gap-3 mb-3"><Info className="w-5 h-5 text-telos-blue-400" /><h3 className="font-medium text-slate-200">AGI Thresholds (2025)</h3></div>
+          <div className="flex items-center gap-3 mb-3"><Info className="w-5 h-5 text-HATaxService-blue-400" /><h3 className="font-medium text-slate-200">AGI Thresholds (2025)</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -143,7 +143,7 @@ export default function SaversCreditStep() {
         href="https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-savings-contributions-savers-credit"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

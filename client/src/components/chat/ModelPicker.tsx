@@ -128,7 +128,7 @@ export default function ModelPicker() {
                   <span className="text-[10px] text-slate-500 ml-1.5">{model.description}</span>
                 </div>
                 {isActive && (
-                  <Check className="w-3.5 h-3.5 text-telos-blue-400 flex-shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-HATaxService-blue-400 flex-shrink-0" />
                 )}
               </button>
             );

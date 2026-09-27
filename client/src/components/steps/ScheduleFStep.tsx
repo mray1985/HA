@@ -206,7 +206,7 @@ export default function ScheduleFStep() {
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
-            className="accent-telos-orange-400 mt-0.5"
+            className="accent-HATaxService-orange-400 mt-0.5"
             checked={!!sf.useFarmOptionalMethod}
             onChange={(e) => update('useFarmOptionalMethod', e.target.checked)}
           />
@@ -223,7 +223,7 @@ export default function ScheduleFStep() {
         href="https://www.irs.gov/forms-pubs/about-schedule-f-form-1040"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

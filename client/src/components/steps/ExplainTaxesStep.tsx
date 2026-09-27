@@ -77,7 +77,7 @@ export default function ExplainTaxesStep() {
       {/* Insights — plain English first */}
       <div className="mt-6">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">1</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">1</span>
           Key Insights
         </h3>
         <TaxInsights form1040={f} calculation={result} />
@@ -86,7 +86,7 @@ export default function ExplainTaxesStep() {
       {/* Tax Flow */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">2</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">2</span>
           How Your Tax Flows
         </h3>
         <p className="text-xs text-slate-400 mb-3">
@@ -98,7 +98,7 @@ export default function ExplainTaxesStep() {
       {/* Bracket Breakdown */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">3</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">3</span>
           Tax Bracket Breakdown
         </h3>
         <p className="text-xs text-slate-400 mb-3">
@@ -116,7 +116,7 @@ export default function ExplainTaxesStep() {
       {/* Effective Tax Rate */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">4</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">4</span>
           Your Tax Rate
         </h3>
         <EffectiveTaxRateCard form1040={f} />
@@ -126,7 +126,7 @@ export default function ExplainTaxesStep() {
       {hasStates && (
         <div className="mt-8">
           <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">5</span>
+            <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">5</span>
             State Taxes
           </h3>
           <p className="text-xs text-slate-400 mb-3">
@@ -140,7 +140,7 @@ export default function ExplainTaxesStep() {
                 <details key={sr.stateCode} className="card group">
                   <summary className="flex items-center justify-between cursor-pointer list-none">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-sm">
+                      <div className="w-9 h-9 rounded-lg bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-sm">
                         {sr.stateCode}
                       </div>
                       <div>
@@ -171,7 +171,7 @@ export default function ExplainTaxesStep() {
                     <div className="border-t border-slate-700/50 my-2" />
 
                     <div className="flex justify-between"><span className="text-slate-400">State income tax</span><span>${sr.stateIncomeTax.toLocaleString()}</span></div>
-                    {sr.stateCredits > 0 && <div className="flex justify-between"><span className="text-telos-orange-400">− Credits</span><span className="text-telos-orange-400">-${sr.stateCredits.toLocaleString()}</span></div>}
+                    {sr.stateCredits > 0 && <div className="flex justify-between"><span className="text-HATaxService-orange-400">− Credits</span><span className="text-HATaxService-orange-400">-${sr.stateCredits.toLocaleString()}</span></div>}
                     {sr.localTax > 0 && <div className="flex justify-between"><span className="text-slate-400">+ Local tax</span><span>${sr.localTax.toLocaleString()}</span></div>}
                     <div className="flex justify-between font-medium border-t border-slate-700 pt-2"><span className="text-white">Total state tax</span><span>${sr.totalStateTax.toLocaleString()}</span></div>
 
@@ -191,7 +191,7 @@ export default function ExplainTaxesStep() {
                               <span className="w-12 text-right text-slate-400">{(b.rate * 100).toFixed(1)}%</span>
                               <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-telos-blue-500/60 rounded-full"
+                                  className="h-full bg-HATaxService-blue-500/60 rounded-full"
                                   style={{ width: `${Math.min(100, sr.stateTaxableIncome > 0 ? (b.taxableAtRate / sr.stateTaxableIncome) * 100 : 0)}%` }}
                                 />
                               </div>
@@ -213,9 +213,9 @@ export default function ExplainTaxesStep() {
       <div className="mt-8">
         <button
           onClick={() => setShowTraces(!showTraces)}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-3 hover:text-telos-blue-300 transition-colors"
+          className="flex items-center gap-2 text-sm font-semibold text-slate-200 mb-3 hover:text-HATaxService-blue-300 transition-colors"
         >
-          <span className="w-6 h-6 rounded-full bg-telos-blue-500/20 text-telos-blue-400 text-xs font-bold flex items-center justify-center">{hasStates ? 6 : 5}</span>
+          <span className="w-6 h-6 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 text-xs font-bold flex items-center justify-center">{hasStates ? 6 : 5}</span>
           Calculation Audit Trail
           {showTraces ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>

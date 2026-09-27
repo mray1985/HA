@@ -61,7 +61,7 @@ export default function LearnMoreModal({
               href={irsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               View on IRS.gov

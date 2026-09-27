@@ -61,10 +61,10 @@ export default function ScheduleHStep() {
           />
         </FormField>
         <label className="flex items-center gap-3 mt-3 cursor-pointer">
-          <input type="checkbox" className="accent-telos-orange-400" checked={!!he.subjectToFUTA} onChange={(e) => update('subjectToFUTA', e.target.checked)} />
+          <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!he.subjectToFUTA} onChange={(e) => update('subjectToFUTA', e.target.checked)} />
           <span className="text-sm text-slate-300">Paid $1,000+ in any calendar quarter (subject to FUTA)</span>
         </label>
-        <a href="https://www.irs.gov/forms-pubs/about-schedule-h-form-1040" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/forms-pubs/about-schedule-h-form-1040" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {he.totalCashWages >= threshold2025 && (

@@ -35,7 +35,7 @@ export default function ReturnContextSummary({ context, richness }: Props) {
   const chips: { label: string; color: string }[] = [];
 
   if (context.filingStatus != null) {
-    chips.push({ label: FILING_STATUS_LABELS[context.filingStatus] || 'Filing status set', color: 'bg-telos-blue-500/20 text-telos-blue-300' });
+    chips.push({ label: FILING_STATUS_LABELS[context.filingStatus] || 'Filing status set', color: 'bg-HATaxService-blue-500/20 text-HATaxService-blue-300' });
   }
   if (context.agi > 0) {
     const rounded = context.agi >= 100000
@@ -66,11 +66,11 @@ export default function ReturnContextSummary({ context, richness }: Props) {
   const isSparse = richness < 0.3;
 
   return (
-    <div className="rounded-lg border p-4 bg-telos-blue-600/10 border-telos-blue-600/30">
+    <div className="rounded-lg border p-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
       <div className="flex items-start gap-2.5">
-        <Info className="w-4 h-4 mt-0.5 shrink-0 text-telos-blue-300" />
+        <Info className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-blue-300" />
         <div className="flex-1">
-          <div className="text-sm font-medium text-telos-blue-300 mb-2">
+          <div className="text-sm font-medium text-HATaxService-blue-300 mb-2">
             What we know about your return
           </div>
 

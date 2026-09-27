@@ -346,7 +346,7 @@ export default function ExportPdfStep() {
       {/* ── Celebration Hero (only when return is complete with no warnings) ──── */}
       {readiness.ready && advisoryCount === 0 && f && (
         <div className="relative overflow-hidden rounded-xl border border-slate-700/50 bg-gradient-to-br from-surface-800 via-surface-900 to-surface-800 px-6 py-8 text-center mb-6">
-          <div className={`absolute inset-0 opacity-20 ${isRefund ? 'bg-gradient-to-br from-emerald-500/30 via-transparent to-telos-blue-600/20' : 'bg-gradient-to-br from-amber-500/20 via-transparent to-telos-orange-500/10'}`} />
+          <div className={`absolute inset-0 opacity-20 ${isRefund ? 'bg-gradient-to-br from-emerald-500/30 via-transparent to-HATaxService-blue-600/20' : 'bg-gradient-to-br from-amber-500/20 via-transparent to-HATaxService-orange-500/10'}`} />
           <div className="relative">
             <div className="flex justify-center mb-3">
               <div className={`rounded-full p-3 ${isRefund ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
@@ -440,7 +440,7 @@ export default function ExportPdfStep() {
                     </div>
                     <button
                       onClick={() => goToStep(b.stepId)}
-                      className="shrink-0 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                      className="shrink-0 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                     >
                       Fix →
                     </button>
@@ -480,7 +480,7 @@ export default function ExportPdfStep() {
                       <span className="text-xs text-slate-400">{w.message}</span>
                       <button
                         onClick={() => goToStep(group.stepId)}
-                        className="shrink-0 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                        className="shrink-0 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                       >
                         Fix →
                       </button>
@@ -497,11 +497,11 @@ export default function ExportPdfStep() {
       <div className="space-y-2">
         <button onClick={() => promptExportPassword('irs')} disabled={irsLoading || hasBlockers} className={`card-selectable w-full text-left flex items-center gap-3 py-3 ${hasBlockers ? 'opacity-40 cursor-not-allowed' : ''}`}>
           {irsLoading ? (
-            <Loader2 className="w-5 h-5 text-telos-blue-400 animate-spin shrink-0" />
+            <Loader2 className="w-5 h-5 text-HATaxService-blue-400 animate-spin shrink-0" />
           ) : irsDone ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           ) : (
-            <FileText className="w-5 h-5 text-telos-blue-400 shrink-0" />
+            <FileText className="w-5 h-5 text-HATaxService-blue-400 shrink-0" />
           )}
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-200">
@@ -513,7 +513,7 @@ export default function ExportPdfStep() {
 
         <button onClick={() => promptExportPassword('summary')} disabled={pdfLoading || hasBlockers} className={`card-selectable w-full text-left flex items-center gap-3 py-3 ${hasBlockers ? 'opacity-40 cursor-not-allowed' : ''}`}>
           {pdfLoading ? (
-            <Loader2 className="w-5 h-5 text-telos-blue-400 animate-spin shrink-0" />
+            <Loader2 className="w-5 h-5 text-HATaxService-blue-400 animate-spin shrink-0" />
           ) : pdfDone ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           ) : (
@@ -528,7 +528,7 @@ export default function ExportPdfStep() {
         </button>
 
         <button onClick={() => promptExportPassword('json')} className="card-selectable w-full text-left flex items-center gap-3 py-3">
-          <FileJson className="w-5 h-5 text-telos-blue-400 shrink-0" />
+          <FileJson className="w-5 h-5 text-HATaxService-blue-400 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-200">Export as JSON</p>
             <p className="text-xs text-slate-400">Machine-readable format. Import into other tax tools or keep as a backup.</p>
@@ -536,7 +536,7 @@ export default function ExportPdfStep() {
         </button>
 
         <button onClick={() => promptExportPassword('csv')} className="card-selectable w-full text-left flex items-center gap-3 py-3">
-          <FileSpreadsheet className="w-5 h-5 text-telos-blue-400 shrink-0" />
+          <FileSpreadsheet className="w-5 h-5 text-HATaxService-blue-400 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-200">Export as CSV</p>
             <p className="text-xs text-slate-400">Open in Excel or Google Sheets. All income, deductions, and adjustments.</p>
@@ -544,7 +544,7 @@ export default function ExportPdfStep() {
         </button>
 
         <button onClick={() => promptExportPassword('transfer')} className="card-selectable w-full text-left flex items-center gap-3 py-3">
-          <Smartphone className="w-5 h-5 text-telos-orange-400 shrink-0" />
+          <Smartphone className="w-5 h-5 text-HATaxService-orange-400 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-medium text-slate-200">Transfer to Another Device</p>
             <p className="text-xs text-slate-400">Save an encrypted .hatax file you can import on any other device or browser.</p>
@@ -554,11 +554,11 @@ export default function ExportPdfStep() {
         {estimatedRec?.recommended && (
           <button onClick={() => promptExportPassword('1040es')} disabled={esLoading || hasBlockers} className={`card-selectable w-full text-left flex items-center gap-3 py-3 ${hasBlockers ? 'opacity-40 cursor-not-allowed' : ''}`}>
             {esLoading ? (
-              <Loader2 className="w-5 h-5 text-telos-orange-400 animate-spin shrink-0" />
+              <Loader2 className="w-5 h-5 text-HATaxService-orange-400 animate-spin shrink-0" />
             ) : esDone ? (
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             ) : (
-              <Calendar className="w-5 h-5 text-telos-orange-400 shrink-0" />
+              <Calendar className="w-5 h-5 text-HATaxService-orange-400 shrink-0" />
             )}
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-200">
@@ -696,7 +696,7 @@ export default function ExportPdfStep() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setShowPasswordModal(false)}>
           <div ref={exportModalRef} role="dialog" aria-modal="true" aria-label="Password-protect export" className="w-full max-w-sm rounded-xl bg-surface-800 border border-slate-700 p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-3">
-              <Lock className="w-4 h-4 text-telos-blue-400" />
+              <Lock className="w-4 h-4 text-HATaxService-blue-400" />
               <h3 className="text-sm font-semibold text-white">Password-Protect Export</h3>
             </div>
             <p className="text-xs text-slate-400 mb-4">
@@ -711,7 +711,7 @@ export default function ExportPdfStep() {
                   type={showExportPassword ? 'text' : 'password'}
                   value={exportPassword}
                   onChange={(e) => setExportPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none pr-10"
+                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none pr-10"
                   placeholder="Enter password (optional)"
                   autoComplete="off"
                 />

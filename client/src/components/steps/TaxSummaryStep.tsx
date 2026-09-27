@@ -131,7 +131,7 @@ export default function TaxSummaryStep() {
               return (
                 <div key={sr.stateCode} className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-xs">
+                    <div className="w-7 h-7 rounded bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-xs">
                       {sr.stateCode}
                     </div>
                     <span className="font-medium text-slate-200">{sr.stateName}</span>
@@ -160,8 +160,8 @@ export default function TaxSummaryStep() {
 
       {/* Savings highlights */}
       {(f.qbiDeduction > 0 || f.seDeduction > 0 || f.deductionAmount > 0) && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-orange-500/5 border-telos-orange-500/20">
-          <h3 className="font-medium text-telos-orange-300 mb-3">Tax Savings</h3>
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-orange-500/5 border-HATaxService-orange-500/20">
+          <h3 className="font-medium text-HATaxService-orange-300 mb-3">Tax Savings</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-slate-400">{f.deductionUsed === 'standard' ? 'Standard' : 'Itemized'} Deduction</span><span className="text-white">-${f.deductionAmount.toLocaleString()}</span></div>
             {f.qbiDeduction > 0 && <div className="flex justify-between"><span className="text-slate-400">QBI Deduction (20% of business income)</span><span className="text-white">-${f.qbiDeduction.toLocaleString()}</span></div>}

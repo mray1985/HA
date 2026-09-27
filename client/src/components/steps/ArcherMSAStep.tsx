@@ -74,20 +74,20 @@ export default function ArcherMSAStep() {
 
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
-            <HeartPulse className="w-5 h-5 text-telos-blue-400" />
+            <HeartPulse className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Coverage & Contributions</h3>
           </div>
 
           <FormField label="HDHP Coverage Type" tooltip="Whether your high deductible health plan covers just you or your family.">
             <div className="flex gap-3">
               <button
-                className={`py-1.5 px-4 rounded text-sm ${info.coverageType === 'self_only' ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+                className={`py-1.5 px-4 rounded text-sm ${info.coverageType === 'self_only' ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
                 onClick={() => update('coverageType', 'self_only')}
               >
                 Self-Only
               </button>
               <button
-                className={`py-1.5 px-4 rounded text-sm ${info.coverageType === 'family' ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+                className={`py-1.5 px-4 rounded text-sm ${info.coverageType === 'family' ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
                 onClick={() => update('coverageType', 'family')}
               >
                 Family
@@ -146,13 +146,13 @@ export default function ArcherMSAStep() {
           <FormField label="Enrolled in Medicare?" tooltip="If you enrolled in Medicare, you cannot make Archer MSA contributions.">
             <div className="flex gap-3">
               <button
-                className={`py-1.5 px-4 rounded text-sm ${info.isEnrolledInMedicare ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+                className={`py-1.5 px-4 rounded text-sm ${info.isEnrolledInMedicare ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
                 onClick={() => update('isEnrolledInMedicare', true)}
               >
                 Yes
               </button>
               <button
-                className={`py-1.5 px-4 rounded text-sm ${!info.isEnrolledInMedicare ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
+                className={`py-1.5 px-4 rounded text-sm ${!info.isEnrolledInMedicare ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`}
                 onClick={() => update('isEnrolledInMedicare', false)}
               >
                 No
@@ -165,7 +165,7 @@ export default function ArcherMSAStep() {
         {employerContributions > 0 && (
           <div className="card bg-surface-800">
             <div className="flex items-center gap-3 mb-2">
-              <Info className="w-5 h-5 text-telos-blue-400" />
+              <Info className="w-5 h-5 text-HATaxService-blue-400" />
               <h3 className="font-medium text-slate-200">Employer Contributions Detected</h3>
             </div>
             <p className="text-sm text-slate-400">
@@ -184,9 +184,9 @@ export default function ArcherMSAStep() {
 
         {/* Live deduction summary */}
         {archerMSADeduction > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20 text-center">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20 text-center">
             <p className="text-sm text-slate-400 mb-1">Archer MSA Deduction</p>
-            <p className="text-2xl font-bold text-telos-orange-400">${archerMSADeduction.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-HATaxService-orange-400">${archerMSADeduction.toLocaleString()}</p>
             <p className="text-xs text-slate-400 mt-1">
               Above-the-line deduction — reduces your AGI
             </p>
@@ -196,7 +196,7 @@ export default function ArcherMSAStep() {
         {/* Contribution limits reference */}
         <div className="card bg-surface-800 border-slate-700 text-sm text-slate-400">
           <div className="flex items-center gap-3 mb-3">
-            <Info className="w-5 h-5 text-telos-blue-400" />
+            <Info className="w-5 h-5 text-HATaxService-blue-400" />
             <h3 className="font-medium text-slate-200">Contribution Limits (2025)</h3>
           </div>
           <div className="overflow-x-auto">
@@ -235,7 +235,7 @@ export default function ArcherMSAStep() {
         href="https://www.irs.gov/forms-pubs/about-form-8853"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

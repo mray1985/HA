@@ -28,7 +28,7 @@ export default function PledgePage() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center mb-4">
-            <span className="font-bold text-5xl"><span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">Tax</span></span>
+            <span className="font-bold text-5xl">HA Tax service</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
             About This Project
@@ -43,7 +43,7 @@ export default function PledgePage() {
           <h2 className="text-lg font-semibold text-white mb-3">What is HATax?</h2>
           <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
             <p>
-              HATax is a project from <a href="https://www.telos.news" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">Telos News</a>.
+              HATax is a project from {/* TODO: replace stub contact link */}<a href="#" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Website</a>.
               It was built by a journalist with no coding
               experience and no specialized knowledge of tax law, using Anthropic's Claude Code
               as an AI coding assistant. The entire app — over 230,000 lines of code across a tax
@@ -60,26 +60,25 @@ export default function PledgePage() {
         {/* Support */}
         <div className="card mb-4">
           <div className="flex items-start gap-3 mb-3">
-            <div className="p-2 bg-telos-orange-500/10 rounded-lg text-telos-orange-400 shrink-0">
+            <div className="p-2 bg-HATaxService-orange-500/10 rounded-lg text-HATaxService-orange-400 shrink-0">
               <Heart className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-semibold text-white text-sm">Support this project</h3>
               <p className="text-sm text-slate-400 mt-1">
-                You can support this project by subscribing to Telos News or making a direct contribution.
+                You can support this project by subscribing to HA Tax service or making a direct contribution.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3 ml-11">
+            {/* TODO: replace stub contact link */}
             <a
-              href="https://www.telos.news"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
-                         bg-telos-orange-600 hover:bg-telos-orange-500 text-white transition-colors"
+                         bg-HATaxService-orange-600 hover:bg-HATaxService-orange-500 text-white transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Subscribe to Telos News
+              Website
             </a>
             <div className="flex gap-2">
               {([
@@ -91,7 +90,7 @@ export default function PledgePage() {
                   key={label}
                   onClick={() => link && window.open(link, '_blank', 'noopener,noreferrer')}
                   disabled={!link}
-                  className="text-sm px-4 py-2 rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500
+                  className="text-sm px-4 py-2 rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500
                              text-white font-medium
                              transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -149,7 +148,7 @@ export default function PledgePage() {
           <h2 className="text-lg font-semibold text-white mb-3">How it's built</h2>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-telos-blue-500/10 rounded-lg text-telos-blue-400 shrink-0">
+              <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg text-HATaxService-blue-400 shrink-0">
                 <Code2 className="w-5 h-5" />
               </div>
               <div>
@@ -162,7 +161,7 @@ export default function PledgePage() {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-telos-blue-500/10 rounded-lg text-telos-blue-400 shrink-0">
+              <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg text-HATaxService-blue-400 shrink-0">
                 <Shield className="w-5 h-5" />
               </div>
               <div>
@@ -176,7 +175,7 @@ export default function PledgePage() {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-telos-blue-500/10 rounded-lg text-telos-blue-400 shrink-0">
+              <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg text-HATaxService-blue-400 shrink-0">
                 <Eye className="w-5 h-5" />
               </div>
               <div>
@@ -190,7 +189,7 @@ export default function PledgePage() {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-telos-blue-500/10 rounded-lg text-telos-blue-400 shrink-0">
+              <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg text-HATaxService-blue-400 shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
@@ -215,21 +214,21 @@ export default function PledgePage() {
             engine, the project is on GitHub.
           </p>
           <div className="flex flex-wrap gap-3">
+            {/* TODO: replace stub contact link */}
             <a
-              href="https://github.com/telosnews/HATax"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               className="btn-primary inline-flex items-center gap-2 text-sm"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              View on GitHub
+              Source
             </a>
+            {/* TODO: replace stub contact link */}
             <a
-              href="mailto:ryan@telos.news"
+              href="mailto:contact@example.com"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
                          bg-surface-700 text-slate-200 hover:bg-surface-600 transition-colors"
             >
-              Contact: ryan@telos.news
+              Contact: contact@example.com
             </a>
           </div>
         </div>

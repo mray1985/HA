@@ -384,7 +384,7 @@ export function getStarterPrompts(stepId: string, section: string, nudgePrompts?
 
 /**
  * Get the single best "Guide Me" prompt for the current step.
- * Used by the floating Telos AI button.
+ * Used by the floating HA Tax service button.
  *
  * If a step has a custom prompt, use it. Otherwise, generate a
  * context-aware prompt using the step label so the AI always gets

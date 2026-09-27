@@ -167,8 +167,8 @@ export default function ActionPreview({
 
   // Active — show proposed actions with Apply/Dismiss buttons
   return (
-    <div className="mt-2 rounded-lg border border-telos-orange-500/30 bg-telos-orange-500/5 px-3 py-2">
-      <p className="text-xs font-medium text-telos-orange-300 mb-2">
+    <div className="mt-2 rounded-lg border border-HATaxService-orange-500/30 bg-HATaxService-orange-500/5 px-3 py-2">
+      <p className="text-xs font-medium text-HATaxService-orange-300 mb-2">
         Proposed changes:
       </p>
 
@@ -178,7 +178,7 @@ export default function ActionPreview({
             key={i}
             className="text-xs text-slate-300 flex items-start gap-2"
           >
-            <span className="text-telos-orange-400 mt-0.5">&bull;</span>
+            <span className="text-HATaxService-orange-400 mt-0.5">&bull;</span>
             <span>{describeAction(action)}</span>
           </li>
         ))}
@@ -189,7 +189,7 @@ export default function ActionPreview({
           onClick={handleApply}
           disabled={isApplying}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                     bg-telos-orange-600 hover:bg-telos-orange-500 text-white
+                     bg-HATaxService-orange-600 hover:bg-HATaxService-orange-500 text-white
                      transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isApplying ? (

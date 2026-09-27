@@ -180,8 +180,8 @@ export default function TransactionCategorizerView({
       {/* Hero summary */}
       <div className="rounded-xl border border-slate-700 bg-surface-800 p-5">
         <div className="flex items-center gap-3 mb-3">
-          <Sparkles className="w-5 h-5 text-telos-orange-400" />
-          <h3 className="text-base font-semibold text-slate-200"><span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span> Transaction Analysis</h3>
+          <Sparkles className="w-5 h-5 text-HATaxService-orange-400" />
+          <h3 className="text-base font-semibold text-slate-200">HA Tax service Transaction Analysis</h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
@@ -211,9 +211,9 @@ export default function TransactionCategorizerView({
 
       {/* Batch action bar — visible when items are selected */}
       {selectedIndices.size > 0 && (
-        <div className="sticky top-0 z-10 rounded-lg border border-telos-blue-500/30 bg-telos-blue-500/10
+        <div className="sticky top-0 z-10 rounded-lg border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/10
                         backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 shadow-lg">
-          <span className="text-xs font-medium text-telos-blue-300">
+          <span className="text-xs font-medium text-HATaxService-blue-300">
             {selectedIndices.size} selected
           </span>
           <div className="h-4 w-px bg-slate-600" />
@@ -222,7 +222,7 @@ export default function TransactionCategorizerView({
           <div className="relative">
             <select
               className="bg-surface-700 border border-slate-600 rounded-md text-xs text-slate-300
-                         pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-telos-blue-500
+                         pl-2.5 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-HATaxService-blue-500
                          cursor-pointer hover:border-slate-500 transition-colors appearance-none"
               value=""
               onChange={(e) => {
@@ -242,7 +242,7 @@ export default function TransactionCategorizerView({
           <div className="flex-1" />
           <button
             onClick={selectAll}
-            className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             Select all
           </button>
@@ -402,8 +402,8 @@ function CategoryCard({
           {onDrillDown && (
             <button
               onClick={(e) => { e.stopPropagation(); onDrillDown(); }}
-              className="text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300
-                         bg-telos-blue-500/10 hover:bg-telos-blue-500/20 border border-telos-blue-500/30
+              className="text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300
+                         bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20 border border-HATaxService-blue-500/30
                          px-3 py-1.5 rounded transition-colors flex items-center gap-1.5"
             >
               <Table2 className="w-3 h-3" />
@@ -420,7 +420,7 @@ function CategoryCard({
           <div className="flex items-center justify-end gap-3 px-4 py-1.5 bg-surface-900/40 border-b border-slate-700/30">
             <button
               onClick={onSelectAll}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               Select all
             </button>
@@ -478,7 +478,7 @@ function TransactionRow({
     <div
       className={`flex items-center gap-3 px-4 py-2 text-xs border-b border-slate-700/30 last:border-0
                    cursor-pointer select-none transition-colors ${
-        isSelected ? 'bg-telos-blue-500/10' : ct.approved ? 'bg-emerald-500/5' : 'hover:bg-surface-700/30'
+        isSelected ? 'bg-HATaxService-blue-500/10' : ct.approved ? 'bg-emerald-500/5' : 'hover:bg-surface-700/30'
       }`}
       onClick={(e) => onRowClick(ct.transactionIndex, e.shiftKey)}
     >
@@ -487,7 +487,7 @@ function TransactionRow({
         <div
           className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
             isSelected
-              ? 'bg-telos-blue-500 border-telos-blue-500'
+              ? 'bg-HATaxService-blue-500 border-HATaxService-blue-500'
               : 'border-slate-600'
           }`}
         >
@@ -515,7 +515,7 @@ function TransactionRow({
         <div className="relative">
           <select
             className="w-full bg-transparent border border-slate-700/50 rounded-md text-[11px] text-slate-400
-                       pl-2 pr-6 py-1 focus:outline-none focus:ring-1 focus:ring-telos-blue-500
+                       pl-2 pr-6 py-1 focus:outline-none focus:ring-1 focus:ring-HATaxService-blue-500
                        cursor-pointer hover:border-slate-500 hover:text-slate-300
                        transition-colors appearance-none"
             value={ct.category}

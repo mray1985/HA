@@ -176,7 +176,7 @@ export default function QBIDetailStep() {
           <label className="flex items-center gap-3 mt-2 ml-1 cursor-pointer">
             <input
               type="checkbox"
-              className="accent-telos-orange-400"
+              className="accent-HATaxService-orange-400"
               checked={form.isSSTB}
               onChange={(e) => setForm({ ...form, isSSTB: e.target.checked })}
             />
@@ -193,7 +193,7 @@ export default function QBIDetailStep() {
           <label className="flex items-center gap-3 mt-3 cursor-pointer">
             <input
               type="checkbox"
-              className="accent-telos-orange-400"
+              className="accent-HATaxService-orange-400"
               checked={form.isSSTB}
               onChange={(e) => setForm({ ...form, isSSTB: e.target.checked })}
             />
@@ -202,7 +202,7 @@ export default function QBIDetailStep() {
           <p className="text-xs text-slate-400 ml-8 mt-1">
             SSTBs include health, law, accounting, consulting, athletics, financial services, and performing arts.
             {(taxReturn.businesses || []).length > 0 && (
-              <span className="text-telos-blue-400"> Tip: Add a business code on the Business Info step to auto-detect SSTB status.</span>
+              <span className="text-HATaxService-blue-400"> Tip: Add a business code on the Business Info step to auto-detect SSTB status.</span>
             )}
           </p>
         </>
@@ -241,13 +241,13 @@ export default function QBIDetailStep() {
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
-            className="accent-telos-orange-400"
+            className="accent-HATaxService-orange-400"
             checked={!!qbi.isAgriculturalCooperativePatron}
             onChange={(e) => updateQBI('isAgriculturalCooperativePatron', e.target.checked)}
           />
           <span className="text-sm text-slate-300">I am a patron of a specified agricultural cooperative (IRC §199A(g))</span>
         </label>
-        <a href="https://www.irs.gov/forms-pubs/about-form-8995-a" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/forms-pubs/about-form-8995-a" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       {/* Per-business list */}
@@ -269,7 +269,7 @@ export default function QBIDetailStep() {
             </div>
             <div className="flex items-center gap-1">
               <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.businessId); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>

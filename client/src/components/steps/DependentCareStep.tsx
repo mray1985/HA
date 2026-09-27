@@ -70,7 +70,7 @@ export default function DependentCareStep() {
 
       <div className="rounded-lg border border-slate-700 bg-surface-800 mt-4 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-700/60 flex items-center gap-2">
-          <Info className="w-4 h-4 text-telos-blue-400" />
+          <Info className="w-4 h-4 text-HATaxService-blue-400" />
           <span className="text-sm font-medium text-slate-200">Who qualifies?</span>
         </div>
         <div className="p-4 space-y-2">
@@ -80,7 +80,7 @@ export default function DependentCareStep() {
             <li>Any dependent incapable of self-care who lived with you for more than half the year</li>
           </ul>
           <p className="text-xs text-slate-400">The care must have been provided so that you (and your spouse, if filing jointly) could work or look for work.</p>
-          <a href="https://www.irs.gov/taxtopics/tc602" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+          <a href="https://www.irs.gov/taxtopics/tc602" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export default function DependentCareStep() {
           irsRef={help?.fields['Number of Qualifying Persons']?.irsRef}
         >
           {derivedQualifying !== null && (
-            <p className="text-xs text-telos-blue-400 mb-2">
+            <p className="text-xs text-HATaxService-blue-400 mb-2">
               Pre-filled: {derivedQualifying} qualifying {derivedQualifying === 1 ? 'person' : 'persons'} found in your dependents (under 13 or disabled). You can override.
             </p>
           )}
@@ -133,7 +133,7 @@ export default function DependentCareStep() {
                 onClick={() => update('qualifyingPersons', n)}
                 className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
                   (info.qualifyingPersons || 1) === n
-                    ? 'bg-telos-blue-600 text-white'
+                    ? 'bg-HATaxService-blue-600 text-white'
                     : 'bg-surface-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -167,7 +167,7 @@ export default function DependentCareStep() {
                 onClick={() => update('isStudentSpouse', !info.isStudentSpouse)}
                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                   info.isStudentSpouse
-                    ? 'bg-telos-blue-600 text-white'
+                    ? 'bg-HATaxService-blue-600 text-white'
                     : 'bg-surface-800 text-slate-400'
                 }`}
               >
@@ -183,7 +183,7 @@ export default function DependentCareStep() {
                 onClick={() => update('isDisabledSpouse', !info.isDisabledSpouse)}
                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                   info.isDisabledSpouse
-                    ? 'bg-telos-blue-600 text-white'
+                    ? 'bg-HATaxService-blue-600 text-white'
                     : 'bg-surface-800 text-slate-400'
                 }`}
               >
@@ -214,10 +214,10 @@ export default function DependentCareStep() {
         </FormField>
 
         {(info.totalExpenses || 0) > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
             <div className="flex justify-between items-center">
               <div>
-                <span className="text-telos-orange-300 font-medium">
+                <span className="text-HATaxService-orange-300 font-medium">
                   Estimated Credit: ${Math.round(estimatedCredit).toLocaleString()}+
                 </span>
                 <p className="text-xs text-slate-400 mt-1">

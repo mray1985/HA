@@ -121,7 +121,7 @@ export default function EstimatedPaymentsStep() {
       {/* Per-Quarter Payments */}
       <div className="card mt-6">
         <div className="flex items-center gap-3 mb-3">
-          <DollarSign className="w-5 h-5 text-telos-blue-400" />
+          <DollarSign className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Quarterly Payments</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -150,7 +150,7 @@ export default function EstimatedPaymentsStep() {
         {totalEstimated > 0 && (
           <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-300">Total Estimated Payments</span>
-            <span className="text-lg font-semibold text-telos-blue-300">
+            <span className="text-lg font-semibold text-HATaxService-blue-300">
               ${totalEstimated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -163,7 +163,7 @@ export default function EstimatedPaymentsStep() {
       {/* Prior Year Tax */}
       <div className="card mt-4">
         <div className="flex items-center gap-3 mb-3">
-          <Receipt className="w-5 h-5 text-telos-blue-400" />
+          <Receipt className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Prior Year Tax Liability</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -226,11 +226,11 @@ export default function EstimatedPaymentsStep() {
           onClick={() => setShowAnnualized(!showAnnualized)}
           className="w-full px-4 py-3 flex items-center gap-3 bg-surface-800 hover:bg-surface-700 transition-colors"
         >
-          <BarChart3 className="w-5 h-5 text-telos-blue-400" />
+          <BarChart3 className="w-5 h-5 text-HATaxService-blue-400" />
           <div className="flex-1 text-left">
             <span className="font-medium text-sm text-slate-200">Annualized Income Method</span>
             {hasAnnualizedData && (
-              <span className="ml-2 text-xs text-telos-orange-400 bg-telos-orange-500/10 px-2 py-0.5 rounded-full">Active</span>
+              <span className="ml-2 text-xs text-HATaxService-orange-400 bg-HATaxService-orange-500/10 px-2 py-0.5 rounded-full">Active</span>
             )}
           </div>
           {showAnnualized ? (
@@ -281,7 +281,7 @@ export default function EstimatedPaymentsStep() {
               href="https://www.irs.gov/forms-pubs/about-form-2210"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov

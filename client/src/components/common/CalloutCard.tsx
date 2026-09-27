@@ -10,8 +10,8 @@ interface CalloutCardProps {
 
 const VARIANT_STYLES = {
   info: {
-    bg: 'bg-telos-blue-600/10 border-telos-blue-600/30',
-    title: 'text-telos-blue-300',
+    bg: 'bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30',
+    title: 'text-HATaxService-blue-300',
     icon: Info,
   },
   warning: {
@@ -20,8 +20,8 @@ const VARIANT_STYLES = {
     icon: AlertTriangle,
   },
   tip: {
-    bg: 'bg-telos-orange-500/10 border-telos-orange-500/20',
-    title: 'text-telos-orange-300',
+    bg: 'bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20',
+    title: 'text-HATaxService-orange-300',
     icon: Lightbulb,
   },
 } as const;
@@ -42,7 +42,7 @@ export default function CalloutCard({ variant, title, children, irsUrl }: Callou
               href={irsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               <ExternalLink className="w-3 h-3" />
               Learn more on IRS.gov

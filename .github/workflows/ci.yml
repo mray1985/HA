@@ -1,4 +1,4 @@
-name: CI — TelosTax Test Suite
+name: CI — HA Tax service Test Suite
 
 on:
   push:

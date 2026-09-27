@@ -38,7 +38,7 @@ export default function PreparerClientPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-telos-orange-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-HATaxService-orange-500"></div>
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function PreparerClientPage() {
             <div className="flex items-center gap-3">
               <Link
                 to={`/preparer/return/${id}`}
-                className="bg-telos-orange-500 hover:bg-telos-orange-600 text-white px-5 py-2.5 rounded-lg font-medium"
+                className="bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-5 py-2.5 rounded-lg font-medium"
               >
                 Open Return
               </Link>
@@ -181,7 +181,7 @@ export default function PreparerClientPage() {
           </button>
           <button
             onClick={handleOpenReturn}
-            className="bg-telos-orange-500 hover:bg-telos-orange-600 text-white px-6 py-2.5 rounded-lg font-medium"
+            className="bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-6 py-2.5 rounded-lg font-medium"
           >
             Open in Wizard
           </button>

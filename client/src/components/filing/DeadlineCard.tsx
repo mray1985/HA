@@ -49,19 +49,19 @@ export default function DeadlineCard({ deadline, extensionFiled }: DeadlineCardP
     ? 'bg-red-500/10 border-red-500/30'
     : extensionFiled
       ? 'bg-emerald-500/10 border-emerald-500/30'
-      : 'bg-telos-blue-600/10 border-telos-blue-600/30';
+      : 'bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30';
 
   const iconColor = remaining.expired
     ? 'text-red-400'
     : extensionFiled
       ? 'text-emerald-400'
-      : 'text-telos-blue-400';
+      : 'text-HATaxService-blue-400';
 
   const titleColor = remaining.expired
     ? 'text-red-300'
     : extensionFiled
       ? 'text-emerald-300'
-      : 'text-telos-blue-300';
+      : 'text-HATaxService-blue-300';
 
   return (
     <div className={`rounded-xl border p-6 ${borderColor}`}>

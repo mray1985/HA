@@ -106,11 +106,11 @@ export default function PreparerDashboardPage({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
                 <div className="flex items-center gap-3">
-                  <svg className="h-8 w-8 text-telos-orange-500" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="h-8 w-8 text-HATaxService-orange-500" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
                   <h1 className="text-xl font-semibold text-white">HA Preparer</h1>
-                  <span className="text-xs bg-telos-orange-500/20 text-telos-orange-400 px-2 py-0.5 rounded">PREPARER</span>
+                  <span className="text-xs bg-HATaxService-orange-500/20 text-HATaxService-orange-400 px-2 py-0.5 rounded">PREPARER</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex items-center gap-2">
@@ -126,7 +126,7 @@ export default function PreparerDashboardPage({
                   </div>
                   <button
                     onClick={() => navigate('/preparer/clients/new')}
-                    className="bg-telos-orange-500 hover:bg-telos-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                    className="bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                   >
                     + New Client
                   </button>
@@ -163,7 +163,7 @@ export default function PreparerDashboardPage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-telos-orange-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-HATaxService-orange-500"></div>
               </div>
             ) : filteredClients.length === 0 ? (
               <div className="text-center py-16">
@@ -174,7 +174,7 @@ export default function PreparerDashboardPage({
                 <p className="mt-2 text-slate-400">Start by adding your first client</p>
                 <button
                   onClick={() => navigate('/preparer/clients/new')}
-                  className="mt-6 inline-flex items-center gap-2 bg-telos-orange-500 hover:bg-telos-orange-600 text-white px-6 py-3 rounded-lg font-medium"
+                  className="mt-6 inline-flex items-center gap-2 bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-6 py-3 rounded-lg font-medium"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
@@ -199,8 +199,8 @@ export default function PreparerDashboardPage({
                       <tr key={client.id} className="hover:bg-surface-900/50 transition-colors">
                         <td className="px-6 py-4">
                           <Link to={`/preparer/client/${client.id}`} className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-telos-orange-500/20 flex items-center justify-center">
-                              <svg className="h-6 w-6 text-telos-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-10 h-10 rounded-full bg-HATaxService-orange-500/20 flex items-center justify-center">
+                              <svg className="h-6 w-6 text-HATaxService-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h18a7 7 0 00-7-7z"/>
                               </svg>
                             </div>

@@ -117,7 +117,7 @@ export default function NAICSCodeSearch({ value, onChange, id }: NAICSCodeSearch
       <div ref={containerRef} className="relative">
         <div className="input-field flex items-center justify-between gap-2 cursor-pointer" onClick={() => { clearSelection(); setTimeout(() => inputRef.current?.focus(), 50); }}>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-telos-blue-400 font-mono text-sm shrink-0">{selectedEntry.code}</span>
+            <span className="text-HATaxService-blue-400 font-mono text-sm shrink-0">{selectedEntry.code}</span>
             <span className="text-white truncate">{selectedEntry.description}</span>
             {selectedEntry.isSSTB && (
               <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded">
@@ -181,13 +181,13 @@ export default function NAICSCodeSearch({ value, onChange, id }: NAICSCodeSearch
               aria-selected={idx === highlightIndex}
               className={`px-3 py-2 cursor-pointer flex items-center gap-2 text-sm border-b border-slate-700/50 last:border-b-0 transition-colors ${
                 idx === highlightIndex
-                  ? 'bg-telos-blue-500/20 text-white'
+                  ? 'bg-HATaxService-blue-500/20 text-white'
                   : 'text-slate-300 hover:bg-slate-700/50'
               }`}
               onClick={() => selectEntry(entry)}
               onMouseEnter={() => setHighlightIndex(idx)}
             >
-              <span className="font-mono text-xs text-telos-blue-400 shrink-0 w-14">{entry.code}</span>
+              <span className="font-mono text-xs text-HATaxService-blue-400 shrink-0 w-14">{entry.code}</span>
               <span className="truncate">{entry.description}</span>
               {entry.isSSTB && (
                 <span className="shrink-0 ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded">

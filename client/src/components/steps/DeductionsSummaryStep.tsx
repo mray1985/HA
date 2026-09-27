@@ -1,5 +1,5 @@
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { calculateForm1040, STANDARD_DEDUCTION_2025, ADDITIONAL_STANDARD_DEDUCTION, FilingStatus } from '@hatax/engine';
+import { calculateForm1040, getStandardDeduction, getAdditionalStandardDeduction, FilingStatus } from '@hatax/engine';
 import { updateReturn } from '../../api/client';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
@@ -57,8 +57,10 @@ export default function DeductionsSummaryStep() {
 
   // Standard deduction (from constants, always available for comparison)
   const filingStatus = taxReturn.filingStatus || FilingStatus.Single;
+  const taxYear = taxReturn.taxYear || 2025;
   const isMarried = filingStatus === FilingStatus.MarriedFilingJointly || filingStatus === FilingStatus.MarriedFilingSeparately;
-  const perQualification = isMarried ? ADDITIONAL_STANDARD_DEDUCTION.MARRIED : ADDITIONAL_STANDARD_DEDUCTION.UNMARRIED;
+  const additionalStdDeduction = getAdditionalStandardDeduction(taxYear);
+  const perQualification = isMarried ? additionalStdDeduction.MARRIED : additionalStdDeduction.UNMARRIED;
   let additionalStd = 0;
   if (isAge65OrOlder(taxReturn.dateOfBirth, taxReturn.taxYear)) additionalStd += perQualification;
   if (taxReturn.isLegallyBlind) additionalStd += perQualification;
@@ -66,7 +68,7 @@ export default function DeductionsSummaryStep() {
     if (isAge65OrOlder(taxReturn.spouseDateOfBirth, taxReturn.taxYear)) additionalStd += perQualification;
     if (taxReturn.spouseIsLegallyBlind) additionalStd += perQualification;
   }
-  const stdAmount = STANDARD_DEDUCTION_2025[filingStatus] + additionalStd;
+  const stdAmount = getStandardDeduction(taxYear)[filingStatus] + additionalStd;
   const itemizedTotal = scheduleA?.totalItemized || 0;
   const recommendStandard = itemizedTotal <= stdAmount;
   const deductionDifference = Math.abs(stdAmount - itemizedTotal);
@@ -95,9 +97,9 @@ export default function DeductionsSummaryStep() {
       </div>
 
       {/* Total savings hero */}
-      <div className="rounded-xl border p-6 mt-6 text-center bg-telos-orange-500/5 border-telos-orange-500/20">
+      <div className="rounded-xl border p-6 mt-6 text-center bg-HATaxService-orange-500/5 border-HATaxService-orange-500/20">
         <p className="text-slate-400 text-sm mb-1">Total Deductions & Adjustments</p>
-        <p className="text-3xl font-bold text-telos-orange-400">
+        <p className="text-3xl font-bold text-HATaxService-orange-400">
           ${totalSavings.toLocaleString()}
         </p>
         <p className="text-xs text-slate-400 mt-1">
@@ -124,12 +126,12 @@ export default function DeductionsSummaryStep() {
       <div className="card mt-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-medium text-slate-200 flex items-center gap-2">
-            <FileCheck className="w-4 h-4 text-telos-orange-400" />
+            <FileCheck className="w-4 h-4 text-HATaxService-orange-400" />
             Deduction Method
           </h3>
           <button
             onClick={() => goToStep('deduction_method')}
-            className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+            className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
           >
             Learn more
           </button>
@@ -141,12 +143,12 @@ export default function DeductionsSummaryStep() {
             onClick={() => handleMethodChange('standard')}
             className={`relative rounded-lg border p-3 text-left transition-all ${
               !isItemized
-                ? 'border-telos-orange-500/60 bg-telos-orange-500/10 ring-1 ring-telos-orange-500/30'
+                ? 'border-HATaxService-orange-500/60 bg-HATaxService-orange-500/10 ring-1 ring-HATaxService-orange-500/30'
                 : 'border-slate-700/50 bg-slate-800/30 hover:border-slate-600/60'
             }`}
           >
             {!isItemized && (
-              <span className="absolute -top-2 right-2 text-[10px] font-semibold bg-telos-orange-500 text-white px-1.5 py-0.5 rounded">
+              <span className="absolute -top-2 right-2 text-[10px] font-semibold bg-HATaxService-orange-500 text-white px-1.5 py-0.5 rounded">
                 Selected
               </span>
             )}
@@ -156,7 +158,7 @@ export default function DeductionsSummaryStep() {
               </span>
             )}
             <p className="text-xs text-slate-400 mb-1">Standard Deduction</p>
-            <p className={`text-lg font-bold tabular-nums ${!isItemized ? 'text-telos-orange-400' : 'text-slate-300'}`}>
+            <p className={`text-lg font-bold tabular-nums ${!isItemized ? 'text-HATaxService-orange-400' : 'text-slate-300'}`}>
               ${stdAmount.toLocaleString()}
             </p>
           </button>
@@ -166,12 +168,12 @@ export default function DeductionsSummaryStep() {
             onClick={() => handleMethodChange('itemized')}
             className={`relative rounded-lg border p-3 text-left transition-all ${
               isItemized
-                ? 'border-telos-orange-500/60 bg-telos-orange-500/10 ring-1 ring-telos-orange-500/30'
+                ? 'border-HATaxService-orange-500/60 bg-HATaxService-orange-500/10 ring-1 ring-HATaxService-orange-500/30'
                 : 'border-slate-700/50 bg-slate-800/30 hover:border-slate-600/60'
             }`}
           >
             {isItemized && (
-              <span className="absolute -top-2 right-2 text-[10px] font-semibold bg-telos-orange-500 text-white px-1.5 py-0.5 rounded">
+              <span className="absolute -top-2 right-2 text-[10px] font-semibold bg-HATaxService-orange-500 text-white px-1.5 py-0.5 rounded">
                 Selected
               </span>
             )}
@@ -181,7 +183,7 @@ export default function DeductionsSummaryStep() {
               </span>
             )}
             <p className="text-xs text-slate-400 mb-1">Itemized Deductions</p>
-            <p className={`text-lg font-bold tabular-nums ${isItemized ? 'text-telos-orange-400' : 'text-slate-300'}`}>
+            <p className={`text-lg font-bold tabular-nums ${isItemized ? 'text-HATaxService-orange-400' : 'text-slate-300'}`}>
               ${itemizedTotal > 0 ? itemizedTotal.toLocaleString() : '—'}
             </p>
           </button>
@@ -209,7 +211,7 @@ export default function DeductionsSummaryStep() {
                     </span>
                     <button
                       onClick={() => goToStep('medical_expenses')}
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                     >
                       Edit
                     </button>
@@ -225,7 +227,7 @@ export default function DeductionsSummaryStep() {
                     </span>
                     <button
                       onClick={() => goToStep('salt_deduction')}
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                     >
                       Edit
                     </button>
@@ -241,7 +243,7 @@ export default function DeductionsSummaryStep() {
                     </span>
                     <button
                       onClick={() => goToStep('mortgage_interest_ded')}
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                     >
                       Edit
                     </button>
@@ -257,7 +259,7 @@ export default function DeductionsSummaryStep() {
                     </span>
                     <button
                       onClick={() => goToStep('charitable_deduction')}
-                      className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                      className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                     >
                       Edit
                     </button>
@@ -268,12 +270,12 @@ export default function DeductionsSummaryStep() {
             <div className="flex items-center justify-between border-t border-slate-700 pt-2 mt-1">
               <span className="text-sm font-medium text-slate-200">Total Itemized</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-telos-orange-400 tabular-nums">
+                <span className="text-sm font-bold text-HATaxService-orange-400 tabular-nums">
                   ${itemizedTotal.toLocaleString()}
                 </span>
                 <button
                   onClick={() => goToStep('itemized_deductions')}
-                  className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                  className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                 >
                   View all
                 </button>
@@ -288,7 +290,7 @@ export default function DeductionsSummaryStep() {
             Your itemized deductions total ${itemizedTotal.toLocaleString()}.{' '}
             <button
               onClick={() => goToStep('itemized_deductions')}
-              className="text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+              className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
             >
               View breakdown
             </button>
@@ -301,7 +303,7 @@ export default function DeductionsSummaryStep() {
         <div className="card mt-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium text-slate-200 flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-telos-orange-400" />
+              <Receipt className="w-4 h-4 text-HATaxService-orange-400" />
               Adjustments to Income
             </h3>
           </div>
@@ -315,7 +317,7 @@ export default function DeductionsSummaryStep() {
                   </span>
                   <button
                     onClick={() => goToStep(adj.stepId)}
-                    className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                    className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
                   >
                     Edit
                   </button>
@@ -325,7 +327,7 @@ export default function DeductionsSummaryStep() {
           </div>
           <div className="flex items-center justify-between border-t border-slate-700 pt-2 mt-1">
             <span className="text-sm font-medium text-slate-200">Total Adjustments</span>
-            <span className="text-sm font-bold text-telos-orange-400 tabular-nums">
+            <span className="text-sm font-bold text-HATaxService-orange-400 tabular-nums">
               -${totalAdjustments.toLocaleString()}
             </span>
           </div>

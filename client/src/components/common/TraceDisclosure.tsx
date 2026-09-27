@@ -11,7 +11,7 @@ export default function TraceDisclosure({ trace }: { trace: CalculationTrace }) 
       <button
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
-        className="flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <Info className="w-3 h-3" />
         <span>How?</span>

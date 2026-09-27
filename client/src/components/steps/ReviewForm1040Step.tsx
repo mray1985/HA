@@ -53,7 +53,7 @@ export default function ReviewForm1040Step() {
       {/* Identity Verification — SSN collected at review for security */}
       <div className="card mt-6 mb-4">
         <div className="flex items-center gap-2 mb-3">
-          <ShieldCheck className="w-4 h-4 text-telos-blue-400" />
+          <ShieldCheck className="w-4 h-4 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200 text-sm uppercase tracking-wide">Identity Verification</h3>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -133,7 +133,7 @@ export default function ReviewForm1040Step() {
               <div>
               <div className="flex justify-between py-1.5">
                 <span className="text-white font-medium">Total Adjustments (Line 10)</span>
-                <span className="text-telos-orange-400 font-semibold">${f.totalAdjustments.toLocaleString()}</span>
+                <span className="text-HATaxService-orange-400 font-semibold">${f.totalAdjustments.toLocaleString()}</span>
               </div>
               {findTrace('form1040.line10') && <TraceDisclosure trace={findTrace('form1040.line10')!} />}
             </div>

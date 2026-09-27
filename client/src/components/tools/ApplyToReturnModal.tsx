@@ -80,8 +80,8 @@ export default function ApplyToReturnModal({ transactions, onConfirm, onCancel }
 
           {/* Discovery keys */}
           {preview.discoveryKeysToEnable.length > 0 && (
-            <div className="rounded-lg border border-telos-blue-500/20 bg-telos-blue-500/5 p-3">
-              <p className="text-xs text-telos-blue-300">
+            <div className="rounded-lg border border-HATaxService-blue-500/20 bg-HATaxService-blue-500/5 p-3">
+              <p className="text-xs text-HATaxService-blue-300">
                 This will also enable {preview.discoveryKeysToEnable.length} wizard{' '}
                 {preview.discoveryKeysToEnable.length === 1 ? 'step' : 'steps'} that{' '}
                 {preview.discoveryKeysToEnable.length === 1 ? 'wasn\'t' : 'weren\'t'} previously visible.

@@ -69,7 +69,7 @@ export default function StateDetailsStep() {
         return (
           <div key={sr.stateCode} className="card mt-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-sm">
+              <div className="w-10 h-10 rounded-lg bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-sm">
                 {sr.stateCode}
               </div>
               <div>
@@ -377,7 +377,7 @@ function ToggleQuestion({
           onClick={() => onChange(true)}
           className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
             value === true
-              ? 'bg-telos-blue-600 text-white'
+              ? 'bg-HATaxService-blue-600 text-white'
               : 'bg-surface-800 text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -387,7 +387,7 @@ function ToggleQuestion({
           onClick={() => onChange(false)}
           className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
             value === false
-              ? 'bg-telos-blue-600 text-white'
+              ? 'bg-HATaxService-blue-600 text-white'
               : 'bg-surface-800 text-slate-400 hover:text-slate-200'
           }`}
         >

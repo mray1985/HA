@@ -48,14 +48,14 @@ export default function SaveIndicator({ state }: { state: SaveState }) {
     >
       {state === 'saving' && (
         <>
-          <Loader2 className="w-3 h-3 animate-spin text-telos-blue-400" />
-          <span className="text-telos-blue-400">Saving...</span>
+          <Loader2 className="w-3 h-3 animate-spin text-HATaxService-blue-400" />
+          <span className="text-HATaxService-blue-400">Saving...</span>
         </>
       )}
       {state === 'saved' && (
         <>
-          <CheckCircle2 className="w-3 h-3 text-telos-orange-400" />
-          <span className="text-telos-orange-400">Saved</span>
+          <CheckCircle2 className="w-3 h-3 text-HATaxService-orange-400" />
+          <span className="text-HATaxService-orange-400">Saved</span>
         </>
       )}
       {state === 'idle' && (

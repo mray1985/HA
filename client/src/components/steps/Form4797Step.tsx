@@ -113,11 +113,11 @@ export default function Form4797Step() {
       </FormField>
       <div className="space-y-2 mt-3">
         <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" className="accent-telos-orange-400" checked={form.isSection1245} onChange={(e) => setForm({ ...form, isSection1245: e.target.checked, isSection1250: false })} />
+          <input type="checkbox" className="accent-HATaxService-orange-400" checked={form.isSection1245} onChange={(e) => setForm({ ...form, isSection1245: e.target.checked, isSection1250: false })} />
           <span className="text-sm text-slate-300">Section 1245 property (equipment, vehicles — full depreciation recapture)</span>
         </label>
         <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" className="accent-telos-orange-400" checked={form.isSection1250} onChange={(e) => setForm({ ...form, isSection1250: e.target.checked, isSection1245: false })} />
+          <input type="checkbox" className="accent-HATaxService-orange-400" checked={form.isSection1250} onChange={(e) => setForm({ ...form, isSection1250: e.target.checked, isSection1245: false })} />
           <span className="text-sm text-slate-300">Section 1250 property (buildings, real estate — partial recapture)</span>
         </label>
       </div>
@@ -163,7 +163,7 @@ export default function Form4797Step() {
             </div>
             <div className="flex items-center gap-1">
               <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function Form4797Step() {
         href="https://www.irs.gov/forms-pubs/about-form-4797"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

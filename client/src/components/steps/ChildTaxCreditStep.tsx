@@ -84,8 +84,8 @@ export default function ChildTaxCreditStep() {
           </div>
         )}
         {derived && (
-          <div className="mb-4 p-3 rounded-lg bg-telos-blue-600/10 border border-telos-blue-600/30 text-sm">
-            <p className="text-telos-blue-300">
+          <div className="mb-4 p-3 rounded-lg bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/30 text-sm">
+            <p className="text-HATaxService-blue-300">
               Pre-filled from your {(taxReturn.dependents || []).length} {(taxReturn.dependents || []).length === 1 ? 'dependent' : 'dependents'}: {derived.qualifyingChildren} qualifying {derived.qualifyingChildren === 1 ? 'child' : 'children'} under 17, {derived.otherDependents} other. You can override below.
             </p>
           </div>
@@ -100,8 +100,8 @@ export default function ChildTaxCreditStep() {
         </FormField>
 
         {totalCredit > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20 mt-4">
-            <span className="text-telos-orange-300 font-medium">Estimated Credit: ${totalCredit.toLocaleString()}</span>
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20 mt-4">
+            <span className="text-HATaxService-orange-300 font-medium">Estimated Credit: ${totalCredit.toLocaleString()}</span>
             <p className="text-xs text-slate-400 mt-1">Subject to income phase-out above $200k (single) / $400k (MFJ)</p>
           </div>
         )}

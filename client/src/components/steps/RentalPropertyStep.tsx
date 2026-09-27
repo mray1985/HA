@@ -173,7 +173,7 @@ export default function RentalPropertyStep() {
       <FormField label="Rental Income" tooltip={help?.fields['Rental Income']?.tooltip} irsRef={help?.fields['Rental Income']?.irsRef}>
         <CurrencyInput value={form.rentalIncome} onChange={(v) => setForm({ ...form, rentalIncome: v })} />
       </FormField>
-      <button type="button" onClick={() => setShowExpenses(!showExpenses)} className="flex items-center gap-2 text-sm text-telos-blue-400 hover:text-telos-blue-300 mt-2 mb-2">
+      <button type="button" onClick={() => setShowExpenses(!showExpenses)} className="flex items-center gap-2 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 mt-2 mb-2">
         {showExpenses ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         {showExpenses ? 'Hide' : 'Show'} Expense Categories
       </button>
@@ -207,7 +207,7 @@ export default function RentalPropertyStep() {
             type="checkbox"
             checked={form.activeParticipation !== false}
             onChange={(e) => setForm({ ...form, activeParticipation: e.target.checked })}
-            className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+            className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
           />
           <div>
             <span className="text-sm text-slate-200 group-hover:text-white">
@@ -232,7 +232,7 @@ export default function RentalPropertyStep() {
             type="checkbox"
             checked={!!form.disposedDuringYear}
             onChange={(e) => setForm({ ...form, disposedDuringYear: e.target.checked })}
-            className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+            className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
           />
           <div>
             <span className="text-sm text-slate-200 group-hover:text-white">
@@ -322,7 +322,7 @@ export default function RentalPropertyStep() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>

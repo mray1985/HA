@@ -83,8 +83,8 @@ function buildSections(): DrillDownSection[] {
 }
 
 const COLOR_CLASSES: Record<string, string> = {
-  orange: 'text-telos-orange-400',
-  blue: 'text-telos-blue-400',
+  orange: 'text-HATaxService-orange-400',
+  blue: 'text-HATaxService-blue-400',
   violet: 'text-violet-400',
   emerald: 'text-emerald-400',
 };

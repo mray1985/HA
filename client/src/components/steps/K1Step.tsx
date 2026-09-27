@@ -183,7 +183,7 @@ export default function K1Step() {
           type="checkbox"
           checked={!!form.isCooperativePatronage}
           onChange={(e) => setForm({ ...form, isCooperativePatronage: e.target.checked })}
-          className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+          className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
         />
         <div>
           <span className="text-sm text-slate-200 group-hover:text-white">
@@ -241,7 +241,7 @@ export default function K1Step() {
           type="checkbox"
           checked={!!form.isPassiveActivity}
           onChange={(e) => setForm({ ...form, isPassiveActivity: e.target.checked })}
-          className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+          className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
         />
         <div>
           <span className="text-sm text-slate-200 group-hover:text-white">
@@ -260,7 +260,7 @@ export default function K1Step() {
             type="checkbox"
             checked={!!form.isLimitedPartner}
             onChange={(e) => setForm({ ...form, isLimitedPartner: e.target.checked })}
-            className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+            className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
           />
           <div>
             <span className="text-sm text-slate-200 group-hover:text-white">
@@ -290,7 +290,7 @@ export default function K1Step() {
           type="checkbox"
           checked={!!form.disposedDuringYear}
           onChange={(e) => setForm({ ...form, disposedDuringYear: e.target.checked })}
-          className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+          className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
         />
         <div>
           <span className="text-sm text-slate-200 group-hover:text-white">
@@ -357,7 +357,7 @@ export default function K1Step() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>

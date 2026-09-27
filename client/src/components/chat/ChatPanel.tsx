@@ -30,7 +30,7 @@ import ResizeHandle from '../common/ResizeHandle';
 /** Short labels for the mode indicator in the header. */
 const MODE_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
   private: { label: 'Private', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
-  byok: { label: 'BYOK', color: 'text-telos-blue-400', bg: 'bg-telos-blue-500/10', border: 'border-telos-blue-500/30' },
+  byok: { label: 'BYOK', color: 'text-HATaxService-blue-400', bg: 'bg-HATaxService-blue-500/10', border: 'border-HATaxService-blue-500/30' },
 };
 
 interface ChatPanelProps {
@@ -196,9 +196,9 @@ export default function ChatPanel({ panelWidth, isDragging, onResizeStart, onRes
               style={topOffset ? { height: topOffset } : { padding: '0.5rem 1rem' }}
             >
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-telos-orange-400" />
+                <Sparkles className="w-4 h-4 text-HATaxService-orange-400" />
                 <h2 className="text-sm font-semibold">
-                  <span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">AI</span> <span className="text-slate-300">Assistant</span>
+                  HA Tax service <span className="text-slate-300">Assistant</span>
                 </h2>
                 {/* Mode indicator — clickable tag to open settings */}
                 <button
@@ -266,7 +266,7 @@ export default function ChatPanel({ panelWidth, isDragging, onResizeStart, onRes
                             onClick={() => sendMessage(prompt)}
                             className="w-full text-left text-xs px-3 py-2.5 rounded-lg
                                        bg-surface-700 border border-slate-600/50
-                                       text-slate-400 hover:text-white hover:border-telos-blue-500/50
+                                       text-slate-400 hover:text-white hover:border-HATaxService-blue-500/50
                                        transition-all duration-150"
                           >
                             &ldquo;{prompt}&rdquo;
@@ -393,11 +393,11 @@ function PrivateModePanel({ onOpenSettings }: { onOpenSettings: () => void }) {
         </div>
 
         {/* Upgrade CTA */}
-        <div className="w-full rounded-lg border border-telos-blue-500/30 bg-telos-blue-500/5 p-4">
+        <div className="w-full rounded-lg border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/5 p-4">
           <div className="flex items-start gap-2.5">
-            <Key className="w-4 h-4 text-telos-blue-400 mt-0.5 shrink-0" />
+            <Key className="w-4 h-4 text-HATaxService-blue-400 mt-0.5 shrink-0" />
             <div className="text-left">
-              <p className="text-sm font-medium text-telos-blue-300 mb-1">
+              <p className="text-sm font-medium text-HATaxService-blue-300 mb-1">
                 Unlock AI chat
               </p>
               <p className="text-xs text-slate-400 mb-3">
@@ -406,9 +406,9 @@ function PrivateModePanel({ onOpenSettings }: { onOpenSettings: () => void }) {
               </p>
               <button
                 onClick={onOpenSettings}
-                className="text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300
-                           bg-telos-blue-500/10 hover:bg-telos-blue-500/20
-                           border border-telos-blue-500/30 px-3 py-1.5 rounded transition-colors"
+                className="text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300
+                           bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20
+                           border border-HATaxService-blue-500/30 px-3 py-1.5 rounded transition-colors"
               >
                 Set up BYOK
               </button>

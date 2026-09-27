@@ -69,7 +69,7 @@ export default function CostOfGoodsSoldStep() {
       {/* Part III fields */}
       <div className="card space-y-4">
         <div className="flex items-center gap-3 mb-3">
-          <Package className="w-5 h-5 text-telos-blue-400" />
+          <Package className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Schedule C Part III</h3>
         </div>
 
@@ -106,11 +106,11 @@ export default function CostOfGoodsSoldStep() {
         {/* COGS result */}
         <div className="flex justify-between items-center py-2 border-t border-slate-700">
           <span className="text-sm font-semibold text-slate-300">Cost of Goods Sold (Line 42)</span>
-          <span className="text-sm font-semibold text-telos-orange-400">${cogsTotal.toLocaleString()}</span>
+          <span className="text-sm font-semibold text-HATaxService-orange-400">${cogsTotal.toLocaleString()}</span>
         </div>
       </div>
 
-      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+      <a href="https://www.irs.gov/forms-pubs/about-schedule-c" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov
       </a>

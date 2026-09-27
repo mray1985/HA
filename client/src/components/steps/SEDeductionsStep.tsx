@@ -123,19 +123,19 @@ export default function SEDeductionsStep() {
           <div className="px-4 py-3 bg-surface-900 border-t border-slate-700 text-sm text-slate-400">
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
-                <span className="text-telos-orange-400 mt-0.5">+</span>
+                <span className="text-HATaxService-orange-400 mt-0.5">+</span>
                 <span><strong className="text-slate-300">Solo 401(k) Deferral: $23,500</strong> — Up from $23,000 in 2024. Catch-up contribution for age 50+: $7,500. SECURE 2.0 super catch-up for ages 60-63: $11,250 (per Notice 2024-80).</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-telos-orange-400 mt-0.5">+</span>
+                <span className="text-HATaxService-orange-400 mt-0.5">+</span>
                 <span><strong className="text-slate-300">SEP-IRA Max: $70,000</strong> — The total annual additions limit increased to $70,000 (up from $69,000). The compensation limit is $350,000.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-telos-orange-400 mt-0.5">+</span>
+                <span className="text-HATaxService-orange-400 mt-0.5">+</span>
                 <span><strong className="text-slate-300">Social Security Wage Base: $176,100</strong> — Up from $168,600 in 2024. This affects the deductible half of self-employment tax and retirement contribution calculations.</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-telos-orange-400 mt-0.5">+</span>
+                <span className="text-HATaxService-orange-400 mt-0.5">+</span>
                 <span><strong className="text-slate-300">100% Bonus Depreciation Restored</strong> — Under the One Big Beautiful Bill Act, 100% first-year bonus depreciation is available again for business assets placed in service in 2025.</span>
               </li>
             </ul>
@@ -147,7 +147,7 @@ export default function SEDeductionsStep() {
         {/* Health Insurance Section (Form 7206) */}
         <div className="card mb-4 bg-surface-800">
           <div className="flex items-center gap-2 mb-3">
-            <Heart className="w-5 h-5 text-telos-orange-400" />
+            <Heart className="w-5 h-5 text-HATaxService-orange-400" />
             <h3 className="font-medium text-slate-200">Health Insurance Premiums</h3>
             <span className="text-xs text-slate-400">(Form 7206)</span>
           </div>
@@ -182,7 +182,7 @@ export default function SEDeductionsStep() {
                   });
                 }
               }}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors mb-2"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors mb-2"
             >
               + Add LTC, Medicare, or monthly eligibility details
             </button>
@@ -232,7 +232,7 @@ export default function SEDeductionsStep() {
                         updateField('selfEmploymentDeductions', { ...sed, form7206: rest });
                       }
                     }}
-                    className="rounded border-slate-600 bg-surface-900 text-telos-orange-500 focus:ring-telos-orange-500"
+                    className="rounded border-slate-600 bg-surface-900 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500"
                   />
                   Were you eligible for an employer health plan in any month of 2025?
                 </label>
@@ -251,7 +251,7 @@ export default function SEDeductionsStep() {
                           type="checkbox"
                           checked={sed.form7206?.monthlyEligibility?.taxpayerEligibleForEmployerPlan?.[idx] || false}
                           onChange={() => toggleEmployerPlanMonth(idx, false)}
-                          className="rounded border-slate-600 bg-surface-800 text-telos-orange-500 focus:ring-telos-orange-500 w-3.5 h-3.5"
+                          className="rounded border-slate-600 bg-surface-800 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500 w-3.5 h-3.5"
                         />
                         {label}
                       </label>
@@ -267,7 +267,7 @@ export default function SEDeductionsStep() {
                               type="checkbox"
                               checked={sed.form7206?.monthlyEligibility?.spouseEligibleForEmployerPlan?.[idx] || false}
                               onChange={() => toggleEmployerPlanMonth(idx, true)}
-                              className="rounded border-slate-600 bg-surface-800 text-telos-orange-500 focus:ring-telos-orange-500 w-3.5 h-3.5"
+                              className="rounded border-slate-600 bg-surface-800 text-HATaxService-orange-500 focus:ring-HATaxService-orange-500 w-3.5 h-3.5"
                             />
                             {label}
                           </label>
@@ -289,7 +289,7 @@ export default function SEDeductionsStep() {
               </div>
               <div className="flex justify-between text-sm border-t border-slate-700 pt-1 mt-1">
                 <span className="text-slate-200 font-medium">SE health insurance deduction:</span>
-                <span className="text-telos-orange-400 font-mono font-semibold">${form7206.finalDeduction.toLocaleString()}</span>
+                <span className="text-HATaxService-orange-400 font-mono font-semibold">${form7206.finalDeduction.toLocaleString()}</span>
               </div>
             </div>
           )}
@@ -305,7 +305,7 @@ export default function SEDeductionsStep() {
               ))}
             </div>
           )}
-          <a href="https://www.irs.gov/forms-pubs/about-form-7206" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 7206 on IRS.gov</a>
+          <a href="https://www.irs.gov/forms-pubs/about-form-7206" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 7206 on IRS.gov</a>
         </div>
 
         {/* SEP-IRA Section */}
@@ -334,7 +334,7 @@ export default function SEDeductionsStep() {
               ))}
             </div>
           )}
-          <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simplified-employee-pension-plan-sep" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 mb-2 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SEP-IRA on IRS.gov</a>
+          <a href="https://www.irs.gov/retirement-plans/plan-sponsor/simplified-employee-pension-plan-sep" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1 mb-2 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />SEP-IRA on IRS.gov</a>
         </div>
 
         {/* Solo 401(k) Section */}
@@ -346,7 +346,7 @@ export default function SEDeductionsStep() {
 
           {/* Show adjusted net SE income context */}
           {solo401k && hasSEIncome && (
-            <div className="flex items-start gap-2 text-xs text-telos-blue-400 bg-telos-blue-600/10 rounded-lg px-3 py-2 mb-4">
+            <div className="flex items-start gap-2 text-xs text-HATaxService-blue-400 bg-HATaxService-blue-600/10 rounded-lg px-3 py-2 mb-4">
               <Info className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Adjusted net SE income: <strong>${solo401k.adjustedNetSEIncome.toLocaleString()}</strong>
@@ -401,7 +401,7 @@ export default function SEDeductionsStep() {
               </div>
               <div className="flex justify-between text-sm border-t border-slate-700 pt-1 mt-1">
                 <span className="text-slate-200 font-medium">Total contribution:</span>
-                <span className="text-telos-orange-400 font-mono font-semibold">${solo401k.totalContribution.toLocaleString()}</span>
+                <span className="text-HATaxService-orange-400 font-mono font-semibold">${solo401k.totalContribution.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs mt-1">
                 <span className="text-slate-400">Annual addition limit:</span>
@@ -429,7 +429,7 @@ export default function SEDeductionsStep() {
               <span>Contributions are within IRS limits.</span>
             </div>
           )}
-          <a href="https://www.irs.gov/retirement-plans/one-participant-401k-plans" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Solo 401(k) on IRS.gov</a>
+          <a href="https://www.irs.gov/retirement-plans/one-participant-401k-plans" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Solo 401(k) on IRS.gov</a>
         </div>
 
         <FormField label="Other Retirement Contributions" optional helpText="SIMPLE IRA or other qualified plan contributions" tooltip={help?.fields['Other Retirement Contributions']?.tooltip} irsRef={help?.fields['Other Retirement Contributions']?.irsRef}>

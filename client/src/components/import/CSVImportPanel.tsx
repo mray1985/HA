@@ -139,17 +139,17 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => setTargetType('1099b')}
-                className={`card-selectable text-left p-4 ${targetType === '1099b' ? 'ring-2 ring-telos-orange-400' : ''}`}
+                className={`card-selectable text-left p-4 ${targetType === '1099b' ? 'ring-2 ring-HATaxService-orange-400' : ''}`}
               >
-                <BarChart3 className="w-5 h-5 text-telos-blue-400 mb-1" />
+                <BarChart3 className="w-5 h-5 text-HATaxService-blue-400 mb-1" />
                 <div className="text-sm font-medium text-slate-200">1099-B</div>
                 <div className="text-xs text-slate-400">Stocks & Investments</div>
               </button>
               <button
                 onClick={() => setTargetType('1099da')}
-                className={`card-selectable text-left p-4 ${targetType === '1099da' ? 'ring-2 ring-telos-orange-400' : ''}`}
+                className={`card-selectable text-left p-4 ${targetType === '1099da' ? 'ring-2 ring-HATaxService-orange-400' : ''}`}
               >
-                <FileSpreadsheet className="w-5 h-5 text-telos-blue-400 mb-1" />
+                <FileSpreadsheet className="w-5 h-5 text-HATaxService-blue-400 mb-1" />
                 <div className="text-sm font-medium text-slate-200">1099-DA</div>
                 <div className="text-xs text-slate-400">Cryptocurrency & Digital Assets</div>
               </button>
@@ -187,7 +187,7 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
           {/* Detected format badge */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">Detected format:</span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-telos-blue-500/20 text-telos-blue-400 border border-telos-blue-500/30">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-HATaxService-blue-500/20 text-HATaxService-blue-400 border border-HATaxService-blue-500/30">
               {result.detectedFormat === 'generic' ? 'Generic (auto-mapped)' : result.detectedFormat.charAt(0).toUpperCase() + result.detectedFormat.slice(1)}
             </span>
             <span className="text-xs text-slate-400">
@@ -214,7 +214,7 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
             </button>
             <button
               onClick={handleReParse}
-              className="px-4 py-2 text-sm font-medium bg-telos-orange-500 hover:bg-telos-orange-400 text-white rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white rounded-lg transition-colors"
             >
               Continue to Preview
             </button>
@@ -230,7 +230,7 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="card bg-surface-800 border-slate-700 p-3 text-center">
-              <div className="text-2xl font-bold text-telos-blue-400">{result.validCount}</div>
+              <div className="text-2xl font-bold text-HATaxService-blue-400">{result.validCount}</div>
               <div className="text-xs text-slate-400">Ready to import</div>
             </div>
             <div className="card bg-surface-800 border-slate-700 p-3 text-center">
@@ -245,8 +245,8 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
 
           {/* Existing data callout */}
           {existingCount > 0 && (
-            <div className="rounded-xl border bg-telos-blue-600/10 border-telos-blue-600/30 p-3">
-              <p className="text-sm text-telos-blue-300">
+            <div className="rounded-xl border bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30 p-3">
+              <p className="text-sm text-HATaxService-blue-300">
                 You already have <strong>{existingCount}</strong> {targetType === '1099da' ? '1099-DA' : '1099-B'} transactions.
                 These <strong>{result.validCount}</strong> new ones will be added to your existing data.
               </p>
@@ -348,7 +348,7 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 batchDupeCheck && batchDupeCheck.duplicateCount > 0
                   ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                  : 'bg-telos-orange-500 hover:bg-telos-orange-400 text-white'
+                  : 'bg-HATaxService-orange-500 hover:bg-HATaxService-orange-400 text-white'
               }`}
             >
               {batchDupeCheck && batchDupeCheck.duplicateCount > 0
@@ -363,7 +363,7 @@ export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
       {/* ─── State: IMPORTING ──────────────────────────── */}
       {state === 'importing' && (
         <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 text-telos-blue-400 animate-spin mx-auto mb-3" />
+          <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
           <p className="text-sm text-slate-300">Importing transactions...</p>
         </div>
       )}

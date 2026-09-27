@@ -159,7 +159,7 @@ export default function DeadlineCalendar({ deadlines }: DeadlineCalendarProps) {
               <span
                 className={`text-xs leading-none ${
                   isToday
-                    ? 'bg-telos-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center font-bold'
+                    ? 'bg-HATaxService-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center font-bold'
                     : cell.isCurrentMonth
                       ? 'text-slate-300'
                       : 'text-slate-600'

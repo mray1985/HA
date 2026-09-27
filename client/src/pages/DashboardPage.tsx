@@ -20,9 +20,9 @@ const FILING_STATUS_LABELS: Record<number, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    in_progress: 'bg-telos-blue-500/20 text-telos-blue-400 border-telos-blue-500/30',
+    in_progress: 'bg-HATaxService-blue-500/20 text-HATaxService-blue-400 border-HATaxService-blue-500/30',
     review: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    completed: 'bg-telos-orange-500/20 text-telos-orange-400 border-telos-orange-500/30',
+    completed: 'bg-HATaxService-orange-500/20 text-HATaxService-orange-400 border-HATaxService-orange-500/30',
   };
   const labels: Record<string, string> = {
     in_progress: 'In Progress',
@@ -357,7 +357,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-2">
-          <h1 className="text-4xl sm:text-5xl font-bold"><span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">Tax</span></h1>
+          <h1 className="text-4xl sm:text-5xl font-bold">HA Tax service</h1>
           <p className="text-slate-400 text-sm">2025 Tax Year</p>
         </div>
         <p className="text-slate-400 mb-8 mt-2">
@@ -384,19 +384,18 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             onClick={() => navigate('/privacy')}
             className="card flex flex-col items-center text-center py-5 px-4 hover:border-slate-500 transition-colors group cursor-pointer"
           >
-            <Lock className="w-6 h-6 text-telos-orange-400 mb-2.5" />
+            <Lock className="w-6 h-6 text-HATaxService-orange-400 mb-2.5" />
             <h3 className="font-semibold text-slate-200 text-sm mb-1 group-hover:text-white transition-colors">Private</h3>
             <p className="text-xs text-slate-400 leading-relaxed">Your tax data stays on your device. Nothing is sent to any server.</p>
             <span className="text-xs text-slate-400 mt-2 group-hover:text-white transition-colors">Learn more &rarr;</span>
           </button>
+          {/* TODO: replace stub contact link */}
           <a
-            href="https://github.com/telosnews/HATax"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open Source — View on GitHub (opens in new tab)"
+            href="#"
+            aria-label="Open Source — Source"
             className="card flex flex-col items-center text-center py-5 px-4 hover:border-slate-500 transition-colors group cursor-pointer"
           >
-            <Code2 className="w-6 h-6 text-telos-blue-400 mb-2.5" />
+            <Code2 className="w-6 h-6 text-HATaxService-blue-400 mb-2.5" />
             <h3 className="font-semibold text-slate-200 text-sm mb-1 group-hover:text-white transition-colors">Open Source</h3>
             <p className="text-xs text-slate-400 leading-relaxed">Our tax engine is on GitHub. Read the code, verify the math.</p>
             <span className="text-xs text-slate-400 mt-2 group-hover:text-white transition-colors">View on GitHub &rarr;</span>
@@ -432,10 +431,10 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             return (
               <button
                 onClick={() => navigate(`/return/${latest.id}`)}
-                className="w-full card flex items-center gap-4 mb-4 hover:border-telos-blue-500/50 transition-colors group cursor-pointer"
+                className="w-full card flex items-center gap-4 mb-4 hover:border-HATaxService-blue-500/50 transition-colors group cursor-pointer"
               >
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="font-semibold text-white group-hover:text-telos-blue-300 transition-colors">
+                  <p className="font-semibold text-white group-hover:text-HATaxService-blue-300 transition-colors">
                     Continue where you left off
                   </p>
                   <p className="text-sm text-slate-400 mt-0.5">
@@ -443,7 +442,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                     {p.sectionLabel && <> &middot; {p.sectionLabel}</>}
                   </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-telos-blue-400 transition-colors shrink-0" />
+                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-HATaxService-blue-400 transition-colors shrink-0" />
               </button>
             );
           } catch {
@@ -456,21 +455,21 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
           <div className="flex flex-col sm:flex-row gap-2 sm:justify-center">
             <button
               onClick={handleCreate}
-              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors"
+              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors"
             >
               <Plus className="w-5 h-5" />
               Start New Tax Return
             </button>
             <button
               onClick={handleFileExtension}
-              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors"
+              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors"
             >
               <Hourglass className="w-4 h-4" />
               File an Extension
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors"
+              className="flex items-center gap-2 justify-center w-full sm:w-52 px-4 py-2.5 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors"
             >
               <Upload className="w-4 h-4" />
               Import .hatax File
@@ -498,12 +497,12 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
         <ErrorBoundary>
         {returns.length === 0 ? (
           <div className="card text-center py-12">
-            <FileText className="w-12 h-12 text-telos-orange-400 mx-auto mb-4" />
+            <FileText className="w-12 h-12 text-HATaxService-orange-400 mx-auto mb-4" />
             <p className="text-white text-xl font-semibold mb-2">Ready to file your 2025 taxes?</p>
             <p className="text-slate-400 text-sm mb-6 max-w-sm mx-auto">
               It's free, private, and lets you file at your own pace.
             </p>
-            <button onClick={handleCreate} className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors">
+            <button onClick={handleCreate} className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors">
               <Plus className="w-5 h-5" /> Start My Tax Return
             </button>
             <p className="text-xs text-slate-400 mt-4">Your data stays in your browser — no account needed.</p>
@@ -517,7 +516,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                   role="button"
                   tabIndex={0}
                   aria-label={`Open tax return for ${ret.firstName && ret.lastName ? `${ret.firstName} ${ret.lastName}` : `started ${new Date(ret.createdAt).toLocaleDateString()}`}`}
-                  className="card flex items-center justify-between gap-3 cursor-pointer hover:border-slate-500 transition-colors focus-visible:ring-2 focus-visible:ring-telos-blue-500 focus-visible:outline-none"
+                  className="card flex items-center justify-between gap-3 cursor-pointer hover:border-slate-500 transition-colors focus-visible:ring-2 focus-visible:ring-HATaxService-blue-500 focus-visible:outline-none"
                   onClick={() => navigate(`/return/${ret.id}`)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/return/${ret.id}`); } }}
                 >
@@ -548,7 +547,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                         <div className="mt-2 flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-surface-700 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-telos-blue-500 rounded-full transition-all"
+                              className="h-full bg-HATaxService-blue-500 rounded-full transition-all"
                               style={{ width: `${p.pct}%` }}
                             />
                           </div>
@@ -613,7 +612,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             {returns.length > 0 && (
               <button
                 onClick={() => { setShowExportModal(true); setTimeout(() => exportPasswordRef.current?.focus(), 100); }}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-telos-blue-400 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-HATaxService-blue-400 transition-colors"
               >
                 <Download className="w-3 h-3" />
                 Download my data
@@ -677,20 +676,20 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                 type="checkbox"
                 checked={consentChecked}
                 onChange={(e) => setConsentChecked(e.target.checked)}
-                className="mt-0.5 rounded border-slate-500 bg-surface-700 text-telos-blue-500 focus:ring-telos-blue-500 focus:ring-offset-0"
+                className="mt-0.5 rounded border-slate-500 bg-surface-700 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500 focus:ring-offset-0"
               />
               <span className="text-xs text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors">
                 I understand this is a prototype, does not constitute tax advice, and that I am
                 responsible for verifying the accuracy of any tax calculations before filing.
                 I have read and agree to
-                the <button onClick={() => navigate('/terms')} className="text-telos-blue-400 hover:text-telos-blue-300 underline">Terms of Service</button> and <button onClick={() => navigate('/privacy')} className="text-telos-blue-400 hover:text-telos-blue-300 underline">Privacy Policy</button>.
+                the <button onClick={() => navigate('/terms')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Terms of Service</button> and <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button>.
               </span>
             </label>
             <div className="flex gap-2">
               <button
                 onClick={handleConsentConfirm}
                 disabled={!consentChecked}
-                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-telos-blue-600 hover:bg-telos-blue-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue
               </button>
@@ -710,7 +709,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={dismissExportCb}>
           <div ref={exportModalRef} role="dialog" aria-modal="true" aria-label="Export data with password" className="w-full max-w-sm rounded-xl bg-surface-800 border border-slate-700 p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-3">
-              <Lock className="w-4 h-4 text-telos-orange-400" />
+              <Lock className="w-4 h-4 text-HATaxService-orange-400" />
               <h3 className="text-sm font-semibold text-white">Encrypt Export</h3>
             </div>
             <p className="text-xs text-slate-400 mb-4">
@@ -723,7 +722,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                   type={showExportPassword ? 'text' : 'password'}
                   value={exportPassword}
                   onChange={(e) => { setExportPassword(e.target.value); setExportError(''); }}
-                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none pr-10"
+                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none pr-10"
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                 />
@@ -741,7 +740,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                 type={showExportPassword ? 'text' : 'password'}
                 value={exportConfirm}
                 onChange={(e) => { setExportConfirm(e.target.value); setExportError(''); }}
-                className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none mb-2"
+                className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none mb-2"
                 placeholder="Confirm password"
                 autoComplete="new-password"
               />
@@ -776,7 +775,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={dismissImport}>
           <div ref={importModalRef} role="dialog" aria-modal="true" aria-label="Import .hatax file" className="w-full max-w-sm rounded-xl bg-surface-800 border border-slate-700 p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-3">
-              <Lock className="w-4 h-4 text-telos-orange-400" />
+              <Lock className="w-4 h-4 text-HATaxService-orange-400" />
               <h3 className="text-sm font-semibold text-white">Import .hatax File</h3>
             </div>
             <p className="text-xs text-slate-400 mb-1">
@@ -792,7 +791,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
                   type={showImportPassword ? 'text' : 'password'}
                   value={importPassword}
                   onChange={(e) => { setImportPassword(e.target.value); setImportError(''); }}
-                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500 focus:outline-none pr-10"
+                  className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500 focus:outline-none pr-10"
                   placeholder="Enter password"
                   autoComplete="off"
                 />

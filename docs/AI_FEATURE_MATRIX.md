@@ -73,7 +73,7 @@ Which features work in each AI mode. **All new features must be added to this ma
 | Chat conversations | No | Yes | Requires cloud LLM |
 | Voice data entry (dictation) | No | Yes | Speech-to-text is local, but chat required to process |
 | "Guide me" step walkthroughs | No | Yes | Requires chat |
-| Field explanations via chat | No | Yes | Right-click → Ask TelosAI → chat |
+| Field explanations via chat | No | Yes | Right-click → Ask HA Tax service → chat |
 | Document attachment in chat | Partial | Yes | Extraction is local; AI review requires LLM |
 | Structured actions (add_income, etc.) | No | Yes | LLM parses natural language → JSON actions |
 | Local intent detection | Yes | Yes | Deterministic fast-path for deletion/navigation intents; no LLM round-trip |
@@ -95,7 +95,7 @@ Which features work in each AI mode. **All new features must be added to this ma
 | Feature | Private | BYOK | Notes |
 |---------|---------|-----------|-------|
 | All 82 wizard steps | Yes | Yes | Full UI |
-| Right-click → Ask TelosAI | No | Yes | Requires chat |
+| Right-click → Ask HA Tax service | No | Yes | Requires chat |
 | Help content & callout cards | Yes | Yes | Static from helpContent.ts |
 | Step warnings banner | Yes | Yes | Deterministic |
 | Nudge cards | Yes | Yes | Deterministic (AI enrichment is additive) |

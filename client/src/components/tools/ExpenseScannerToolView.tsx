@@ -143,27 +143,27 @@ export default function ExpenseScannerToolView() {
         title="Smart Expense Scanner"
         description={isPrivate
           ? 'AI-powered transaction categorization requires BYOK mode.'
-          : 'Upload transactions, select what to look for, and let TelosAI categorize your expenses by tax relevance.'
+          : 'Upload transactions, select what to look for, and let HA Tax service categorize your expenses by tax relevance.'
         }
       />
 
       {/* ─── Private Mode: upgrade CTA ─── */}
       {isPrivate && (
-        <div className="rounded-lg border border-telos-blue-500/30 bg-telos-blue-500/5 p-5 mt-2">
+        <div className="rounded-lg border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/5 p-5 mt-2">
           <div className="flex items-start gap-3">
-            <Key className="w-5 h-5 text-telos-blue-400 mt-0.5 shrink-0" />
+            <Key className="w-5 h-5 text-HATaxService-blue-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-telos-blue-300 mb-1">Unlock Smart Expense Scanner</p>
+              <p className="text-sm font-medium text-HATaxService-blue-300 mb-1">Unlock Smart Expense Scanner</p>
               <p className="text-xs text-slate-400 mb-3">
                 Add your own API key to scan your bank and credit card transactions
-                for tax-relevant expenses. TelosAI categorizes every transaction by
+                for tax-relevant expenses. HA Tax service categorizes every transaction by
                 type — business expenses, medical, charitable, home office, and more.
               </p>
               <button
                 onClick={() => useAISettingsStore.getState().setMode('byok')}
-                className="text-xs font-medium text-telos-blue-400 hover:text-telos-blue-300
-                           bg-telos-blue-500/10 hover:bg-telos-blue-500/20
-                           border border-telos-blue-500/30 px-3 py-1.5 rounded transition-colors"
+                className="text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300
+                           bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20
+                           border border-HATaxService-blue-500/30 px-3 py-1.5 rounded transition-colors"
               >
                 Set up BYOK
               </button>
@@ -177,7 +177,7 @@ export default function ExpenseScannerToolView() {
         <div className="mt-2 rounded-xl border border-slate-700 bg-surface-800 p-5">
           {/* Card header */}
           <div className="flex items-center gap-2.5 mb-4">
-            <ScanSearch className="w-5 h-5 text-telos-blue-400 shrink-0" />
+            <ScanSearch className="w-5 h-5 text-HATaxService-blue-400 shrink-0" />
             <div>
               <h3 className="font-medium text-slate-200">Scan your 2025 transactions</h3>
               {hasTransactions ? (

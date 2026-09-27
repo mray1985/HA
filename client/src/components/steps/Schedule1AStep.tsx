@@ -60,18 +60,18 @@ export default function Schedule1AStep() {
         </FormField>
         <div className="space-y-2 mt-2">
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-telos-orange-400" checked={!!s1a.isTippedOccupation} onChange={(e) => update('isTippedOccupation', e.target.checked)} />
+            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!s1a.isTippedOccupation} onChange={(e) => update('isTippedOccupation', e.target.checked)} />
             <span className="text-sm text-slate-300">I work in an IRS-listed tipped occupation</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-telos-orange-400" checked={!!s1a.isSelfEmployedTipped} onChange={(e) => update('isSelfEmployedTipped', e.target.checked)} />
+            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!s1a.isSelfEmployedTipped} onChange={(e) => update('isSelfEmployedTipped', e.target.checked)} />
             <span className="text-sm text-slate-300">I am self-employed in a tipped occupation (non-SSTB)</span>
           </label>
           <a
             href="https://www.irs.gov/forms-pubs/occupations-that-customarily-and-regularly-received-tips-on-or-before-december-31-2024"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors ml-6"
+            className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors ml-6"
           >
             <ExternalLink className="w-3 h-3" />
             See IRS-listed tipped occupations
@@ -89,7 +89,7 @@ export default function Schedule1AStep() {
           <CurrencyInput value={s1a.qualifiedOvertimePay} onChange={(v) => update('qualifiedOvertimePay', v)} />
         </FormField>
         <label className="flex items-center gap-3 mt-2 cursor-pointer">
-          <input type="checkbox" className="accent-telos-orange-400" checked={!!s1a.isFLSANonExempt} onChange={(e) => update('isFLSANonExempt', e.target.checked)} />
+          <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!s1a.isFLSANonExempt} onChange={(e) => update('isFLSANonExempt', e.target.checked)} />
           <span className="text-sm text-slate-300">I am FLSA non-exempt (overtime-eligible employee)</span>
         </label>
       </div>
@@ -111,11 +111,11 @@ export default function Schedule1AStep() {
             </FormField>
             <div className="space-y-2 mt-2">
               <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="accent-telos-orange-400" checked={!!s1a.vehicleAssembledInUS} onChange={(e) => update('vehicleAssembledInUS', e.target.checked)} />
+                <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!s1a.vehicleAssembledInUS} onChange={(e) => update('vehicleAssembledInUS', e.target.checked)} />
                 <span className="text-sm text-slate-300">Vehicle was assembled in the United States</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="accent-telos-orange-400" checked={!!s1a.isNewVehicle} onChange={(e) => update('isNewVehicle', e.target.checked)} />
+                <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!s1a.isNewVehicle} onChange={(e) => update('isNewVehicle', e.target.checked)} />
                 <span className="text-sm text-slate-300">This is a new vehicle (original use starts with me)</span>
               </label>
             </div>
@@ -144,7 +144,7 @@ export default function Schedule1AStep() {
           href="https://www.irs.gov/forms-pubs/about-form-4137"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+          className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
           Learn more on IRS.gov
@@ -155,7 +155,7 @@ export default function Schedule1AStep() {
         href="https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions-individuals-and-workers"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

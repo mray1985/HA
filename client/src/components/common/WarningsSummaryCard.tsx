@@ -55,7 +55,7 @@ export default function WarningsSummaryCard() {
                 </h4>
                 <button
                   onClick={() => goToStep(stepWarnings.stepId)}
-                  className="flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+                  className="flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   Review
                   <ArrowRight className="w-3 h-3" />

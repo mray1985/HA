@@ -76,7 +76,7 @@ export default function ForeignTaxCreditStep() {
       ))}
 
       {totalForeignTax > 0 && (
-        <div className="rounded-xl border p-6 mt-4 bg-telos-blue-600/10 border-telos-blue-600/30 text-center">
+        <div className="rounded-xl border p-6 mt-4 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30 text-center">
           <p className="text-sm text-slate-400">Total Foreign Tax Paid</p>
           <p className="text-2xl font-bold text-white">${totalForeignTax.toLocaleString()}</p>
         </div>
@@ -86,7 +86,7 @@ export default function ForeignTaxCreditStep() {
         href="https://www.irs.gov/forms-pubs/about-form-1116"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
       >
         <ExternalLink className="w-3 h-3" />
         Learn more on IRS.gov

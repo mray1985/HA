@@ -87,14 +87,14 @@ export default function CreditsSummaryStep() {
           <div className="space-y-0 divide-y divide-slate-700/50">
             {nonRefundableLines.map((cl) => (
               <div key={cl.label} className="flex items-center gap-3 py-2.5">
-                <div className="text-telos-orange-400 shrink-0">{cl.icon}</div>
+                <div className="text-HATaxService-orange-400 shrink-0">{cl.icon}</div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-slate-200">{cl.label}</span>
                 </div>
                 <span className="text-sm font-medium text-white tabular-nums">${cl.amount.toLocaleString()}</span>
                 <button
                   onClick={() => goToStep(cl.stepId)}
-                  className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+                  className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
                 >
                   Edit
                 </button>
@@ -116,14 +116,14 @@ export default function CreditsSummaryStep() {
           <div className="space-y-0 divide-y divide-slate-700/50">
             {refundableLines.map((cl) => (
               <div key={cl.label} className="flex items-center gap-3 py-2.5">
-                <div className="text-telos-orange-400 shrink-0">{cl.icon}</div>
+                <div className="text-HATaxService-orange-400 shrink-0">{cl.icon}</div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-slate-200">{cl.label}</span>
                 </div>
                 <span className="text-sm font-medium text-white tabular-nums">${cl.amount.toLocaleString()}</span>
                 <button
                   onClick={() => goToStep(cl.stepId)}
-                  className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+                  className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
                 >
                   Edit
                 </button>

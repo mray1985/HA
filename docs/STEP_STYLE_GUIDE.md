@@ -83,7 +83,7 @@ function GuideMe() {
     <div className="rounded-lg border border-slate-700 bg-surface-800/50 mt-4 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Sparkles className="w-4 h-4 text-telos-orange-400 shrink-0" />
+          <Sparkles className="w-4 h-4 text-HATaxService-orange-400 shrink-0" />
           <div>
             <p className="text-sm font-medium text-slate-300">{/* Contextual question */}</p>
             <p className="text-xs text-slate-400 mt-0.5">{/* Brief description */}</p>
@@ -92,8 +92,8 @@ function GuideMe() {
         <button
           onClick={() => openWithPrompt('...')}
           className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md
-                     bg-telos-orange-600/20 hover:bg-telos-orange-600/30 text-telos-orange-300
-                     border border-telos-orange-500/30 hover:border-telos-orange-500/50 transition-colors"
+                     bg-HATaxService-orange-600/20 hover:bg-HATaxService-orange-600/30 text-HATaxService-orange-300
+                     border border-HATaxService-orange-500/30 hover:border-HATaxService-orange-500/50 transition-colors"
         >
           <Sparkles className="w-3 h-3" />
           Guide me
@@ -108,15 +108,15 @@ function GuideMe() {
 - **Placement:** Always immediately after `SectionIntro` (before info callouts, hero cards, or search)
 - **Prompt:** Must be section-specific (e.g., "Help me enter my income" / "Help me find deductions" / "Help me find tax credits")
 - **Styling:** `border-slate-700 bg-surface-800/50` (subtle, not attention-grabbing)
-- **Icon:** Always `Sparkles` in `text-telos-orange-400`
+- **Icon:** Always `Sparkles` in `text-HATaxService-orange-400`
 - **Button text:** Always "Guide me" (two words, lowercase "me")
 
 ### PillToggle Feedback Messages
 
 | Answer | State | Message | Color |
 |--------|-------|---------|-------|
-| Yes | No data | "Click 'Start' above or continue to enter your data" | `text-telos-blue-400` |
-| Yes | Data entered | "Data entered. Click 'Revisit' to make changes." | `text-telos-orange-400` |
+| Yes | No data | "Click 'Start' above or continue to enter your data" | `text-HATaxService-blue-400` |
+| Yes | Data entered | "Data entered. Click 'Revisit' to make changes." | `text-HATaxService-orange-400` |
 | No | — | "Got it — you won't need to report this." | `text-slate-400` |
 | Not Sure | — | "No worries — we'll include this section so you can decide later." | `text-amber-400` |
 
@@ -309,7 +309,7 @@ Every step that corresponds to an IRS form or publication should include a stand
   href="https://www.irs.gov/forms-pubs/about-form-XXXX"
   target="_blank"
   rel="noopener noreferrer"
-  className="inline-flex items-center gap-1 mt-4 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"
+  className="inline-flex items-center gap-1 mt-4 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
 >
   <ExternalLink className="w-3 h-3" />
   Learn more on IRS.gov
@@ -333,7 +333,7 @@ Many steps also have IRS refs via the `helpContent` system's `irsRef` field on i
 
 Color logic per [UI Color Reference](#ui-color-reference):
 - Income amounts: `text-white`
-- Deductions/savings: `text-telos-orange-400`
+- Deductions/savings: `text-HATaxService-orange-400`
 - Credits/refunds/profit: `text-emerald-400`
 - Tax owed/penalties: `text-amber-400`
 - Losses: `text-red-400`
@@ -388,7 +388,7 @@ Color logic per [UI Color Reference](#ui-color-reference):
 |---------|-------|-------|
 | Income | White (neutral) | `text-white` |
 | Self-Employment | Profit: emerald / Loss: red | `text-emerald-400` / `text-red-400` |
-| Deductions | Orange (savings) | `text-telos-orange-400` |
+| Deductions | Orange (savings) | `text-HATaxService-orange-400` |
 | Credits | Emerald | `text-emerald-400` |
 | Tax Summary | Refund: emerald / Owed: amber | `text-emerald-400` / `text-amber-400` |
 
@@ -496,7 +496,7 @@ Semantic color conventions for monetary values, text, and interactive elements a
 | Color | Tailwind Class | Usage |
 |-------|---------------|-------|
 | **White** | `text-white` | Line item values in breakdown lists (neutral — context communicates meaning) |
-| **Telos Orange** | `text-telos-orange-400` | Hero totals on deduction/savings pages; section total rows (e.g., "Total Adjustments") |
+| **HA Tax service Orange** | `text-HATaxService-orange-400` | Hero totals on deduction/savings pages; section total rows (e.g., "Total Adjustments") |
 | **Emerald** | `text-emerald-400` | Refunds, credits, positive outcomes for the taxpayer |
 | **Amber** | `text-amber-400` | Taxes owed, AMT, penalties — amounts the taxpayer must pay |
 | **Red** | `text-red-400` | Losses (capital losses, negative balances in non-refund contexts) |
@@ -521,11 +521,11 @@ Semantic color conventions for monetary values, text, and interactive elements a
 
 | Element | Color |
 |---------|-------|
-| Primary buttons | `bg-telos-blue-600` / `text-white` |
+| Primary buttons | `bg-HATaxService-blue-600` / `text-white` |
 | Secondary buttons | `bg-surface-700` / `text-slate-200` |
-| Inline "Edit" buttons | `text-telos-blue-400` with `border-telos-blue-500/30` |
-| Text links / navigation | `text-telos-blue-400` hover → `text-telos-blue-300` |
-| Selected card border | `border-telos-orange-500` with `bg-telos-orange-500/10` |
+| Inline "Edit" buttons | `text-HATaxService-blue-400` with `border-HATaxService-blue-500/30` |
+| Text links / navigation | `text-HATaxService-blue-400` hover → `text-HATaxService-blue-300` |
+| Selected card border | `border-HATaxService-orange-500` with `bg-HATaxService-orange-500/10` |
 
 ### Summary Page Icons (SectionIntro)
 
@@ -598,11 +598,11 @@ For charts with many items that don't map to a single semantic concept (income d
 
 ### Icon Colors
 
-- Section heading icons: `text-telos-orange-400` (consistent brand accent)
+- Section heading icons: `text-HATaxService-orange-400` (consistent brand accent)
 - Inline status icons: Match the semantic color of their context
 
 ### Background Accents
 
-- Hero cards with orange context: `bg-telos-orange-500/5 border-telos-orange-500/20`
+- Hero cards with orange context: `bg-HATaxService-orange-500/5 border-HATaxService-orange-500/20`
 - Hero cards with emerald context: `bg-emerald-500/5 border-emerald-500/20`
 - Hero cards with amber context: `bg-amber-500/5 border-amber-500/20`

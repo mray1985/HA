@@ -182,7 +182,7 @@ function OverallProgressHeader({
             completeness === 100
               ? 'bg-emerald-500'
               : completeness >= 60
-                ? 'bg-telos-blue-500'
+                ? 'bg-HATaxService-blue-500'
                 : 'bg-amber-500'
           }`}
           style={{ width: `${completeness}%` }}
@@ -227,7 +227,7 @@ function PendingAlert({ groups }: { groups: FormTypeGroup[] }) {
             <span className="text-sm text-slate-400 flex-1">{group.formLabel}</span>
             <button
               onClick={() => goToStep(group.stepId)}
-              className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+              className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
             >
               Enter
             </button>
@@ -258,7 +258,7 @@ function IncomeFormGroupCard({ group }: { group: FormTypeGroup }) {
         onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && hasEntries) { e.preventDefault(); setIsOpen(!isOpen); } }}
         className={`w-full flex items-center gap-3 text-left ${hasEntries ? 'cursor-pointer' : 'cursor-default'}`}
       >
-        <div className="text-telos-orange-400 shrink-0">{icon}</div>
+        <div className="text-HATaxService-orange-400 shrink-0">{icon}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-200">{group.formLabel}</span>
@@ -294,7 +294,7 @@ function IncomeFormGroupCard({ group }: { group: FormTypeGroup }) {
         {!hasEntries && (
           <button
             onClick={(e) => { e.stopPropagation(); goToStep(group.stepId); }}
-            className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+            className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
           >
             Enter
           </button>
@@ -335,7 +335,7 @@ function FormEntryRow({ entry, stepId }: { entry: FormEntry; stepId: string }) {
       </div>
       <button
         onClick={() => goToStep(stepId)}
-        className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+        className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
       >
         Edit
       </button>
@@ -352,7 +352,7 @@ function NonIncomeSectionRow({ section }: { section: NonIncomeSection }) {
 
   return (
     <div className="flex items-center gap-3 py-2.5">
-      <div className="text-telos-blue-400 shrink-0">{icon}</div>
+      <div className="text-HATaxService-blue-400 shrink-0">{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-200">{section.label}</span>
@@ -372,7 +372,7 @@ function NonIncomeSectionRow({ section }: { section: NonIncomeSection }) {
       </div>
       <button
         onClick={() => goToStep(section.stepId)}
-        className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-2 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors shrink-0"
+        className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-2 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors shrink-0"
       >
         {section.status === 'complete' ? 'View' : 'Edit'}
       </button>

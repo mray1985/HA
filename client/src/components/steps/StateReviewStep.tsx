@@ -83,7 +83,7 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-telos-blue-600/20 flex items-center justify-center text-telos-blue-400 font-bold text-sm">
+          <div className="w-10 h-10 rounded-lg bg-HATaxService-blue-600/20 flex items-center justify-center text-HATaxService-blue-400 font-bold text-sm">
             {sr.stateCode}
           </div>
           <div>
@@ -152,7 +152,7 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
                 <span className="w-12 text-right text-slate-400">{(b.rate * 100).toFixed(1)}%</span>
                 <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-telos-blue-500/60 rounded-full"
+                    className="h-full bg-HATaxService-blue-500/60 rounded-full"
                     style={{
                       width: `${Math.min(100, (b.taxableAtRate / sr.stateTaxableIncome) * 100)}%`,
                     }}

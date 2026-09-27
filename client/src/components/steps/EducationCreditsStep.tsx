@@ -164,7 +164,7 @@ export default function EducationCreditsStep() {
               <div className="text-sm text-slate-400">{ec.type === 'american_opportunity' ? 'AOTC' : 'LLC'} &middot; Tuition: ${(ec.tuitionPaid ?? 0).toLocaleString()}</div>
             </div>
             <div className="flex items-center gap-1">
-              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(ec); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+              <ItemWarningBadge warnings={itemWarnings.get(idx)} /><button onClick={(e) => { e.stopPropagation(); startEdit(ec); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
               <button onClick={(e) => { e.stopPropagation(); removeItem(ec.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
@@ -183,7 +183,7 @@ export default function EducationCreditsStep() {
       {taxReturn.educationCredits.some((ec) => ec.type === 'american_opportunity') && (
         <div className="card mt-6 space-y-4">
           <div className="flex items-start gap-2">
-            <Info className="w-4 h-4 text-telos-blue-400 shrink-0 mt-0.5" />
+            <Info className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-slate-200">AOTC Refundable Credit Eligibility</p>
               <p className="text-xs text-slate-400 mt-1">Up to 40% of the American Opportunity Credit ($1,000) is refundable — unless you were a dependent who didn&apos;t provide over half your own support. Most filers can skip these questions.</p>

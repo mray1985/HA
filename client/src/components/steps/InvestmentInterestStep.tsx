@@ -59,15 +59,15 @@ export default function InvestmentInterestStep() {
         </p>
         <div className="space-y-2">
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-telos-orange-400" checked={!!ii.electToIncludeQualifiedDividends} onChange={(e) => update('electToIncludeQualifiedDividends', e.target.checked)} />
+            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!ii.electToIncludeQualifiedDividends} onChange={(e) => update('electToIncludeQualifiedDividends', e.target.checked)} />
             <span className="text-sm text-slate-300">Include qualified dividends in net investment income</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-telos-orange-400" checked={!!ii.electToIncludeLTCG} onChange={(e) => update('electToIncludeLTCG', e.target.checked)} />
+            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!ii.electToIncludeLTCG} onChange={(e) => update('electToIncludeLTCG', e.target.checked)} />
             <span className="text-sm text-slate-300">Include net long-term capital gains in net investment income</span>
           </label>
         </div>
-        <a href="https://www.irs.gov/forms-pubs/about-form-4952" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
+        <a href="https://www.irs.gov/forms-pubs/about-form-4952" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Learn more on IRS.gov</a>
       </div>
 
       <StepNavigation onContinue={save} />

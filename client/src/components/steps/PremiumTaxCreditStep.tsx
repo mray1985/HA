@@ -146,8 +146,8 @@ export default function PremiumTaxCreditStep() {
 
       {/* Annual vs Monthly toggle */}
       <div className="flex gap-2 mb-4">
-        <button className={`py-1.5 px-3 rounded text-sm ${useAnnual ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => setUseAnnual(true)}>Same Every Month</button>
-        <button className={`py-1.5 px-3 rounded text-sm ${!useAnnual ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => setUseAnnual(false)}>Enter Monthly</button>
+        <button className={`py-1.5 px-3 rounded text-sm ${useAnnual ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => setUseAnnual(true)}>Same Every Month</button>
+        <button className={`py-1.5 px-3 rounded text-sm ${!useAnnual ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => setUseAnnual(false)}>Enter Monthly</button>
       </div>
 
       {useAnnual ? (
@@ -223,7 +223,7 @@ export default function PremiumTaxCreditStep() {
 
       <div className="mt-6 space-y-4">
         <FormField label="Tax Family Size" tooltip="The number of people in your tax household (you, spouse if filing jointly, and dependents). This determines your Federal Poverty Level percentage.">
-          <p className="text-xs text-telos-blue-400 mb-2">
+          <p className="text-xs text-HATaxService-blue-400 mb-2">
             Auto-calculated: 1 (you){taxReturn.filingStatus === FilingStatus.MarriedFilingJointly ? ' + 1 (spouse)' : ''}{(taxReturn.dependents || []).length > 0 ? ` + ${(taxReturn.dependents || []).length} (dependents)` : ''} = {derivedFamilySize}
           </p>
           <input
@@ -253,21 +253,21 @@ export default function PremiumTaxCreditStep() {
           <div className="space-y-2">
             <FormField label="Victim of domestic abuse?" tooltip="MFS filers can only claim PTC if they are victims of domestic abuse or spousal abandonment.">
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.isVictimOfDomesticAbuse ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isVictimOfDomesticAbuse', true)}>Yes</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.isVictimOfDomesticAbuse ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isVictimOfDomesticAbuse', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.isVictimOfDomesticAbuse ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isVictimOfDomesticAbuse', true)}>Yes</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.isVictimOfDomesticAbuse ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isVictimOfDomesticAbuse', false)}>No</button>
               </div>
             </FormField>
             <FormField label="Spousal abandonment?" tooltip="You lived apart from your spouse for the entire tax year.">
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.isSpousalAbandonment ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isSpousalAbandonment', true)}>Yes</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpousalAbandonment ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isSpousalAbandonment', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.isSpousalAbandonment ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isSpousalAbandonment', true)}>Yes</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.isSpousalAbandonment ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => updateGeneralField('isSpousalAbandonment', false)}>No</button>
               </div>
             </FormField>
           </div>
         )}
 
         <div className="flex items-center gap-3 mt-4 mb-1">
-          <FileText className="w-5 h-5 text-telos-blue-400" />
+          <FileText className="w-5 h-5 text-HATaxService-blue-400" />
           <h3 className="font-medium text-slate-200">Form 1095-A Entries</h3>
         </div>
         <p className="text-sm text-slate-400">Add each Form 1095-A you received from the Marketplace. Most people have one per policy.</p>
@@ -292,7 +292,7 @@ export default function PremiumTaxCreditStep() {
               </div>
               <div className="flex items-center gap-1">
                 <ItemWarningBadge warnings={itemWarnings.get(idx)} />
-                <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-telos-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+                <button onClick={(e) => { e.stopPropagation(); startEdit(item); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
                 <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
@@ -308,8 +308,8 @@ export default function PremiumTaxCreditStep() {
         )}
 
         {totalAPTC > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-blue-600/10 border-telos-blue-600/30 text-sm">
-            <p className="text-telos-blue-300 font-medium">Total Advance PTC received: ${totalAPTC.toLocaleString()}</p>
+          <div className="rounded-xl border p-6 bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30 text-sm">
+            <p className="text-HATaxService-blue-300 font-medium">Total Advance PTC received: ${totalAPTC.toLocaleString()}</p>
             <p className="text-xs text-slate-400 mt-1">
               This will be reconciled against your actual PTC based on final income. You may owe back excess APTC or receive an additional credit.
             </p>

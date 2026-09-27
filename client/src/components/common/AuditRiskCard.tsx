@@ -19,10 +19,10 @@ const LEVEL_COLORS: Record<RiskLevel, {
     icon: 'text-emerald-400',
   },
   moderate: {
-    card: 'bg-telos-blue-600/10 border-telos-blue-600/30',
-    badge: 'bg-telos-blue-600/20 text-telos-blue-300',
+    card: 'bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30',
+    badge: 'bg-HATaxService-blue-600/20 text-HATaxService-blue-300',
     badgeText: 'Moderate',
-    icon: 'text-telos-blue-400',
+    icon: 'text-HATaxService-blue-400',
   },
   elevated: {
     card: 'bg-amber-500/10 border-amber-500/30',
@@ -150,8 +150,8 @@ function FactorDetail({ factor }: { factor: RiskFactor }) {
       <p className="text-sm font-medium text-slate-200">{factor.label}</p>
       <p className="text-xs text-slate-400 mt-1 leading-relaxed">{factor.explanation}</p>
       <div className="flex items-start gap-1.5 mt-2">
-        <Lightbulb className="w-3.5 h-3.5 text-telos-orange-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-telos-orange-300/80">{factor.mitigation}</p>
+        <Lightbulb className="w-3.5 h-3.5 text-HATaxService-orange-400 shrink-0 mt-0.5" />
+        <p className="text-xs text-HATaxService-orange-300/80">{factor.mitigation}</p>
       </div>
     </div>
   );

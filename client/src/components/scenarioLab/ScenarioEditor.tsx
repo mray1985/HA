@@ -74,7 +74,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
   };
 
   return (
-    <div className={`py-3 px-3 rounded-lg transition-colors ${hasOverride ? 'border-l-2 border-l-telos-orange-500 bg-telos-orange-500/5' : ''}`}>
+    <div className={`py-3 px-3 rounded-lg transition-colors ${hasOverride ? 'border-l-2 border-l-HATaxService-orange-500 bg-HATaxService-orange-500/5' : ''}`}>
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-start gap-2">
           {variable.icon && <variable.icon className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />}
@@ -104,7 +104,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
             {variable.applyMode === 'navigate' && (
               <button
                 onClick={handleNavigate}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-telos-blue-500/10 text-telos-blue-400 hover:bg-telos-blue-500/20 transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-HATaxService-blue-500/10 text-HATaxService-blue-400 hover:bg-HATaxService-blue-500/20 transition-colors"
                 title="Edit this value in your return"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -113,7 +113,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
             )}
             <button
               onClick={handleReset}
-              className="p-1 text-slate-500 hover:text-telos-orange-400 transition-colors rounded"
+              className="p-1 text-slate-500 hover:text-HATaxService-orange-400 transition-colors rounded"
               title="Reset to original"
             >
               <RotateCcw className="w-3 h-3" />
@@ -138,7 +138,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
         <select
           value={String(currentValue)}
           onChange={(e) => handleChange(e.target.value)}
-          className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-telos-orange-500 focus:ring-1 focus:ring-telos-orange-500/30"
+          className="w-full bg-surface-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-HATaxService-orange-500 focus:ring-1 focus:ring-HATaxService-orange-500/30"
         >
           {variable.options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -150,7 +150,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
         <button
           onClick={() => handleChange(!(currentValue as boolean))}
           className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-            currentValue ? 'bg-telos-orange-500/20 text-telos-orange-400' : 'bg-surface-800 text-slate-400'
+            currentValue ? 'bg-HATaxService-orange-500/20 text-HATaxService-orange-400' : 'bg-surface-800 text-slate-400'
           }`}
         >
           {currentValue ? 'Enabled' : 'Disabled'}
@@ -188,7 +188,7 @@ function CategoryAccordion({ category, variables, taxReturn, scenario, dispatch,
           <span className="text-[10px] text-slate-500">{variables.length}</span>
         </div>
         {overrideCount > 0 && (
-          <span className="text-[10px] bg-telos-orange-500/20 text-telos-orange-400 px-1.5 py-0.5 rounded">
+          <span className="text-[10px] bg-HATaxService-orange-500/20 text-HATaxService-orange-400 px-1.5 py-0.5 rounded">
             {overrideCount} changed
           </span>
         )}
@@ -255,7 +255,7 @@ export default function ScenarioEditor({ taxReturn, scenario, dispatch, expanded
           placeholder="Search variables..."
           value={searchQuery}
           onChange={(e) => dispatch({ type: 'SET_SEARCH', query: e.target.value })}
-          className="w-full pl-9 pr-3 py-2 bg-surface-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-telos-blue-500 focus:ring-1 focus:ring-telos-blue-500/30"
+          className="w-full pl-9 pr-3 py-2 bg-surface-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-HATaxService-blue-500 focus:ring-1 focus:ring-HATaxService-blue-500/30"
         />
       </div>
 
@@ -263,7 +263,7 @@ export default function ScenarioEditor({ taxReturn, scenario, dispatch, expanded
       {scenario.overrides.size > 0 && (
         <button
           onClick={() => dispatch({ type: 'CLEAR_ALL_OVERRIDES', scenarioId: scenario.id })}
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-telos-orange-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-HATaxService-orange-400 transition-colors"
         >
           <RotateCcw className="w-3 h-3" />
           Reset all {scenario.overrides.size} overrides

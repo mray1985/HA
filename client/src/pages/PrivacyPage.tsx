@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         </button>
 
         <div className="flex items-center gap-3 mb-8">
-          <span className="font-bold text-4xl"><span className="text-telos-orange-400">Telos</span><span className="text-telos-blue-400">Tax</span></span>
+          <span className="font-bold text-4xl">HA Tax service</span>
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Privacy Policy</h1>
         </div>
 
@@ -24,8 +24,8 @@ export default function PrivacyPage() {
           <p className="text-slate-400 text-xs">Last updated: March 22, 2026</p>
 
           {/* TL;DR box */}
-          <div className="card bg-telos-blue-600/10 border-telos-blue-600/30">
-            <h3 className="text-base font-semibold text-telos-blue-300 mb-2">The short version</h3>
+          <div className="card bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
+            <h3 className="text-base font-semibold text-HATaxService-blue-300 mb-2">The short version</h3>
             <p className="text-slate-300">
               Your tax data never leaves your computer. We don't collect data. We don't use cookies.
               We don't track you. Your tax return exists only on your device, encrypted with a
@@ -56,10 +56,10 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What Tax Data We Collect</h2>
-            <p className="font-semibold text-telos-orange-300">None.</p>
+            <p className="font-semibold text-HATaxService-orange-300">None.</p>
             <p>
               HATax runs entirely in your web browser. When you enter tax information — names,
-              income, deductions, Social Security Numbers — that data is stored in your browser's <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">localStorage</code> on
+              income, deductions, Social Security Numbers — that data is stored in your browser's <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">localStorage</code> on
               your device. It is never transmitted over the internet.
             </p>
             <p>
@@ -84,27 +84,27 @@ export default function PrivacyPage() {
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">Everything you enter (name, address, income, deductions)</td>
                     <td className="py-2 pr-4">Browser localStorage, encrypted when a passphrase is set</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">Social Security Number (last 4 digits only)</td>
                     <td className="py-2 pr-4">Browser localStorage (AES-256-GCM encrypted)</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">Imported documents (PDFs, CSVs, photos)</td>
                     <td className="py-2 pr-4">Read in your browser and discarded after extraction</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">Tax calculation results</td>
                     <td className="py-2 pr-4">Browser memory (RAM)</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">PDF, CSV, JSON, and .hatax exports</td>
                     <td className="py-2 pr-4">Generated in browser, saved to your device</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">AI chat conversations (BYOK mode)</td>
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
                   <tr className="border-b border-slate-800">
                     <td className="py-2 pr-4">Installed app cache (PWA)</td>
                     <td className="py-2 pr-4">Static files only — never tax data</td>
-                    <td className="py-2 text-telos-orange-300">Never</td>
+                    <td className="py-2 text-HATaxService-orange-300">Never</td>
                   </tr>
                 </tbody>
               </table>
@@ -211,7 +211,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">6. Data Portability</h2>
             <p>
-              HATax provides one-click export in four formats: JSON, CSV, PDF, and <code className="text-telos-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">.hatax</code> (an
+              HATax provides one-click export in four formats: JSON, CSV, PDF, and <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">.hatax</code> (an
               encrypted, password-protected format for safe backup and transfer). You can export your
               complete tax return data at any time from the export page. This data belongs to you and
               can be imported into other tools or kept for your records.
@@ -287,7 +287,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mt-6 mb-3">12. Contact</h2>
             <p>
-              Questions about this privacy policy? Email us at <a href="mailto:ryan@telos.news" className="text-telos-blue-400 hover:text-telos-blue-300 underline">ryan@telos.news</a> or visit our <a href="https://github.com/telosnews/HATax" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">GitHub repository</a>.
+              Questions about this privacy policy? Email us at {/* TODO: replace stub contact link */}<a href="mailto:contact@example.com" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">contact@example.com</a> or visit our {/* TODO: replace stub contact link */}<a href="#" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Source</a>.
             </p>
           </section>
 
@@ -326,7 +326,7 @@ export default function PrivacyPage() {
               Anthropic says it does not use API data for model training, and that API inputs and
               outputs are retained for up to 30 days for safety monitoring, then automatically
               deleted. For full details,
-              see <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-telos-blue-400 hover:text-telos-blue-300 underline">Anthropic's privacy policy</a>.
+              see <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Anthropic's privacy policy</a>.
             </p>
             <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">AI features that use BYOK</h3>
             <ul className="list-disc list-inside space-y-1 text-slate-400">

@@ -117,7 +117,7 @@ export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelPr
             {f.totalAdjustments > 0 && (
               <div className="bg-surface-900 rounded-lg p-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                  Adjustments <span className="text-telos-orange-500">(reduce your income)</span>
+                  Adjustments <span className="text-HATaxService-orange-500">(reduce your income)</span>
                 </h4>
                 <div className="space-y-2">
                   {f.seDeduction > 0 && (

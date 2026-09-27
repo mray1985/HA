@@ -251,7 +251,7 @@ export default function CreditsOverviewStep() {
             isActive ? 'bg-surface-800' : 'bg-surface-900 hover:bg-surface-800'
           }`}
         >
-          <div className={`${isActive ? 'text-telos-orange-400' : 'text-slate-400'}`}>
+          <div className={`${isActive ? 'text-HATaxService-orange-400' : 'text-slate-400'}`}>
             {q.icon}
           </div>
           <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ export default function CreditsOverviewStep() {
                 </span>
               )}
               {q.isAutoCalculated && (
-                <span className="text-[10px] text-telos-blue-400 bg-telos-blue-600/10 px-1.5 py-0.5 rounded font-normal whitespace-nowrap">
+                <span className="text-[10px] text-HATaxService-blue-400 bg-HATaxService-blue-600/10 px-1.5 py-0.5 rounded font-normal whitespace-nowrap">
                   auto
                 </span>
               )}
@@ -279,7 +279,7 @@ export default function CreditsOverviewStep() {
             {isActive && hasData && !q.isAutoCalculated && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(q.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Revisit
               </button>
@@ -287,7 +287,7 @@ export default function CreditsOverviewStep() {
             {isActive && !hasData && !q.isAutoCalculated && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToStep(q.stepId); }}
-                className="text-xs text-telos-blue-400 hover:text-telos-blue-300 px-3 py-1 rounded border border-telos-blue-500/30 hover:border-telos-blue-500/50 transition-colors"
+                className="text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 px-3 py-1 rounded border border-HATaxService-blue-500/30 hover:border-HATaxService-blue-500/50 transition-colors"
               >
                 Start
               </button>
@@ -310,13 +310,13 @@ export default function CreditsOverviewStep() {
                   onChange={(val) => setAnswer(q.key, val)}
                 />
                 {answer === 'yes' && !hasData && !q.isAutoCalculated && (
-                  <p className="text-xs text-telos-blue-400 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-HATaxService-blue-400 mt-2 flex items-center gap-1">
                     <PenLine className="w-3 h-3" />
                     Click "Start" above or continue to enter your data.
                   </p>
                 )}
                 {answer === 'yes' && hasData && (
-                  <p className="text-xs text-telos-orange-400 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-HATaxService-orange-400 mt-2 flex items-center gap-1">
                     <Check className="w-3 h-3" />
                     {q.isAutoCalculated ? 'Calculated automatically from your income.' : 'Data entered. Click "Revisit" to make changes.'}
                   </p>
@@ -347,14 +347,14 @@ export default function CreditsOverviewStep() {
 
 
       {/* Consolidated info callout */}
-      <div className="rounded-lg border border-telos-blue-600/30 bg-telos-blue-600/10 mt-4 mb-4 p-4">
+      <div className="rounded-lg border border-HATaxService-blue-600/30 bg-HATaxService-blue-600/10 mt-4 mb-4 p-4">
         <div className="flex items-start gap-2.5">
-          <Info className="w-4 h-4 mt-0.5 shrink-0 text-telos-blue-300" />
+          <Info className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-blue-300" />
           <div className="text-sm text-slate-400 leading-relaxed space-y-2">
             <p>
-              <span className="font-medium text-telos-blue-300">How credits work:</span>{' '}
+              <span className="font-medium text-HATaxService-blue-300">How credits work:</span>{' '}
               Tax credits reduce your tax dollar-for-dollar — much more valuable than deductions. Some credits are <strong className="text-slate-300">refundable</strong> (EITC, ACTC, AOTC) meaning you get the money even if you owe no tax.{' '}
-              <a href="https://www.irs.gov/credits-deductions-for-individuals" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-telos-blue-400 hover:text-telos-blue-300 transition-colors">
+              <a href="https://www.irs.gov/credits-deductions-for-individuals" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors">
                 <ExternalLink className="w-3 h-3" />Learn more on IRS.gov
               </a>
             </p>
@@ -367,11 +367,11 @@ export default function CreditsOverviewStep() {
 
       {/* Status callout */}
       {(yesCount > 0 || totalCredits > 0) && (
-        <div className="card mt-4 text-center bg-telos-orange-500/5 border-telos-orange-500/20">
+        <div className="card mt-4 text-center bg-HATaxService-orange-500/5 border-HATaxService-orange-500/20">
           {totalCredits > 0 ? (
             <>
               <p className="text-sm text-slate-300">
-                <span className="text-telos-orange-400 font-bold">${totalCredits.toLocaleString()}</span> in total credits
+                <span className="text-HATaxService-orange-400 font-bold">${totalCredits.toLocaleString()}</span> in total credits
               </p>
               <p className="text-xs text-slate-400 mt-1">
                 {yesCount} {yesCount === 1 ? 'credit' : 'credits'} selected
@@ -379,7 +379,7 @@ export default function CreditsOverviewStep() {
             </>
           ) : (
             <p className="text-sm text-slate-300">
-              <span className="text-telos-orange-400 font-bold">{yesCount}</span>{' '}
+              <span className="text-HATaxService-orange-400 font-bold">{yesCount}</span>{' '}
               {yesCount === 1 ? 'credit' : 'credits'} selected
             </p>
           )}
@@ -425,7 +425,7 @@ export default function CreditsOverviewStep() {
                     {group.label}
                   </span>
                   {activeCount > 0 && (
-                    <span className="text-xs text-telos-orange-400 bg-telos-orange-500/10 px-2 py-0.5 rounded-full">
+                    <span className="text-xs text-HATaxService-orange-400 bg-HATaxService-orange-500/10 px-2 py-0.5 rounded-full">
                       {activeCount}
                     </span>
                   )}

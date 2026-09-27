@@ -99,13 +99,13 @@ export default function EVCreditStep() {
         <FormField label="Vehicle Type" tooltip={help?.fields['Vehicle Type']?.tooltip}>
           <div className="flex gap-2">
             <button
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${info.isNewVehicle ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${info.isNewVehicle ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
               onClick={() => update('isNewVehicle', true)}
             >
               New Vehicle
             </button>
             <button
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${!info.isNewVehicle ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${!info.isNewVehicle ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400 hover:text-slate-200'}`}
               onClick={() => update('isNewVehicle', false)}
             >
               Previously Owned
@@ -142,7 +142,7 @@ export default function EVCreditStep() {
                 type="checkbox"
                 checked={!!info.isVanSUVPickup}
                 onChange={(e) => update('isVanSUVPickup', e.target.checked)}
-                className="mt-1 rounded border-slate-600 bg-slate-800 text-telos-blue-500 focus:ring-telos-blue-500"
+                className="mt-1 rounded border-slate-600 bg-slate-800 text-HATaxService-blue-500 focus:ring-HATaxService-blue-500"
               />
               <div>
                 <span className="text-sm text-slate-200 group-hover:text-white">
@@ -156,22 +156,22 @@ export default function EVCreditStep() {
 
             <FormField label="Final Assembly in North America?" tooltip="The vehicle must undergo final assembly in North America to qualify.">
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.finalAssemblyUS ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('finalAssemblyUS', true)}>Yes</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.finalAssemblyUS ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('finalAssemblyUS', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.finalAssemblyUS ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('finalAssemblyUS', true)}>Yes</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.finalAssemblyUS ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('finalAssemblyUS', false)}>No</button>
               </div>
             </FormField>
 
             <FormField label="Meets Critical Mineral Requirement?" tooltip="The vehicle's battery must contain a certain percentage of critical minerals extracted or processed in the US or a free trade partner.">
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.meetsMineralReq ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsMineralReq', true)}>Yes ($3,750)</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.meetsMineralReq ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsMineralReq', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.meetsMineralReq ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsMineralReq', true)}>Yes ($3,750)</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.meetsMineralReq ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsMineralReq', false)}>No</button>
               </div>
             </FormField>
 
             <FormField label="Meets Battery Component Requirement?" tooltip="The vehicle's battery must contain a certain percentage of components manufactured or assembled in North America.">
               <div className="flex gap-3">
-                <button className={`py-1.5 px-4 rounded text-sm ${info.meetsBatteryComponentReq ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsBatteryComponentReq', true)}>Yes ($3,750)</button>
-                <button className={`py-1.5 px-4 rounded text-sm ${!info.meetsBatteryComponentReq ? 'bg-telos-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsBatteryComponentReq', false)}>No</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${info.meetsBatteryComponentReq ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsBatteryComponentReq', true)}>Yes ($3,750)</button>
+                <button className={`py-1.5 px-4 rounded text-sm ${!info.meetsBatteryComponentReq ? 'bg-HATaxService-blue-600 text-white' : 'bg-surface-800 text-slate-400'}`} onClick={() => update('meetsBatteryComponentReq', false)}>No</button>
               </div>
             </FormField>
           </>
@@ -187,8 +187,8 @@ export default function EVCreditStep() {
         )}
 
         {estimatedCredit > 0 && (
-          <div className="rounded-xl border p-6 bg-telos-orange-500/10 border-telos-orange-500/20">
-            <span className="text-telos-orange-300 font-medium">
+          <div className="rounded-xl border p-6 bg-HATaxService-orange-500/10 border-HATaxService-orange-500/20">
+            <span className="text-HATaxService-orange-300 font-medium">
               Estimated Credit: ${estimatedCredit.toLocaleString()}
             </span>
             <p className="text-xs text-slate-400 mt-1">
