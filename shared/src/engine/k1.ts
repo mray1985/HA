@@ -84,7 +84,10 @@ export function routeK1Income(k1: IncomeK1): K1RoutingResult {
   const qualifiedDividends = Math.min(k1.qualifiedDividends || 0, ordinaryDividends);
   const shortTermCapitalGain = k1.shortTermCapitalGain || 0;
   const longTermCapitalGain = k1.longTermCapitalGain || 0;
-  const netSection1231Gain = k1.netSection1231Gain || 0;
+  // Box 10 is already the signed net section 1231 gain or loss. Box 13 code K
+  // is excess business interest, not a section 1231 loss. Form 1040 nets this
+  // amount with Form 4797 before treating a gain as long-term or a loss as ordinary.
+  const netSection1231Gain = round2(k1.netSection1231Gain || 0);
   const otherIncome = k1.otherIncome || 0;
   const section199AQBI = k1.section199AQBI || 0;
   const section179Deduction = Math.max(0, k1.section179Deduction || 0);

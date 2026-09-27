@@ -54,10 +54,14 @@ describe('calculateQBIDeduction', () => {
     expect(result).toBe(0);
   });
 
-  it('handles QualifyingSurvivingSpouse like MFJ', () => {
-    const mfj = calculateQBIDeduction(80000, 300000, FilingStatus.MarriedFilingJointly);
+  it('uses the non-joint QBI threshold for a qualifying surviving spouse', () => {
+    // $300,000 is under the joint threshold and over the single phase-out.
+    const single = calculateQBIDeduction(80000, 300000, FilingStatus.Single);
     const qss = calculateQBIDeduction(80000, 300000, FilingStatus.QualifyingSurvivingSpouse);
-    expect(qss).toBe(mfj);
+    const mfj = calculateQBIDeduction(80000, 300000, FilingStatus.MarriedFilingJointly);
+    expect(qss).toBe(single);
+    expect(qss).toBe(0);
+    expect(mfj).toBeGreaterThan(0);
   });
 
   it('handles MFS like Single for thresholds', () => {

@@ -125,4 +125,154 @@ describe('28% collectibles rate', () => {
     expect(collectibleGain.scheduleD?.collectiblesGain).toBe(10000);
     expect(collectibleGain.form1040.incomeTax - ordinaryGain.form1040.incomeTax).toBe(1300);
   });
+
+  it('does not tax a short-term loss that already reduced collectibles at 15%', () => {
+    const wages = [{
+      id: 'w1',
+      employerName: 'Acme',
+      wages: 220000,
+      federalTaxWithheld: 0,
+    }];
+    const collectibles = {
+      id: 'art',
+      brokerName: 'Gallery',
+      description: 'Painting',
+      dateSold: '2025-06-01',
+      proceeds: 10000,
+      costBasis: 0,
+      isLongTerm: true,
+      isCollectible: true,
+    };
+    const shortTermLoss = {
+      id: 'stock',
+      brokerName: 'Broker',
+      description: 'Stock',
+      dateSold: '2025-06-01',
+      proceeds: 0,
+      costBasis: 4000,
+      isLongTerm: false,
+    };
+    const reducedOnly = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: [{ ...collectibles, proceeds: 6000 }],
+    }));
+    const withShortTermLoss = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: [collectibles, shortTermLoss],
+    }));
+
+    expect(withShortTermLoss.scheduleD?.collectiblesGain).toBe(6000);
+    expect(withShortTermLoss.form1040.incomeTax).toBe(reducedOnly.form1040.incomeTax);
+  });
+
+  it('does not treat collectibles wiped out by a net capital loss as long-term gain', () => {
+    const wages = [{
+      id: 'w1',
+      employerName: 'Acme',
+      wages: 80000,
+      federalTaxWithheld: 8000,
+    }];
+    const plainLoss = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: [{
+        id: 'stock',
+        brokerName: 'Broker',
+        description: 'Stock',
+        dateSold: '2025-06-01',
+        proceeds: 0,
+        costBasis: 2000,
+        isLongTerm: false,
+      }],
+    }));
+    const wipedCollectibles = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: [
+        {
+          id: 'art',
+          brokerName: 'Gallery',
+          description: 'Painting',
+          dateSold: '2025-06-01',
+          proceeds: 3000,
+          costBasis: 0,
+          isLongTerm: true,
+          isCollectible: true,
+        },
+        {
+          id: 'stock',
+          brokerName: 'Broker',
+          description: 'Stock',
+          dateSold: '2025-06-01',
+          proceeds: 0,
+          costBasis: 5000,
+          isLongTerm: false,
+        },
+      ],
+    }));
+
+    expect(wipedCollectibles.scheduleD?.collectiblesGain).toBe(0);
+    expect(wipedCollectibles.form1040.incomeTax).toBe(plainLoss.form1040.incomeTax);
+  });
+
+  it('recomputes collectibles after a section 1231 gain restores long-term net gain', () => {
+    const wages = [{
+      id: 'w1',
+      employerName: 'Acme',
+      wages: 220000,
+      federalTaxWithheld: 0,
+    }];
+    const collectiblesAndLoss = [
+      {
+        id: 'art',
+        brokerName: 'Gallery',
+        description: 'Painting',
+        dateSold: '2025-06-01',
+        proceeds: 10000,
+        costBasis: 0,
+        isLongTerm: true,
+        isCollectible: true,
+      },
+      {
+        id: 'stock',
+        brokerName: 'Broker',
+        description: 'Stock',
+        dateSold: '2025-06-01',
+        proceeds: 0,
+        costBasis: 10000,
+        isLongTerm: true,
+      },
+    ];
+    const land = {
+      id: 'land',
+      description: 'Land',
+      dateAcquired: '2020-01-01',
+      dateSold: '2025-06-01',
+      salesPrice: 10000,
+      costBasis: 0,
+      depreciationAllowed: 0,
+    };
+    const wiped = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: collectiblesAndLoss,
+    }));
+    const restored = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      income1099B: collectiblesAndLoss,
+      form4797Properties: [land],
+    }));
+    const preferential = calculateForm1040(makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      w2Income: wages,
+      form4797Properties: [land],
+    }));
+
+    expect(wiped.scheduleD?.collectiblesGain).toBe(0);
+    expect(restored.scheduleD?.collectiblesGain).toBe(10000);
+    expect(restored.form1040.incomeTax - preferential.form1040.incomeTax).toBe(1300);
+  });
 });

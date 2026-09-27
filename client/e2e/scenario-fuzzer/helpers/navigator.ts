@@ -17,46 +17,31 @@ export async function injectAndOpen(page: Page, taxReturn: FuzzerTaxReturn): Pro
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
 
+  await page.evaluate(({ tr, id }) => {
+    localStorage.setItem(`hatax:return:${id}`, JSON.stringify(tr));
+    localStorage.setItem('hatax:returns', JSON.stringify([id]));
+    localStorage.setItem('hatax:consent', JSON.stringify({
+      termsVersion: 'March 2026',
+      privacyVersion: 'March 2026',
+      acceptedAt: new Date().toISOString(),
+    }));
+  }, { tr: taxReturn, id: taxReturn.id });
+
   if (USE_PROGRAMMATIC_ENCRYPTION) {
-    // Fast path: set up encryption via Web Crypto API directly (no UI)
     await setupEncryptionProgrammatically(page);
-
-    // Inject plaintext return (app will encrypt on loadAllReturns)
-    await page.evaluate(({ tr, id }) => {
-      localStorage.setItem(`hatax:return:${id}`, JSON.stringify(tr));
-      localStorage.setItem('hatax:returns', JSON.stringify([id]));
-    }, { tr: taxReturn, id: taxReturn.id });
-
-    // Navigate to return — encryption is already configured
-    await page.goto(`/return/${taxReturn.id}`);
-    await page.waitForTimeout(1500);
-
-    // Handle unlock if needed (key is in localStorage but not in memory after nav)
-    await handleEncryptionGate(page);
-  } else {
-    // UI path: inject plaintext, let the encryption gate appear, fill it in
-    await page.evaluate(({ tr, id }) => {
-      localStorage.setItem(`hatax:return:${id}`, JSON.stringify(tr));
-      localStorage.setItem('hatax:returns', JSON.stringify([id]));
-    }, { tr: taxReturn, id: taxReturn.id });
-
-    // Reload to trigger the encryption gate
-    await page.reload();
-    await page.waitForTimeout(500);
-
-    // Handle encryption gate (set passphrase for the first time)
-    await handleEncryptionGate(page);
-
-    // Navigate to the return
-    await page.goto(`/return/${taxReturn.id}`);
-    await page.waitForTimeout(1000);
-
-    // If encryption gate appears again on the return page, handle it
-    await handleEncryptionGate(page);
   }
 
-  // Wait for wizard to fully load
-  await page.waitForTimeout(500);
+  // A full navigation drops the in-memory key, so open the return with a
+  // client-side click after the gate is dismissed.
+  await page.reload();
+  await handleEncryptionGate(page);
+
+  const openReturn = page.getByRole('button', { name: /Continue where you left off/i });
+  await openReturn.waitFor({ state: 'visible', timeout: 10000 });
+  await openReturn.click();
+  await page.waitForURL(new RegExp(`/return/${taxReturn.id}`));
+  await page.getByRole('button', { name: /Let.*Go|^Continue$|^Done/i }).first()
+    .waitFor({ state: 'visible', timeout: 10000 });
 }
 
 /**
@@ -81,8 +66,17 @@ export async function walkAllSteps(page: Page): Promise<{ visitedSteps: string[]
       break;
     }
 
-    // Check for stuck navigation (same step label twice)
-    if (stepLabel === lastStepLabel && stepLabel !== `step-${i}`) {
+    const clicked = await clickNavButton(page);
+    if (!clicked) {
+      const onLastStep = await page.getByRole('heading', { name: /Export & PDF|Filing Instructions/i }).isVisible().catch(() => false);
+      if (onLastStep) break;
+      const disabledContinue = await page.locator('button:has-text("Continue"):disabled').isVisible().catch(() => false);
+      if (disabledContinue) {
+        errors.push(`Continue button disabled at step ${i} (${stepLabel}) — validation may be blocking`);
+      }
+      stuckCount++;
+      if (stuckCount >= 2) break;
+    } else if (stepLabel === lastStepLabel) {
       stuckCount++;
       if (stuckCount >= 3) break;
     } else {
@@ -90,27 +84,7 @@ export async function walkAllSteps(page: Page): Promise<{ visitedSteps: string[]
     }
     lastStepLabel = stepLabel;
 
-    // Try to click the navigation button
-    const clicked = await clickNavButton(page);
-    if (!clicked) {
-      // Check if Continue exists but is disabled (validation blocking)
-      const disabledContinue = await page.locator('button:has-text("Continue"):disabled').isVisible({ timeout: 200 }).catch(() => false);
-      if (disabledContinue) {
-        errors.push(`Continue button disabled at step ${i} (${stepLabel}) — validation may be blocking`);
-        // Try to skip past by clicking sidebar next section
-        break;
-      }
-
-      // Check if we're on the last step (export/finish)
-      const hasExport = await page.getByText(/Export|Download|Filing Instructions/i).isVisible().catch(() => false);
-      if (hasExport) break;
-
-      // No nav button found — might be stuck
-      stuckCount++;
-      if (stuckCount >= 3) break;
-    }
-
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(100);
   }
 
   return { visitedSteps, errors };
@@ -161,25 +135,21 @@ async function extractStepLabel(page: Page, index: number): Promise<string> {
  */
 async function clickNavButton(page: Page): Promise<boolean> {
   // The welcome step has "Let's Go", other steps have "Continue" or "Done"
-  const buttons = [
-    page.getByRole('button', { name: /Let.*Go/i }),
-    page.getByRole('button', { name: /Continue/i }),
-    page.getByRole('button', { name: /Done/i }),
-    page.getByRole('button', { name: /Next/i }),
-  ];
-
-  for (const btn of buttons) {
-    try {
-      if (await btn.isVisible({ timeout: 500 })) {
-        await btn.click();
-        await page.waitForTimeout(400);
+  // The step action sits at the bottom of the page. An earlier hidden match
+  // (chat, menus) must not block the walk.
+  const buttons = page.getByRole('button', { name: /Let.*Go|^Continue|^Done$|^Done with|^Next$|Download Forms/i });
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    const count = await buttons.count();
+    for (let i = count - 1; i >= 0; i--) {
+      const btn = buttons.nth(i);
+      if (await btn.isVisible().catch(() => false) && await btn.isEnabled().catch(() => false)) {
+        await btn.click({ force: true, timeout: 3000 });
         return true;
       }
-    } catch {
-      // Button not found, try next
     }
+    await page.waitForTimeout(100);
   }
-
   return false;
 }
 

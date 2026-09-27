@@ -283,12 +283,13 @@ describe('Schedule 1-A: Enhanced Senior Deduction', () => {
   });
 
   it('MFJ phase-out uses $150k threshold', () => {
-    // MFJ, both 65+. MAGI = $200k. Excess = $200k - $150k = $50k. Reduction = $50k * 0.06 = $3,000
+    // MFJ, both 65+. MAGI = $200k. Excess = $50k. 6% × $50k = $3,000 once.
+    // Combined $12,000 − $3,000 = $9,000.
     const result = calculateSchedule1A(
       {}, 200000, FilingStatus.MarriedFilingJointly, true, true,
     );
     expect(result.seniorPhaseOutReduction).toBe(3000);
-    expect(result.seniorDeduction).toBe(9000); // $12k - $3k
+    expect(result.seniorDeduction).toBe(9000);
   });
 
   it('MFS filers ineligible for senior deduction', () => {

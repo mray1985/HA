@@ -155,14 +155,16 @@ export function calculateMultiBusinessQBIDeduction(
   return Math.max(0, round2(Math.min(totalDeduction, taxableIncomeLimit)));
 }
 
-// QBI threshold: MFJ and QSS use the higher threshold per IRS Form 8995 worksheet.
-// Note: IRC §199A(e)(2) says "joint return" but IRS practice groups QSS with MFJ.
+// QBI threshold: the doubled amount is for a joint return. A qualifying surviving
+// spouse files another return, so the Revenue Procedure's "all other returns"
+// amount applies (the single/head-of-household figure).
 function getQBIThreshold(filingStatus: FilingStatus, taxYear: number = 2025): number {
   const QBI = getQbi(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
-    case FilingStatus.QualifyingSurvivingSpouse:
       return QBI.THRESHOLD_MFJ;
+    case FilingStatus.MarriedFilingSeparately:
+      return QBI.THRESHOLD_MFS;
     default:
       return QBI.THRESHOLD_SINGLE;
   }
@@ -172,7 +174,6 @@ function getQBIPhaseInRange(filingStatus: FilingStatus, taxYear: number = 2025):
   const QBI = getQbi(taxYear);
   switch (filingStatus) {
     case FilingStatus.MarriedFilingJointly:
-    case FilingStatus.QualifyingSurvivingSpouse:
       return QBI.PHASE_IN_RANGE_MFJ;
     default:
       return QBI.PHASE_IN_RANGE_SINGLE;

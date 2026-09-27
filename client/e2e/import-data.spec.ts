@@ -3,7 +3,7 @@
  *
  * Tests the Import Data wizard step including:
  * - Step appears in the wizard sidebar
- * - Import CSV and Import PDF option cards are visible
+ * - CSV Import and PDF and Image Import option cards are visible
  * - CSV flow: selecting CSV mode shows the CSV import panel
  * - PDF flow: selecting PDF mode shows the PDF import panel
  * - Back navigation returns to option cards
@@ -12,50 +12,23 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
+import { clickNavButton, openSidebarStep } from './helpers/wizard';
 
 // Helper: navigate to a fresh return wizard
 async function createAndOpenReturn(page: Page) {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await unlockDashboard(page);
   await page.getByRole('button', { name: /Start New Tax Return/i }).click();
   await expect(page).toHaveURL(/\/return\/[a-f0-9-]+/);
   await page.waitForTimeout(500);
 }
 
-// Helper: click the main navigation button (Continue, Let's Go, etc.)
-async function clickNavButton(page: Page) {
-  const letsGo = page.getByRole('button', { name: /Let.*Go/i });
-  const continueBtn = page.getByRole('button', { name: /Continue/i });
-  const doneBtn = page.getByRole('button', { name: /Done/i });
-
-  if (await letsGo.isVisible().catch(() => false)) {
-    await letsGo.click();
-  } else if (await continueBtn.isVisible().catch(() => false)) {
-    await continueBtn.click();
-  } else if (await doneBtn.isVisible().catch(() => false)) {
-    await doneBtn.click();
-  }
-  await page.waitForTimeout(400);
-}
-
-// Helper: navigate to the Import Data step by clicking through the wizard
-// (sidebar sections may be collapsed, so forward navigation is more reliable)
 async function navigateToImportStep(page: Page) {
-  // Welcome → Personal Info → Filing Status → Dependents → Income Overview → Import Data
-  // That's 5 forward clicks from the welcome step
-  for (let i = 0; i < 5; i++) {
-    await clickNavButton(page);
-  }
-
-  // Check if we're on Import Data. If not, try one more click.
-  const isOnImport = await page.getByText('Import Your Tax Documents').isVisible().catch(() => false);
-  if (!isOnImport) {
-    await clickNavButton(page);
-  }
-
-  // Wait for the step to fully render
-  await page.waitForTimeout(300);
+  await openSidebarStep(page, 'Import Data');
+  await expect(page.getByText('Import Your Tax Documents')).toBeVisible();
 }
 
 test.describe('Import Data Step', () => {
@@ -68,8 +41,8 @@ test.describe('Import Data Step', () => {
 
     // Should see the step title or import-related content
     const hasTitle = await page.getByText('Import Your Tax Documents').isVisible().catch(() => false);
-    const hasImportCSV = await page.getByText('Import CSV').isVisible().catch(() => false);
-    const hasImportPDF = await page.getByText('Import PDF').isVisible().catch(() => false);
+    const hasImportCSV = await page.getByText('CSV Import').isVisible().catch(() => false);
+    const hasImportPDF = await page.getByText('PDF and Image Import').isVisible().catch(() => false);
 
     expect(hasTitle || hasImportCSV || hasImportPDF).toBe(true);
   });
@@ -81,8 +54,8 @@ test.describe('Import Data Step', () => {
     await expect(page.getByText('Import Your Tax Documents')).toBeVisible();
 
     // Should see both option cards
-    await expect(page.getByText('Import CSV')).toBeVisible();
-    await expect(page.getByText('Import PDF')).toBeVisible();
+    await expect(page.getByText('CSV Import')).toBeVisible();
+    await expect(page.getByText('PDF and Image Import')).toBeVisible();
   });
 
   test('shows the optional skip message', async ({ page }) => {
@@ -94,18 +67,15 @@ test.describe('Import Data Step', () => {
   test('shows limitation callouts', async ({ page }) => {
     await navigateToImportStep(page);
 
-    // Should see the warning callout about limitations
-    await expect(page.getByText('Import Limitations')).toBeVisible();
-
-    // Should see the info callout about supported formats
-    await expect(page.getByText('Supported CSV Formats')).toBeVisible();
+    await expect(page.getByText(/Scanned documents and photos can be processed with OCR/i)).toBeVisible();
+    await expect(page.getByText(/Schwab, Fidelity/i)).toBeVisible();
   });
 
-  test('clicking Import CSV shows the CSV import panel', async ({ page }) => {
+  test('clicking CSV Import shows the CSV import panel', async ({ page }) => {
     await navigateToImportStep(page);
 
-    // Click the "Import CSV" card
-    await page.getByText('Import CSV').first().click();
+    // Click the "CSV Import" card
+    await page.getByText('CSV Import').first().click();
     await page.waitForTimeout(300);
 
     // Should see CSV-specific UI elements
@@ -118,11 +88,11 @@ test.describe('Import Data Step', () => {
     expect(has1099B || has1099DA || hasBroker || hasTargetType).toBe(true);
   });
 
-  test('clicking Import PDF shows the PDF import panel', async ({ page }) => {
+  test('clicking PDF and Image Import shows the PDF import panel', async ({ page }) => {
     await navigateToImportStep(page);
 
-    // Click the "Import PDF" card
-    await page.getByText('Import PDF').first().click();
+    // Click the "PDF and Image Import" card
+    await page.getByText('PDF and Image Import').first().click();
     await page.waitForTimeout(300);
 
     // Should see PDF-specific UI elements (the drop zone or PDF-related text)
@@ -137,7 +107,7 @@ test.describe('Import Data Step', () => {
     await navigateToImportStep(page);
 
     // Enter CSV mode
-    await page.getByText('Import CSV').first().click();
+    await page.getByText('CSV Import').first().click();
     await page.waitForTimeout(300);
 
     // Look for a back button (may be "← Back to options" or similar)
@@ -155,8 +125,8 @@ test.describe('Import Data Step', () => {
       }
 
       // Should be back on the idle view with both cards
-      const hasCSV = await page.getByText('Import CSV').isVisible().catch(() => false);
-      const hasPDF = await page.getByText('Import PDF').isVisible().catch(() => false);
+      const hasCSV = await page.getByText('CSV Import').isVisible().catch(() => false);
+      const hasPDF = await page.getByText('PDF and Image Import').isVisible().catch(() => false);
       expect(hasCSV && hasPDF).toBe(true);
     }
   });
@@ -165,7 +135,7 @@ test.describe('Import Data Step', () => {
     await navigateToImportStep(page);
 
     // Enter PDF mode
-    await page.getByText('Import PDF').first().click();
+    await page.getByText('PDF and Image Import').first().click();
     await page.waitForTimeout(300);
 
     // Look for a back button
@@ -181,8 +151,8 @@ test.describe('Import Data Step', () => {
         }
       }
 
-      const hasCSV = await page.getByText('Import CSV').isVisible().catch(() => false);
-      const hasPDF = await page.getByText('Import PDF').isVisible().catch(() => false);
+      const hasCSV = await page.getByText('CSV Import').isVisible().catch(() => false);
+      const hasPDF = await page.getByText('PDF and Image Import').isVisible().catch(() => false);
       expect(hasCSV && hasPDF).toBe(true);
     }
   });
@@ -208,7 +178,7 @@ test.describe('Import Data Step', () => {
     await navigateToImportStep(page);
 
     await expect(
-      page.getByText(/Save time by importing CSV files or digital PDFs/i),
+      page.getByText(/Skip manual data entry/i),
     ).toBeVisible();
   });
 

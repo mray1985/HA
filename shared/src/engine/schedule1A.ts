@@ -34,8 +34,8 @@ export function calculateSchedule1A(
 ): Schedule1AResult {
   const SCHEDULE_1A = getTaxConstants(taxYear).SCHEDULE_1A;
   const isMFS = filingStatus === FilingStatus.MarriedFilingSeparately;
-  const isMFJ = filingStatus === FilingStatus.MarriedFilingJointly ||
-    filingStatus === FilingStatus.QualifyingSurvivingSpouse;
+  const isJointReturn = filingStatus === FilingStatus.MarriedFilingJointly;
+  const isMFJ = isJointReturn || filingStatus === FilingStatus.QualifyingSurvivingSpouse;
 
   // ─── 1. No Tax on Tips ───────────────────────────
   let tipsDeduction = 0;
@@ -74,14 +74,19 @@ export function calculateSchedule1A(
   if (!isMFS) {
     let seniorCount = 0;
     if (taxpayerAge65OrOlder) seniorCount++;
-    if (isMFJ && spouseAge65OrOlder) seniorCount++;
+    if (isJointReturn && spouseAge65OrOlder) seniorCount++;
 
     if (seniorCount > 0) {
+      // Schedule 1-A Part V / OBBBA §104: $6,000 per qualifying person.
+      // $150,000 only if married filing jointly. The 6% reduction applies once
+      // to the combined amount, not once per person.
+      const threshold = isJointReturn
+        ? SCHEDULE_1A.SENIOR_PHASE_OUT_MFJ
+        : SCHEDULE_1A.SENIOR_PHASE_OUT_SINGLE;
       const baseSenior = seniorCount * SCHEDULE_1A.SENIOR_AMOUNT;
-      const threshold = isMFJ ? SCHEDULE_1A.SENIOR_PHASE_OUT_MFJ : SCHEDULE_1A.SENIOR_PHASE_OUT_SINGLE;
-      if (magi > threshold) {
-        seniorPhaseOutReduction = round2((magi - threshold) * SCHEDULE_1A.SENIOR_PHASE_OUT_RATE);
-      }
+      seniorPhaseOutReduction = magi > threshold
+        ? round2((magi - threshold) * SCHEDULE_1A.SENIOR_PHASE_OUT_RATE)
+        : 0;
       seniorDeduction = round2(Math.max(0, baseSenior - seniorPhaseOutReduction));
     }
   }

@@ -12,29 +12,16 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
+import { clickNavButton, openSidebarStep, reopenCurrentReturn } from './helpers/wizard';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function createAndOpenReturn(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: /new.*return|start.*return|create/i }).click();
+  await unlockDashboard(page);
+  await page.getByRole('button', { name: /Start New Tax Return/i }).click();
   await page.waitForURL(/\/return\//);
-}
-
-async function clickNavButton(page: Page) {
-  const letsGo = page.getByRole('button', { name: /Let.*Go/i });
-  const continueBtn = page.getByRole('button', { name: /Continue/i });
-  const doneBtn = page.getByRole('button', { name: /Done/i });
-  if (await letsGo.isVisible().catch(() => false)) await letsGo.click();
-  else if (await continueBtn.isVisible().catch(() => false)) await continueBtn.click();
-  else if (await doneBtn.isVisible().catch(() => false)) await doneBtn.click();
-  await page.waitForTimeout(400);
-}
-
-async function navigateToStep(page: Page, stepCount: number) {
-  for (let i = 0; i < stepCount; i++) {
-    await clickNavButton(page);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -44,8 +31,8 @@ async function navigateToStep(page: Page, stepCount: number) {
 test.describe('Personal Info — Input Validation', () => {
   test.beforeEach(async ({ page }) => {
     await createAndOpenReturn(page);
-    // Navigate past Welcome step to Personal Info
-    await clickNavButton(page);
+    await openSidebarStep(page, 'Personal Info');
+    await expect(page.getByText('First Name').first()).toBeVisible();
   });
 
   test('accepts text in name fields', async ({ page }) => {
@@ -81,8 +68,7 @@ test.describe('Personal Info — Input Validation', () => {
 test.describe('Filing Status — Conditional Display', () => {
   test.beforeEach(async ({ page }) => {
     await createAndOpenReturn(page);
-    // Welcome → Personal Info → Filing Status
-    await navigateToStep(page, 2);
+    await openSidebarStep(page, 'Filing Status');
   });
 
   test('shows 5 filing status options', async ({ page }) => {
@@ -123,8 +109,8 @@ test.describe('Filing Status — Conditional Display', () => {
 test.describe('Dependents — Form Validation', () => {
   test.beforeEach(async ({ page }) => {
     await createAndOpenReturn(page);
-    // Welcome → Personal Info → Filing Status → Dependents
-    await navigateToStep(page, 3);
+    await openSidebarStep(page, 'Dependents');
+    await page.getByRole('radio', { name: /^Yes$/i }).click();
   });
 
   test('Add Dependent button exists', async ({ page }) => {
@@ -197,17 +183,17 @@ test.describe('Dependents — Form Validation', () => {
 test.describe('Income Overview — Discovery Toggles', () => {
   test.beforeEach(async ({ page }) => {
     await createAndOpenReturn(page);
-    // Navigate to Income Overview (Welcome → Personal → Filing → Dependents → Income Overview)
-    await navigateToStep(page, 4);
+    await openSidebarStep(page, 'Income');
+    await openSidebarStep(page, 'Income Overview');
   });
 
   test('shows income type categories with expandable sections', async ({ page }) => {
     // Income Overview shows categorized income types
-    const w2Section = page.getByText(/W-2 Employment Income/i).first();
+    const w2Section = page.getByText(/Employment Income \(W-2\)/i).first();
     await expect(w2Section).toBeVisible();
 
     // Should show the search bar for income types
-    const searchBar = page.locator('input[placeholder*="Search income"]');
+    const searchBar = page.locator('input[placeholder*="Search income types"]');
     await expect(searchBar).toBeVisible();
 
     // Click on W-2 to expand it
@@ -217,7 +203,7 @@ test.describe('Income Overview — Discovery Toggles', () => {
 
   test('clicking W-2 section expands to show add option', async ({ page }) => {
     // Click on the W-2 Employment Income section to expand it
-    const w2Section = page.getByText(/W-2 Employment Income/i).first();
+    const w2Section = page.getByText(/Employment Income \(W-2\)/i).first();
     await w2Section.click();
     await page.waitForTimeout(500);
 
@@ -237,12 +223,12 @@ test.describe('Income Overview — Discovery Toggles', () => {
 test.describe('W-2 Income — Currency Input', () => {
   test.beforeEach(async ({ page }) => {
     await createAndOpenReturn(page);
-    // Navigate to Income Overview and enable W-2
-    await navigateToStep(page, 4);
+    await openSidebarStep(page, 'Income');
+    await openSidebarStep(page, 'Income Overview');
 
     // Enable W-2 income
-    const w2Section = page.locator('div').filter({ hasText: /w-2/i }).first();
-    const yesBtn = w2Section.getByRole('button', { name: /^yes$/i });
+    const w2Card = page.locator('div').filter({ hasText: /Employment Income \(W-2\)/i }).first();
+    const yesBtn = w2Card.getByRole('radio', { name: /^Yes$/i });
     if (await yesBtn.isVisible().catch(() => false)) {
       await yesBtn.click();
       await page.waitForTimeout(300);
@@ -308,45 +294,27 @@ test.describe('W-2 Income — Currency Input', () => {
 test.describe('Data Persistence — Auto-Save', () => {
   test('personal info persists to localStorage after input', async ({ page }) => {
     await createAndOpenReturn(page);
-    // Navigate to Personal Info
-    await clickNavButton(page);
+    await openSidebarStep(page, 'Personal Info');
 
-    // Fill first name
-    const firstNameInput = page.locator('input').first();
+    const firstNameInput = page.getByLabel('First Name');
     await firstNameInput.fill('TestPersist');
-    await page.waitForTimeout(700); // Wait for 500ms debounce + buffer
+    await page.waitForTimeout(800);
 
-    // Check localStorage
-    const returnData = await page.evaluate(() => {
-      const ids = JSON.parse(localStorage.getItem('hatax:returns') || '[]');
-      if (ids.length === 0) return null;
-      return JSON.parse(localStorage.getItem(`hatax:return:${ids[0]}`) || 'null');
-    });
-
-    expect(returnData).toBeTruthy();
-    // The first name should be stored (field might be firstName or addressStreet depending on layout)
-    const storedJson = JSON.stringify(returnData);
-    expect(storedJson).toContain('TestPersist');
+    await reopenCurrentReturn(page);
+    await openSidebarStep(page, 'Personal Info');
+    await expect(page.getByLabel('First Name')).toHaveValue('TestPersist');
   });
 
   test('filing status persists after selection', async ({ page }) => {
     await createAndOpenReturn(page);
-    await navigateToStep(page, 2); // to Filing Status
+    await openSidebarStep(page, 'Filing Status');
 
-    // Select Head of Household
-    const hohBtn = page.getByText(/Head of Household/i).first();
-    await hohBtn.click();
-    await page.waitForTimeout(700);
+    await page.getByRole('button', { name: /Head of Household/i }).click();
+    await page.waitForTimeout(800);
 
-    // Verify in localStorage
-    const filingStatus = await page.evaluate(() => {
-      const ids = JSON.parse(localStorage.getItem('hatax:returns') || '[]');
-      if (ids.length === 0) return null;
-      const tr = JSON.parse(localStorage.getItem(`hatax:return:${ids[0]}`) || 'null');
-      return tr?.filingStatus;
-    });
-
-    expect(filingStatus).toBeTruthy();
+    await reopenCurrentReturn(page);
+    await openSidebarStep(page, 'Filing Status');
+    await expect(page.getByRole('button', { name: /Head of Household/i })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -357,11 +325,10 @@ test.describe('Data Persistence — Auto-Save', () => {
 test.describe('Navigation — Continue Button Behavior', () => {
   test('Continue button is always visible on wizard steps', async ({ page }) => {
     await createAndOpenReturn(page);
-    // Navigate past welcome to Personal Info
-    await clickNavButton(page);
+    await openSidebarStep(page, 'Personal Info');
 
     // A continue/next button should be visible
-    const navButton = page.getByRole('button', { name: /continue|next|done/i });
+    const navButton = page.getByRole('button', { name: /^Continue$/i });
     await expect(navButton.first()).toBeVisible();
   });
 

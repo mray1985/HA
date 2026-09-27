@@ -47,7 +47,7 @@ import { calculateEstimatedQuarterly } from './estimatedTax.js';
 import { calculateEITC } from './eitc.js';
 import { calculateNIIT } from './niit.js';
 import { calculateAdditionalMedicareTaxW2 } from './additionalMedicare.js';
-import { calculateScheduleD } from './scheduleD.js';
+import { calculateScheduleD, capCollectiblesGain, limitCapitalLoss } from './scheduleD.js';
 import { calculateTaxableSocialSecurity } from './socialSecurity.js';
 import { calculateScheduleE } from './scheduleE.js';
 import { calculateDependentCareCredit } from './dependentCare.js';
@@ -726,17 +726,13 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
   ctx.k1Routing = hasK1 ? aggregateK1Income(taxReturn.incomeK1) : undefined;
 
   if (ctx.k1Routing) {
-    // §1231: net gain → long-term capital gain; net loss → ordinary loss (IRC §1231(a))
-    const net1231 = ctx.k1Routing.netSection1231Gain || 0;
-    const section1231AsLTCG = Math.max(0, net1231);
-    const section1231AsOrdinaryLoss = Math.min(0, net1231); // negative or 0
-
-    ctx.k1OrdinaryIncome = round2(ctx.k1Routing.ordinaryBusinessIncome + ctx.k1Routing.guaranteedPayments + ctx.k1Routing.otherIncome + section1231AsOrdinaryLoss);
+    // Section 1231 is characterized later, after it is netted with Form 4797.
+    ctx.k1OrdinaryIncome = round2(ctx.k1Routing.ordinaryBusinessIncome + ctx.k1Routing.guaranteedPayments + ctx.k1Routing.otherIncome);
     ctx.k1Interest = ctx.k1Routing.interestIncome || 0;
     ctx.k1OrdinaryDividends = ctx.k1Routing.ordinaryDividends || 0;
     ctx.k1QualifiedDividends = ctx.k1Routing.qualifiedDividends || 0;
     ctx.k1ShortTermGain = ctx.k1Routing.shortTermCapitalGain || 0;
-    ctx.k1LongTermGain = round2((ctx.k1Routing.longTermCapitalGain || 0) + section1231AsLTCG);
+    ctx.k1LongTermGain = round2(ctx.k1Routing.longTermCapitalGain || 0);
     ctx.k1RentalIncome = ctx.k1Routing.rentalIncome || 0;
     ctx.k1Royalties = ctx.k1Routing.royalties || 0;
     ctx.k1QBI = ctx.k1Routing.section199AQBI || 0;
@@ -872,7 +868,7 @@ export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
       scheduleCNetProfit: ctx.scheduleCNetProfit,
       seDeductibleHalf: ctx.seDeductibleHalf,
       desiredContribution: sed.sepIraContributions,
-    });
+    }, _taxYear);
     ctx.sepIRATotalContribution = ctx.sepIRAResult.appliedContribution;
   }
 
@@ -893,7 +889,7 @@ export function calculateSelfEmploymentSection(ctx: Form1040Context): void {
       w2SalaryDeferrals: autoW2Deferrals > 0 ? autoW2Deferrals : undefined,
       simpleIraDeferrals: sed.simpleIraContributions || 0,
       sepIraContributions: ctx.sepIRATotalContribution > 0 ? ctx.sepIRATotalContribution : undefined,
-    });
+    }, _taxYear);
     // Use deductibleContribution for Schedule 1 Line 16 (excludes Roth deferrals)
     ctx.solo401kTotalContribution = ctx.solo401kResult.deductibleContribution;
   }
@@ -978,10 +974,15 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
 
   const allScheduleDTransactions = [...(taxReturn.income1099B || []), ...digitalAssetTransactions, ...badDebtTransactions];
 
-  // Schedule D
+  // Schedule D. A prior-year capital-loss carryforward is a Schedule D loss
+  // even when this year has no 1099-B, so it can offset section 1231 gain
+  // and still produce the §1211(b) deduction.
   const has1099B = allScheduleDTransactions.length > 0;
   const hasCapGainDist = ctx.totalCapitalGainDistributions > 0;
-  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist)
+  const hasCapitalLossCarryforward = Math.abs(safeNum(taxReturn.capitalLossCarryforward))
+    + Math.abs(safeNum(taxReturn.capitalLossCarryforwardST))
+    + Math.abs(safeNum(taxReturn.capitalLossCarryforwardLT)) > 0;
+  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward)
     ? calculateScheduleD(
         allScheduleDTransactions,
         safeNum(taxReturn.capitalLossCarryforward),
@@ -1003,17 +1004,57 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
     ctx.form4797Unrecaptured1250 = ctx.form4797Result.unrecapturedSection1250Gain;
   }
 
-  // Derived capital amounts
-  ctx.form4797LTCGContribution = ctx.form4797Result?.section1231IsGain
-    ? ctx.form4797Result.netSection1231GainOrLoss
+  // IRC §1231(a): net K-1 box 10 with Form 4797 section 1231 before
+  // characterizing the result. A net gain is long-term. A net loss is ordinary.
+  // Section 1231(c) five-year lookback is not computed.
+  const k1Section1231 = ctx.k1Routing?.netSection1231Gain || 0;
+  const combinedSection1231 = round2(k1Section1231 + (ctx.form4797Section1231GainOrLoss || 0));
+  ctx.form4797LTCGContribution = combinedSection1231 > 0 ? combinedSection1231 : 0;
+  ctx.form4797OrdinaryLoss = combinedSection1231 < 0 ? combinedSection1231 : 0;
+  // Unrecaptured §1250 is a slice of section 1231 gain. After K-1 box 10 is
+  // netted in, it cannot exceed the gain that is still taxed as long-term.
+  // A net section 1231 loss leaves no 25% gain from Form 4797. A direct
+  // taxReturn.unrecapturedSection1250Gain is not part of this net.
+  const cappedUnrecaptured1250 = combinedSection1231 > 0
+    ? round2(Math.min(ctx.form4797Unrecaptured1250, combinedSection1231))
     : 0;
-  ctx.scheduleDNetGain = ctx.scheduleD
-    ? (ctx.scheduleD.netGainOrLoss > 0 ? ctx.scheduleD.netGainOrLoss : 0) + ctx.homeSaleTaxableGain
-    : ctx.homeSaleTaxableGain;
+  ctx.form4797Unrecaptured1250 = cappedUnrecaptured1250;
+  if (ctx.form4797Result) {
+    ctx.form4797Result.unrecapturedSection1250Gain = cappedUnrecaptured1250;
+  }
+  // Section 1231 gain is long-term. Net it with Schedule D before the §1211(b)
+  // loss limit, so a short-term loss reduces the gain instead of producing both
+  // a limited loss and the full gain.
+  const section1231Ltcg = ctx.form4797LTCGContribution;
+  const schedNetST = ctx.scheduleD?.netShortTerm || 0;
+  const schedNetLT = ctx.scheduleD?.netLongTerm || 0;
+  const netLTWith1231 = round2(schedNetLT + section1231Ltcg);
+  const netWith1231 = round2(schedNetST + netLTWith1231);
+  if (section1231Ltcg > 0 && ctx.scheduleD) {
+    // The 28% worksheet uses Schedule D line 15, which includes this gain.
+    // A long-term loss that zeroed collectibles before the gain was added
+    // must be re-capped once the combined long-term result is a gain.
+    ctx.scheduleD.collectiblesGain = capCollectiblesGain(
+      ctx.scheduleD.collectiblesRateGain || 0,
+      netLTWith1231,
+    );
+    const limited = limitCapitalLoss(schedNetST, netLTWith1231, filingStatus, _taxYear);
+    ctx.scheduleD.capitalLossDeduction = limited.capitalLossDeduction;
+    ctx.scheduleD.capitalLossCarryforward = limited.capitalLossCarryforward;
+    ctx.scheduleD.capitalLossCarryforwardST = limited.capitalLossCarryforwardST;
+    ctx.scheduleD.capitalLossCarryforwardLT = limited.capitalLossCarryforwardLT;
+  }
   ctx.capitalLossDeduction = ctx.scheduleD?.capitalLossDeduction || 0;
-  ctx.scheduleDLongTermGain = ctx.scheduleD
-    ? Math.max(0, ctx.scheduleD.netLongTerm) + ctx.homeSaleTaxableGain
-    : ctx.homeSaleTaxableGain;
+  ctx.scheduleDNetGain = round2((netWith1231 > 0 ? netWith1231 : 0) + ctx.homeSaleTaxableGain);
+  // IRC §1(h) net long-term gain: combine Schedule D, K-1, and section 1231
+  // before the zero floor, so a short-term loss can offset those gains.
+  // Home-sale gain is added after that net, as it was before.
+  const netSTForRates = round2(schedNetST + ctx.k1ShortTermGain);
+  const netLTForRates = round2(schedNetLT + ctx.k1LongTermGain + section1231Ltcg);
+  const netForRates = round2(netSTForRates + netLTForRates);
+  ctx.scheduleDLongTermGain = round2(
+    Math.max(0, Math.min(netLTForRates, netForRates)) + ctx.homeSaleTaxableGain,
+  );
 }
 
 // ─── Section 4: Preliminary Income ────────────────────────
@@ -1026,9 +1067,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
   ctx.allOrdinaryDividends = round2(ctx.totalOrdinaryDividends + ctx.k1OrdinaryDividends);
   ctx.allQualifiedDividends = round2(ctx.totalQualifiedDividends + ctx.k1QualifiedDividends);
 
-  ctx.form4797OrdinaryLoss = ctx.form4797Section1231GainOrLoss < 0
-    ? ctx.form4797Section1231GainOrLoss
-    : 0;
+  // Section 1231 ordinary loss was set with the Form 4797 netting above.
 
   // IRC §129: Dependent care employer benefits over exclusion limit → taxable income
   const rawDCBenefits = Math.max(0,
@@ -1053,7 +1092,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     ctx.k1OrdinaryIncome - ctx.k1Section179Deduction + ctx.k1ShortTermGain + ctx.k1LongTermGain +
     ctx.hsaDistributionTaxable +
     ctx.scheduleDNetGain - ctx.capitalLossDeduction +
-    ctx.form4797OrdinaryIncome + ctx.form4797LTCGContribution + ctx.form4797OrdinaryLoss +
+    ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss +
     ctx.dcFSATaxableExcess,
   );
 
@@ -1117,12 +1156,12 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     // First pass: Form 7206 with no PTC adjustment → preliminary AGI → preliminary PTC
     const firstPassForm7206 = calculateForm7206(
       form7206Input, ctx.scheduleCNetProfit, ctx.scheduleFNetProfit,
-      halfSE, retirementForSEHICap, 0, filingStatus,
+      halfSE, retirementForSEHICap, 0, filingStatus, _taxYear,
     );
     const firstPassAdj = round2(halfSE + firstPassForm7206.finalDeduction + retirementForSEHICap + hsaDed + earlyWdPenaltyForPrelim);
     const firstPassAGI = round2(totalIncomePreScheduleE - firstPassAdj);
     const firstPassHI = calculatePTCHouseholdIncome(firstPassAGI, 0, ctx.taxExemptInterest, nonTaxableSSForPrelim);
-    const firstPassPTC = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, firstPassHI, filingStatus);
+    const firstPassPTC = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, firstPassHI, filingStatus, _taxYear);
 
     if (firstPassPTC.annualPTC > 0) {
       // Actual PTC > 0: iterate until SE health deduction ↔ PTC converge
@@ -1130,12 +1169,12 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
       for (let iter = 0; iter < 10; iter++) {
         const iterForm7206 = calculateForm7206(
           form7206Input, ctx.scheduleCNetProfit, ctx.scheduleFNetProfit,
-          halfSE, retirementForSEHICap, ptcForForm7206, filingStatus,
+          halfSE, retirementForSEHICap, ptcForForm7206, filingStatus, _taxYear,
         );
         const iterAdj = round2(halfSE + iterForm7206.finalDeduction + retirementForSEHICap + hsaDed + earlyWdPenaltyForPrelim);
         const iterAGI = round2(totalIncomePreScheduleE - iterAdj);
         const iterHI = calculatePTCHouseholdIncome(iterAGI, 0, ctx.taxExemptInterest, nonTaxableSSForPrelim);
-        const iterPTC = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, iterHI, filingStatus);
+        const iterPTC = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, iterHI, filingStatus, _taxYear);
         if (Math.abs(iterPTC.annualPTC - ptcForForm7206) < 1) break; // converged
         ptcForForm7206 = iterPTC.annualPTC;
       }
@@ -1151,6 +1190,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     retirementForSEHICap,
     ptcForForm7206,
     filingStatus,
+    _taxYear,
   );
   ctx.selfEmployedHealthInsurance = ctx.form7206Result.finalDeduction;
 
@@ -1282,6 +1322,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
 
 export function calculateAdjustmentsSection(ctx: Form1040Context): void {
   const { taxReturn, filingStatus } = ctx;
+  const _taxYear = taxReturn.taxYear || 2025;
   const disc = taxReturn.incomeDiscovery || {};
   const isDeclined = (key: string) => disc[key] === 'no';
 
@@ -1306,7 +1347,7 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
         dateOfBirth: taxReturn.hsaContribution.dateOfBirth ?? taxReturn.dateOfBirth,
         taxYear: taxReturn.hsaContribution.taxYear ?? taxReturn.taxYear,
       };
-      ctx.hsaDeduction = calculateHSADeduction(effectiveHSAInfo);
+      ctx.hsaDeduction = calculateHSADeduction(effectiveHSAInfo, _taxYear);
     } else {
       ctx.hsaDeduction = taxReturn.hsaDeduction || 0;
     }
@@ -1314,7 +1355,7 @@ export function calculateAdjustmentsSection(ctx: Form1040Context): void {
 
   // Archer MSA (Form 8853)
   if (taxReturn.archerMSA && (taxReturn.archerMSA.personalContributions || 0) > 0) {
-    ctx.archerMSAResult = calculateArcherMSADeduction(taxReturn.archerMSA, taxReturn.w2Income);
+    ctx.archerMSAResult = calculateArcherMSADeduction(taxReturn.archerMSA, taxReturn.w2Income, _taxYear);
     ctx.archerMSADeduction = ctx.archerMSAResult.deduction;
   }
 
@@ -1537,9 +1578,10 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
   const totalQBI = round2(ctx.scheduleCNetProfit + ctx.k1QBI + ctx.scheduleFNetProfit);
   const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nolDeduction);
 
-  // IRC §199A(a)(2): taxable income limit reduced by "net capital gain" per §1(h)
-  // Net capital gain = max(0, net LTCG) + qualified dividends (§1(h)(11))
-  const netLTCGForQBI = Math.max(0, ctx.scheduleD?.netLongTerm || 0);
+  // IRC §199A(a)(2): taxable income limit reduced by net capital gain (IRC §1(h)).
+  // scheduleDLongTermGain already nets Schedule D, K-1, and section 1231 before
+  // the zero floor. Qualified dividends are added below.
+  const netLTCGForQBI = Math.max(0, ctx.scheduleDLongTermGain);
   const netCapitalGainForQBI = round2(netLTCGForQBI + ctx.allQualifiedDividends);
 
   ctx.qbiDeduction = 0;
@@ -1550,6 +1592,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
         taxableIncomeBeforeQBI,
         filingStatus,
         netCapitalGainForQBI,
+        _taxYear,
       );
     } else {
       ctx.qbiDeduction = calculateQBIDeduction(
@@ -1558,6 +1601,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
         taxReturn.qbiInfo?.w2WagesPaidByBusiness ?? 0,
         taxReturn.qbiInfo?.ubiaOfQualifiedProperty ?? 0,
         netCapitalGainForQBI,
+        _taxYear,
       );
     }
   }
@@ -1571,12 +1615,14 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
     ctx.schedule1AResult = calculateSchedule1A(
       taxReturn.schedule1A, schedule1AMAGI, filingStatus,
       taxpayerIs65ForSenior, spouseIs65ForSenior,
+      _taxYear,
     );
     ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
   } else if (taxpayerIs65ForSenior || (filingStatus === FilingStatus.MarriedFilingJointly && spouseIs65ForSenior)) {
     ctx.schedule1AResult = calculateSchedule1A(
       {}, schedule1AMAGI, filingStatus,
       taxpayerIs65ForSenior, spouseIs65ForSenior,
+      _taxYear,
     );
     ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
   }
@@ -1612,7 +1658,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
 
   let preferentialQD = ctx.allQualifiedDividends;
   // Capital gain distributions are now included in scheduleDLongTermGain (via Schedule D Line 13)
-  let preferentialLTCGBase = round2(ctx.scheduleDLongTermGain + ctx.k1LongTermGain + ctx.form4797LTCGContribution);
+  let preferentialLTCGBase = ctx.scheduleDLongTermGain;
   if (taxReturn.investmentInterest?.electToIncludeQualifiedDividends) {
     preferentialQD = 0;
   }
@@ -1733,9 +1779,10 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
   // A net capital loss does NOT reduce other investment income for NIIT purposes —
   // the $3k capital loss deduction reduces AGI (affecting the threshold comparison)
   // but is not subtracted from net investment income.
-  const scheduleDGainForNIIT = ctx.scheduleD
-    ? Math.max(0, ctx.scheduleD.netGainOrLoss)
-    : 0;
+  const scheduleDGainForNIIT = Math.max(
+    0,
+    round2((ctx.scheduleD?.netGainOrLoss || 0) + ctx.form4797LTCGContribution),
+  );
   const rentalIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.netRentalIncome) : 0;
   const royaltyIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)) : 0;
   // K-1 rental excluded — already in rentalIncomeForNIIT via Schedule E netRentalIncome
@@ -1743,12 +1790,10 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     ctx.k1Interest + ctx.k1OrdinaryDividends + Math.max(0, ctx.k1ShortTermGain) +
     Math.max(0, ctx.k1LongTermGain),
   );
-  const form4797NIITContribution = Math.max(0, ctx.form4797LTCGContribution);
-  // Capital gain distributions now included in scheduleDGainForNIIT (via Schedule D)
+  // Capital gain distributions and section 1231 gain are in scheduleDGainForNIIT.
   const grossInvestmentIncomeForNIIT = round2(
     ctx.allInterest + ctx.allOrdinaryDividends +
-    scheduleDGainForNIIT + rentalIncomeForNIIT + royaltyIncomeForNIIT + k1InvestmentForNIIT +
-    form4797NIITContribution -
+    scheduleDGainForNIIT + rentalIncomeForNIIT + royaltyIncomeForNIIT + k1InvestmentForNIIT -
     ctx.k1Interest - ctx.k1OrdinaryDividends,
   );
 
@@ -2166,7 +2211,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
     const nonTaxableSS = round2(ssaTotal - ctx.taxableSocialSecurity);
     const ptcHouseholdIncome = calculatePTCHouseholdIncome(ctx.agi, ctx.feieExclusion, ctx.taxExemptInterest, nonTaxableSS);
 
-    ctx.ptcResult = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, ptcHouseholdIncome, filingStatus);
+    ctx.ptcResult = calculatePremiumTaxCredit(taxReturn.premiumTaxCredit, ptcHouseholdIncome, filingStatus, _taxYear);
 
     if (ctx.ptcResult.netPTC > 0) {
       ctx.premiumTaxCreditNet = ctx.ptcResult.netPTC;
@@ -2189,7 +2234,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
   const qualifyingChildrenForEITC = countEITCQualifyingChildren(taxReturn.dependents, taxReturn.taxYear, ctcChildrenFallback);
   // EITC investment income per IRS Pub 596 includes: taxable + tax-exempt interest,
   // ordinary dividends, capital gain net income (Schedule D line 7), and net rental/royalty income.
-  const scheduleDNetGain = ctx.scheduleD ? Math.max(0, ctx.scheduleD.netGainOrLoss) : 0;
+  const scheduleDNetGain = Math.max(0, round2((ctx.scheduleD?.netGainOrLoss || 0) + ctx.form4797LTCGContribution));
   const k1CapitalGains = round2(Math.max(0, ctx.k1ShortTermGain) + Math.max(0, ctx.k1LongTermGain));
   const rentalRoyaltyNet = ctx.scheduleEResult
     ? round2(Math.max(0, ctx.scheduleEResult.netRentalIncome) + Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)))
@@ -2391,6 +2436,8 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
 export function assembleForm1040Result(ctx: Form1040Context): CalculationResult {
   const { taxReturn } = ctx;
   const ssaBenefits = taxReturn.incomeSSA1099?.totalBenefits || 0;
+  // Line 7 is the Schedule D result after section 1231 is netted in, including
+  // a limited capital loss. Home-sale gain is included via scheduleDNetGain.
   const capitalGainOrLoss = round2(ctx.scheduleDNetGain - ctx.capitalLossDeduction);
 
   const form1040: Form1040Result = {
@@ -2571,6 +2618,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     evRefuelingCredit: ctx.evRefuelingResult,
     scholarshipCredit: ctx.scholarshipCreditResult,
     form4797: ctx.form4797Result,
+    section1231LongTermGain: ctx.form4797LTCGContribution,
     form4137: ctx.form4137Result,
     scheduleF: ctx.scheduleFResult,
     scheduleR: ctx.scheduleRResult,

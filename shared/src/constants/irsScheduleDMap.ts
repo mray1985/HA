@@ -164,6 +164,40 @@ function fmtDollar(v: number): string {
   return v && !isNaN(v) ? Math.round(v).toString() : '';
 }
 
+/** IRC §1(h)(4) 28% rate gain currently measured by the engine (collectibles only). */
+function rateGain28(calc: CalculationResult | undefined): number {
+  return Math.max(0, calc?.scheduleD?.collectiblesGain || 0);
+}
+
+/**
+ * Unrecaptured §1250 gain taxed at 25%. Same sum the income-tax section uses:
+ * the direct return amount plus Form 4797.
+ */
+function unrecaptured1250(tr: TaxReturn, calc: CalculationResult | undefined): number {
+  return (calc?.form4797?.unrecapturedSection1250Gain || 0) + (tr.unrecapturedSection1250Gain || 0);
+}
+
+/**
+ * Section 1231 gain taxed as long-term. Prefer the amount the engine stored
+ * after netting K-1 box 10 with Form 4797.
+ */
+function section1231LongTermGain(calc: CalculationResult | undefined): number {
+  if (typeof calc?.section1231LongTermGain === 'number') {
+    return Math.max(0, calc.section1231LongTermGain);
+  }
+  const combined = (calc?.k1Routing?.netSection1231Gain || 0)
+    + (calc?.form4797?.netSection1231GainOrLoss || 0);
+  return Math.max(0, combined);
+}
+
+function scheduleDLine15(calc: CalculationResult | undefined): number {
+  return (calc?.scheduleD?.netLongTerm || 0) + section1231LongTermGain(calc);
+}
+
+function scheduleDLine16(calc: CalculationResult | undefined): number {
+  return (calc?.scheduleD?.netGainOrLoss || 0) + section1231LongTermGain(calc);
+}
+
 export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
   // ══════════════════════════════════════════════════════════════
   // Header
@@ -446,14 +480,7 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     sourcePath: '',
     source: 'calculationResult',
     format: 'dollarNoCents',
-    transform: (_tr, calc) => {
-      // §1231 gain that's treated as LTCG flows to Schedule D line 11
-      const r = calc.form4797;
-      if (r && r.section1231IsGain && r.netSection1231GainOrLoss > 0) {
-        return fmtDollar(r.netSection1231GainOrLoss);
-      }
-      return '';
-    },
+    transform: (_tr, calc) => fmtDollar(section1231LongTermGain(calc)),
   },
 
   // Line 12: Net LT gain/loss from partnerships, K-1
@@ -487,26 +514,28 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     },
   },
 
-  // Line 15: Net long-term capital gain or (loss)
+  // Line 15: Net long-term capital gain or (loss), including section 1231 gain
   {
     pdfFieldName: `${P1}.f1_43[0]`,
     formLabel: 'Line 15: Net long-term capital gain or (loss)',
-    sourcePath: 'scheduleD.netLongTerm',
+    sourcePath: '',
     source: 'calculationResult',
     format: 'dollarNoCents',
+    transform: (_tr, calc) => fmtDollar(scheduleDLine15(calc)),
   },
 
   // ══════════════════════════════════════════════════════════════
   // Page 2 — Part III Summary (Lines 16-22)
   // ══════════════════════════════════════════════════════════════
 
-  // Line 16: Combine lines 7 and 15
+  // Line 16: Combine lines 7 and 15, including section 1231 gain
   {
     pdfFieldName: `${P2}.f2_1[0]`,
     formLabel: 'Line 16: Combine lines 7 and 15',
-    sourcePath: 'scheduleD.netGainOrLoss',
+    sourcePath: '',
     source: 'calculationResult',
     format: 'dollarNoCents',
+    transform: (_tr, calc) => fmtDollar(scheduleDLine16(calc)),
   },
 
   // Line 17: Are lines 15 and 16 both gains?
@@ -517,11 +546,7 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     sourcePath: '',
     source: 'calculationResult',
     format: 'checkbox',
-    transform: (_tr, calc) => {
-      const d = calc.scheduleD;
-      if (!d) return false;
-      return d.netLongTerm > 0 && d.netGainOrLoss > 0;
-    },
+    transform: (_tr, calc) => scheduleDLine15(calc) > 0 && scheduleDLine16(calc) > 0,
   },
   // No
   {
@@ -531,14 +556,21 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     source: 'calculationResult',
     format: 'checkbox',
     transform: (_tr, calc) => {
-      const d = calc.scheduleD;
-      if (!d) return false;
-      return !(d.netLongTerm > 0 && d.netGainOrLoss > 0);
+      if (!calc.scheduleD && section1231LongTermGain(calc) === 0) return false;
+      return !(scheduleDLine15(calc) > 0 && scheduleDLine16(calc) > 0);
     },
   },
 
-  // Line 18: 28% Rate Gain (collectibles, §1202 exclusion)
-  // Currently not computed separately — leave blank for MVP
+  // Line 18: 28% Rate Gain. Collectibles are computed. Section 1202 gain is not
+  // on the return (no QSBS gain or exclusion percentage), so it is not added here.
+  {
+    pdfFieldName: `${P2}.f2_2[0]`,
+    formLabel: 'Line 18: 28% rate gain',
+    sourcePath: '',
+    source: 'calculationResult',
+    format: 'dollarNoCents',
+    transform: (_tr, calc) => fmtDollar(rateGain28(calc)),
+  },
 
   // Line 19: Unrecaptured Section 1250 Gain
   {
@@ -547,11 +579,7 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     sourcePath: '',
     source: 'calculationResult',
     format: 'dollarNoCents',
-    transform: (_tr, calc) => {
-      // From Form 4797 or direct unrecaptured §1250 on TaxReturn
-      const v = calc.form4797?.unrecapturedSection1250Gain || 0;
-      return fmtDollar(v);
-    },
+    transform: (tr, calc) => fmtDollar(unrecaptured1250(tr, calc)),
   },
 
   // Line 20: Are lines 18 and 19 both zero or blank?
@@ -562,10 +590,7 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     sourcePath: '',
     source: 'calculationResult',
     format: 'checkbox',
-    transform: (_tr, calc) => {
-      const s1250 = calc.form4797?.unrecapturedSection1250Gain || 0;
-      return s1250 === 0; // Line 18 (28% rate) is always 0 for MVP
-    },
+    transform: (tr, calc) => rateGain28(calc) === 0 && unrecaptured1250(tr, calc) === 0,
   },
   // No
   {
@@ -574,10 +599,7 @@ export const SCHEDULE_D_FIELDS: IRSFieldMapping[] = [
     sourcePath: '',
     source: 'calculationResult',
     format: 'checkbox',
-    transform: (_tr, calc) => {
-      const s1250 = calc.form4797?.unrecapturedSection1250Gain || 0;
-      return s1250 !== 0;
-    },
+    transform: (tr, calc) => rateGain28(calc) !== 0 || unrecaptured1250(tr, calc) !== 0,
   },
 
   // Line 21: Capital loss deduction (smaller of loss on line 16 or $3,000/$1,500)
@@ -625,8 +647,8 @@ export const SCHEDULE_D_TEMPLATE: IRSFormTemplate = {
     const hasCarryforward = (tr.capitalLossCarryforwardST || 0) !== 0 ||
       (tr.capitalLossCarryforwardLT || 0) !== 0;
     const hasCapGains = (calc.scheduleD?.netGainOrLoss ?? 0) !== 0;
-    const hasForm4797 = calc.form4797 != null && calc.form4797.section1231IsGain;
-    return has1099B || has1099DA || hasCarryforward || hasCapGains || hasForm4797 === true;
+    const hasSection1231LongTerm = section1231LongTermGain(calc) > 0;
+    return has1099B || has1099DA || hasCarryforward || hasCapGains || hasSection1231LongTerm;
   },
   fields: SCHEDULE_D_FIELDS,
 };

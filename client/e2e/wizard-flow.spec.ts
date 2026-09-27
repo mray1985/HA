@@ -9,12 +9,15 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
+import { openSidebarStep, reopenCurrentReturn } from './helpers/wizard';
 
 // Helper: navigate to a fresh return wizard
 async function createAndOpenReturn(page: Page) {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await unlockDashboard(page);
   await page.getByRole('button', { name: /Start New Tax Return/i }).click();
   await expect(page).toHaveURL(/\/return\/[a-f0-9-]+/);
   // Wait for wizard to load
@@ -45,8 +48,8 @@ test.describe('Wizard Navigation', () => {
 
   test('renders the wizard welcome page', async ({ page }) => {
     // Should see the welcome message
-    await expect(page.getByText('Welcome to')).toBeVisible();
-    await expect(page.getByText('HATax').first()).toBeVisible();
+    await expect(page.getByText("Let's prepare your 2025 tax return.")).toBeVisible();
+    await expect(page.getByText('HA Tax service').first()).toBeVisible();
     // Should see "Let's Go" button
     await expect(page.getByRole('button', { name: /Let.*Go/i })).toBeVisible();
   });
@@ -54,18 +57,18 @@ test.describe('Wizard Navigation', () => {
   test('shows sidebar with step sections', async ({ page }) => {
     // Sidebar shows sections in uppercase via CSS text-transform
     // Use case-insensitive matching for robustness
-    await expect(page.getByText(/my info/i).first()).toBeVisible();
-    await expect(page.getByText(/income/i).first()).toBeVisible();
-    await expect(page.getByText(/review/i).first()).toBeVisible();
-    await expect(page.getByText(/finish/i).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^My Info/ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Income/ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Review/ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Finish/ }).first()).toBeVisible();
   });
 
   test('shows section tabs at the top', async ({ page }) => {
     // Top navigation tabs
-    await expect(page.getByText('My Info').first()).toBeVisible();
-    await expect(page.getByText('Income').first()).toBeVisible();
-    await expect(page.getByText('Review').first()).toBeVisible();
-    await expect(page.getByText('Finish').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^My Info,/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Income,/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Review,/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Finish,/ })).toBeVisible();
   });
 
   test('shows save indicator', async ({ page }) => {
@@ -106,7 +109,7 @@ test.describe('Wizard Navigation', () => {
     await page.waitForTimeout(300);
 
     // Should be back on welcome
-    await expect(page.getByText('Welcome to')).toBeVisible();
+    await expect(page.getByText("Let's prepare your 2025 tax return.")).toBeVisible();
   });
 
   test('can click sidebar items to navigate', async ({ page }) => {
@@ -129,36 +132,24 @@ test.describe('Filing Status Selection', () => {
   });
 
   test('can navigate to filing status and see options', async ({ page }) => {
-    // Click sidebar to go directly to Filing Status
-    await page.getByText('Filing Status').first().click();
-    await page.waitForTimeout(500);
+    await openSidebarStep(page, 'Filing Status');
 
     // Should see filing status options
     await expect(page.getByText(/What.*filing status/i)).toBeVisible();
-    await expect(page.getByText('Single')).toBeVisible();
-    await expect(page.getByText('Married Filing Jointly')).toBeVisible();
-    await expect(page.getByText('Head of Household')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Single/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Married Filing Jointly/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Head of Household/ })).toBeVisible();
   });
 
   test('selecting a filing status persists to localStorage', async ({ page }) => {
-    // Navigate to filing status via sidebar
-    await page.getByText('Filing Status').first().click();
-    await page.waitForTimeout(500);
+    await openSidebarStep(page, 'Filing Status');
+    await page.getByRole('button', { name: /^Single/ }).click();
+    await page.waitForTimeout(800);
 
-    // Click "Single"
-    await page.getByText('Single').first().click();
-    // Wait for auto-save (500ms debounce + buffer)
-    await page.waitForTimeout(1500);
-
-    // Check localStorage
-    const saved = await page.evaluate(() => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
-      if (keys.length === 0) return null;
-      return JSON.parse(localStorage.getItem(keys[0])!);
-    });
-
-    expect(saved).toBeTruthy();
-    expect(saved.filingStatus).toBe(1); // FilingStatus.Single = 1
+    // Returns are stored encrypted, so confirm the selection survives a reload.
+    await reopenCurrentReturn(page);
+    await openSidebarStep(page, 'Filing Status');
+    await expect(page.getByRole('button', { name: /^Single/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -190,23 +181,12 @@ test.describe('Auto-Save', () => {
   test('data survives page reload', async ({ page }) => {
     await createAndOpenReturn(page);
 
-    // Navigate to filing status and select Single
-    await page.getByText('Filing Status').first().click();
-    await page.waitForTimeout(500);
-    await page.getByText('Single').first().click();
-    await page.waitForTimeout(1500);
+    await openSidebarStep(page, 'Filing Status');
+    await page.getByRole('button', { name: /^Single/ }).click();
+    await page.waitForTimeout(800);
 
-    // Reload the page
-    await page.reload();
-    await page.waitForTimeout(1000);
-
-    // Verify localStorage preserved the filing status
-    const filingStatus = await page.evaluate(() => {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('hatax:return:'));
-      if (keys.length === 0) return null;
-      return JSON.parse(localStorage.getItem(keys[0])!).filingStatus;
-    });
-
-    expect(filingStatus).toBe(1); // Single
+    await reopenCurrentReturn(page);
+    await openSidebarStep(page, 'Filing Status');
+    await expect(page.getByRole('button', { name: /^Single/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });

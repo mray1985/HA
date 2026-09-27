@@ -37,7 +37,6 @@ export function calculateScheduleD(
   capitalGainDistributions?: number,
   taxYear: number = 2025,
 ): ScheduleDResult {
-  const SCHEDULE_D = getTaxConstants(taxYear).SCHEDULE_D;
   let shortTermGain = 0;
   let shortTermLoss = 0;
   let longTermGain = 0;
@@ -110,53 +109,15 @@ export function calculateScheduleD(
   const netShortTerm = round2(shortTermGain - shortTermLoss);
   const netLongTerm = round2(longTermGain - longTermLoss);
   const netGainOrLoss = round2(netShortTerm + netLongTerm);
-  // 28% Rate Gain Worksheet: smaller of net collectibles gain and net LTCG,
-  // and only when both are gains.
+  // 2025 Schedule D 28% Rate Gain Worksheet: start from net collectibles,
+  // then subtract a net short-term loss and the long-term capital-loss
+  // carryover. The result cannot exceed net long-term gain. Section 1231
+  // gain is added later and the cap is applied again against that total.
   const netCollectibles = round2(collectiblesLongTermGain - collectiblesLongTermLoss);
-  const collectiblesGain = netLongTerm > 0
-    ? Math.max(0, Math.min(netCollectibles, netLongTerm))
-    : 0;
+  const collectiblesRateGain = collectibles28RateGain(netCollectibles, netShortTerm, cfLT);
+  const collectiblesGain = capCollectiblesGain(collectiblesRateGain, netLongTerm);
 
-  // Capital loss deduction limit
-  const lossLimit = filingStatus === FilingStatus.MarriedFilingSeparately
-    ? SCHEDULE_D.CAPITAL_LOSS_LIMIT_MFS
-    : SCHEDULE_D.CAPITAL_LOSS_LIMIT;
-
-  let capitalLossDeduction = 0;
-  let capitalLossCarryforwardTotal = 0;
-  let outCarryforwardST = 0;
-  let outCarryforwardLT = 0;
-
-  if (netGainOrLoss < 0) {
-    const totalLoss = Math.abs(netGainOrLoss);
-    capitalLossDeduction = Math.min(totalLoss, lossLimit);
-    capitalLossCarryforwardTotal = round2(totalLoss - capitalLossDeduction);
-
-    // Determine carryforward character using IRS Capital Loss Carryover Worksheet logic.
-    // The deduction is applied to ST net loss first, then LT net loss.
-    const stNetLoss = netShortTerm < 0 ? Math.abs(netShortTerm) : 0;
-    const ltNetLoss = netLongTerm < 0 ? Math.abs(netLongTerm) : 0;
-
-    if (netShortTerm >= 0 && netLongTerm < 0) {
-      // Only LT loss (ST gain partially offset it). All carryforward is LT.
-      outCarryforwardST = 0;
-      outCarryforwardLT = capitalLossCarryforwardTotal;
-    } else if (netLongTerm >= 0 && netShortTerm < 0) {
-      // Only ST loss (LT gain partially offset it). All carryforward is ST.
-      outCarryforwardST = capitalLossCarryforwardTotal;
-      outCarryforwardLT = 0;
-    } else {
-      // Both sides have net losses. Apply deduction to ST first, then LT.
-      let deductionRemaining = capitalLossDeduction;
-
-      const stApplied = Math.min(deductionRemaining, stNetLoss);
-      outCarryforwardST = round2(stNetLoss - stApplied);
-      deductionRemaining -= stApplied;
-
-      const ltApplied = Math.min(deductionRemaining, ltNetLoss);
-      outCarryforwardLT = round2(ltNetLoss - ltApplied);
-    }
-  }
+  const limited = limitCapitalLoss(netShortTerm, netLongTerm, filingStatus, taxYear);
 
   return {
     shortTermGain: round2(shortTermGain),
@@ -166,11 +127,90 @@ export function calculateScheduleD(
     longTermLoss: round2(longTermLoss),
     netLongTerm,
     netGainOrLoss,
+    collectiblesRateGain,
     collectiblesGain,
+    capitalLossDeduction: limited.capitalLossDeduction,
+    capitalLossCarryforward: limited.capitalLossCarryforward,
+    capitalLossCarryforwardST: limited.capitalLossCarryforwardST,
+    capitalLossCarryforwardLT: limited.capitalLossCarryforwardLT,
+  };
+}
+
+/**
+ * 28% Rate Gain Worksheet amount before the net-long-term cap: net
+ * collectibles, minus a net short-term loss and the long-term carryover.
+ */
+export function collectibles28RateGain(
+  netCollectibles: number,
+  netShortTerm: number,
+  ltCarryover: number,
+): number {
+  let rateGain = netCollectibles;
+  if (netShortTerm < 0) {
+    rateGain = round2(rateGain - Math.abs(netShortTerm));
+  }
+  if (ltCarryover > 0) {
+    rateGain = round2(rateGain - ltCarryover);
+  }
+  return Math.max(0, rateGain);
+}
+
+/** Cap the 28% rate gain at net long-term gain. Zero when that net is not a gain. */
+export function capCollectiblesGain(rateGain: number, netLongTerm: number): number {
+  return netLongTerm > 0 ? Math.max(0, Math.min(rateGain, netLongTerm)) : 0;
+}
+
+/**
+ * IRC §1211(b) / §1212(b). Apply the $3,000 ($1,500 MFS) loss limit to an
+ * already-netted short-term and long-term result, and preserve carryforward
+ * character. Section 1231 gain is long-term and must be in netLongTerm first.
+ */
+export function limitCapitalLoss(
+  netShortTerm: number,
+  netLongTerm: number,
+  filingStatus: FilingStatus,
+  taxYear: number = 2025,
+): Pick<ScheduleDResult, 'capitalLossDeduction' | 'capitalLossCarryforward' | 'capitalLossCarryforwardST' | 'capitalLossCarryforwardLT'> {
+  const lossLimit = filingStatus === FilingStatus.MarriedFilingSeparately
+    ? getTaxConstants(taxYear).SCHEDULE_D.CAPITAL_LOSS_LIMIT_MFS
+    : getTaxConstants(taxYear).SCHEDULE_D.CAPITAL_LOSS_LIMIT;
+  const netGainOrLoss = round2(netShortTerm + netLongTerm);
+
+  if (netGainOrLoss >= 0) {
+    return {
+      capitalLossDeduction: 0,
+      capitalLossCarryforward: 0,
+      capitalLossCarryforwardST: 0,
+      capitalLossCarryforwardLT: 0,
+    };
+  }
+
+  const totalLoss = Math.abs(netGainOrLoss);
+  const capitalLossDeduction = Math.min(totalLoss, lossLimit);
+  const capitalLossCarryforward = round2(totalLoss - capitalLossDeduction);
+  const stNetLoss = netShortTerm < 0 ? Math.abs(netShortTerm) : 0;
+  const ltNetLoss = netLongTerm < 0 ? Math.abs(netLongTerm) : 0;
+
+  let capitalLossCarryforwardST = 0;
+  let capitalLossCarryforwardLT = 0;
+  if (netShortTerm >= 0 && netLongTerm < 0) {
+    capitalLossCarryforwardLT = capitalLossCarryforward;
+  } else if (netLongTerm >= 0 && netShortTerm < 0) {
+    capitalLossCarryforwardST = capitalLossCarryforward;
+  } else {
+    let deductionRemaining = capitalLossDeduction;
+    const stApplied = Math.min(deductionRemaining, stNetLoss);
+    capitalLossCarryforwardST = round2(stNetLoss - stApplied);
+    deductionRemaining -= stApplied;
+    const ltApplied = Math.min(deductionRemaining, ltNetLoss);
+    capitalLossCarryforwardLT = round2(ltNetLoss - ltApplied);
+  }
+
+  return {
     capitalLossDeduction,
-    capitalLossCarryforward: capitalLossCarryforwardTotal,
-    capitalLossCarryforwardST: outCarryforwardST,
-    capitalLossCarryforwardLT: outCarryforwardLT,
+    capitalLossCarryforward,
+    capitalLossCarryforwardST,
+    capitalLossCarryforwardLT,
   };
 }
 

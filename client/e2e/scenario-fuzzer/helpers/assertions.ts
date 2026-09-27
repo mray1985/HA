@@ -78,11 +78,17 @@ export async function assertStepHealth(page: Page, stepIndex: number): Promise<s
   }
 
   // 3. Navigation button should exist (Continue / Let's Go / Done / Back)
-  const hasNavButton = await page.getByRole('button', { name: /Continue|Let.*Go|Done|Next|Back/i })
-    .first().isVisible().catch(() => false);
+  const navButtons = page.getByRole('button', { name: /Continue|Let.*Go|Done|Next|Back|Download Forms/i });
+  let hasNavButton = false;
+  const navCount = await navButtons.count();
+  for (let i = 0; i < navCount; i++) {
+    if (await navButtons.nth(i).isVisible().catch(() => false)) {
+      hasNavButton = true;
+      break;
+    }
+  }
   if (!hasNavButton) {
-    // Check if we're on a page that legitimately has no nav button (export, etc.)
-    const isFinishPage = await page.getByText(/Export|Download|Filing/i).isVisible().catch(() => false);
+    const isFinishPage = await page.getByRole('heading', { name: /Export & PDF|Filing Instructions/i }).isVisible().catch(() => false);
     if (!isFinishPage) {
       failures.push(`Step ${stepIndex}: No navigation button found`);
     }

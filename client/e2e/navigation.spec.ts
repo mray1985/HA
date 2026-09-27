@@ -10,11 +10,12 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
 
 test.describe('App Routing', () => {
   test('dashboard loads at /', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('HATax');
+    await expect(page.locator('h1')).toContainText('HA Tax service');
   });
 
   test('pledge page loads at /pledge', async ({ page }) => {
@@ -43,7 +44,7 @@ test('terms page loads at /terms', async ({ page }) => {
     await page.goto('/nonexistent-page');
     // Should redirect to dashboard
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText('HATax');
+    await expect(page.locator('h1')).toContainText('HA Tax service');
   });
 
   test('invalid return ID shows appropriate handling', async ({ page }) => {
@@ -72,6 +73,7 @@ test.describe('Cross-Page Navigation', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await unlockDashboard(page);
 
     // Create a return
     await page.getByRole('button', { name: /Start New Tax Return/i }).click();
@@ -79,6 +81,7 @@ test.describe('Cross-Page Navigation', () => {
 
     // Navigate back to dashboard
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('HATax');
+    await unlockDashboard(page);
+    await expect(page.locator('h1')).toContainText('HA Tax service');
   });
 });

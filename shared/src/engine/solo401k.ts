@@ -39,8 +39,8 @@ export function calculateSolo401kLimits(input: Solo401kInput, taxYear: number = 
   let superCatchUpEligible = false;
 
   if (input.age !== undefined) {
-    if (input.age >= 60 && input.age <= 63) {
-      // SECURE 2.0 super catch-up: ages 60-63 get $11,250 instead of $7,500
+    if (input.age >= 60 && input.age <= 63 && SOLO_401K.SUPER_CATCH_UP_60_63 > SOLO_401K.CATCH_UP_50_PLUS) {
+      // SECURE 2.0 super catch-up. The higher amount starts in 2025 (Notice 2024-80).
       superCatchUpEligible = true;
       catchUpEligible = true;
       catchUpAmount = SOLO_401K.SUPER_CATCH_UP_60_63;

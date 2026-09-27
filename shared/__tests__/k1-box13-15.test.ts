@@ -16,7 +16,8 @@
 import { describe, it, expect } from 'vitest';
 import { routeK1Income, aggregateK1Income } from '../src/engine/k1.js';
 import { calculateForm1040 } from '../src/engine/form1040.js';
-import { FilingStatus, TaxReturn, IncomeK1 } from '../src/types/index.js';
+import { FilingStatus, TaxReturn, IncomeK1, CalculationResult } from '../src/types/index.js';
+import { SCHEDULE_D_FIELDS } from '../src/constants/irsScheduleDMap.js';
 
 // ─── Helper: minimal K-1 ─────────────────────────────────
 function makeK1(overrides: Partial<IncomeK1> = {}): IncomeK1 {
@@ -552,3 +553,246 @@ describe('K-1 Box 13/15 — mixed entity type handling', () => {
     expect(result.totalSEIncome).toBe(30000);
   });
 });
+
+describe('K-1 section 1231', () => {
+  it('does not treat box 13 code K as a section 1231 loss', () => {
+    const routed = routeK1Income(makeK1({
+      netSection1231Gain: 10000,
+      box131231Loss: 4000,
+    }));
+    expect(routed.netSection1231Gain).toBe(10000);
+
+    const gainOnly = calculateForm1040(makeReturn({
+      w2Income: [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }],
+      incomeK1: [makeK1({ netSection1231Gain: 10000 })],
+    }));
+    const withCodeK = calculateForm1040(makeReturn({
+      w2Income: [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }],
+      incomeK1: [makeK1({ netSection1231Gain: 10000, box131231Loss: 4000 })],
+    }));
+
+    expect(withCodeK.k1Routing?.netSection1231Gain).toBe(10000);
+    expect(withCodeK.form1040.totalIncome).toBe(gainOnly.form1040.totalIncome);
+    expect(withCodeK.form1040.incomeTax).toBe(gainOnly.form1040.incomeTax);
+  });
+
+  it('nets a section 1231 gain against a short-term loss before the capital-loss limit', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages,
+      income1099B: [{
+        id: 'stock',
+        brokerName: 'Broker',
+        description: 'Stock',
+        dateSold: '2025-06-01',
+        proceeds: 0,
+        costBasis: 5000,
+        isLongTerm: false,
+      }],
+      incomeK1: [makeK1({ netSection1231Gain: 10000 })],
+    }));
+
+    expect(result.scheduleD?.capitalLossDeduction).toBe(0);
+    expect(result.form1040.capitalGainOrLoss).toBe(5000);
+    expect(result.form1040.totalIncome).toBe(85000);
+    expect(scheduleDLine('Line 16: Combine lines 7 and 15')(result)).toBe('5000');
+  });
+
+  it('treats a signed box 10 section 1231 loss as an ordinary loss', () => {
+    const base = calculateForm1040(makeReturn({
+      w2Income: [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }],
+    }));
+    const withLoss = calculateForm1040(makeReturn({
+      w2Income: [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }],
+      incomeK1: [makeK1({ netSection1231Gain: -5000 })],
+    }));
+    expect(withLoss.k1Routing?.netSection1231Gain).toBe(-5000);
+    expect(withLoss.form1040.totalIncome).toBe(base.form1040.totalIncome - 5000);
+    expect(withLoss.form1040.k1OrdinaryIncome).toBe(0);
+  });
+
+  it('nets signed section 1231 amounts across K-1s before characterizing them', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [
+        makeK1({ id: 'gain', netSection1231Gain: 10000 }),
+        makeK1({ id: 'loss', entityName: 'Loss LP', netSection1231Gain: -15000 }),
+      ],
+    }));
+    const ordinaryLoss = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [makeK1({ netSection1231Gain: -5000 })],
+    }));
+    expect(result.k1Routing?.netSection1231Gain).toBe(-5000);
+    expect(result.form1040.totalIncome).toBe(ordinaryLoss.form1040.totalIncome);
+    expect(result.form1040.incomeTax).toBe(ordinaryLoss.form1040.incomeTax);
+  });
+
+  it('nets K-1 section 1231 with Form 4797 before calling the result long-term or ordinary', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const mixed = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [makeK1({ netSection1231Gain: 10000 })],
+      form4797Properties: [{
+        id: 'land',
+        description: 'Land',
+        dateAcquired: '2020-01-01',
+        dateSold: '2025-06-01',
+        salesPrice: 0,
+        costBasis: 15000,
+        depreciationAllowed: 0,
+      }],
+    }));
+    const ordinaryLoss = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [makeK1({ netSection1231Gain: -5000 })],
+    }));
+    expect(mixed.form4797?.netSection1231GainOrLoss).toBe(-15000);
+    expect(mixed.form1040.totalIncome).toBe(ordinaryLoss.form1040.totalIncome);
+    expect(mixed.form1040.incomeTax).toBe(ordinaryLoss.form1040.incomeTax);
+  });
+
+  it('caps unrecaptured section 1250 by the combined section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 220000, federalTaxWithheld: 0 }];
+    const otherLongTerm = {
+      id: 'stock',
+      brokerName: 'Broker',
+      description: 'Stock',
+      dateSold: '2025-06-01',
+      proceeds: 10000,
+      costBasis: 0,
+      isLongTerm: true,
+    };
+    const rental = (straightLine: number) => ({
+      id: 'rental',
+      description: 'Rental building',
+      dateAcquired: '2010-01-01',
+      dateSold: '2025-06-01',
+      salesPrice: 100000,
+      costBasis: 100000,
+      depreciationAllowed: straightLine,
+      isSection1250: true,
+      straightLineDepreciation: straightLine,
+    });
+    const mixed = calculateForm1040(makeReturn({
+      w2Income: wages,
+      income1099B: [otherLongTerm],
+      incomeK1: [makeK1({ netSection1231Gain: -15000 })],
+      form4797Properties: [rental(20000)],
+    }));
+    const alreadyCapped = calculateForm1040(makeReturn({
+      w2Income: wages,
+      income1099B: [otherLongTerm],
+      form4797Properties: [rental(5000)],
+    }));
+
+    expect(mixed.form4797?.unrecapturedSection1250Gain).toBe(5000);
+    expect(mixed.form1040.section1250Tax).toBe(alreadyCapped.form1040.section1250Tax);
+    expect(mixed.form1040.incomeTax).toBe(alreadyCapped.form1040.incomeTax);
+    expect(scheduleDLine('Line 11: Gain from Form 4797, Part I (section 1231)')(mixed)).toBe('5000');
+    expect(scheduleDLine('Line 15: Net long-term capital gain or (loss)')(mixed)).toBe('15000');
+    expect(scheduleDLine('Line 16: Combine lines 7 and 15')(mixed)).toBe('15000');
+    expect(mixed.form1040.capitalGainOrLoss).toBe(15000);
+    expect(scheduleDLine('Line 19: Unrecaptured section 1250 gain')(mixed)).toBe('5000');
+  });
+
+  it('prints Schedule D line 11 only for a positive combined section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const land = (costBasis: number) => ({
+      id: 'land',
+      description: 'Land',
+      dateAcquired: '2020-01-01',
+      dateSold: '2025-06-01',
+      salesPrice: 10000,
+      costBasis,
+      depreciationAllowed: 0,
+    });
+    const line11 = scheduleDLine('Line 11: Gain from Form 4797, Part I (section 1231)');
+
+    const netGain = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [makeK1({ netSection1231Gain: -4000 })],
+      form4797Properties: [land(0)],
+    }));
+    const netLoss = calculateForm1040(makeReturn({
+      w2Income: wages,
+      incomeK1: [makeK1({ netSection1231Gain: -15000 })],
+      form4797Properties: [land(0)],
+      unrecapturedSection1250Gain: 1000,
+    }));
+
+    expect(line11(netGain)).toBe('6000');
+    expect(scheduleDLine('Line 15: Net long-term capital gain or (loss)')(netGain)).toBe('6000');
+    expect(scheduleDLine('Line 16: Combine lines 7 and 15')(netGain)).toBe('6000');
+    expect(netGain.section1231LongTermGain).toBe(6000);
+    expect(netGain.form1040.capitalGainOrLoss).toBe(6000);
+    expect(line11(netLoss)).toBe('');
+    expect(netLoss.form4797?.unrecapturedSection1250Gain).toBe(0);
+    expect(scheduleDLine('Line 19: Unrecaptured section 1250 gain')(
+      netLoss,
+      makeReturn({ unrecapturedSection1250Gain: 1000 }),
+    )).toBe('1000');
+  });
+
+  it('applies a long-term capital-loss carryforward to a standalone section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const land = (salesPrice: number) => ({
+      id: 'land',
+      description: 'Land',
+      dateAcquired: '2020-01-01',
+      dateSold: '2025-06-01',
+      salesPrice,
+      costBasis: 0,
+      depreciationAllowed: 0,
+    });
+    const withCarry = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 4000,
+      form4797Properties: [land(10000)],
+    }));
+    const smallerGain = calculateForm1040(makeReturn({
+      w2Income: wages,
+      form4797Properties: [land(6000)],
+    }));
+
+    expect(withCarry.scheduleD?.capitalLossDeduction).toBe(0);
+    expect(withCarry.scheduleD?.capitalLossCarryforward).toBe(0);
+    expect(withCarry.form1040.capitalGainOrLoss).toBe(6000);
+    expect(withCarry.form1040.totalIncome).toBe(smallerGain.form1040.totalIncome);
+    expect(withCarry.form1040.incomeTax).toBe(smallerGain.form1040.incomeTax);
+  });
+
+  it('keeps the $3,000 loss deduction when a carryforward exceeds section 1231 gain', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const carryOnly = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 10000,
+    }));
+    const withGain = calculateForm1040(makeReturn({
+      w2Income: wages,
+      capitalLossCarryforwardLT: 10000,
+      form4797Properties: [{
+        id: 'land',
+        description: 'Land',
+        dateAcquired: '2020-01-01',
+        dateSold: '2025-06-01',
+        salesPrice: 2000,
+        costBasis: 0,
+        depreciationAllowed: 0,
+      }],
+    }));
+
+    expect(carryOnly.form1040.capitalLossDeduction).toBe(3000);
+    expect(carryOnly.scheduleD?.capitalLossCarryforwardLT).toBe(7000);
+    expect(withGain.form1040.capitalLossDeduction).toBe(3000);
+    expect(withGain.scheduleD?.capitalLossCarryforwardLT).toBe(5000);
+    expect(withGain.form1040.totalIncome).toBe(carryOnly.form1040.totalIncome);
+  });
+});
+
+function scheduleDLine(label: string) {
+  const field = SCHEDULE_D_FIELDS.find(f => f.formLabel === label);
+  if (!field?.transform) throw new Error(`Missing Schedule D field: ${label}`);
+  return (calc: CalculationResult, tr: TaxReturn = {} as TaxReturn) => field.transform!(tr, calc);
+}

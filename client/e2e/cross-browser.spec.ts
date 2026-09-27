@@ -13,12 +13,14 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { unlockDashboard } from './helpers/unlock';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function createAndOpenReturn(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: /new.*return|start.*return|create/i }).click();
+  await unlockDashboard(page);
+  await page.getByRole('button', { name: /Start New Tax Return/i }).click();
   await page.waitForURL(/\/return\//);
 }
 
@@ -29,7 +31,7 @@ async function createAndOpenReturn(page: Page) {
 test.describe('Cross-Browser — App Rendering', () => {
   test('dashboard loads with HATax branding', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/HATax/i).first()).toBeVisible();
+    await expect(page.getByText('HA Tax service').first()).toBeVisible();
   });
 
   test('dashboard has proper layout structure', async ({ page }) => {
@@ -42,7 +44,7 @@ test.describe('Cross-Browser — App Rendering', () => {
   test('static pages render correctly', async ({ page }) => {
     // Pledge page
     await page.goto('/pledge');
-    await expect(page.getByText(/pledge|promise|commitment/i).first()).toBeVisible();
+    await expect(page.getByText('About This Project').first()).toBeVisible();
   });
 });
 
@@ -64,7 +66,8 @@ test.describe('Cross-Browser — localStorage', () => {
 
   test('creating a return persists to localStorage', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /new.*return|start.*return|create/i }).click();
+    await unlockDashboard(page);
+    await page.getByRole('button', { name: /Start New Tax Return/i }).click();
     await page.waitForURL(/\/return\//);
 
     const ids = await page.evaluate(() => {
@@ -92,7 +95,8 @@ test.describe('Cross-Browser — CSS Layout', () => {
 
   test('buttons have correct visual styling', async ({ page }) => {
     await page.goto('/');
-    const createBtn = page.getByRole('button', { name: /new.*return|start.*return|create/i });
+    await unlockDashboard(page);
+    const createBtn = page.getByRole('button', { name: /Start New Tax Return/i });
     await expect(createBtn).toBeVisible();
     // Button should have reasonable dimensions
     const box = await createBtn.boundingBox();

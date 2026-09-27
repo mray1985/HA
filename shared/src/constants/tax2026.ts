@@ -38,8 +38,8 @@ export const TAX_BRACKETS_2026: Record<FilingStatus, TaxBracket[]> = {
     { min: 0, max: 17700, rate: 0.10 },
     { min: 17700, max: 67450, rate: 0.12 },
     { min: 67450, max: 105700, rate: 0.22 },
-    { min: 105700, max: 201775, rate: 0.24 },
-    { min: 201775, max: 256200, rate: 0.32 },
+    { min: 105700, max: 201750, rate: 0.24 },
+    { min: 201750, max: 256200, rate: 0.32 },
     { min: 256200, max: 640600, rate: 0.35 },
     { min: 640600, max: Infinity, rate: 0.37 },
   ],
@@ -80,7 +80,7 @@ export const ADDITIONAL_STANDARD_DEDUCTION = {
 // Authority: IRC §63(c)(5) — Limitation on standard deduction for dependents
 // Constants: Rev. Proc. 2025-32, Section 3.02
 export const DEPENDENT_STANDARD_DEDUCTION = {
-  MIN_AMOUNT: 1400,
+  MIN_AMOUNT: 1350,         // Rev. Proc. 2025-32 §4.14(2)
   EARNED_INCOME_PLUS: 450,
 };
 
@@ -114,7 +114,8 @@ export const SE_TAX = {
 
 export const QBI = {
   RATE: 0.20,
-  THRESHOLD_SINGLE: 201775,
+  THRESHOLD_SINGLE: 201750,       // Rev. Proc. 2025-32 §4.26 — Single and head of household
+  THRESHOLD_MFS: 201775,          // Rev. Proc. 2025-32 §4.26 — Married filing separately
   THRESHOLD_MFJ: 403500,
   PHASE_IN_RANGE_SINGLE: 75000,
   PHASE_IN_RANGE_MFJ: 150000,
@@ -1094,7 +1095,7 @@ export const SOLO_401K = {
   EMPLOYER_CONTRIBUTION_RATE: 0.25,
   SE_EFFECTIVE_RATE: 0.20,
   ANNUAL_ADDITION_LIMIT: 72000,
-  COMPENSATION_CAP: 355000,
+  COMPENSATION_CAP: 360000,                 // Notice 2025-67 — IRC §401(a)(17)
 };
 
 // ──────────────────────────────────────────────────
@@ -1108,7 +1109,7 @@ export const SEP_IRA = {
   CONTRIBUTION_RATE: 0.25,
   SE_EFFECTIVE_RATE: 0.20,
   MAX_CONTRIBUTION: 72000,
-  COMPENSATION_CAP: 355000,
+  COMPENSATION_CAP: 360000,                 // Notice 2025-67 — IRC §401(a)(17)
 };
 
 // ──────────────────────────────────────────────────
@@ -1133,11 +1134,11 @@ export const SIMPLE_IRA = {
 // Per person. Used by Form 7206 to cap deductible LTC premiums by age.
 // ──────────────────────────────────────────────────
 export const LTC_PREMIUM_LIMITS_2026 = {
-  AGE_40_OR_UNDER: 490,
-  AGE_41_TO_50: 920,
-  AGE_51_TO_60: 1840,
-  AGE_61_TO_70: 4910,
-  AGE_71_AND_OVER: 6130,
+  AGE_40_OR_UNDER: 500,             // Rev. Proc. 2025-32 §4.27
+  AGE_41_TO_50: 930,
+  AGE_51_TO_60: 1860,
+  AGE_61_TO_70: 4960,
+  AGE_71_AND_OVER: 6200,
 } as const;
 
 export const EV_REFUELING = {
