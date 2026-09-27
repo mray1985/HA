@@ -4,6 +4,14 @@ import type { StepCondition } from '@hatax/engine';
 import { writeReturn } from '../api/client';
 import { isEncryptionSetup } from '../services/crypto';
 
+interface Checkpoint {
+  id: string;
+  timestamp: string;
+  label: string;
+  taxReturn: TaxReturn;
+  stepIndex: number;
+}
+
 // ─── Debounced Auto-Save ─────────────────────────
 // Writes the full TaxReturn to localStorage after 500ms of inactivity.
 // All data stays local — never leaves the user's browser.
@@ -290,6 +298,10 @@ interface TaxReturnState {
   pendingFocusLineId: string | null;
   /** Multi-select form keys ("formId:instanceIndex") for batch view/print/download */
   selectedFormKeys: Set<string>;
+  /** Checkpoint history for undo/redo */
+  checkpoints: Checkpoint[];
+  /** Max checkpoints to keep */
+  maxCheckpoints: number;
 
   setReturn: (taxReturn: TaxReturn) => void;
   setReturnId: (id: string) => void;
@@ -316,6 +328,13 @@ interface TaxReturnState {
   goNext: () => void;
   goPrev: () => void;
   goToStep: (stepId: string) => void;
+
+  createCheckpoint: (label?: string) => void;
+  restoreCheckpoint: (id: string) => void;
+  deleteCheckpoint: (id: string) => void;
+  clearCheckpoints: () => void;
+  getCheckpoints: () => Checkpoint[];
+  checkpointOnBlur: (label?: string) => void;
 }
 
 export const useTaxReturnStore = create<TaxReturnState>((set, get) => ({
@@ -333,6 +352,8 @@ export const useTaxReturnStore = create<TaxReturnState>((set, get) => ({
   activeInstanceIndex: 0,
   pendingFocusLineId: null,
   selectedFormKeys: new Set<string>(),
+  checkpoints: [],
+  maxCheckpoints: 50,
 
   setReturn: (taxReturn) => set({ taxReturn }),
   setReturnId: (id) => set({ returnId: id }),
@@ -382,6 +403,48 @@ export const useTaxReturnStore = create<TaxReturnState>((set, get) => ({
         if (get().saveState === 'saved') set({ saveState: 'idle' });
       }, 1500);
     });
+  },
+
+  /** Create a checkpoint immediately (for field blur, step change, etc.) */
+  createCheckpoint: (label?: string) => {
+    const { taxReturn, currentStepIndex, checkpoints, maxCheckpoints } = get();
+    if (!taxReturn) return;
+    const checkpoint: Checkpoint = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      label: label || `Step ${currentStepIndex + 1}`,
+      taxReturn: JSON.parse(JSON.stringify(taxReturn)),
+      stepIndex: currentStepIndex,
+    };
+    const next = [checkpoint, ...checkpoints].slice(0, maxCheckpoints);
+    set({ checkpoints: next });
+  },
+
+  /** Restore a checkpoint by ID */
+  restoreCheckpoint: (id: string) => {
+    const { checkpoints } = get();
+    const cp = checkpoints.find((c) => c.id === id);
+    if (cp) {
+      set({ taxReturn: cp.taxReturn, currentStepIndex: cp.stepIndex, saveState: 'saved' });
+      writeReturn(cp.taxReturn);
+      setTimeout(() => set({ saveState: 'idle' }), 1500);
+    }
+  },
+
+  /** Delete a checkpoint by ID */
+  deleteCheckpoint: (id: string) => set((state) => ({
+    checkpoints: state.checkpoints.filter((c) => c.id !== id),
+  })),
+
+  /** Clear all checkpoints */
+  clearCheckpoints: () => set({ checkpoints: [] }),
+
+  /** Get all checkpoints for UI display */
+  getCheckpoints: () => get().checkpoints,
+
+  /** Auto-checkpoint on field blur - call this from input onBlur */
+  checkpointOnBlur: (label?: string) => {
+    get().createCheckpoint(label);
   },
 
   setCurrentStep: (index) => set({ currentStepIndex: index }),
