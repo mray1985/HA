@@ -152,7 +152,7 @@ function buildSectionData(fs: FilingStatus, isMFS: boolean, section: string, tax
       lines.push(`Additional Medicare Tax: 0.9% on SE income above ${$(addlThreshold)}`);
       const qbiThreshold = isMFS
         ? Q.THRESHOLD_MFS
-        : (fs === FilingStatus.MarriedFilingJointly || fs === FilingStatus.QualifyingSurvivingSpouse)
+        : fs === FilingStatus.MarriedFilingJointly
           ? Q.THRESHOLD_MFJ
           : Q.THRESHOLD_SINGLE;
       lines.push(`QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of qualified business income. SSTB threshold: ${$(qbiThreshold)}`);
@@ -287,7 +287,7 @@ function buildConditionalData(
     addOnce('se', `SE Tax: ${(SE.RATE * 100).toFixed(1)}% (OASDI up to ${$(SE.SS_WAGE_BASE)} + Medicare). Min threshold: ${$(SE.MINIMUM_EARNINGS_THRESHOLD)}`);
     const qbiThreshold = fs === FilingStatus.MarriedFilingSeparately
       ? Q.THRESHOLD_MFS
-      : (fs === FilingStatus.MarriedFilingJointly || fs === FilingStatus.QualifyingSurvivingSpouse)
+      : fs === FilingStatus.MarriedFilingJointly
         ? Q.THRESHOLD_MFJ
         : Q.THRESHOLD_SINGLE;
     addOnce('qbi', `QBI Deduction: ${(Q.RATE * 100).toFixed(0)}% of QBI. SSTB threshold: ${$(qbiThreshold)}`);

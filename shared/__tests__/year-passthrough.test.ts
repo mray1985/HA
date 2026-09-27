@@ -229,6 +229,36 @@ describe('tax year is passed into year-parameterized calculations', () => {
     // 20% of ($100,000 − $35,000) = $13,000. Unreduced long-term gain would cap at $12,000.
     expect(result.form1040.qbiDeduction).toBe(13000);
   });
+
+  it('does not reduce the QBI limit by K-1 long-term gain that a short-term loss already offset', () => {
+    const standardDeduction = getStandardDeduction(2025)[FilingStatus.Single];
+    // Schedule D loss deduction $3,000 and K-1 long-term gain $10,000 are both in income.
+    const wages = 100000 + standardDeduction - 7000;
+    const result = calculateForm1040(makeReturn({
+      w2Income: [{ id: 'w2', employerName: 'Acme', wages, federalTaxWithheld: 0 }],
+      income1099B: [{
+        id: 'st',
+        brokerName: 'Broker',
+        description: 'Stock',
+        dateSold: '2025-06-01',
+        proceeds: 0,
+        costBasis: 15000,
+        isLongTerm: false,
+      }],
+      incomeK1: [{
+        id: 'k1',
+        entityName: 'Biz LP',
+        entityType: 'partnership',
+        section199AQBI: 100000,
+        longTermCapitalGain: 10000,
+      }],
+      qbiInfo: { isSSTB: false },
+    }));
+
+    // Net capital gain is zero ($10,000 long-term − $15,000 short-term, floored).
+    // 20% of $100,000 = $20,000. Leaving the $10,000 unoffset would cap the deduction at $18,000.
+    expect(result.form1040.qbiDeduction).toBe(20000);
+  });
 });
 
 describe('Schedule D rate-gain lines', () => {

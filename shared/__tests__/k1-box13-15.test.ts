@@ -576,6 +576,28 @@ describe('K-1 section 1231', () => {
     expect(withCodeK.form1040.incomeTax).toBe(gainOnly.form1040.incomeTax);
   });
 
+  it('nets a section 1231 gain against a short-term loss before the capital-loss limit', () => {
+    const wages = [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }];
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages,
+      income1099B: [{
+        id: 'stock',
+        brokerName: 'Broker',
+        description: 'Stock',
+        dateSold: '2025-06-01',
+        proceeds: 0,
+        costBasis: 5000,
+        isLongTerm: false,
+      }],
+      incomeK1: [makeK1({ netSection1231Gain: 10000 })],
+    }));
+
+    expect(result.scheduleD?.capitalLossDeduction).toBe(0);
+    expect(result.form1040.capitalGainOrLoss).toBe(5000);
+    expect(result.form1040.totalIncome).toBe(85000);
+    expect(scheduleDLine('Line 16: Combine lines 7 and 15')(result)).toBe('5000');
+  });
+
   it('treats a signed box 10 section 1231 loss as an ordinary loss', () => {
     const base = calculateForm1040(makeReturn({
       w2Income: [{ id: 'w2', employerName: 'Acme', wages: 80000, federalTaxWithheld: 8000 }],

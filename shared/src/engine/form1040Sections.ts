@@ -47,7 +47,7 @@ import { calculateEstimatedQuarterly } from './estimatedTax.js';
 import { calculateEITC } from './eitc.js';
 import { calculateNIIT } from './niit.js';
 import { calculateAdditionalMedicareTaxW2 } from './additionalMedicare.js';
-import { calculateScheduleD } from './scheduleD.js';
+import { calculateScheduleD, limitCapitalLoss } from './scheduleD.js';
 import { calculateTaxableSocialSecurity } from './socialSecurity.js';
 import { calculateScheduleE } from './scheduleE.js';
 import { calculateDependentCareCredit } from './dependentCare.js';
@@ -1017,15 +1017,32 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   if (ctx.form4797Result) {
     ctx.form4797Result.unrecapturedSection1250Gain = cappedUnrecaptured1250;
   }
-  ctx.scheduleDNetGain = ctx.scheduleD
-    ? (ctx.scheduleD.netGainOrLoss > 0 ? ctx.scheduleD.netGainOrLoss : 0) + ctx.homeSaleTaxableGain
-    : ctx.homeSaleTaxableGain;
+  // Section 1231 gain is long-term. Net it with Schedule D before the §1211(b)
+  // loss limit, so a short-term loss reduces the gain instead of producing both
+  // a limited loss and the full gain.
+  const section1231Ltcg = ctx.form4797LTCGContribution;
+  const schedNetST = ctx.scheduleD?.netShortTerm || 0;
+  const schedNetLT = ctx.scheduleD?.netLongTerm || 0;
+  const netLTWith1231 = round2(schedNetLT + section1231Ltcg);
+  const netWith1231 = round2(schedNetST + netLTWith1231);
+  if (section1231Ltcg > 0 && ctx.scheduleD) {
+    const limited = limitCapitalLoss(schedNetST, netLTWith1231, filingStatus, _taxYear);
+    ctx.scheduleD.capitalLossDeduction = limited.capitalLossDeduction;
+    ctx.scheduleD.capitalLossCarryforward = limited.capitalLossCarryforward;
+    ctx.scheduleD.capitalLossCarryforwardST = limited.capitalLossCarryforwardST;
+    ctx.scheduleD.capitalLossCarryforwardLT = limited.capitalLossCarryforwardLT;
+  }
   ctx.capitalLossDeduction = ctx.scheduleD?.capitalLossDeduction || 0;
-  // A net short-term loss reduces long-term gain before the 0/15/20% computation.
-  // Use the smaller of Schedule D lines 15 and 16, then add home-sale gain.
-  ctx.scheduleDLongTermGain = ctx.scheduleD
-    ? Math.max(0, Math.min(ctx.scheduleD.netLongTerm, ctx.scheduleD.netGainOrLoss)) + ctx.homeSaleTaxableGain
-    : ctx.homeSaleTaxableGain;
+  ctx.scheduleDNetGain = round2((netWith1231 > 0 ? netWith1231 : 0) + ctx.homeSaleTaxableGain);
+  // IRC §1(h) net long-term gain: combine Schedule D, K-1, and section 1231
+  // before the zero floor, so a short-term loss can offset those gains.
+  // Home-sale gain is added after that net, as it was before.
+  const netSTForRates = round2(schedNetST + ctx.k1ShortTermGain);
+  const netLTForRates = round2(schedNetLT + ctx.k1LongTermGain + section1231Ltcg);
+  const netForRates = round2(netSTForRates + netLTForRates);
+  ctx.scheduleDLongTermGain = round2(
+    Math.max(0, Math.min(netLTForRates, netForRates)) + ctx.homeSaleTaxableGain,
+  );
 }
 
 // ─── Section 4: Preliminary Income ────────────────────────
@@ -1063,7 +1080,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     ctx.k1OrdinaryIncome - ctx.k1Section179Deduction + ctx.k1ShortTermGain + ctx.k1LongTermGain +
     ctx.hsaDistributionTaxable +
     ctx.scheduleDNetGain - ctx.capitalLossDeduction +
-    ctx.form4797OrdinaryIncome + ctx.form4797LTCGContribution + ctx.form4797OrdinaryLoss +
+    ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss +
     ctx.dcFSATaxableExcess,
   );
 
@@ -1550,13 +1567,9 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
   const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nolDeduction);
 
   // IRC §199A(a)(2): taxable income limit reduced by net capital gain (IRC §1(h)).
-  // Use the same long-term base as the preferential-rate tax: the smaller of
-  // Schedule D lines 15 and 16, plus home-sale gain, K-1 long-term gain, and
-  // positive combined section 1231 gain. Qualified dividends are added below.
-  const netLTCGForQBI = Math.max(
-    0,
-    ctx.scheduleDLongTermGain + ctx.k1LongTermGain + ctx.form4797LTCGContribution,
-  );
+  // scheduleDLongTermGain already nets Schedule D, K-1, and section 1231 before
+  // the zero floor. Qualified dividends are added below.
+  const netLTCGForQBI = Math.max(0, ctx.scheduleDLongTermGain);
   const netCapitalGainForQBI = round2(netLTCGForQBI + ctx.allQualifiedDividends);
 
   ctx.qbiDeduction = 0;
@@ -1633,7 +1646,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
 
   let preferentialQD = ctx.allQualifiedDividends;
   // Capital gain distributions are now included in scheduleDLongTermGain (via Schedule D Line 13)
-  let preferentialLTCGBase = round2(ctx.scheduleDLongTermGain + ctx.k1LongTermGain + ctx.form4797LTCGContribution);
+  let preferentialLTCGBase = ctx.scheduleDLongTermGain;
   if (taxReturn.investmentInterest?.electToIncludeQualifiedDividends) {
     preferentialQD = 0;
   }
@@ -1754,9 +1767,10 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
   // A net capital loss does NOT reduce other investment income for NIIT purposes —
   // the $3k capital loss deduction reduces AGI (affecting the threshold comparison)
   // but is not subtracted from net investment income.
-  const scheduleDGainForNIIT = ctx.scheduleD
-    ? Math.max(0, ctx.scheduleD.netGainOrLoss)
-    : 0;
+  const scheduleDGainForNIIT = Math.max(
+    0,
+    round2((ctx.scheduleD?.netGainOrLoss || 0) + ctx.form4797LTCGContribution),
+  );
   const rentalIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.netRentalIncome) : 0;
   const royaltyIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)) : 0;
   // K-1 rental excluded — already in rentalIncomeForNIIT via Schedule E netRentalIncome
@@ -1764,12 +1778,10 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     ctx.k1Interest + ctx.k1OrdinaryDividends + Math.max(0, ctx.k1ShortTermGain) +
     Math.max(0, ctx.k1LongTermGain),
   );
-  const form4797NIITContribution = Math.max(0, ctx.form4797LTCGContribution);
-  // Capital gain distributions now included in scheduleDGainForNIIT (via Schedule D)
+  // Capital gain distributions and section 1231 gain are in scheduleDGainForNIIT.
   const grossInvestmentIncomeForNIIT = round2(
     ctx.allInterest + ctx.allOrdinaryDividends +
-    scheduleDGainForNIIT + rentalIncomeForNIIT + royaltyIncomeForNIIT + k1InvestmentForNIIT +
-    form4797NIITContribution -
+    scheduleDGainForNIIT + rentalIncomeForNIIT + royaltyIncomeForNIIT + k1InvestmentForNIIT -
     ctx.k1Interest - ctx.k1OrdinaryDividends,
   );
 
@@ -2210,7 +2222,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
   const qualifyingChildrenForEITC = countEITCQualifyingChildren(taxReturn.dependents, taxReturn.taxYear, ctcChildrenFallback);
   // EITC investment income per IRS Pub 596 includes: taxable + tax-exempt interest,
   // ordinary dividends, capital gain net income (Schedule D line 7), and net rental/royalty income.
-  const scheduleDNetGain = ctx.scheduleD ? Math.max(0, ctx.scheduleD.netGainOrLoss) : 0;
+  const scheduleDNetGain = Math.max(0, round2((ctx.scheduleD?.netGainOrLoss || 0) + ctx.form4797LTCGContribution));
   const k1CapitalGains = round2(Math.max(0, ctx.k1ShortTermGain) + Math.max(0, ctx.k1LongTermGain));
   const rentalRoyaltyNet = ctx.scheduleEResult
     ? round2(Math.max(0, ctx.scheduleEResult.netRentalIncome) + Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)))
@@ -2412,11 +2424,9 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
 export function assembleForm1040Result(ctx: Form1040Context): CalculationResult {
   const { taxReturn } = ctx;
   const ssaBenefits = taxReturn.incomeSSA1099?.totalBenefits || 0;
-  // Line 7 includes the positive combined section 1231 gain already in total
-  // income. It is not added again inside incomeBeforeSS.
-  const capitalGainOrLoss = round2(
-    ctx.scheduleDNetGain - ctx.capitalLossDeduction + ctx.form4797LTCGContribution,
-  );
+  // Line 7 is the Schedule D result after section 1231 is netted in, including
+  // a limited capital loss. Home-sale gain is included via scheduleDNetGain.
+  const capitalGainOrLoss = round2(ctx.scheduleDNetGain - ctx.capitalLossDeduction);
 
   const form1040: Form1040Result = {
     totalWages: round2(ctx.totalWages),
