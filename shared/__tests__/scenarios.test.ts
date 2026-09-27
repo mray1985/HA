@@ -951,3 +951,66 @@ describe('Edge Cases', () => {
     expect(result.form1040.incomeTax).toBeGreaterThan(600000);
   });
 });
+
+// Single filer, one W-2, $60,000 wages, $5,000 withheld, standard deduction.
+// 10% × $11,925 = $1,192.50
+// 12% × ($44,250 − $11,925) = 12% × $32,325 = $3,879.00
+// Income tax = $5,071.50; balance due = $71.50
+// Effective rate 8.4525% displays as 8.5% at one decimal, not 8.4%.
+describe('Scenario — Single W-2, $60,000 withheld $5,000 (TY2025)', () => {
+  const taxReturn = makeTaxReturn({
+    filingStatus: FilingStatus.Single,
+    w2Income: [{
+      id: 'w1',
+      employerName: 'Acme Corp',
+      wages: 60000,
+      federalTaxWithheld: 5000,
+    }],
+  });
+  const f = calculateForm1040(taxReturn).form1040;
+
+  it('matches the 2025 single bracket math', () => {
+    expect(f.standardDeduction).toBe(15750);
+    expect(f.agi).toBe(60000);
+    expect(f.taxableIncome).toBe(44250);
+    expect(f.incomeTax).toBe(5071.5);
+    expect(f.taxAfterCredits).toBe(5071.5);
+    expect(f.totalWithholding).toBe(5000);
+    expect(f.amountOwed).toBe(71.5);
+    expect(f.refundAmount).toBe(0);
+    expect(f.marginalTaxRate).toBe(0.12);
+    expect((f.effectiveTaxRate * 100).toFixed(1)).toBe('8.5');
+  });
+});
+
+// Tax year 2026 must read TAX_BRACKETS_2026 / STANDARD_DEDUCTION_2026.
+// The 2025 tables are named *_2025 inside the 2024 and 2025 modules, so a
+// lookup that always asks for that key crashes on the 2026 module.
+describe('Tax year 2026 — single W-2, $60,000', () => {
+  const taxReturn = makeTaxReturn({
+    taxYear: 2026,
+    filingStatus: FilingStatus.Single,
+    w2Income: [{
+      id: 'w1',
+      employerName: 'Acme Corp',
+      wages: 60000,
+      federalTaxWithheld: 5000,
+    }],
+  });
+  const f = calculateForm1040(taxReturn).form1040;
+
+  it('uses the 2026 standard deduction', () => {
+    expect(f.deductionAmount).toBe(16100);
+    expect(f.agi).toBe(60000);
+    expect(f.taxableIncome).toBe(43900);
+  });
+
+  it('applies the 2026 ordinary brackets', () => {
+    // 10% × $12,400 = $1,240
+    // 12% × ($43,900 − $12,400) = 12% × $31,500 = $3,780
+    // Total = $5,020
+    expect(f.incomeTax).toBe(5020);
+    expect(f.marginalTaxRate).toBe(0.12);
+    expect(f.amountOwed).toBe(20);
+  });
+});

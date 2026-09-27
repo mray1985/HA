@@ -473,6 +473,7 @@ export const CAPITAL_GAINS_RATES = {
   RATE_15: 0.15,                   // IRC §1(h)(1)(C) — 15% rate
   RATE_20: 0.20,                   // IRC §1(h)(1)(D) — 20% rate
   RATE_25: 0.25,                   // IRC §1(h)(1)(E) — 25% rate (unrecaptured Section 1250 gain)
+  RATE_28: 0.28,                   // IRC §1(h)(1)(F), §1(h)(4) — 28% maximum rate on collectibles gain
   // 0% rate upper thresholds — Rev. Proc. 2023-34 §3.12, Table 3
   THRESHOLD_0: {
     [FilingStatus.Single]: 47025,                    // Rev. Proc. 2023-34 §3.12

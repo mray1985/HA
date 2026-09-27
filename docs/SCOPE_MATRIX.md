@@ -8,7 +8,7 @@
 
 ## Summary
 
-HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **6,100+ tests** spanning **139 test files**. The engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for federal tax year 2025, with full state tax coverage for **all 50 states + DC**.
+HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **5,025 tests** spanning **96 test files** (`npm test`). The engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for federal tax year 2025, with full state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 
@@ -23,8 +23,8 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | IRS PDF templates | 41 |
 | State PDF templates | 43 |
 | Wizard step components | 105 |
-| Test files | 139 |
-| Total tests | 6,100+ |
+| Test files | 96 (`npm test`) |
+| Total tests | 5,025 (`npm test`) |
 | Filing statuses | 5 (Single, MFJ, MFS, HoH, QSS) |
 | Tax year | 2025 |
 
@@ -101,9 +101,9 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 
 | Item | Status | Form / Schedule | Notes |
 |---|---|---|---|
-| Child Tax Credit (CTC) | ✅ | | $2,000 per qualifying child; phaseout at $200K/$400K |
+| Child Tax Credit (CTC) | ✅ | | $2,200 per qualifying child (OBBBA); phaseout at $200K/$400K |
 | Other Dependents Credit (ODC) | ✅ | | $500 per qualifying dependent |
-| Additional Child Tax Credit (ACTC) | ✅ | Schedule 8812 | Refundable portion of CTC |
+| Additional Child Tax Credit (ACTC) | ✅ | Schedule 8812 | Refundable portion of CTC; cap $1,700 per child |
 | Earned Income Tax Credit (EITC) | ✅ | Schedule EIC | 0 to 3 qualifying children; investment income test |
 | American Opportunity Tax Credit (AOTC) | ✅ | Form 8863 | 40% refundable; 4-year limit |
 | Lifetime Learning Credit (LLC) | ✅ | Form 8863 | Nonrefundable; no year limit |
@@ -147,7 +147,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 
 | Item | Status | Form / Schedule | Notes |
 |---|---|---|---|
-| Capital gains and losses | ✅ | Schedule D | Short-term/long-term netting; carryforward tracking; 25% unrecaptured §1250 rate zone; 0%/15%/20% preferential rates |
+| Capital gains and losses | ✅ | Schedule D | Short-term/long-term netting; carryforward tracking; 25% unrecaptured §1250 rate zone; 28% collectibles rate on 1099-B `isCollectible` long-term gain; 0%/15%/20% preferential rates |
 | Social Security taxability | ✅ | Worksheet | Provisional income method; up to 85% taxable; MFS "lived apart" exception supported |
 | Sale of home exclusion | ✅ | Section 121 | $250K/$500K exclusion; ownership and use tests |
 | Foreign Earned Income Exclusion | ✅ | Form 2555 | Bona fide residence and physical presence tests; housing exclusion; stacking rule |
@@ -254,7 +254,7 @@ All 43 income-tax states + DC have declarative field mapping templates in `share
 |---|---|
 | E-filing (MeF XML) | Requires IRS Transmitter Control Code (TCC) approval and strict XML schema compliance. **Explicitly marked out of scope** for this project (not just deferred). |
 | Amended returns (Form 1040-X) | Requires diff logic against a previously filed return. Deferred until core filing flow is stable. |
-| Multi-year support | Each tax year has unique brackets, phaseouts, and legislative changes. Engine architecture supports extension but only 2025 constants are shipped. |
+| Multi-year support | Federal constants and flat-tax state tables are checked in for 2024, 2025, and 2026. Progressive and custom state bracket tables are checked in for 2025 only; other years are unavailable rather than filled with another year's brackets. |
 | IP PIN support | Identity Protection PIN is a transmittal-layer concern, not a calculation concern. Relevant only if e-filing is added. |
 
 ---
@@ -266,7 +266,7 @@ These are edge cases within otherwise comprehensive modules:
 | Feature | Limitation |
 |---|---|
 | Form 4562 (Depreciation) | No ADS (Alternative Depreciation System); no amortization; no listed property (except vehicles) |
-| Capital gains | No 28% collectibles rate |
+| Capital gains | 28% rate applies to long-term collectibles gain flagged on Form 1099-B. Section 1202 28% rate gain is not computed. |
 | AMT (Form 6251) | No AMT foreign tax credit; no AMT net operating loss |
 | Foreign tax credit (Form 1116) | No carryback/carryforward; no re-sourcing rules |
 | Schedule E (Rentals) | No at-risk rules (Section 465); no material participation tests |

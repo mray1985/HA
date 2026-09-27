@@ -20,10 +20,15 @@ import { describe, it, expect } from 'vitest';
 import { calculateForm1040 } from '../src/engine/form1040.js';
 import { calculateStateTaxes, applyBrackets } from '../src/engine/state/index.js';
 import {
-  isStateSupported, getSupportedStates, NO_INCOME_TAX_STATES,
+  isStateSupported, getSupportedStates, getStateCalculator, NO_INCOME_TAX_STATES,
   FLAT_TAX_STATES, PROGRESSIVE_TAX_STATES,
 } from '../src/engine/state/stateRegistry.js';
 import { TaxReturn, FilingStatus, StateReturnConfig } from '../src/types/index.js';
+import { getStandardDeduction } from '../src/constants/taxConstants.js';
+import { NM_CONFIG, MO_CONFIG, ME_CONFIG, DC_CONFIG } from '../src/constants/states/progressiveTax.js';
+import { FLAT_TAX_CONSTANTS } from '../src/constants/states/flatTax.js';
+import { FLAT_TAX_CONSTANTS_2024 } from '../src/constants/states/flatTax2024.js';
+import { FLAT_TAX_CONSTANTS_2026 } from '../src/constants/states/flatTax2026.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -238,7 +243,7 @@ describe('Progressive States — Golden Value Tests', () => {
   // Missouri — top bracket at just $4,828
   it('MO — $75K single: tax ≈ $2,652', () => {
     const result = calcState(75000, 'MO');
-    // $75K - $14,600 std ded = $60,400 → $1,200×2% + $1,207×2.5% + ... + rest at 4.7%
+    // $75K − federal basic standard deduction ($15,750) → rest at 4.7%
     expect(result.stateIncomeTax).toBeGreaterThan(2200);
     expect(result.stateIncomeTax).toBeLessThan(3100);
   });
@@ -717,5 +722,90 @@ describe('MFJ Filing Status', () => {
       expect(mfj.totalStateTax, `${state} MFJ tax should be ≤ single tax`)
         .toBeLessThanOrEqual(single.totalStateTax + 1); // +1 for rounding
     }
+  });
+});
+
+describe('Federal standard-deduction conformity', () => {
+  function expectMatch(
+    deduction: Record<string, number>,
+    year: number,
+  ) {
+    const federal = getStandardDeduction(year);
+    expect(deduction.single).toBe(federal[FilingStatus.Single]);
+    expect(deduction.married_joint).toBe(federal[FilingStatus.MarriedFilingJointly]);
+    expect(deduction.married_separate).toBe(federal[FilingStatus.MarriedFilingSeparately]);
+    expect(deduction.head_of_household).toBe(federal[FilingStatus.HeadOfHousehold]);
+  }
+
+  it('NM and MO 2025 match the federal basic standard deduction', () => {
+    expectMatch(NM_CONFIG.standardDeduction, 2025);
+    expectMatch(MO_CONFIG.standardDeduction, 2025);
+    expect(NM_CONFIG.standardDeductionConformsToFederal).toBe(true);
+    expect(MO_CONFIG.standardDeductionConformsToFederal).toBe(true);
+    expect(calcState(75000, 'NM').stateDeduction).toBe(15750);
+    expect(calcState(75000, 'MO').stateDeduction).toBe(15750);
+  });
+
+  it('ME and DC keep state-specific standard deductions', () => {
+    const federal2025 = getStandardDeduction(2025);
+    expect(ME_CONFIG.standardDeductionConformsToFederal).toBe(false);
+    expect(DC_CONFIG.standardDeductionConformsToFederal).toBe(false);
+    expect(ME_CONFIG.standardDeduction.single).toBe(14600);
+    expect(ME_CONFIG.standardDeduction.married_joint).toBe(29200);
+    expect(ME_CONFIG.standardDeduction.head_of_household).toBe(21900);
+    expect(DC_CONFIG.standardDeduction.single).toBe(14600);
+    expect(ME_CONFIG.standardDeduction.single).not.toBe(federal2025[FilingStatus.Single]);
+    expect(calcState(75000, 'ME').stateDeduction).toBe(14600);
+    expect(calcState(75000, 'DC').stateDeduction).toBe(14600);
+  });
+
+  it('AZ and IA match the federal basic standard deduction for each year they claim conformity', () => {
+    expectMatch(FLAT_TAX_CONSTANTS_2024.AZ.standardDeduction, 2024);
+    expectMatch(FLAT_TAX_CONSTANTS_2024.IA.standardDeduction, 2024);
+    expectMatch(FLAT_TAX_CONSTANTS.AZ.standardDeduction, 2025);
+    expectMatch(FLAT_TAX_CONSTANTS.IA.standardDeduction, 2025);
+    expectMatch(FLAT_TAX_CONSTANTS_2026.AZ.standardDeduction, 2026);
+    expectMatch(FLAT_TAX_CONSTANTS_2026.IA.standardDeduction, 2026);
+  });
+});
+
+describe('State calculators follow the tax year table', () => {
+  function calcYear(stateCode: string, taxYear: number) {
+    const tr = makeW2Return(75000, stateCode);
+    tr.taxYear = taxYear;
+    const federal = calculateForm1040(tr);
+    return calculateStateTaxes(tr, federal)[0];
+  }
+
+  it('uses the 2026 flat-tax table for Arizona instead of the 2025 table', () => {
+    expect(getStateCalculator('AZ', 2026)).not.toBeNull();
+    expect(calcYear('AZ', 2025).stateDeduction).toBe(getStandardDeduction(2025)[FilingStatus.Single]);
+    expect(calcYear('AZ', 2026).stateDeduction).toBe(getStandardDeduction(2026)[FilingStatus.Single]);
+    expect(calcYear('AZ', 2026).stateDeduction).not.toBe(calcYear('AZ', 2025).stateDeduction);
+  });
+
+  it('does not apply the 2025 progressive brackets to 2024 or 2026', () => {
+    for (const stateCode of ['VA', 'NM', 'MO', 'ME', 'DC']) {
+      expect(getStateCalculator(stateCode, 2024), stateCode).toBeNull();
+      expect(getStateCalculator(stateCode, 2026), stateCode).toBeNull();
+      expect(getStateCalculator(stateCode, 2025), stateCode).not.toBeNull();
+      const otherYear = calcYear(stateCode, 2026);
+      expect(otherYear.additionalLines?.unavailable).toBe(1);
+      expect(otherYear.totalStateTax).toBe(0);
+    }
+  });
+
+  it('does not apply 2025 custom-state brackets to another year', () => {
+    expect(getStateCalculator('CA', 2024)).toBeNull();
+    expect(getStateCalculator('NY', 2026)).toBeNull();
+    expect(getStateCalculator('CA', 2025)).not.toBeNull();
+    expect(calcYear('CA', 2024).additionalLines?.unavailable).toBe(1);
+    expect(calcYear('CA', 2025).totalStateTax).toBeGreaterThan(0);
+  });
+
+  it('keeps New Hampshire year logic for 2024 and the 2025 repeal', () => {
+    expect(getStateCalculator('NH', 2024)).not.toBeNull();
+    expect(getStateCalculator('NH', 2025)).not.toBeNull();
+    expect(getStateCalculator('NH', 2026)).not.toBeNull();
   });
 });

@@ -35,7 +35,7 @@ import {
   Solo401kResult, SEPIRAResult, HSAContributionInfo,
   ScholarshipCreditResult, Form8801Result,
 } from '../types/index.js';
-import { getTaxConstants } from '../constants/taxConstants.js';
+import { getStandardDeduction, getTaxConstants } from '../constants/taxConstants.js';
 import { calculateScheduleC } from './scheduleC.js';
 import { calculateScheduleSE } from './scheduleSE.js';
 import { calculateScheduleA } from './scheduleA.js';
@@ -1623,6 +1623,12 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
   const unrecapturedSection1250Gain = round2(
     safeNum(taxReturn.unrecapturedSection1250Gain) + ctx.form4797Unrecaptured1250,
   );
+  // 28% rate gain from 1099-B collectibles. Capped at the LTCG that is
+  // actually in the preferential computation so it is not also taxed at 15/20%.
+  const collectiblesGain = Math.min(
+    Math.max(0, ctx.scheduleD?.collectiblesGain || 0),
+    Math.max(0, totalPreferentialLTCG),
+  );
   const hasPreferentialIncome = preferentialQD > 0 || totalPreferentialLTCG > 0;
 
   // §911(f) stacking: when FEIE is claimed, tax on remaining income must be
@@ -1635,7 +1641,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
       // §911(f) + preferential rates: stack excluded income under the full computation
       const fullResult = calculatePreferentialRateTax(
         ctx.taxableIncome + feieStack, preferentialQD, totalPreferentialLTCG, filingStatus,
-        unrecapturedSection1250Gain, _taxYear,
+        unrecapturedSection1250Gain, _taxYear, collectiblesGain,
       );
       const excludedResult = calculateProgressiveTax(feieStack, filingStatus, _taxYear);
       ctx.incomeTax = round2(Math.max(0, fullResult.totalTax - excludedResult.tax));
@@ -1645,7 +1651,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     } else {
       const prefResult = calculatePreferentialRateTax(
         ctx.taxableIncome, preferentialQD, totalPreferentialLTCG, filingStatus,
-        unrecapturedSection1250Gain, _taxYear,
+        unrecapturedSection1250Gain, _taxYear, collectiblesGain,
       );
       ctx.incomeTax = prefResult.totalTax;
       ctx.preferentialTax = prefResult.preferentialTax;
@@ -1674,6 +1680,8 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     preferentialQD,
     totalPreferentialLTCG,
     unrecapturedSection1250Gain,
+    _taxYear,
+    collectiblesGain,
   );
   ctx.amtAmount = ctx.amtResult.amtAmount;
 
@@ -1694,7 +1702,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
       formula: feieStack > 0
         ? '§911(f): tax(taxableIncome + exclusion) − tax(exclusion)'
         : hasPreferentialIncome
-          ? 'Preferential rate tax (qualified dividends/LTCG at 0%/15%/20%)'
+          ? (collectiblesGain > 0
+            ? 'Preferential rate tax (0%/15%/20%, 25% §1250, 28% collectibles)'
+            : 'Preferential rate tax (qualified dividends/LTCG at 0%/15%/20%)')
           : 'Progressive tax on taxable income',
       inputs: [
         { lineId: 'form1040.line15', label: 'Taxable Income', value: ctx.taxableIncome },
@@ -2332,9 +2342,11 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
   ctx.refundAppliedToNextYear = round2(Math.min(requestedApply, ctx.refundAmount));
   ctx.netRefund = round2(ctx.refundAmount - ctx.refundAppliedToNextYear);
 
-  // Effective rate
+  // Effective rate, stored as a ratio rounded to 0.01 percentage points
+  // (8.45% → 0.0845). Divide by 10,000 from an integer so (rate * 100).toFixed(1)
+  // round-trips; dividing a 2-decimal percent by 100 does not (8.45/100 displays as 8.4%).
   ctx.effectiveTaxRate = ctx.totalIncome > 0
-    ? round2((Math.max(0, ctx.taxAfterCredits) / ctx.totalIncome) * 100) / 100
+    ? Math.round(round2((Math.max(0, ctx.taxAfterCredits) / ctx.totalIncome) * 100) * 100) / 10000
     : 0;
 
   // Estimated quarterly
@@ -2662,7 +2674,7 @@ export function calculateIRADeduction(
  * Standard deduction with additional amounts for age 65+ and/or legally blind.
  */
 export function calculateStandardDeduction(taxReturn: TaxReturn, filingStatus: FilingStatus, earnedIncome: number = 0): number {
-  let base = getTaxConstants(taxReturn.taxYear || 2025).STANDARD_DEDUCTION_2025[filingStatus];
+  let base = getStandardDeduction(taxReturn.taxYear || 2025)[filingStatus];
 
   if (taxReturn.canBeClaimedAsDependent) {
     const dependentBase = Math.max(

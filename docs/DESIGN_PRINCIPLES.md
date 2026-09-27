@@ -284,8 +284,8 @@ limited. HATax occupies a distinct position.
 | Engine modules in `shared/src/engine/` | 80           |
 | Constants files in `shared/src/constants/` | 103      |
 | Implemented tax features             | 90+           |
-| Total tests                          | 6,100+        |
-| Test files                           | 139           |
+| Total tests                          | 5,025 (`npm test`) |
+| Test files                           | 96 (`npm test`) |
 | Wizard step components               | 105           |
 | IRS PDF templates                    | 41            |
 | State PDF templates                  | 43            |

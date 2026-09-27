@@ -448,6 +448,7 @@ export const CAPITAL_GAINS_RATES = {
   RATE_15: 0.15,
   RATE_20: 0.20,
   RATE_25: 0.25,
+  RATE_28: 0.28,                   // IRC §1(h)(1)(F), §1(h)(4) — 28% maximum rate on collectibles gain
   THRESHOLD_0: {
     [FilingStatus.Single]: 49450,
     [FilingStatus.MarriedFilingJointly]: 98900,

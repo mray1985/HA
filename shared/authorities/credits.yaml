@@ -5,7 +5,7 @@ functions:
     authorities:
       - type: IRC
         section: "24"
-        description: "Child Tax Credit of up to $2,000 per qualifying child under age 17; Other Dependents Credit of $500"
+        description: "Child Tax Credit per qualifying child under age 17 from the tax-year constants (2024: $2,000; 2025 and 2026: $2,200); Other Dependents Credit of $500; Additional Child Tax Credit refundable cap $1,700"
         weight: binding
       - type: IRC
         section: "24(d)"

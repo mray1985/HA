@@ -163,11 +163,13 @@ describe('Rev. Proc. 2024-40, §3.01 — Tax Rate Tables', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 3.02: Standard Deduction (Rev. Proc. 2024-40, Table 5)
+// Standard deduction: OBBBA increased Rev. Proc. 2024-40 §3.02 Table 5
+// ($15,000 / $30,000 / $22,500) to $15,750 / $31,500 / $23,625.
+// Aged/blind add-ons below are still the Rev. Proc. 2024-40 amounts.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('Rev. Proc. 2024-40, §3.02 — Standard Deduction', () => {
-  it('standard deduction amounts match Table 5', () => {
+describe('2025 standard deduction — OBBBA increase over Rev. Proc. 2024-40 §3.02', () => {
+  it('basic amounts are the OBBBA figures, not the pre-OBBBA $15,000', () => {
     expect(STANDARD_DEDUCTION_2025[FilingStatus.Single]).toBe(15750);
     expect(STANDARD_DEDUCTION_2025[FilingStatus.MarriedFilingJointly]).toBe(31500);
     expect(STANDARD_DEDUCTION_2025[FilingStatus.MarriedFilingSeparately]).toBe(15750);

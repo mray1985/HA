@@ -42,6 +42,8 @@ export function calculateScheduleD(
   let shortTermLoss = 0;
   let longTermGain = 0;
   let longTermLoss = 0;
+  let collectiblesLongTermGain = 0;
+  let collectiblesLongTermLoss = 0;
 
   for (const t of transactions) {
     // Wash sale adjustment (Box 1g): disallowed loss reduces the deductible loss.
@@ -66,6 +68,15 @@ export function calculateScheduleD(
         longTermGain += gainOrLoss;
       } else {
         longTermLoss += Math.abs(gainOrLoss);
+      }
+      // IRC §1(h)(4): long-term collectibles gain is a 28% rate gain.
+      // Short-term collectibles stay in ordinary income.
+      if (t.isCollectible) {
+        if (gainOrLoss >= 0) {
+          collectiblesLongTermGain += gainOrLoss;
+        } else {
+          collectiblesLongTermLoss += Math.abs(gainOrLoss);
+        }
       }
     } else {
       if (gainOrLoss >= 0) {
@@ -99,6 +110,12 @@ export function calculateScheduleD(
   const netShortTerm = round2(shortTermGain - shortTermLoss);
   const netLongTerm = round2(longTermGain - longTermLoss);
   const netGainOrLoss = round2(netShortTerm + netLongTerm);
+  // 28% Rate Gain Worksheet: smaller of net collectibles gain and net LTCG,
+  // and only when both are gains.
+  const netCollectibles = round2(collectiblesLongTermGain - collectiblesLongTermLoss);
+  const collectiblesGain = netLongTerm > 0
+    ? Math.max(0, Math.min(netCollectibles, netLongTerm))
+    : 0;
 
   // Capital loss deduction limit
   const lossLimit = filingStatus === FilingStatus.MarriedFilingSeparately
@@ -149,6 +166,7 @@ export function calculateScheduleD(
     longTermLoss: round2(longTermLoss),
     netLongTerm,
     netGainOrLoss,
+    collectiblesGain,
     capitalLossDeduction,
     capitalLossCarryforward: capitalLossCarryforwardTotal,
     capitalLossCarryforwardST: outCarryforwardST,

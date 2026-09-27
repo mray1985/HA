@@ -199,6 +199,8 @@ export const OR_CONFIG: ProgressiveTaxStateConfig = {
 // MISSOURI — 7 brackets, top 4.7%
 // Mo. Rev. Stat. §143.011 (2025). Same brackets all statuses.
 // Top bracket starts at $9,191.
+// Federal standard-deduction conformity (mo1040Map.ts). The amounts below
+// are the TY2025 snapshot; calculation uses getStandardDeduction(taxYear).
 // ═══════════════════════════════════════════════════════════════════
 
 export const MO_CONFIG: ProgressiveTaxStateConfig = {
@@ -214,11 +216,12 @@ export const MO_CONFIG: ProgressiveTaxStateConfig = {
     { min: 7878, max: Infinity, rate: 0.047 },
   ]),
   standardDeduction: {
-    single: 14600,
-    married_joint: 29200,
-    married_separate: 14600,
-    head_of_household: 21900,
+    single: 15750,
+    married_joint: 31500,
+    married_separate: 15750,
+    head_of_household: 23625,
   },
+  standardDeductionConformsToFederal: true,
   personalExemption: 0,
   dependentExemption: 1200,
   stateEITCRate: 0.20, // Increased from 10% to 20% for TY2025 — 2025 MO-1040 instructions p.10
@@ -512,6 +515,9 @@ export const WV_CONFIG: ProgressiveTaxStateConfig = {
 // MAINE — 3 brackets, top 7.15%
 // 36 M.R.S.A. §5111 (2025). Filing-status-specific brackets.
 // $5,150 personal exemption per person.
+// Standard deduction below is state-specific on the checked-in TY2025 table.
+// Maine's constants and 1040ME mapping do not claim federal conformity,
+// so these amounts are not replaced with getStandardDeduction.
 // ═══════════════════════════════════════════════════════════════════
 
 export const ME_CONFIG: ProgressiveTaxStateConfig = {
@@ -545,6 +551,7 @@ export const ME_CONFIG: ProgressiveTaxStateConfig = {
     married_separate: 14600,
     head_of_household: 21900,
   },
+  standardDeductionConformsToFederal: false,
   personalExemption: 5150,
   dependentExemption: 5150,
   // ME EITC: 25% with qualifying children, 50% without — 2025 ME 1040ME instructions p.10
@@ -563,7 +570,9 @@ export const ME_CONFIG: ProgressiveTaxStateConfig = {
 
 // ═══════════════════════════════════════════════════════════════════
 // NEW MEXICO — 5 brackets, top 5.9%
-// N.M. Stat. §7-2-7 (2025). Federal std ded conformity.
+// N.M. Stat. §7-2-7 (2025). Federal standard-deduction conformity:
+// same basic amounts as getStandardDeduction(taxYear). The map below is the
+// TY2025 snapshot; calculation reads the year resolver.
 // ═══════════════════════════════════════════════════════════════════
 
 export const NM_CONFIG: ProgressiveTaxStateConfig = {
@@ -604,11 +613,12 @@ export const NM_CONFIG: ProgressiveTaxStateConfig = {
     ],
   },
   standardDeduction: {
-    single: 14600,
-    married_joint: 29200,
-    married_separate: 14600,
-    head_of_household: 21900,
+    single: 15750,
+    married_joint: 31500,
+    married_separate: 15750,
+    head_of_household: 23625,
   },
+  standardDeductionConformsToFederal: true,
   personalExemption: 0,
   dependentExemption: 4000,
   stateEITCRate: 0.25,
@@ -829,6 +839,9 @@ export const DE_CONFIG: ProgressiveTaxStateConfig = {
 // ═══════════════════════════════════════════════════════════════════
 // DISTRICT OF COLUMBIA — 7 brackets, top 10.75%
 // D.C. Code §47-1806.03 (2025). High rates.
+// Standard deduction below is the state-specific DC amount on the checked-in
+// TY2025 table (D-40 mapping: "DC standard or itemized deduction"). It is not
+// federal conformity, so it is not replaced with getStandardDeduction.
 // ═══════════════════════════════════════════════════════════════════
 
 export const DC_CONFIG: ProgressiveTaxStateConfig = {
@@ -849,6 +862,7 @@ export const DC_CONFIG: ProgressiveTaxStateConfig = {
     married_separate: 14600,
     head_of_household: 21900,
   },
+  standardDeductionConformsToFederal: false,
   personalExemption: 0,
   dependentExemption: 0,
   // DC EITC: 100% of federal for filers with children; standalone calc for childless

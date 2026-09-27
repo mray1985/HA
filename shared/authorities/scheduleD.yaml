@@ -22,6 +22,6 @@ functions:
     limitations:
       - "Does not handle wash sale adjustments (IRC 1091)"
       - "Does not handle constructive sales under IRC 1259"
-      - "28% rate group (collectibles) and 25% rate group (unrecaptured 1250 gain) not fully modeled"
+      - "Long-term collectibles gain flagged isCollectible on Form 1099-B is measured here and taxed at 28% in capitalGains.ts. Unrecaptured section 1250 gain is taxed in capitalGains.ts. Section 1202 28% rate gain is not computed."
       - "Capital loss carryforward from prior years must be provided as input"
       - "Does not handle section 1256 contracts (60/40 split)"

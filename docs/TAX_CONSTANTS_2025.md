@@ -919,7 +919,7 @@ Std. deduction: $2,835 (S) / $5,670 (MFJ). EITC: 9% refundable.
 | $6,565 – $7,878 | 4.5% |
 | $7,878+ | 4.7% |
 
-Std. deduction: $14,600 (S) / $29,200 (MFJ). Dependent exemption: $1,200. EITC: 10% nonrefundable.
+Std. deduction: federal basic standard deduction (TY2025 $15,750 single / $31,500 MFJ). Dependent exemption: $1,200. EITC: 20% nonrefundable.
 
 ### South Carolina
 **Authority:** S.C. Code §12-6-510
@@ -1038,7 +1038,7 @@ Exemption: $2,000/person. Dependent exemption: $2,000.
 | 6.75% | $26,800 – $63,450 | $53,600 – $126,900 |
 | 7.15% | $63,450+ | $126,900+ |
 
-Std. deduction: $14,600 (S) / $29,200 (MFJ). Exemption: $5,150/person. Dependent exemption: $5,150. EITC: 12% refundable.
+Std. deduction: state-specific $14,600 (S) / $29,200 (MFJ), not federal conformity. Exemption: $5,150/person. Dependent exemption: $5,150. EITC: 12% refundable.
 
 ### New Mexico
 **Authority:** N.M. Stat. §7-2-7
@@ -1053,7 +1053,7 @@ Std. deduction: $14,600 (S) / $29,200 (MFJ). Exemption: $5,150/person. Dependent
 | 4.9% | $66,500 – $210,000 | $100,000 – $315,000 |
 | 5.9% | $210,000+ | $315,000+ |
 
-Std. deduction: $14,600 (S) / $29,200 (MFJ). Dependent exemption: $4,000. EITC: 25% refundable.
+Std. deduction: federal basic standard deduction (TY2025 $15,750 single / $31,500 MFJ). Dependent exemption: $4,000. EITC: 25% refundable.
 
 ### Montana
 **Authority:** Mont. Code §15-30-2103
@@ -1120,7 +1120,7 @@ Std. deduction: $3,250 (S) / $6,500 (MFJ). EITC: 4.5% nonrefundable.
 | $500,000 – $1,000,000 | 9.75% |
 | $1,000,000+ | 10.75% |
 
-Std. deduction: $14,600 (S) / $29,200 (MFJ). EITC: 70% refundable.
+Std. deduction: state-specific $14,600 (S) / $29,200 (MFJ), not federal conformity. EITC: 70% refundable.
 
 ---
 

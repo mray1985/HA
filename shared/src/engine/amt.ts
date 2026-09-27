@@ -52,7 +52,9 @@ export interface AMTPartIIIResult {
   capitalGainsTax: number;
   /** Tax on unrecaptured §1250 gain at 25% */
   section1250Tax: number;
-  /** Special computation tax (ordinary + §1250 + preferential) */
+  /** Tax on collectibles gain at the 28% maximum (IRC §1(h)(4)) */
+  collectiblesTax: number;
+  /** Special computation tax (ordinary + §1250 + collectibles + preferential) */
   specialComputationTax: number;
   /** Flat-rate tax: 26%/28% on entire AMT base (comparison) */
   flatRateTax: number;
@@ -168,6 +170,7 @@ export function calculateAMT(
   longTermCapitalGains?: number,
   unrecapturedSection1250Gain?: number,
   taxYear: number = 2025,
+  collectiblesGain: number = 0,
 ): AMTResult {
   const amtData = taxReturn.amtData;
 
@@ -296,7 +299,7 @@ export function calculateAMT(
 
   if ((qd > 0 || ltcg > 0) && amtBase > 0) {
     // Part III: preferential capital gains rates applied to AMT base
-    partIII = calculateAMTPartIII(amtBase, qd, ltcg, s1250, filingStatus, taxYear);
+    partIII = calculateAMTPartIII(amtBase, qd, ltcg, s1250, filingStatus, taxYear, collectiblesGain);
     tentativeMinimumTax = partIII.tentativeMinimumTax;
     usedPartIII = true;
   } else {
@@ -369,11 +372,11 @@ export function calculateAMT(
  * rather than the flat 26%/28% AMT rates. The ordinary (non-cap-gains)
  * portion still uses 26%/28%.
  *
- * TMT = min(special computation, flat 26%/28% on entire base)
+ * Collectibles gain flagged on the return is taxed at the 28% maximum
+ * (IRC §1(h)(4)), stacked after unrecaptured §1250 and before the
+ * 0%/15%/20% adjusted net capital gain. Section 1202 gain is not computed.
  *
- * @limitations Does not compute 28% rate on collectibles gain (mirrors
- *   capitalGains.ts). Collectibles gain is treated at the standard 15%/20%
- *   preferential rates, which may slightly understate AMT for rare cases.
+ * TMT = min(special computation, flat 26%/28% on entire base)
  */
 export function calculateAMTPartIII(
   amtBase: number,
@@ -382,6 +385,7 @@ export function calculateAMTPartIII(
   unrecapturedSection1250Gain: number,
   filingStatus: FilingStatus,
   taxYear: number = 2025,
+  collectiblesGain: number = 0,
 ): AMTPartIIIResult {
   if (amtBase <= 0) {
     return {
@@ -391,6 +395,7 @@ export function calculateAMTPartIII(
       ordinaryTax: 0,
       capitalGainsTax: 0,
       section1250Tax: 0,
+      collectiblesTax: 0,
       specialComputationTax: 0,
       flatRateTax: 0,
       tentativeMinimumTax: 0,
@@ -415,6 +420,7 @@ export function calculateAMTPartIII(
       ordinaryTax: flatRateTax,
       capitalGainsTax: 0,
       section1250Tax: 0,
+      collectiblesTax: 0,
       specialComputationTax: flatRateTax,
       flatRateTax,
       tentativeMinimumTax: flatRateTax,
@@ -438,8 +444,13 @@ export function calculateAMTPartIII(
   const capitalGainsRates = getCapitalGainsRates(taxYear);
   const section1250Tax = round2(effective1250 * capitalGainsRates.RATE_25);
 
-  // Remaining preferential income (LTCG + QD minus §1250) → 0%/15%/20% zones
-  const remainingPreferential = round2(adjustedNetCapitalGain - effective1250);
+  // Collectibles (28% maximum) are part of LTCG and stack after §1250.
+  const ltcgAfter1250 = Math.max(0, Math.min(longTermCapitalGains, adjustedNetCapitalGain) - effective1250);
+  const effectiveCollectibles = Math.min(Math.max(0, collectiblesGain), ltcgAfter1250);
+  const collectiblesTax = round2(effectiveCollectibles * capitalGainsRates.RATE_28);
+
+  // Remaining preferential income (LTCG + QD minus §1250 and collectibles) → 0%/15%/20% zones
+  const remainingPreferential = round2(adjustedNetCapitalGain - effective1250 - effectiveCollectibles);
 
   let capitalGainsTax = 0;
 
@@ -447,8 +458,8 @@ export function calculateAMTPartIII(
     const threshold0 = capitalGainsRates.THRESHOLD_0[filingStatus];
     const threshold15 = capitalGainsRates.THRESHOLD_15[filingStatus];
 
-    // Capital gains stack on top of ordinary AMT income + §1250
-    const prefStart = round2(ordinaryAMTIncome + effective1250);
+    // Capital gains stack on top of ordinary AMT income + §1250 + collectibles
+    const prefStart = round2(ordinaryAMTIncome + effective1250 + effectiveCollectibles);
     const prefEnd = round2(prefStart + remainingPreferential);
 
     // Portion in 0% zone
@@ -465,8 +476,8 @@ export function calculateAMTPartIII(
     );
   }
 
-  // Special computation = ordinary tax + §1250 tax + preferential tax
-  const specialComputationTax = round2(ordinaryTax + section1250Tax + capitalGainsTax);
+  // Special computation = ordinary tax + §1250 tax + collectibles tax + preferential tax
+  const specialComputationTax = round2(ordinaryTax + section1250Tax + collectiblesTax + capitalGainsTax);
 
   // TMT = min(special, flat) — preferential rates never increase AMT
   const tentativeMinimumTax = Math.min(specialComputationTax, flatRateTax);
@@ -478,6 +489,7 @@ export function calculateAMTPartIII(
     ordinaryTax,
     capitalGainsTax,
     section1250Tax,
+    collectiblesTax,
     specialComputationTax,
     flatRateTax,
     tentativeMinimumTax,

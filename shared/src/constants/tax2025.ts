@@ -56,8 +56,11 @@ export const TAX_BRACKETS_2025: Record<FilingStatus, TaxBracket[]> = {
 
 // ──────────────────────────────────────────────────
 // Standard Deduction
-// Authority: IRC §63(c) — Standard deduction defined; TCJA §11021 — Increased amounts
-// Constants: Rev. Proc. 2024-40, Section 3.02, Table 5 — Standard deduction amounts
+// Authority: IRC §63(c) — Standard deduction defined
+// Basic amounts: OBBBA increased the Rev. Proc. 2024-40 §3.02 Table 5 figures
+//   ($15,000 single/MFS, $30,000 MFJ/QSS, $22,500 head of household)
+//   to $15,750 / $31,500 / $23,625 for tax year 2025.
+// Additional aged/blind amounts remain Rev. Proc. 2024-40 §3.02.
 // ──────────────────────────────────────────────────
 
 export const STANDARD_DEDUCTION_2025: Record<FilingStatus, number> = {
@@ -472,6 +475,7 @@ export const CAPITAL_GAINS_RATES = {
   RATE_15: 0.15,                   // IRC §1(h)(1)(C) — 15% rate
   RATE_20: 0.20,                   // IRC §1(h)(1)(D) — 20% rate
   RATE_25: 0.25,                   // IRC §1(h)(1)(E) — 25% rate (unrecaptured Section 1250 gain)
+  RATE_28: 0.28,                   // IRC §1(h)(1)(F), §1(h)(4) — 28% maximum rate on collectibles gain
   // 0% rate upper thresholds — Rev. Proc. 2024-40 §3.12, Table 3
   THRESHOLD_0: {
     [FilingStatus.Single]: 48350,                    // Rev. Proc. 2024-40 §3.12

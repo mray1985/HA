@@ -1,5 +1,5 @@
-import { FilingStatus, TaxBracket, BracketDetail, CalculationTrace } from '../types/index.js';
-import { getTaxConstants } from '../constants/taxConstants.js';
+import { FilingStatus, BracketDetail, CalculationTrace } from '../types/index.js';
+import { getTaxBrackets } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -18,7 +18,7 @@ export function calculateProgressiveTax(
   filingStatus: FilingStatus,
   taxYear: number = 2025,
 ): { tax: number; brackets: BracketDetail[]; marginalRate: number } {
-  const brackets = getTaxConstants(taxYear).TAX_BRACKETS_2025[filingStatus];
+  const brackets = getTaxBrackets(taxYear)[filingStatus];
   if (!brackets) {
     throw new Error(`Unknown filing status: ${filingStatus}`);
   }
@@ -62,7 +62,7 @@ export function calculateProgressiveTax(
  * @limitations None
  */
 export function getMarginalRate(taxableIncome: number, filingStatus: FilingStatus, taxYear: number = 2025): number {
-  const brackets = getTaxConstants(taxYear).TAX_BRACKETS_2025[filingStatus];
+  const brackets = getTaxBrackets(taxYear)[filingStatus];
   const income = Math.max(0, taxableIncome);
 
   for (let i = brackets.length - 1; i >= 0; i--) {

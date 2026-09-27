@@ -2,7 +2,7 @@
 
 Comprehensive reference for running, understanding, and extending the HATax test suite.
 
-**Total: 139 test files | 6,100+ tests**
+**Engine suite (`npm test`): 96 test files | 5,025 tests**
 
 ---
 
@@ -34,7 +34,7 @@ cd shared && npx vitest
 
 ```
 tax-project/
-├── shared/__tests__/           89 files — Engine: brackets, forms, credits, states, fuzzing
+├── shared/__tests__/           96 files — Engine: brackets, forms, credits, states, fuzzing (`npm test`)
 ├── client/src/__tests__/       30 files — Services: import, parsing, AI, audit risk
 ├── client/e2e/                  9 files — Playwright: wizard flow, accessibility, fuzzer
 │   └── scenario-fuzzer/        13 archetypes, 8 generators, PRNG-seeded

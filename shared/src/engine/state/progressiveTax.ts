@@ -15,6 +15,7 @@ import {
   type StateReturnConfig, type StateTaxBracket, type CalculationTrace, FilingStatus,
 } from '../../types/index.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
+import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { TraceBuilder } from '../traceBuilder.js';
 import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
@@ -35,6 +36,15 @@ export interface ProgressiveTaxStateConfig {
 
   /** Standard deduction by filing status key. */
   standardDeduction: Record<FilingKey, number>;
+
+  /**
+   * When true, the standard deduction is the federal basic standard deduction
+   * for the tax year (`getStandardDeduction`). Set only when this state's own
+   * notes say it conforms to the federal standard deduction. The
+   * `standardDeduction` map is the TY2025 snapshot of that amount.
+   * Brackets are never taken from the federal bracket table.
+   */
+  standardDeductionConformsToFederal?: boolean;
 
   /**
    * Personal exemption per person (taxpayer + spouse if MFJ).
@@ -90,6 +100,15 @@ export interface ProgressiveTaxStateConfig {
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
+/** Years that have a checked-in progressive bracket table. Do not invent others. */
+export const PROGRESSIVE_BRACKET_TABLE_YEARS = [2025] as const;
+
+function federalBasicStandardDeduction(filingStatus: FilingStatus | undefined, taxYear: number): number {
+  const table = getStandardDeduction(taxYear);
+  if (!filingStatus) return table[FilingStatus.Single];
+  return table[filingStatus] ?? table[FilingStatus.Single];
+}
+
 function countPersons(filingStatus: FilingStatus | undefined): number {
   if (
     filingStatus === FilingStatus.MarriedFilingJointly ||
@@ -128,10 +147,17 @@ export function countExemptions(tr: TaxReturn): number {
  * Create a StateCalculator for a progressive-tax state.
  *
  * @param config  The state's tax configuration (brackets, deductions, hooks, etc.)
- * @returns       A StateCalculator whose `.calculate()` method performs the
- *                full progressive-tax computation.
+ * @param taxYear Tax year being filed. Returns null when no bracket table
+ *                is checked in for that year. Federal-conforming standard
+ *                deductions are read from that year's federal constants;
+ *                brackets are not inferred.
+ * @returns       A StateCalculator, or null when this year has no table.
  */
-export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig, taxYear: number = 2025): StateCalculator {
+export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig, taxYear: number = 2025): StateCalculator | null {
+  if (!(PROGRESSIVE_BRACKET_TABLE_YEARS as readonly number[]).includes(taxYear)) {
+    return null;
+  }
+
   return {
     calculate(
       taxReturn: TaxReturn,
@@ -194,7 +220,9 @@ export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig
       );
 
       // ── Step 4: Deductions ───────────────────────
-      const stateDeduction = config.standardDeduction[filingKey] || 0;
+      const stateDeduction = config.standardDeductionConformsToFederal
+        ? federalBasicStandardDeduction(filingStatus, taxYear)
+        : (config.standardDeduction[filingKey] || 0);
 
       // ── Step 5: Exemptions ───────────────────────
       const personalExemption = getPersonalExemption(config, filingKey, numPersons);

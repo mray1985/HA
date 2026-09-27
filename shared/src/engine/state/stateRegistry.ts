@@ -80,19 +80,32 @@ export const PROGRESSIVE_TAX_STATES = [
   'ND', 'NE', 'NM', 'OK', 'OR', 'RI', 'SC', 'VA', 'VT', 'WV',
 ];
 
+/**
+ * Custom calculators whose only checked-in bracket table is tax year 2025.
+ * Other years return null so the 2025 table is not applied to a different year.
+ * New Hampshire is not in this list: its calculator switches 2024 I&D tax vs the 2025 repeal.
+ */
+const CUSTOM_BRACKET_TABLE_YEAR = 2025;
+
+function yearScopedCalculator(
+  calculate: StateCalculator['calculate'],
+): (taxYear: number) => StateCalculator | null {
+  return (taxYear) => (taxYear === CUSTOM_BRACKET_TABLE_YEAR ? { calculate } : null);
+}
+
 /** Registry of implemented state calculators — factories that create calculators per tax year. */
-const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator> = {
-  // Custom calculators (complex state-specific rules) - these need to be wrapped to accept taxYear
-  CA: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateCalifornia(taxReturn, federalResult, config) }),
-  NY: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateNewYork(taxReturn, federalResult, config) }),
-  NJ: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateNewJersey(taxReturn, federalResult, config) }),
-  OH: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateOhio(taxReturn, federalResult, config) }),
-  WI: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateWisconsin(taxReturn, federalResult, config) }),
-  CT: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateConnecticut(taxReturn, federalResult, config) }),
-  MD: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateMaryland(taxReturn, federalResult, config) }),
-  AL: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateAlabama(taxReturn, federalResult, config) }),
-  HI: (taxYear: number) => ({ calculate: (taxReturn, federalResult, config) => calculateHawaii(taxReturn, federalResult, config) }),
-  NH: (taxYear: number) => createNHCalculator(),
+const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator | null> = {
+  // Custom calculators (complex state-specific rules). Only the TY2025 table is checked in.
+  CA: yearScopedCalculator((taxReturn, federalResult, config) => calculateCalifornia(taxReturn, federalResult, config)),
+  NY: yearScopedCalculator((taxReturn, federalResult, config) => calculateNewYork(taxReturn, federalResult, config)),
+  NJ: yearScopedCalculator((taxReturn, federalResult, config) => calculateNewJersey(taxReturn, federalResult, config)),
+  OH: yearScopedCalculator((taxReturn, federalResult, config) => calculateOhio(taxReturn, federalResult, config)),
+  WI: yearScopedCalculator((taxReturn, federalResult, config) => calculateWisconsin(taxReturn, federalResult, config)),
+  CT: yearScopedCalculator((taxReturn, federalResult, config) => calculateConnecticut(taxReturn, federalResult, config)),
+  MD: yearScopedCalculator((taxReturn, federalResult, config) => calculateMaryland(taxReturn, federalResult, config)),
+  AL: yearScopedCalculator((taxReturn, federalResult, config) => calculateAlabama(taxReturn, federalResult, config)),
+  HI: yearScopedCalculator((taxReturn, federalResult, config) => calculateHawaii(taxReturn, federalResult, config)),
+  NH: (_taxYear: number) => createNHCalculator(),
 
   // Flat-tax states
   PA: (taxYear: number) => createFlatTaxCalculator('PA', taxYear),
@@ -146,6 +159,7 @@ export function getStateCalculator(stateCode: string, taxYear: number = 2025): S
   const factory = CALCULATOR_FACTORIES[stateCode.toUpperCase()];
   if (!factory) return null;
   const calc = factory(taxYear);
+  if (!calc) return null;
   CALCULATOR_CACHE.set(key, calc);
   return calc;
 }

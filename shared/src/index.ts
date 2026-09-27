@@ -1,5 +1,11 @@
 export * from './types/index.js';
 export * from './constants/tax2025.js';
+export {
+  getAdditionalStandardDeduction,
+  getStandardDeduction,
+  getTaxBrackets,
+  getTaxConstants,
+} from './constants/taxConstants.js';
 export * from './engine/utils.js';
 export * from './engine/brackets.js';
 export * from './engine/scheduleC.js';

@@ -22,7 +22,7 @@ import type { FlatTaxStateConfig } from '../../constants/states/flatTax.js';
 import { FLAT_TAX_CONSTANTS, MA_PERSONAL_EXEMPTION } from '../../constants/states/flatTax.js';
 import { FLAT_TAX_CONSTANTS_2024, MA_PERSONAL_EXEMPTION_2024 } from '../../constants/states/flatTax2024.js';
 import { FLAT_TAX_CONSTANTS_2026, MA_PERSONAL_EXEMPTION_2026 } from '../../constants/states/flatTax2026.js';
-import { getTaxConstants } from '../../constants/taxConstants.js';
+import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
 import { getStateWithholding, getStateFilingKey, getStateName } from './index.js';
@@ -72,7 +72,7 @@ function countPersons(filingStatus: FilingStatus | undefined): number {
  * Used by UT's taxpayer credit calculation.
  */
 function getFederalStandardDeduction(filingStatus: FilingStatus | undefined, taxYear: number = 2025): number {
-  const std = getTaxConstants(taxYear).STANDARD_DEDUCTION_2025;
+  const std = getStandardDeduction(taxYear);
   if (!filingStatus) return std[FilingStatus.Single];
   return std[filingStatus] || std[FilingStatus.Single];
 }

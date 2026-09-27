@@ -27,9 +27,9 @@ export interface SaversCreditEligibility {
  *
  * The rate depends on filing status and AGI:
  *   Filing Status    |   50%        |   20%        |   10%        |   0%
- *   Single/MFS       | ≤ $23,750    | ≤ $25,750    | ≤ $36,500    | > $36,500
- *   HoH              | ≤ $35,625    | ≤ $38,625    | ≤ $54,750    | > $54,750
- *   MFJ/QSS          | ≤ $47,500    | ≤ $51,500    | ≤ $73,000    | > $73,000
+ *   Single/MFS       | ≤ $23,750    | ≤ $25,500    | ≤ $39,500    | > $39,500
+ *   HoH              | ≤ $35,625    | ≤ $38,250    | ≤ $59,250    | > $59,250
+ *   MFJ/QSS          | ≤ $47,500    | ≤ $51,000    | ≤ $79,000    | > $79,000
  *
  * Eligibility (IRC §25B(c)):
  *   - Must be age 18 or older at end of tax year

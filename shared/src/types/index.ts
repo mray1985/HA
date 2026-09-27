@@ -2024,6 +2024,12 @@ export interface ScheduleDResult {
   longTermLoss: number;
   netLongTerm: number;
   netGainOrLoss: number;
+  /**
+   * Long-term collectibles gain taxed at the 28% maximum (IRC §1(h)(4)).
+   * Lesser of net long-term collectibles gain and net long-term gain.
+   * Zero when that net is not a gain. Section 1202 gain is not included.
+   */
+  collectiblesGain: number;
   capitalLossDeduction: number;     // Up to $3k ($1.5k MFS) deductible against ordinary income
   capitalLossCarryforward: number;  // Total excess loss carried to future years
   capitalLossCarryforwardST: number; // Short-term portion of carryforward

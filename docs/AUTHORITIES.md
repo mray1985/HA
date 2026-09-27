@@ -87,9 +87,9 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Filing status determination must be provided as input; not independently validated
 - Standard deduction amounts must be updated annually per revenue procedure
 - Does not handle amended return (1040-X) computations
-- Does not handle alternative minimum tax (AMT) under IRC 55-59
+- Alternative minimum tax is computed on Form 6251 from the return. The AMT foreign tax credit is applied when amtData.amtForeignTaxCredit is supplied, and regular foreign tax credit is reconciled afterward. AMT net operating loss (ATNOLD) is applied only when amtData.atnold is supplied.
 - Ordering of credits (nonrefundable before refundable) follows Form 1040 line sequence
-- Does not handle net operating loss (NOL) deductions under IRC 172
+- Net operating loss deduction is taken from a supplied nolCarryforward, limited to 80% of taxable income before the QBI deduction, and is applied before QBI. The orchestrator does not compute a new NOL from the current-year loss.
 - Prior year data (carryforwards, basis) must be supplied externally
 
 ---
@@ -220,16 +220,17 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 
 | Function | Authority | Reference | Weight | Description |
 |----------|-----------|-----------|--------|-------------|
-| `calculatePreferentialRateTax` | IRC | 1(h) | binding | Preferential tax rates of 0%, 15%, and 20% on net capital gains and qualified dividends |
+| `calculatePreferentialRateTax` | IRC | 1(h) | binding | Maximum rates on adjusted net capital gain, including 0%/15%/20%, 25% unrecaptured section 1250 gain, and 28% collectibles gain |
 | | IRC | 1(h)(1)(E) | binding | 25% rate on unrecaptured Section 1250 gain; tax is lesser of amount taxed at 25% or amount that would be taxed at ordinary rates |
+| | IRC | 1(h)(4) | binding | 28% maximum rate on collectibles gain |
 | | Rev. Proc. | Rev. Proc. 2024-40, Section 3.12 | binding | Inflation-adjusted thresholds for 0%/15%/20% capital gains rate brackets |
 | | Form | Form 1040, Qualified Dividends and Capital Gain Tax Worksheet | explanatory | |
 | | Form | Schedule D Tax Worksheet | explanatory | |
 
-**Scope:** Computes tax on net long-term capital gains and qualified dividends at preferential rates, integrating with ordinary income brackets. Includes the 25% rate zone for unrecaptured Section 1250 gain with min(special, regular) comparison per the Schedule D Tax Worksheet.
+**Scope:** Computes tax on net long-term capital gains and qualified dividends at preferential rates, including the 25% rate zone for unrecaptured Section 1250 gain and the 28% maximum on long-term collectibles gain flagged on Form 1099-B. Uses min(special, regular) comparison per IRC §1(h).
 
 **Limitations:**
-- Does not handle 28% rate on collectibles gain
+- 28% collectibles rate applies only to long-term gain flagged isCollectible on Form 1099-B, capped at net long-term gain. Section 1202 28% rate gain is not computed.
 - NIIT (3.8% surtax) computed separately in niit.ts
 - Short-term gains taxed at ordinary rates are handled in brackets.ts
 - Net capital loss deduction limited to $3,000 handled in scheduleD.ts
@@ -515,7 +516,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 
 | Function | Authority | Reference | Weight | Description |
 |----------|-----------|-----------|--------|-------------|
-| `calculateCredits` | IRC | 24 | binding | Child Tax Credit of up to $2,000 per qualifying child under age 17; Other Dependents Credit of $500 |
+| `calculateCredits` | IRC | 24 | binding | Child Tax Credit per qualifying child from the tax-year constants (2024: $2,000; 2025 and 2026: $2,200); Other Dependents Credit of $500; ACTC cap $1,700 |
 | | IRC | 24(d) | binding | Additional Child Tax Credit (refundable portion) with earned income formula |
 | | IRC | 25A | binding | Education credits: AOTC up to $2,500 per student; LLC up to $2,000 per return |
 | | Rev. Proc. | Rev. Proc. 2024-40, Sections 3.23-3.27 | binding | Inflation-adjusted CTC/ACTC phase-out thresholds and education credit income limits |
@@ -994,7 +995,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 **Limitations:**
 - Does not handle wash sale adjustments (IRC 1091)
 - Does not handle constructive sales under IRC 1259
-- 28% rate group (collectibles) and 25% rate group (unrecaptured 1250 gain) not fully modeled
+- Long-term collectibles gain flagged isCollectible on Form 1099-B is measured here and taxed at 28% in capitalGains.ts. Unrecaptured section 1250 gain is taxed in capitalGains.ts. Section 1202 28% rate gain is not computed.
 - Capital loss carryforward from prior years must be provided as input
 - Does not handle section 1256 contracts (60/40 split)
 
@@ -1342,4 +1343,4 @@ The constants file contains inline citation comments referencing the underlying 
 
 ---
 
-*Last updated: 2026-03-22 | 45 authority-mapped modules (80 engine modules total) + 1 constants file | Engine: 6,100+ tests across 139 files*
+*Last updated: 2026-03-22 | 45 authority-mapped modules (80 engine modules total) + 1 constants file | Engine: 5,025 tests across 96 files (`npm test`)*
