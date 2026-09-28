@@ -159,3 +159,4 @@ export * from './migrations/index.js';
 // Declarative wizard conditions (inspired by Direct File's condition-driven flow)
 export * from './wizard/conditionTypes.js';
 export * from './wizard/conditionEvaluator.js';
+export * from './taxfacts/taxFact.js';
