@@ -3,7 +3,7 @@
  * A dropped file gets a stable hash-based document ID and provenance metadata.
  * Extracted fields become TaxFacts through the tax-tool API (HA-AI-011).
  * Form type is asserted by the deterministic classifier (step 4) before income tools run.
- * New OCR engines are a later phase — callers reuse existing extractors.
+ * Scans use the existing client OCR path (step 5 / documentOcr) — no new engines or weights.
  */
 
 import type { TaxFact } from './taxFact.js';

@@ -3,6 +3,7 @@ import {
   factsFromFields,
   fieldsForToolCall,
   invokeTaxTool,
+  ocrExtractorLabel,
   pickToolFieldArgs,
   toolNameForIncomeType,
 } from '@hatax/engine';
@@ -31,7 +32,7 @@ export function appendTaxFacts(returnId: string, facts: TaxFact[]): TaxFact[] {
 }
 
 function extractorLabel(extracted: PDFExtractResult): string {
-  return extracted.aiEnhanced ? 'local-pdf+byok' : extracted.ocrUsed ? 'local-ocr' : 'local-pdf';
+  return ocrExtractorLabel(extracted.ocrUsed === true, extracted.aiEnhanced === true);
 }
 
 /**

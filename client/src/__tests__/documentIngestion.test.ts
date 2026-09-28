@@ -426,6 +426,112 @@ describe('documentIngestion client pipeline', () => {
     expect(applied.document.classification?.confidence).toBe('low');
     expect(applied.document.classifications?.[0]?.confidence).toBe('low');
     expect(applied.facts.some((f) => f.status === 'extracted')).toBe(true);
+    expect(applied.document.extractor).toBe('local-ocr');
+  });
+
+  it('does not create income when OCR text is empty or unreadable', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc({ fileName: 'blank-scan.png' })]);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { wages: 99999 },
+      incomeType: 'w2',
+      payerName: 'Ghost',
+      confidence: 'low',
+      warnings: [],
+      errors: ['OCR could not extract any text from this image.'],
+      textBlockCount: 0,
+      ocrUsed: true,
+      ocrAvailable: true,
+      rawOCRText: '   ',
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement'],
+          reasoning: 'stale label must not invent income',
+        },
+        fields: [],
+        summary: 'empty ocr',
+        textBlockCount: 0,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'blank-scan.png' }),
+      extracted,
+    });
+
+    expect(applied.unclassified).toBe(true);
+    expect(applied.facts).toEqual([]);
+    expect(applied.pieces[0].toolFields).toEqual({});
+    expect(applied.document.status).toBe('unclassified');
+    expect(loadTaxFacts('ret-1')).toEqual([]);
+  });
+
+  it('OCR path keeps explicit 0 and omits missing boxes', () => {
+    saveTaxFacts('ret-1', []);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: undefined,
+        federalTaxWithheld: null,
+        socialSecurityWages: 0,
+        medicareWages: 41000,
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: true,
+      ocrAvailable: true,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'OCR W-2',
+        },
+        fields: [],
+        summary: 'ocr zeros',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'scan-w2.png' }),
+      extracted,
+    });
+
+    expect(applied.pieces[0].classification.confidence).toBe('low');
+    expect(applied.pieces[0].toolFields).toEqual({
+      employerName: 'Acme',
+      socialSecurityWages: 0,
+      medicareWages: 41000,
+    });
+    expect(applied.pieces[0].toolFields).not.toHaveProperty('wages');
+    const ss = applied.facts.find((f) => f.sourceField === 'socialSecurityWages');
+    expect(ss?.status).toBe('extracted');
+    expect(ss?.value).toBe(0);
+    expect(ss?.extractor).toBe('local-ocr');
+    const wages = applied.facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.status).toBe('unknown');
   });
 
   it('keeps high classification confidence for a digital PDF with strong markers', () => {
