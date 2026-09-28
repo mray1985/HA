@@ -120,6 +120,7 @@ export default function PreparerIntakePage() {
           summary: `${labels} · ${applied.successCount} added`,
           detail: [
             extracted.aiEnhanced ? 'The model checked the scanned fields.' : 'Read on this computer.',
+            ...toolErrors,
             ...extracted.warnings,
             ...applied.results.filter((r) => !r.success).map((r) => r.error || r.summary),
           ].filter(Boolean).join(' '),

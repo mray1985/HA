@@ -155,6 +155,102 @@ describe('tax tools (HA-AI-011)', () => {
     expect(toolNameForIncomeType('1099misc')).toBeNull();
   });
 
+  it('round-trips W-2 box12 codes and box13 flags through the tool', () => {
+    const result = addW2(
+      {
+        employerName: 'Acme',
+        wages: 60000,
+        box12: [
+          { code: 'D', amount: 5000 },
+          { code: 'DD', amount: 0 },
+        ],
+        box13: {
+          statutoryEmployee: false,
+          retirementPlan: true,
+          thirdPartySickPay: true,
+        },
+      },
+      ctx,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.fields.box12).toEqual([
+      { code: 'D', amount: 5000 },
+      { code: 'DD', amount: 0 },
+    ]);
+    expect(result.fields.box13).toEqual({
+      statutoryEmployee: false,
+      retirementPlan: true,
+      thirdPartySickPay: true,
+    });
+
+    const box12Fact = result.facts.find((f) => f.sourceField === 'box12');
+    expect(box12Fact?.status).toBe('extracted');
+    expect(box12Fact?.value).toEqual([
+      { code: 'D', amount: 5000 },
+      { code: 'DD', amount: 0 },
+    ]);
+
+    const box13Fact = result.facts.find((f) => f.sourceField === 'box13');
+    expect(box13Fact?.status).toBe('extracted');
+    expect(box13Fact?.value).toEqual({
+      statutoryEmployee: false,
+      retirementPlan: true,
+      thirdPartySickPay: true,
+    });
+  });
+
+  it('accepts 1099-R Roth basis, QCD, and simplified-method fields', () => {
+    const result = invokeTaxTool({
+      tool: 'add_1099_r',
+      args: {
+        payerName: 'Fidelity',
+        grossDistribution: 20000,
+        taxableAmount: 15000,
+        isRothIRA: true,
+        rothContributionBasis: 8000,
+        qcdAmount: 0,
+        useSimplifiedMethod: true,
+        simplifiedMethod: {
+          totalContributions: 40000,
+          ageAtStartDate: 65,
+          isJointAndSurvivor: false,
+          paymentsThisYear: 12,
+          priorYearTaxFreeRecovery: 0,
+        },
+      },
+      context: {
+        ...ctx,
+        sourceFileName: '1099r.pdf',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.incomeType).toBe('1099r');
+    expect(result.fields.rothContributionBasis).toBe(8000);
+    expect(result.fields.qcdAmount).toBe(0);
+    expect(result.fields.useSimplifiedMethod).toBe(true);
+    expect(result.fields.simplifiedMethod).toEqual({
+      totalContributions: 40000,
+      ageAtStartDate: 65,
+      isJointAndSurvivor: false,
+      paymentsThisYear: 12,
+      priorYearTaxFreeRecovery: 0,
+    });
+
+    const roth = result.facts.find((f) => f.sourceField === 'rothContributionBasis');
+    expect(roth?.status).toBe('extracted');
+    expect(roth?.value).toBe(8000);
+
+    const qcd = result.facts.find((f) => f.sourceField === 'qcdAmount');
+    expect(qcd?.status).toBe('extracted');
+    expect(qcd?.value).toBe(0);
+  });
+
   it('unknown TaxFact status cannot carry a value', () => {
     const result = addW2({ employerName: 'Acme' }, ctx);
     expect(result.ok).toBe(true);

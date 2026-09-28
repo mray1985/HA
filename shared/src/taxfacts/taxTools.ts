@@ -27,13 +27,13 @@ export const TAX_TOOL_NAMES = [
 
 export type TaxToolName = (typeof TAX_TOOL_NAMES)[number];
 
+/** Income tools only (excludes filing-status candidate). */
+export type TaxToolIncomeName = Exclude<TaxToolName, 'set_filing_status_candidate'>;
+
 /** Income-item API keys used by addIncomeItem / intentExecutor. */
 export type TaxToolIncomeType = 'w2' | '1099int' | '1099div' | '1099nec' | '1099r';
 
-export const TAX_TOOL_INCOME_TYPE: Record<
-  Exclude<TaxToolName, 'set_filing_status_candidate'>,
-  TaxToolIncomeType
-> = {
+export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
   add_1099_int: '1099int',
   add_1099_div: '1099div',
@@ -41,7 +41,7 @@ export const TAX_TOOL_INCOME_TYPE: Record<
   add_1099_r: '1099r',
 };
 
-const INCOME_TYPE_TO_TOOL: Record<string, Exclude<TaxToolName, 'set_filing_status_candidate'>> = {
+const INCOME_TYPE_TO_TOOL: Record<string, TaxToolIncomeName> = {
   w2: 'add_w2',
   '1099int': 'add_1099_int',
   '1099div': 'add_1099_div',
@@ -49,7 +49,7 @@ const INCOME_TYPE_TO_TOOL: Record<string, Exclude<TaxToolName, 'set_filing_statu
   '1099r': 'add_1099_r',
 };
 
-export function toolNameForIncomeType(incomeType: string | null | undefined): TaxToolName | null {
+export function toolNameForIncomeType(incomeType: string | null | undefined): TaxToolIncomeName | null {
   if (!incomeType) return null;
   return INCOME_TYPE_TO_TOOL[incomeType] ?? null;
 }
@@ -69,6 +69,40 @@ const optionalAmount = z.preprocess(asMissing, z.number().finite().optional());
 const optionalString = z.preprocess(asMissing, z.string().optional());
 const optionalBoolean = z.preprocess(asMissing, z.boolean().optional());
 
+/** W-2 Box 12a–d coded benefit entries (matches W2Box12Entry). */
+const W2Box12EntrySchema = z
+  .object({
+    code: z.string().min(1),
+    amount: z.number().finite(),
+  })
+  .strict();
+
+/** W-2 Box 13 checkboxes (matches W2Box13). */
+const W2Box13Schema = z
+  .object({
+    statutoryEmployee: optionalBoolean,
+    retirementPlan: optionalBoolean,
+    thirdPartySickPay: optionalBoolean,
+  })
+  .strict();
+
+const optionalBox12 = z.preprocess(asMissing, z.array(W2Box12EntrySchema).optional());
+const optionalBox13 = z.preprocess(asMissing, W2Box13Schema.optional());
+
+/** 1099-R Simplified Method worksheet fields (matches Income1099R.simplifiedMethod). */
+const SimplifiedMethodSchema = z
+  .object({
+    totalContributions: z.number().finite(),
+    ageAtStartDate: z.number().finite(),
+    isJointAndSurvivor: z.boolean(),
+    combinedAge: optionalAmount,
+    paymentsThisYear: z.number().finite(),
+    priorYearTaxFreeRecovery: optionalAmount,
+  })
+  .strict();
+
+const optionalSimplifiedMethod = z.preprocess(asMissing, SimplifiedMethodSchema.optional());
+
 const AddW2FieldsSchema = z
   .object({
     employerName: optionalString,
@@ -82,6 +116,8 @@ const AddW2FieldsSchema = z
     stateTaxWithheld: optionalAmount,
     stateWages: optionalAmount,
     state: optionalString,
+    box12: optionalBox12,
+    box13: optionalBox13,
     isSpouse: optionalBoolean,
   })
   .strict();
@@ -133,9 +169,15 @@ const Add1099RFieldsSchema = z
     distributionCode: optionalString,
     isIRA: optionalBoolean,
     isRothIRA: optionalBoolean,
+    rothContributionBasis: optionalAmount,
+    qcdAmount: optionalAmount,
     stateCode: optionalString,
     stateTaxWithheld: optionalAmount,
     isSpouse: optionalBoolean,
+    earlyDistributionExceptionCode: optionalString,
+    earlyDistributionExceptionAmount: optionalAmount,
+    useSimplifiedMethod: optionalBoolean,
+    simplifiedMethod: optionalSimplifiedMethod,
   })
   .strict();
 
@@ -153,10 +195,7 @@ const SetFilingStatusCandidateSchema = z
   })
   .strict();
 
-const TOOL_FIELD_SCHEMAS: Record<
-  Exclude<TaxToolName, 'set_filing_status_candidate'>,
-  z.ZodObject<z.ZodRawShape>
-> = {
+const TOOL_FIELD_SCHEMAS: Record<TaxToolIncomeName, z.ZodObject<z.ZodRawShape>> = {
   add_w2: AddW2FieldsSchema,
   add_1099_int: Add1099IntFieldsSchema,
   add_1099_div: Add1099DivFieldsSchema,
@@ -166,7 +205,7 @@ const TOOL_FIELD_SCHEMAS: Record<
 
 /** Keep only schema-known keys (for OCR bridges). Direct tool calls still reject unknowns. */
 export function pickToolFieldArgs(
-  tool: Exclude<TaxToolName, 'set_filing_status_candidate'>,
+  tool: TaxToolIncomeName,
   args: Record<string, unknown>,
 ): Record<string, unknown> {
   const shape = TOOL_FIELD_SCHEMAS[tool].shape as Record<string, unknown>;

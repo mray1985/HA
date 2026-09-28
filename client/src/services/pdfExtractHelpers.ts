@@ -480,7 +480,7 @@ const PURE_NUMERIC_RE = /^-?[\d,]+\.?\d*$/;
  * under wide merged labels are still found. Adds a below-bias: on IRS forms,
  * box values are always below their labels, so values above get a 20px penalty.
  */
-function findNearbyNumber(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): number {
+function findNearbyNumber(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): number | undefined {
   const candidates: Array<{ value: number; distance: number }> = [];
   const rejected: Array<{ text: string; value: number; reason: string; dx: number; dy: number; dist: number }> = [];
 
@@ -609,7 +609,8 @@ function findNearbyNumber(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
     if (rejected.length > 0) {
       console.debug(`[PDFExtract] Label "${labelBlock.text.substring(0, 40)}" — ${rejected.length} numeric blocks REJECTED:`, rejected);
     }
-    return 0;
+    // Not found — distinct from a printed $0.
+    return undefined;
   }
   candidates.sort((a, b) => a.distance - b.distance);
   return Math.round(candidates[0].value * 100) / 100;
@@ -749,15 +750,17 @@ function extractPayerName(textBlocks: TextBlock[], keywords: string[]): string {
 
 /**
  * Extract a number associated with a box label (e.g., "Box 1", "1 Wages").
+ * Returns undefined when the box/label or nearby value is absent.
+ * A genuine printed $0 stays numeric 0 — never coerce missing → 0.
  */
-function extractBoxValue(textBlocks: TextBlock[], boxKeywords: string[]): number {
+function extractBoxValue(textBlocks: TextBlock[], boxKeywords: string[]): number | undefined {
   const label = findLabelBlock(textBlocks, boxKeywords);
   if (!label) {
     console.debug(`[PDFExtract] No label found for keywords: ${boxKeywords.join(', ')}`);
-    return 0;
+    return undefined;
   }
   const value = findNearbyNumber(textBlocks, label);
-  if (value === 0) {
+  if (value === undefined) {
     console.debug(`[PDFExtract] Label "${label.text}" at (${Math.round(label.x)},${Math.round(label.y)}) page=${label.page} w=${Math.round(label.width)} — no value found. Keywords: ${boxKeywords[0]}`);
     // Dump ALL blocks sorted by Y position so we can see the full layout
     const allBlocks = textBlocks
@@ -1419,7 +1422,21 @@ function formatTraceValue(value: unknown): string {
   if (typeof value === 'number') {
     return value === 0 ? '$0' : `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
+  if (Array.isArray(value) || (value !== null && typeof value === 'object')) {
+    return JSON.stringify(value);
+  }
   return String(value);
+}
+
+/** Trace "found" means a real extracted value, including numeric 0 — not missing/undefined. */
+function isTraceFound(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value as object).length > 0;
+  return false;
 }
 
 /**
@@ -1462,7 +1479,7 @@ export function generateImportTrace(
   const fields: ImportTraceEntry[] = Object.entries(extractedData).map(([key, value]) => {
     const label = fieldLabels[key] || key;
     const isName = typeof value === 'string';
-    const isFound = isName ? (value as string).length > 0 : (value as number) !== 0;
+    const isFound = isTraceFound(value);
 
     return {
       field: key,
