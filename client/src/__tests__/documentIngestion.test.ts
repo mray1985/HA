@@ -372,4 +372,277 @@ describe('documentIngestion client pipeline', () => {
     expect(loadTaxFacts('ret-1')).toEqual([]);
     expect(applied.document.status).toBe('unclassified');
   });
+
+  it('caps stored classification confidence when OCR confidence is low', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: 50000,
+        socialSecurityWages: 50000,
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      // OCR path explicitly caps extract confidence at low.
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: true,
+      ocrAvailable: true,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'OCR matched W-2 markers',
+        },
+        fields: [],
+        summary: 'ocr',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.unclassified).toBeUndefined();
+    expect(applied.pieces[0].classification.status).toBe('classified');
+    expect(applied.pieces[0].classification.confidence).toBe('low');
+    expect(applied.document.classification?.confidence).toBe('low');
+    expect(applied.document.classifications?.[0]?.confidence).toBe('low');
+    expect(applied.facts.some((f) => f.status === 'extracted')).toBe(true);
+  });
+
+  it('keeps high classification confidence for a digital PDF with strong markers', () => {
+    saveTaxFacts('ret-1', []);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { employerName: 'Acme', wages: 41000 },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 10,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'digital',
+        textBlockCount: 10,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.pieces[0].classification.confidence).toBe('high');
+    expect(applied.document.classification?.confidence).toBe('high');
+  });
+
+  it('persists classification reason and markers for every piece in a multi-form file', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc({ fileName: 'packet.pdf' })]);
+
+    const w2Piece: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: 50000,
+        socialSecurityWages: 0,
+        medicareWages: 50000,
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'w2',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+
+    const intPiece: PDFExtractResult = {
+      formType: '1099-INT',
+      extractedData: { payerName: 'Bank', amount: 12 },
+      incomeType: '1099int',
+      payerName: 'Bank',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: 'Form 1099-INT Interest Income Payer name Interest income Early withdrawal penalty',
+      trace: {
+        formDetection: {
+          detectedType: '1099-INT',
+          confidence: 'high',
+          matchedKeywords: ['1099-int', 'interest income', 'payer', 'interest'],
+          reasoning: 'Matched 1099-INT markers',
+        },
+        fields: [],
+        summary: 'int',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const extracted: PDFExtractResult = {
+      ...w2Piece,
+      additionalResults: [intPiece],
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'packet.pdf' }),
+      extracted,
+    });
+
+    expect(applied.pieces).toHaveLength(2);
+    expect(applied.pieces[0].classification.status).toBe('classified');
+    expect(applied.pieces[0].classification.formType).toBe('W-2');
+    expect(applied.pieces[0].classification.reason).toMatch(/W-2/);
+    expect(applied.pieces[0].classification.matchedMarkers.some((m) => /w-2|wage and tax/i.test(m))).toBe(true);
+
+    expect(applied.pieces[1].classification.status).toBe('classified');
+    expect(applied.pieces[1].classification.formType).toBe('1099-INT');
+    expect(applied.pieces[1].classification.reason).toMatch(/1099-INT/);
+    expect(applied.pieces[1].classification.matchedMarkers.some((m) => /1099-int|interest/i.test(m))).toBe(true);
+
+    // Stored provenance keeps every piece — not only the first / primary.
+    const stored = loadDocuments('ret-1')[0];
+    expect(stored.classifications).toHaveLength(2);
+    expect(stored.classifications?.[0]?.formType).toBe('W-2');
+    expect(stored.classifications?.[0]?.reason).toMatch(/W-2/);
+    expect(stored.classifications?.[0]?.matchedMarkers.length).toBeGreaterThan(0);
+    expect(stored.classifications?.[1]?.formType).toBe('1099-INT');
+    expect(stored.classifications?.[1]?.reason).toMatch(/1099-INT/);
+    expect(stored.classifications?.[1]?.matchedMarkers.length).toBeGreaterThan(0);
+    // Summary field remains the first classified piece.
+    expect(stored.classification?.formType).toBe('W-2');
+
+    // Explicit 0 from the W-2 piece is preserved; both pieces wrote income.
+    const ss = applied.facts.find((f) => f.sourceField === 'socialSecurityWages');
+    expect(ss?.status).toBe('extracted');
+    expect(ss?.value).toBe(0);
+    expect(applied.facts.filter((f) => f.status === 'extracted').length).toBeGreaterThan(1);
+  });
+
+  it('skips unclassified pieces in a multi-form file without inventing income for them', () => {
+    saveTaxFacts('ret-1', []);
+    const classified: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { employerName: 'Acme', wages: 100 },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 6,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer Wages Federal income tax withheld Social security
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'Matched W-2',
+        },
+        fields: [],
+        summary: 'w2',
+        textBlockCount: 6,
+        pagesScanned: 1,
+      },
+    };
+    const junk: PDFExtractResult = {
+      formType: null,
+      extractedData: { amount: 999 },
+      incomeType: null,
+      payerName: '',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 1,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: 'Cover letter. Please find enclosed forms. Bring snacks.',
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'mixed.pdf' }),
+      extracted: { ...classified, additionalResults: [junk] },
+    });
+
+    expect(applied.pieces).toHaveLength(2);
+    expect(applied.pieces[0].classification.status).toBe('classified');
+    expect(applied.pieces[1].classification.status).toBe('unclassified');
+    expect(applied.pieces[1].toolFields).toEqual({});
+    expect(applied.pieces[1].facts).toEqual([]);
+    expect(applied.document.classifications).toHaveLength(2);
+    expect(applied.document.classifications?.[1]?.status).toBe('unclassified');
+    expect(applied.document.classifications?.[1]?.reason).toMatch(/No primary form markers/i);
+    // Only the classified piece creates income facts.
+    expect(applied.facts.every((f) => f.sourceField !== 'amount' || f.status === 'unknown')).toBe(true);
+    expect(applied.unclassified).toBeUndefined();
+  });
 });

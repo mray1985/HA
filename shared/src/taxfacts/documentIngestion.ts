@@ -62,8 +62,16 @@ export interface IngestedDocument {
   extractor?: string;
   formTypes?: string[];
   rejectReason?: string;
-  /** Set after the deterministic classifier runs (step 4). */
+  /**
+   * Primary classification summary (first classified piece, or first piece when none classify).
+   * Prefer `classifications` for full per-piece provenance.
+   */
   classification?: DocumentClassificationRecord;
+  /**
+   * Classification provenance for every form piece in the file (same order as extraction pieces).
+   * Each classified piece keeps its own matched markers and reason.
+   */
+  classifications?: DocumentClassificationRecord[];
 }
 
 export interface DocumentFileMeta {

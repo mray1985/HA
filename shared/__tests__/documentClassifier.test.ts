@@ -108,6 +108,68 @@ describe('document classifier (work-order step 4)', () => {
     expect(result.confidence).toBe('high');
   });
 
+  it('does not store high classification confidence when OCR/scan confidence is low', () => {
+    const result = classifyDocument({
+      text: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      detectedConfidence: 'low',
+    });
+    expect(result.status).toBe('classified');
+    if (result.status !== 'classified') return;
+    expect(result.formType).toBe('W-2');
+    expect(result.source).toBe('text_markers');
+    // Marker strength would be high, but OCR confidence caps it.
+    expect(result.confidence).toBe('low');
+    expect(result.matchedMarkers.length).toBeGreaterThan(0);
+  });
+
+  it('keeps high classification confidence for a clean digital PDF with strong markers', () => {
+    const result = classifyDocument({
+      text: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      detectedConfidence: 'high',
+    });
+    expect(result.status).toBe('classified');
+    if (result.status !== 'classified') return;
+    expect(result.confidence).toBe('high');
+  });
+
+  it('allows high confidence when no scan/OCR confidence is supplied', () => {
+    const result = classifyDocument({
+      text: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+    });
+    expect(result.status).toBe('classified');
+    if (result.status !== 'classified') return;
+    expect(result.confidence).toBe('high');
+  });
+
+  it('caps importer-marker confidence with low detectedConfidence', () => {
+    const result = classifyDocument({
+      detectedFormType: 'W-2',
+      matchedMarkers: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+      detectedConfidence: 'low',
+    });
+    expect(result.status).toBe('classified');
+    if (result.status !== 'classified') return;
+    expect(result.confidence).toBe('low');
+  });
+
   it('stays unclassified when text and importer disagree', () => {
     const result = classifyDocument({
       text: 'Form W-2 Wage and Tax Statement Employer Wages Federal income tax withheld Social security',

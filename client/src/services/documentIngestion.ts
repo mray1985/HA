@@ -165,11 +165,15 @@ export function markDocumentUnclassified(input: {
   returnId: string;
   document: IngestedDocument;
   classification: DocumentClassification;
+  /** Per-piece records when a multi-form file had no classified pieces. */
+  classifications?: DocumentClassification[];
 }): IngestedDocument {
+  const pieceRecords = (input.classifications ?? [input.classification]).map(classificationRecord);
   const updated: IngestedDocument = {
     ...input.document,
     status: 'unclassified',
     classification: classificationRecord(input.classification),
+    classifications: pieceRecords,
   };
   upsertDocument(input.returnId, updated);
   return updated;
@@ -215,6 +219,7 @@ export function applyExtractionToDocument(input: {
       returnId: input.returnId,
       document: input.document,
       classification: primary,
+      classifications,
     });
     return {
       document: updated,
@@ -292,14 +297,18 @@ export function applyExtractionToDocument(input: {
     (input.extracted.aiEnhanced ? 'local-pdf+byok' : input.extracted.ocrUsed ? 'local-ocr' : 'local-pdf');
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
+  const classificationRecords = classifications.map(classificationRecord);
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
     extractor,
     formTypes: formTypes.length > 0 ? formTypes : undefined,
+    // Summary remains the first classified piece for existing UI consumers.
     classification: primaryClassified
       ? classificationRecord(primaryClassified)
       : classificationRecord(classifications[0]!),
+    // Every piece keeps its own markers/reason — including later W-2/1099s.
+    classifications: classificationRecords,
   };
   upsertDocument(input.returnId, updated);
 

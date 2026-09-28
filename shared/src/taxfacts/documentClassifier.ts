@@ -262,17 +262,46 @@ function matchSignatureFromMarkers(
   return { primary, secondary };
 }
 
+const CONFIDENCE_RANK: Record<ClassificationConfidence, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+};
+
+/**
+ * Classification confidence must not exceed scan/OCR/importer confidence.
+ * Marker strength can only lower confidence further, never raise past the source.
+ */
+export function capConfidence(
+  markerConfidence: ClassificationConfidence,
+  sourceConfidence?: ClassificationConfidence | null,
+): ClassificationConfidence {
+  if (!sourceConfidence) return markerConfidence;
+  return CONFIDENCE_RANK[markerConfidence] <= CONFIDENCE_RANK[sourceConfidence]
+    ? markerConfidence
+    : sourceConfidence;
+}
+
+function markerConfidence(
+  primary: string[],
+  secondary: string[],
+): ClassificationConfidence {
+  return primary.length > 0 && secondary.length >= 2 ? 'high' : 'medium';
+}
+
 function classifiedFromMatch(input: {
   sig: FormMarkerSignature;
   primary: string[];
   secondary: string[];
   source: Exclude<ClassificationSource, 'none'>;
-  confidenceOverride?: ClassificationConfidence;
+  /** Scan / OCR / importer confidence — caps marker-derived confidence. */
+  sourceConfidence?: ClassificationConfidence | null;
 }): ClassifiedDocumentResult {
   const matched = [...input.primary, ...input.secondary];
-  const confidence =
-    input.confidenceOverride ??
-    (input.primary.length > 0 && input.secondary.length >= 2 ? 'high' : 'medium');
+  const confidence = capConfidence(
+    markerConfidence(input.primary, input.secondary),
+    input.sourceConfidence,
+  );
   const primaryList = input.primary.map((m) => `"${m}"`).join(', ');
   return {
     status: 'classified',
@@ -304,6 +333,7 @@ function unclassified(reason: string, matchedMarkers: string[] = []): Unclassifi
 function classifyFromHaystack(
   haystack: string,
   source: Exclude<ClassificationSource, 'none'>,
+  sourceConfidence?: ClassificationConfidence | null,
 ): DocumentClassification {
   if (!haystack) {
     return unclassified('No extractable text or form markers were available.');
@@ -317,6 +347,7 @@ function classifyFromHaystack(
       primary,
       secondary,
       source,
+      sourceConfidence,
     });
   }
 
@@ -338,10 +369,11 @@ export function classifyDocument(input: ClassifyDocumentInput): DocumentClassifi
       : null;
 
   let textMiss: UnclassifiedDocumentResult | null = null;
+  const sourceConfidence = input.detectedConfidence ?? null;
 
   // Prefer full text when present.
   if (text) {
-    const fromText = classifyFromHaystack(text, 'text_markers');
+    const fromText = classifyFromHaystack(text, 'text_markers', sourceConfidence);
     if (fromText.status === 'classified') {
       // Conflict with importer label → do not guess.
       if (detected && detected !== fromText.formType) {
@@ -374,7 +406,7 @@ export function classifyDocument(input: ClassifyDocumentInput): DocumentClassifi
         primary,
         secondary,
         source: 'importer_markers',
-        confidenceOverride: input.detectedConfidence ?? undefined,
+        sourceConfidence,
       });
     }
 
