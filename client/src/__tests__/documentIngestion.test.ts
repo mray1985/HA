@@ -688,6 +688,175 @@ describe('documentIngestion client pipeline', () => {
     expect(applied.facts.filter((f) => f.status === 'extracted').length).toBeGreaterThan(1);
   });
 
+  it('multi-form OCR keeps secondary classification and income when the piece has OCR text', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc({ fileName: 'scan-packet.pdf' })]);
+
+    const w2Piece: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: 50000,
+        socialSecurityWages: 0,
+        medicareWages: 50000,
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: true,
+      ocrAvailable: true,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'OCR matched W-2 markers',
+        },
+        fields: [],
+        summary: 'ocr w2',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+
+    const intPiece: PDFExtractResult = {
+      formType: '1099-INT',
+      extractedData: { payerName: 'Bank', amount: 12 },
+      incomeType: '1099int',
+      payerName: 'Bank',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      ocrUsed: true,
+      ocrAvailable: true,
+      // Per-piece OCR text must be present (or missing text must not wipe markers).
+      rawOCRText: 'Form 1099-INT Interest Income Payer name Interest income Early withdrawal penalty',
+      trace: {
+        formDetection: {
+          detectedType: '1099-INT',
+          confidence: 'low',
+          matchedKeywords: ['1099-int', 'interest income', 'payer', 'interest'],
+          reasoning: 'OCR matched 1099-INT markers',
+        },
+        fields: [],
+        summary: 'ocr int',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'scan-packet.pdf' }),
+      extracted: { ...w2Piece, additionalResults: [intPiece] },
+    });
+
+    expect(applied.unclassified).toBeUndefined();
+    expect(applied.pieces).toHaveLength(2);
+    expect(applied.pieces[0].classification.status).toBe('classified');
+    expect(applied.pieces[0].classification.formType).toBe('W-2');
+    expect(applied.pieces[0].classification.confidence).toBe('low');
+    expect(applied.pieces[0].classification.matchedMarkers.length).toBeGreaterThan(0);
+
+    expect(applied.pieces[1].classification.status).toBe('classified');
+    expect(applied.pieces[1].classification.formType).toBe('1099-INT');
+    expect(applied.pieces[1].classification.confidence).toBe('low');
+    expect(applied.pieces[1].classification.matchedMarkers.some((m) => /1099-int|interest/i.test(m))).toBe(true);
+    expect(applied.pieces[1].facts.some((f) => f.status === 'extracted')).toBe(true);
+
+    const stored = loadDocuments('ret-1')[0];
+    expect(stored.classifications).toHaveLength(2);
+    expect(stored.classifications?.[1]?.formType).toBe('1099-INT');
+    expect(stored.classifications?.[1]?.matchedMarkers.length).toBeGreaterThan(0);
+    expect(stored.extractor).toBe('local-ocr');
+    expect(applied.facts.filter((f) => f.status === 'extracted').length).toBeGreaterThan(1);
+  });
+
+  it('multi-form OCR still classifies a secondary piece when rawOCRText was omitted', () => {
+    // Regression for the producer bug: additionalResults set ocrUsed without rawOCRText.
+    saveTaxFacts('ret-1', []);
+    const w2Piece: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { employerName: 'Acme', wages: 41000, socialSecurityWages: 0 },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 6,
+      ocrUsed: true,
+      ocrAvailable: true,
+      rawOCRText: `
+        Form W-2 Wage and Tax Statement
+        Employer identification number
+        Wages, tips, other compensation
+        Federal income tax withheld
+        Social security wages
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'OCR W-2',
+        },
+        fields: [],
+        summary: 'ocr w2',
+        textBlockCount: 6,
+        pagesScanned: 1,
+      },
+    };
+    const intPieceMissingText: PDFExtractResult = {
+      formType: '1099-INT',
+      extractedData: { payerName: 'Bank', amount: 12 },
+      incomeType: '1099int',
+      payerName: 'Bank',
+      confidence: 'low',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      ocrUsed: true,
+      ocrAvailable: true,
+      // Intentionally omit rawOCRText — markers must survive.
+      trace: {
+        formDetection: {
+          detectedType: '1099-INT',
+          confidence: 'low',
+          matchedKeywords: ['1099-int', 'interest income', 'payer', 'interest'],
+          reasoning: 'OCR 1099-INT',
+        },
+        fields: [],
+        summary: 'ocr int missing text',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc({ fileName: 'scan-multi.pdf' }),
+      extracted: { ...w2Piece, additionalResults: [intPieceMissingText] },
+    });
+
+    expect(applied.pieces[1].classification.status).toBe('classified');
+    expect(applied.pieces[1].classification.formType).toBe('1099-INT');
+    expect(applied.pieces[1].classification.matchedMarkers.length).toBeGreaterThan(0);
+    expect(applied.pieces[1].facts.some((f) => f.status === 'extracted')).toBe(true);
+  });
+
   it('skips unclassified pieces in a multi-form file without inventing income for them', () => {
     saveTaxFacts('ret-1', []);
     const classified: PDFExtractResult = {

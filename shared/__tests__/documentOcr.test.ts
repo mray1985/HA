@@ -71,6 +71,36 @@ describe('document OCR bridge (work-order step 5)', () => {
     expect(classificationAllowsIncomeWrite(result)).toBe(false);
   });
 
+  it('keeps markers when OCR was used but per-piece text is missing (not blank)', () => {
+    // Multi-form additionalResults historically omitted rawOCRText while still
+    // setting ocrUsed + form markers. Missing text must not wipe that evidence.
+    const bridge = classificationInputFromOcr({
+      text: null,
+      ocrUsed: true,
+      confidence: 'low',
+      detectedFormType: '1099-INT',
+      matchedMarkers: ['1099-int', 'interest income', 'payer', 'interest'],
+    });
+
+    expect(bridge.emptyOcrText).toBe(false);
+    expect(bridge.classifyInput.detectedFormType).toBe('1099-INT');
+    expect(bridge.classifyInput.matchedMarkers).toEqual([
+      '1099-int',
+      'interest income',
+      'payer',
+      'interest',
+    ]);
+    expect(bridge.classifyInput.detectedConfidence).toBe('low');
+
+    const result = classifyDocument(bridge.classifyInput);
+    expect(result.status).toBe('classified');
+    if (result.status !== 'classified') return;
+    expect(result.formType).toBe('1099-INT');
+    expect(result.confidence).toBe('low');
+    expect(result.matchedMarkers.length).toBeGreaterThan(0);
+    expect(classificationAllowsIncomeWrite(result)).toBe(true);
+  });
+
   it('keeps explicit numeric 0 from OCR-backed tool fields and omits missing boxes', () => {
     const result = invokeTaxTool({
       tool: 'add_w2',

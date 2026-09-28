@@ -9,6 +9,8 @@
  * - OCR confidence is preserved and never upgraded through classification.
  * - When OCR was used and confidence is missing, treat it as low.
  * - Empty / unreadable OCR text clears form labels so income is not invented.
+ *   Missing per-piece text (null/undefined) does not wipe markers from a
+ *   successful OCR read of a secondary form in the same file.
  * - Missing numeric boxes stay omitted (handled by tax tools); printed 0 stays 0.
  */
 
@@ -73,16 +75,29 @@ export function isEmptyOcrText(text?: string | null): boolean {
 }
 
 /**
+ * True when OCR produced an explicit empty/whitespace string.
+ * Missing (null/undefined) is not "known empty" — multi-form OCR pieces may
+ * omit rawOCRText even though classification markers came from real OCR text.
+ */
+export function isBlankOcrText(text?: string | null): boolean {
+  return typeof text === 'string' && text.trim().length === 0;
+}
+
+/**
  * Normalize extractor/OCR signals into a classifyDocument input.
- * Empty OCR clears bare form labels and markers so income tools stay off.
+ * Known-empty OCR clears bare form labels and markers so income tools stay off.
+ * Missing text alone does not wipe valid per-piece markers / form types.
  */
 export function classificationInputFromOcr(
   signals: OcrExtractionSignals,
 ): OcrClassificationBridge {
   const ocrUsed = Boolean(signals.ocrUsed);
+  const blankOcrText = isBlankOcrText(signals.text);
   const emptyOcrText = isEmptyOcrText(signals.text);
 
-  if (ocrUsed && emptyOcrText) {
+  // Only clear evidence when OCR is known to have produced zero text for this
+  // piece. Do not erase secondary multi-form results that lack rawOCRText.
+  if (ocrUsed && blankOcrText) {
     return {
       classifyInput: {
         text: null,
@@ -105,7 +120,7 @@ export function classificationInputFromOcr(
         confidence: signals.confidence,
       }),
     },
-    emptyOcrText,
+    emptyOcrText: blankOcrText,
     ocrUsed,
   };
 }
