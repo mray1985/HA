@@ -2,10 +2,16 @@
  * Document ingestion records and pure helpers (work-order step 3 / HA-AI doc ingestion).
  * A dropped file gets a stable hash-based document ID and provenance metadata.
  * Extracted fields become TaxFacts through the tax-tool API (HA-AI-011).
- * Classification models and new OCR engines are later phases — callers reuse existing extractors.
+ * Form type is asserted by the deterministic classifier (step 4) before income tools run.
+ * New OCR engines are a later phase — callers reuse existing extractors.
  */
 
 import type { TaxFact } from './taxFact.js';
+import type {
+  ClassifiableFormType,
+  ClassificationConfidence,
+  ClassificationSource,
+} from './documentClassifier.js';
 
 /** Local screening only — not antivirus. Rejects empty / oversized / wrong-type drops. */
 export const MAX_INGEST_BYTES = 50 * 1024 * 1024;
@@ -24,9 +30,20 @@ export const ALLOWED_INGEST_MIME_TYPES = [
 
 export type IngestDocumentStatus =
   | 'registered'
+  | 'unclassified'
   | 'extracted'
   | 'duplicate'
   | 'rejected';
+
+/** Compact classification provenance stored on the ingested document. */
+export interface DocumentClassificationRecord {
+  status: 'classified' | 'unclassified';
+  formType: ClassifiableFormType | null;
+  confidence: ClassificationConfidence;
+  reason: string;
+  matchedMarkers: string[];
+  source: ClassificationSource;
+}
 
 /**
  * Provenance record for one dropped file on a return.
@@ -45,6 +62,8 @@ export interface IngestedDocument {
   extractor?: string;
   formTypes?: string[];
   rejectReason?: string;
+  /** Set after the deterministic classifier runs (step 4). */
+  classification?: DocumentClassificationRecord;
 }
 
 export interface DocumentFileMeta {

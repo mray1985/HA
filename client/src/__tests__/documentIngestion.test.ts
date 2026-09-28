@@ -198,6 +198,18 @@ describe('documentIngestion client pipeline', () => {
       textBlockCount: 10,
       ocrUsed: false,
       ocrAvailable: false,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'test',
+        textBlockCount: 10,
+        pagesScanned: 1,
+      },
     };
 
     const applied = applyExtractionToDocument({
@@ -249,6 +261,13 @@ describe('documentIngestion client pipeline', () => {
       { incomeType: '1099r', formType: '1099-R', data: { grossDistribution: 1000, qcdAmount: 0 } },
     ];
 
+    const markers: Record<string, string[]> = {
+      '1099int': ['1099-int', 'interest income', 'payer', 'interest'],
+      '1099div': ['1099-div', 'dividends and distributions', 'ordinary dividends', 'qualified dividends'],
+      '1099nec': ['1099-nec', 'nonemployee compensation', 'payer', 'compensation'],
+      '1099r': ['1099-r', 'distributions from pensions', 'gross distribution', 'taxable amount'],
+    };
+
     for (const item of cases) {
       saveTaxFacts('ret-1', []);
       const extracted: PDFExtractResult = {
@@ -262,6 +281,18 @@ describe('documentIngestion client pipeline', () => {
         textBlockCount: 4,
         ocrUsed: false,
         ocrAvailable: false,
+        trace: {
+          formDetection: {
+            detectedType: item.formType,
+            confidence: 'high',
+            matchedKeywords: markers[item.incomeType] ?? [],
+            reasoning: `Matched ${item.formType} markers`,
+          },
+          fields: [],
+          summary: 'test',
+          textBlockCount: 4,
+          pagesScanned: 1,
+        },
       };
       const applied = applyExtractionToDocument({
         returnId: 'ret-1',
@@ -278,5 +309,67 @@ describe('documentIngestion client pipeline', () => {
         expect(fact.taxYear).toBe(2026);
       }
     }
+  });
+
+  it('leaves unrecognized extracts unclassified and does not create income facts', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const extracted: PDFExtractResult = {
+      formType: null,
+      extractedData: { wages: 50000 },
+      incomeType: null,
+      payerName: '',
+      confidence: 'low',
+      warnings: [],
+      errors: ['Could not determine the form type.'],
+      textBlockCount: 2,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: 'Meeting notes. Bring snacks. No tax form here.',
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.unclassified).toBe(true);
+    expect(applied.facts).toEqual([]);
+    expect(applied.pieces[0].toolFields).toEqual({});
+    expect(applied.document.status).toBe('unclassified');
+    expect(applied.document.classification?.status).toBe('unclassified');
+    expect(applied.classification?.reason).toMatch(/No primary form markers/i);
+    expect(loadTaxFacts('ret-1')).toEqual([]);
+  });
+
+  it('does not classify from a bare formType label without markers', () => {
+    saveTaxFacts('ret-1', []);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { wages: 100 },
+      incomeType: 'w2',
+      payerName: 'Guess',
+      confidence: 'medium',
+      warnings: [],
+      errors: [],
+      textBlockCount: 1,
+      ocrUsed: false,
+      ocrAvailable: false,
+      // No rawOCRText and no matchedKeywords — bare label is not enough.
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2026,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.unclassified).toBe(true);
+    expect(applied.facts).toEqual([]);
+    expect(loadTaxFacts('ret-1')).toEqual([]);
+    expect(applied.document.status).toBe('unclassified');
   });
 });

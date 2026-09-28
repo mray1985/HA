@@ -103,6 +103,7 @@ export default function PreparerIntakePage() {
           continue;
         }
 
+        // Extract first (existing PDF/OCR path), then classify before any tax-tool write.
         const extracted = await withModel(await readOne(file));
         const applied = applyExtractionToDocument({
           returnId: id,
@@ -110,6 +111,22 @@ export default function PreparerIntakePage() {
           document: registered.document,
           extracted,
         });
+
+        if (applied.unclassified) {
+          next.push({
+            fileName: file.name,
+            summary: 'Form type unknown',
+            detail: [
+              `Stored as ${applied.document.documentId} without writing income.`,
+              applied.classification?.reason,
+              ...extracted.errors,
+              ...extracted.warnings,
+            ].filter(Boolean).join(' '),
+            facts: [],
+            documentId: applied.document.documentId,
+          });
+          continue;
+        }
 
         if (applied.provenanceError) {
           next.push({
@@ -140,6 +157,9 @@ export default function PreparerIntakePage() {
             summary: 'Nothing usable was read',
             detail: [
               `Stored as ${applied.document.documentId}.`,
+              applied.classification
+                ? `${applied.classification.formType}: ${applied.classification.reason}`
+                : null,
               ...toolErrors,
               ...extracted.errors,
               ...extracted.warnings,
@@ -152,13 +172,15 @@ export default function PreparerIntakePage() {
 
         const executed = executeActions(actions, id);
         const labels = applied.pieces
-          .map((piece) => piece.extracted.formType || 'form')
+          .filter((piece) => piece.classification.status === 'classified')
+          .map((piece) => piece.classification.formType || piece.extracted.formType || 'form')
           .join(', ');
         next.push({
           fileName: file.name,
-          summary: `${labels} · ${executed.successCount} added`,
+          summary: `${labels || 'form'} · ${executed.successCount} added`,
           detail: [
             `Source ${applied.document.documentId}.`,
+            applied.classification?.reason,
             extracted.aiEnhanced ? 'The model checked the scanned fields.' : 'Read on this computer.',
             ...toolErrors,
             ...extracted.warnings,
@@ -193,7 +215,7 @@ export default function PreparerIntakePage() {
         <p className="text-xs uppercase tracking-wide text-HATaxService-orange-400 mb-2">New client</p>
         <h1 className="text-3xl font-bold text-white mb-3">Drop the client’s forms</h1>
         <p className="text-slate-300 text-sm leading-relaxed mb-6">
-          W-2s and 1099s are read into this return. Each file is hashed and stored with provenance. The assistant only writes values it can see on the form. It does not invent income. You still review the return before anyone files it.
+          W-2s and 1099s are identified from form markers, then read into this return. Each file is hashed and stored with provenance. Unrecognized documents stay unclassified and are not written as income. The assistant does not invent form types or amounts. You still review the return before anyone files it.
         </p>
         <label className="block border border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-HATaxService-orange-500">
           <span className="text-white font-medium">{busy ? 'Reading forms...' : 'Choose PDFs or photos'}</span>
