@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, type AccountRole } from '../../store/authStore';
 
-export default function RegisterPage() {
+const COPY: Record<AccountRole, { title: string; redirect: string; loginPath: string }> = {
+  taxpayer: { title: 'HATax', redirect: '/', loginPath: '/login' },
+  preparer: { title: 'HATax Preparer', redirect: '/preparer', loginPath: '/preparer/login' },
+};
+
+export default function RegisterPage({ audience = 'preparer' }: { audience?: AccountRole }) {
   const navigate = useNavigate();
   const { register, error, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
@@ -10,17 +15,21 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const copy = COPY[audience];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
     if (password !== confirmPassword) {
-      return; // Could add error state for this
+      setFormError('Passwords do not match');
+      return;
     }
 
     try {
-      await register(email, password, name);
-      navigate('/preparer');
+      await register(email, password, name, audience);
+      navigate(copy.redirect);
     } catch {
       // Error handled by store
     }
@@ -30,15 +39,15 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-surface-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">HATax Preparer</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{copy.title}</h1>
           <p className="text-slate-400">Create your account</p>
         </div>
 
         <div className="bg-surface-800 rounded-xl border border-slate-700 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
+            {(formError || error) && (
               <div className="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
-                {error}
+                {formError || error}
               </div>
             )}
 
@@ -127,7 +136,7 @@ export default function RegisterPage() {
 
           <p className="mt-6 text-center text-slate-400 text-sm">
             Already have an account?{' '}
-            <Link to="/preparer/login" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
+            <Link to={copy.loginPath} className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
               Sign in
             </Link>
           </p>

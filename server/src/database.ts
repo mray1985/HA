@@ -2,15 +2,18 @@ import Database from 'better-sqlite3';
 import { resolve } from 'path';
 import { mkdirSync } from 'fs';
 
-const DB_DIR = resolve(process.cwd(), 'data');
-mkdirSync(DB_DIR, { recursive: true });
+const DB_PATH = process.env.HATAX_DB_PATH
+  ? resolve(process.env.HATAX_DB_PATH)
+  : resolve(process.cwd(), 'data', 'hatax.db');
+mkdirSync(resolve(DB_PATH, '..'), { recursive: true });
 
-const db = new Database(resolve(DB_DIR, 'hatax.db'), {
+const db = new Database(DB_PATH, {
   verbose: process.env.NODE_ENV === 'development' ? console.log : undefined,
 });
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');
 
 // ─── Schema ────────────────────────────────────────
 
@@ -28,6 +31,17 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 `);
+
+for (const sql of [
+  `ALTER TABLE users ADD COLUMN subscription_status TEXT NOT NULL DEFAULT 'inactive'`,
+  `ALTER TABLE users ADD COLUMN subscription_until TEXT`,
+]) {
+  try {
+    db.exec(sql);
+  } catch {
+    // Column already exists on databases created after this migration.
+  }
+}
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS sessions (
@@ -68,8 +82,13 @@ export const getUserByEmail = db.prepare(`
 `);
 
 export const getUserById = db.prepare(`
-  SELECT id, email, name, role, created_at, updated_at, last_login
+  SELECT id, email, name, role, created_at, updated_at, last_login,
+         subscription_status, subscription_until
   FROM users WHERE id = ?
+`);
+
+export const activateSubscription = db.prepare(`
+  UPDATE users SET subscription_status = 'active', subscription_until = ? WHERE id = ?
 `);
 
 export const updateUserLastLogin = db.prepare(`
@@ -119,5 +138,9 @@ export const deleteUserData = db.prepare(`
 export const getAllUsers = db.prepare(`
   SELECT id, email, name, role, created_at, last_login FROM users
 `);
+
+export function closeDatabase(): void {
+  db.close();
+}
 
 export default db;

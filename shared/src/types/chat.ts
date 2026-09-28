@@ -126,5 +126,5 @@ export interface ChatStatus {
   /** The active AI mode, if applicable. */
   mode?: 'private' | 'byok';
   /** The cloud provider being used, if applicable. */
-  provider?: 'anthropic';
+  provider?: 'anthropic' | 'openrouter';
 }

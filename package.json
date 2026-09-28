@@ -10,6 +10,8 @@
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:site": "npm run build -w client",
+    "start:site": "node scripts/start-site.mjs",
     "build:shared": "npm run build -w shared",
     "test": "npm test -w shared",
     "gen:constants": "npx tsx scripts/gen-constants-doc.ts"

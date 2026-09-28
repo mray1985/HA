@@ -16,7 +16,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { rawAnthropicCompletionWithKey } from '../services/anthropicClient.js';
+import { apiKeyError, rawCompletionWithUserKey } from '../services/llmProvider.js';
 import { handleLLMError, handleRouteError } from '../services/errorSanitizer.js';
 import { stripPII } from '../services/piiStripper.js';
 import { config } from '../config.js';
@@ -39,7 +39,7 @@ const MerchantClassifySchema = z.object({
     hasRentalIncome: z.boolean().default(false),
     deductionMethod: z.enum(['standard', 'itemized']).default('standard'),
   }),
-  provider: z.literal('anthropic'),
+  provider: z.enum(['anthropic', 'openrouter']),
   apiKey: z.string().min(1).max(200),
   model: z.string().min(1).max(100),
 });
@@ -95,12 +95,10 @@ router.post('/classify-merchants', async (req: Request, res: Response) => {
     const { merchants, context, apiKey, model } = parseResult.data;
 
     // 3. Validate API key format
-    if (!apiKey.startsWith('sk-ant-')) {
+    const keyError = apiKeyError(parseResult.data.provider, apiKey);
+    if (keyError) {
       res.status(400).json({
-        error: {
-          message: 'Invalid Anthropic API key format. Keys start with "sk-ant-".',
-          code: 'INVALID_API_KEY',
-        },
+        error: { message: keyError, code: 'INVALID_API_KEY' },
       });
       return;
     }
@@ -123,7 +121,7 @@ router.post('/classify-merchants', async (req: Request, res: Response) => {
     // 6. Dispatch to Anthropic
     let raw: string;
     try {
-      raw = await rawAnthropicCompletionWithKey(apiKey, model, messages, MERCHANT_CLASSIFY_PROMPT);
+      raw = await rawCompletionWithUserKey(parseResult.data.provider, apiKey, model, messages, MERCHANT_CLASSIFY_PROMPT);
     } catch (err: any) {
       if (handleLLMError(err, res, 'batch-classify')) return;
       throw err;
@@ -146,7 +144,7 @@ router.post('/classify-merchants', async (req: Request, res: Response) => {
 
 const CategorizeSchema = z.object({
   prompt: z.string().min(1).max(50000),
-  provider: z.literal('anthropic'),
+  provider: z.enum(['anthropic', 'openrouter']),
   apiKey: z.string().min(1).max(200),
   model: z.string().min(1).max(100),
 });
@@ -187,9 +185,10 @@ router.post('/categorize-transactions', async (req: Request, res: Response) => {
     }
 
     // Validate API key format
-    if (!apiKey.startsWith('sk-ant-')) {
+    const keyError = apiKeyError(parseResult.data.provider, apiKey);
+    if (keyError) {
       res.status(400).json({
-        error: { message: 'Invalid Anthropic API key format. Keys start with "sk-ant-".', code: 'INVALID_API_KEY' },
+        error: { message: keyError, code: 'INVALID_API_KEY' },
       });
       return;
     }
@@ -201,7 +200,7 @@ router.post('/categorize-transactions', async (req: Request, res: Response) => {
 
     let raw: string;
     try {
-      raw = await rawAnthropicCompletionWithKey(apiKey, model, messages, systemPrompt);
+      raw = await rawCompletionWithUserKey(parseResult.data.provider, apiKey, model, messages, systemPrompt);
     } catch (err: any) {
       if (handleLLMError(err, res, 'batch-categorize')) return;
       throw err;

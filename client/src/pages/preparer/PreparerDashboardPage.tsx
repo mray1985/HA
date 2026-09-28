@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { deleteReturn, listReturns } from '../../api/client';
+import { createReturn, deleteReturn, exportAllData, listReturns } from '../../api/client';
 import { type TaxReturn } from '@hatax/engine';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import LockScreen from '../../components/common/LockScreen';
+import { useAuthStore } from '../../store/authStore';
 
 type ClientSummary = Pick<TaxReturn, 'id' | 'firstName' | 'lastName' | 'spouseFirstName' | 'spouseLastName' | 'taxYear' | 'status' | 'updatedAt' | 'createdAt'>;
 
@@ -18,11 +19,14 @@ export default function PreparerDashboardPage({
   lockError?: string | null;
 }) {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'updated' | 'name' | 'year'>('updated');
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadPassword, setDownloadPassword] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   const loadClients = useCallback(async () => {
     try {
@@ -74,6 +78,28 @@ export default function PreparerDashboardPage({
       return 0;
     });
 
+  const addClient = () => {
+    const created = createReturn();
+    navigate(`/preparer/intake/${created.id}`);
+  };
+
+  const downloadClients = async () => {
+    if (downloadPassword.length < 8) {
+      toast.error('Use a download password of at least 8 characters');
+      return;
+    }
+    setDownloading(true);
+    try {
+      await exportAllData(downloadPassword);
+      toast.success('Encrypted client file downloaded');
+      setDownloadPassword('');
+    } catch {
+      toast.error('Could not download client file');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this client return? This cannot be undone.')) return;
     try {
@@ -124,8 +150,32 @@ export default function PreparerDashboardPage({
                       {getYears().map(y => <option key={y} value={y.toString()}>{y}</option>)}
                     </select>
                   </div>
+                  <span className="hidden md:inline text-sm text-slate-400">{user?.email}</span>
+                  <input
+                    type="password"
+                    value={downloadPassword}
+                    onChange={(e) => setDownloadPassword(e.target.value)}
+                    placeholder="Download password"
+                    aria-label="Download password"
+                    className="hidden lg:block w-40 bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1"
+                  />
                   <button
-                    onClick={() => navigate('/preparer/clients/new')}
+                    type="button"
+                    disabled={downloading}
+                    onClick={() => { void downloadClients(); }}
+                    className="text-sm text-slate-300 hover:text-white"
+                  >
+                    {downloading ? 'Downloading...' : 'Download clients'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void logout().then(() => navigate('/preparer/login')); }}
+                    className="text-sm text-slate-300 hover:text-white"
+                  >
+                    Sign out
+                  </button>
+                  <button
+                    onClick={addClient}
                     className="bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                   >
                     + New Client
@@ -173,7 +223,7 @@ export default function PreparerDashboardPage({
                 <h3 className="mt-4 text-lg font-medium text-white">No clients yet</h3>
                 <p className="mt-2 text-slate-400">Start by adding your first client</p>
                 <button
-                  onClick={() => navigate('/preparer/clients/new')}
+                  onClick={addClient}
                   className="mt-6 inline-flex items-center gap-2 bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white px-6 py-3 rounded-lg font-medium"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +256,7 @@ export default function PreparerDashboardPage({
                             </div>
                             <div>
                               <p className="text-white font-medium">
-                                {client.firstName || ''} {client.lastName || ''} || 'Unnamed'
+                                {`${client.firstName || ''} ${client.lastName || ''}`.trim() || 'Unnamed'}
                               </p>
                               {client.spouseFirstName && client.spouseLastName && (
                                 <p className="text-xs text-slate-400">+ {client.spouseFirstName} {client.spouseLastName}</p>
