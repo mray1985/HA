@@ -1,6 +1,6 @@
 # HATax Scope Matrix
 
-**Tax Year:** 2025 | **Engine Version:** 1.0 | **Last Updated:** 2026-03-20
+**Tax Years:** 2024, 2025, and 2026 (federal) | **Engine Version:** 0.1.0 | **Last Updated:** 2026-09-27
 
 > **See also:** [`KNOWN-LIMITATIONS.md`](./KNOWN-LIMITATIONS.md) for detailed gap analysis with rationale.
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **5,025 tests** spanning **96 test files** (`npm test`). The engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for federal tax year 2025, with full state tax coverage for **all 50 states + DC**.
+HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **5,071 tests** spanning **99 test files** (`npm test`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 
@@ -23,10 +23,10 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | IRS PDF templates | 41 |
 | State PDF templates | 43 |
 | Wizard step components | 105 |
-| Test files | 96 (`npm test`) |
-| Total tests | 5,025 (`npm test`) |
+| Test files | 99 (`npm test`) |
+| Total tests | 5,071 (`npm test`) |
 | Filing statuses | 5 (Single, MFJ, MFS, HoH, QSS) |
-| Tax year | 2025 |
+| Federal tax years | 2024, 2025, 2026 |
 
 ---
 
@@ -84,7 +84,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Schedule 1-A (OBBBA provisions) | ✅ | Schedule 1-A | Tips, overtime, car loan interest, senior deductions with phase-outs |
 | Capital loss deduction | ✅ | Schedule D | $3,000 limit ($1,500 MFS); ST/LT carryforward tracked |
 | Investment interest expense | ✅ | Form 4952 | Limited to net investment income; QD/LTCG election; carryforward |
-| NOL carryforward | ✅ | | 80% of taxable income limitation |
+| NOL carryforward | ✅ | | Prior-year carryforward deducted at 80% of taxable income before QBI. A current-year NOL is computed and reported, and is not deducted on the same return |
 | Depreciation (multi-asset) | ✅ | Form 4562 | Section 179 ($1.25M), bonus (100%), MACRS GDS (3/5/7/10/15/20-yr); half-year and mid-quarter conventions; §179 double-dip prevention; prior-year convention tracking |
 | FEIE housing exclusion | ✅ | Form 2555 | $130K exclusion + housing; stacking rule (Section 911(f)) |
 | Moving expenses (military) | ✅ | Form 3903 | Active-duty military only |
@@ -147,7 +147,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 
 | Item | Status | Form / Schedule | Notes |
 |---|---|---|---|
-| Capital gains and losses | ✅ | Schedule D | Short-term/long-term netting; carryforward tracking; 25% unrecaptured §1250 rate zone; 28% collectibles rate on 1099-B `isCollectible` long-term gain; 0%/15%/20% preferential rates |
+| Capital gains and losses | ✅ | Schedule D | Short-term/long-term netting; carryforward tracking; 25% unrecaptured §1250 rate zone; 28% rate on collectibles and non-excluded §1202 gain; §1202 exclusion for QSBS held more than five years; 0%/15%/20% preferential rates |
 | Social Security taxability | ✅ | Worksheet | Provisional income method; up to 85% taxable; MFS "lived apart" exception supported |
 | Sale of home exclusion | ✅ | Section 121 | $250K/$500K exclusion; ownership and use tests |
 | Foreign Earned Income Exclusion | ✅ | Form 2555 | Bona fide residence and physical presence tests; housing exclusion; stacking rule |
@@ -155,7 +155,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Nondeductible IRA and Roth conversions | ✅ | Form 8606 | Pro-rata rule for basis tracking |
 | Form 8283 (Non-Cash Charitable) | ✅ | Form 8283 | Section A (≤$5,000) and Section B (>$5,000) classification; category-specific AGI limits (60% cash, 50% ordinary, 30% capital gain); 5-year FIFO carryforward |
 | Donation Valuation Tool | ✅ | Form 8283 | 170-item database from Salvation Army + Goodwill guides; condition-based FMV (Good/Very Good/Like New); depreciation calculator with fractional year interpolation; slide-over panel integrated into Form 8283 step |
-| Business property sales | ✅ | Form 4797 | Section 1231/1245/1250 depreciation recapture; netting; flows to Form 1040 and Schedule D |
+| Business property sales | ✅ | Form 4797 | Section 1231/1245/1250 depreciation recapture; netting with K-1 box 10; five-year §1231(c) lookback when prior-year nets are entered; flows to Form 1040 and Schedule D |
 | HoH Filing Status Validation | ✅ | | Qualifying person, residency, household cost checks (non-blocking); IRC §2(b), §7703(b) |
 | Deceased Spouse Handling | ✅ | | MFJ for year of death, QSS for 2 subsequent years; non-blocking validation; IRC §6013(a)(2), §2(a) |
 | Plausibility warnings | ✅ | | Yellow warnings for implausible values based on IRS audit triggers and SOI norms |
@@ -265,15 +265,15 @@ These are edge cases within otherwise comprehensive modules:
 
 | Feature | Limitation |
 |---|---|
-| Form 4562 (Depreciation) | No ADS (Alternative Depreciation System); no amortization; no listed property (except vehicles) |
-| Capital gains | 28% rate applies to long-term collectibles gain flagged on Form 1099-B. Section 1202 28% rate gain is not computed. |
+| Form 4562 (Depreciation) | ADS is straight-line when `depreciationSystem` is `ads`, defaulting to the shortest class life in the GDS class. No listed-property rules except vehicles. An ADS election does not turn off bonus depreciation |
+| Capital gains | 28% rate gain is collectibles plus non-excluded §1202 gain, after short-term losses and the long-term carryover. Stock acquired after July 4, 2025 is not excluded in 2024–2026 |
 | AMT (Form 6251) | No AMT foreign tax credit; no AMT net operating loss |
 | Foreign tax credit (Form 1116) | No carryback/carryforward; no re-sourcing rules |
 | Schedule E (Rentals) | No at-risk rules (Section 465); no material participation tests |
-| Home sale (Section 121) | No partial exclusion for reduced maximum (unforeseen circumstances) |
+| Home sale (Section 121) | Reduced maximum applies when `reducedMaximumReason` is set (employment, health, or unforeseen circumstances). Without that reason, fewer than 24 months of ownership and use means no exclusion |
 | EITC | No tie-breaker rules when multiple people claim same child |
 | Premium Tax Credit | Assumes annual coverage (no monthly proration for coverage gaps) |
-| Adoption credit | No multi-year carryforward tracking |
+| Adoption credit | Nonrefundable. Unused credit carries forward five years, oldest first, from `priorCarryforwards` |
 | Form 8606 (IRA basis) | Single-year only; no multi-year basis accumulation |
 | Schedule F (Farm) | Cash method only; no accrual method; no optional SE method |
 | Charitable (Form 8283) | No private foundation 20% AGI limits |
