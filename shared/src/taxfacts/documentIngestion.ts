@@ -67,12 +67,18 @@ export type ScreenDocumentResult =
   | { ok: true }
   | { ok: false; reason: string };
 
+/** Normalize and validate a SHA-256 hex digest (exactly 64 hex chars). */
+export function normalizeContentHash(contentHash: string): string {
+  const hex = contentHash.trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (hex.length !== 64) {
+    throw new Error('contentHash must be a SHA-256 hex digest (64 hex characters)');
+  }
+  return hex;
+}
+
 /** Stable document ID from content hash (not file name / mtime). */
 export function documentIdFromHash(contentHash: string): string {
-  const hex = contentHash.trim().toLowerCase().replace(/[^0-9a-f]/g, '');
-  if (hex.length < 16) {
-    throw new Error('contentHash must be a SHA-256 hex digest');
-  }
+  const hex = normalizeContentHash(contentHash);
   return `DOC-${hex.slice(0, 32)}`;
 }
 
@@ -86,11 +92,15 @@ export function screenDocument(input: ScreenDocumentInput): ScreenDocumentResult
   const mime = (input.mimeType || '').toLowerCase().trim();
   const name = input.fileName.toLowerCase();
   const mimeOk =
-    mime === '' ||
     ALLOWED_INGEST_MIME_TYPES.includes(mime as (typeof ALLOWED_INGEST_MIME_TYPES)[number]) ||
     mime.startsWith('image/');
   const extOk = /\.(pdf|png|jpe?g|webp|gif|tiff?|heic|heif)$/i.test(name);
-  if (!mimeOk && !extOk) {
+  // Empty MIME is only accepted when the extension is a known PDF/image type.
+  if (mime === '') {
+    if (!extOk) {
+      return { ok: false, reason: 'Only PDF and image files are accepted.' };
+    }
+  } else if (!mimeOk && !extOk) {
     return { ok: false, reason: 'Only PDF and image files are accepted.' };
   }
   return { ok: true };
@@ -114,7 +124,7 @@ export function createIngestedDocument(input: {
   status?: IngestDocumentStatus;
   rejectReason?: string;
 }): IngestedDocument {
-  const hash = input.meta.contentHash.trim().toLowerCase();
+  const hash = normalizeContentHash(input.meta.contentHash);
   return {
     documentId: documentIdFromHash(hash),
     returnId: input.returnId,

@@ -16,8 +16,10 @@ export function taxFactStorageKey(returnId: string): string {
 }
 
 /** Provenance records for dropped preparer documents (metadata only, not file bytes). */
+export const DOCUMENT_KEY_PREFIX = isPreparerApp()
+  ? 'hatax-preparer:documents:'
+  : 'hatax:documents:';
+
 export function documentStorageKey(returnId: string): string {
-  return isPreparerApp()
-    ? `hatax-preparer:documents:${returnId}`
-    : `hatax:documents:${returnId}`;
+  return `${DOCUMENT_KEY_PREFIX}${returnId}`;
 }

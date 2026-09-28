@@ -69,8 +69,9 @@ export default function PreparerIntakePage() {
 
   const onFiles = async (list: FileList | null) => {
     if (!id || !list || list.length === 0) return;
+    let taxYear: number;
     try {
-      getReturn(id);
+      taxYear = getReturn(id).taxYear;
     } catch {
       setError('This client return is not on this computer.');
       return;
@@ -105,7 +106,7 @@ export default function PreparerIntakePage() {
         const extracted = await withModel(await readOne(file));
         const applied = applyExtractionToDocument({
           returnId: id,
-          taxYear: 2025,
+          taxYear,
           document: registered.document,
           extracted,
         });

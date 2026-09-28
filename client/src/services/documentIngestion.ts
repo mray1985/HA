@@ -14,7 +14,7 @@ import {
   type TaxFact,
 } from '@hatax/engine';
 import type { PDFExtractResult } from './pdfExtractHelpers';
-import { documentStorageKey } from './storageScope';
+import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
 
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
@@ -37,6 +37,25 @@ export function loadDocuments(returnId: string): IngestedDocument[] {
 
 export function saveDocuments(returnId: string, documents: IngestedDocument[]): void {
   localStorage.setItem(documentStorageKey(returnId), JSON.stringify(documents));
+}
+
+/** Remove provenance for one return (paired with deleteReturn). */
+export function deleteDocuments(returnId: string): void {
+  localStorage.removeItem(documentStorageKey(returnId));
+}
+
+/** Remove all document provenance keys for the current app (paired with wipeAllData). */
+export function deleteAllDocuments(): void {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(DOCUMENT_KEY_PREFIX)) {
+      keysToRemove.push(key);
+    }
+  }
+  for (const key of keysToRemove) {
+    localStorage.removeItem(key);
+  }
 }
 
 export function upsertDocument(returnId: string, document: IngestedDocument): IngestedDocument[] {
@@ -87,9 +106,13 @@ export async function registerDroppedDocument(input: {
 
   const contentHash = await sha256Hex(await input.file.arrayBuffer());
   const prior = findDocumentByHash(loadDocuments(input.returnId), contentHash);
-  if (prior) {
-    // Keep the existing record (and its extracted status). Callers skip re-import.
+  if (prior?.status === 'extracted') {
+    // Successful prior extraction of the same bytes — keep the record, no downgrade.
     return { document: prior, duplicate: true, rejected: false };
+  }
+  if (prior) {
+    // Failed or incomplete registration — allow retry with the same document id.
+    return { document: prior, duplicate: false, rejected: false };
   }
 
   const document = createIngestedDocument({

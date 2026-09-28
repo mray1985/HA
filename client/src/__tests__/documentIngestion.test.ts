@@ -9,11 +9,14 @@ import {
 } from '@hatax/engine';
 import {
   applyExtractionToDocument,
+  deleteAllDocuments,
+  deleteDocuments,
   loadDocuments,
   registerDroppedDocument,
   saveDocuments,
 } from '../services/documentIngestion';
 import { loadTaxFacts, saveTaxFacts } from '../services/preparerTaxFacts';
+import { DOCUMENT_KEY_PREFIX, documentStorageKey } from '../services/storageScope';
 import type { PDFExtractResult, SupportedFormType } from '../services/pdfExtractHelpers';
 
 const HASH =
@@ -97,19 +100,85 @@ describe('documentIngestion client pipeline', () => {
     expect(loadDocuments('ret-1')).toHaveLength(0);
   });
 
-  it('detects duplicate content by hash', async () => {
+  it('rejects empty MIME with unsupported extension', async () => {
+    const file = mockFile('notes.txt', [1, 2, 3], '');
+    const result = await registerDroppedDocument({ returnId: 'ret-1', file });
+    expect(result.rejected).toBe(true);
+    expect(loadDocuments('ret-1')).toHaveLength(0);
+  });
+
+  it('accepts empty MIME when extension is a supported image/PDF type', async () => {
+    const file = mockFile('scan.PNG', [0xaa, 1, 2, 3, 4, 5, 6, 7], '');
+    const result = await registerDroppedDocument({ returnId: 'ret-1', file });
+    expect(result.rejected).toBe(false);
+    expect(result.duplicate).toBe(false);
+    expect(loadDocuments('ret-1')).toHaveLength(1);
+  });
+
+  it('allows retry when prior record is only registered (incomplete)', async () => {
     const bytes = [0xaa, 1, 2, 3, 4, 5, 6, 7];
     const file = mockFile('w2.pdf', bytes, 'application/pdf');
-    await registerDroppedDocument({ returnId: 'ret-1', file });
+    const first = await registerDroppedDocument({ returnId: 'ret-1', file });
+    expect(first.duplicate).toBe(false);
+    expect(first.document.status).toBe('registered');
+
+    const again = await registerDroppedDocument({
+      returnId: 'ret-1',
+      file: mockFile('w2-retry.pdf', bytes, 'application/pdf'),
+    });
+    expect(again.duplicate).toBe(false);
+    expect(again.rejected).toBe(false);
+    expect(again.document.documentId).toBe(first.document.documentId);
+    expect(again.document.status).toBe('registered');
+    expect(loadDocuments('ret-1')).toHaveLength(1);
+  });
+
+  it('treats successful extracted duplicate as already ingested and keeps status', async () => {
+    const bytes = [0xaa, 1, 2, 3, 4, 5, 6, 7];
+    saveDocuments('ret-1', [
+      baseDoc({
+        status: 'extracted',
+        extractor: 'local-pdf',
+        formTypes: ['W-2'],
+      }),
+    ]);
     const again = await registerDroppedDocument({
       returnId: 'ret-1',
       file: mockFile('w2-copy.pdf', bytes, 'application/pdf'),
     });
     expect(again.duplicate).toBe(true);
+    expect(again.document.status).toBe('extracted');
+    expect(again.document.extractor).toBe('local-pdf');
     expect(loadDocuments('ret-1')).toHaveLength(1);
+    expect(loadDocuments('ret-1')[0].status).toBe('extracted');
   });
 
-  it('stores W-2 tool facts with source; omits missing wages; keeps explicit 0', () => {
+  it('removes document metadata for one return and all current-app keys', () => {
+    saveDocuments('ret-1', [baseDoc()]);
+    saveDocuments('ret-2', [baseDoc({ returnId: 'ret-2', documentId: 'DOC-other' })]);
+    // Other app's document key must survive wipe of the current app prefix.
+    const otherAppKey = DOCUMENT_KEY_PREFIX.startsWith('hatax-preparer:')
+      ? 'hatax:documents:other-1'
+      : 'hatax-preparer:documents:other-1';
+    localStorage.setItem(otherAppKey, JSON.stringify([baseDoc({ returnId: 'other-1' })]));
+
+    deleteDocuments('ret-1');
+    expect(localStorage.getItem(documentStorageKey('ret-1'))).toBeNull();
+    expect(loadDocuments('ret-2')).toHaveLength(1);
+
+    deleteAllDocuments();
+    expect(localStorage.getItem(documentStorageKey('ret-2'))).toBeNull();
+    // Only keys with the current app prefix are removed.
+    const remaining: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) remaining.push(key);
+    }
+    expect(remaining.some((k) => k.startsWith(DOCUMENT_KEY_PREFIX))).toBe(false);
+    expect(localStorage.getItem(otherAppKey)).not.toBeNull();
+  });
+
+  it('stores W-2 tool facts with source; omits missing wages; keeps explicit 0; stamps tax year', () => {
     saveTaxFacts('ret-1', []);
     saveDocuments('ret-1', [baseDoc()]);
     const extracted: PDFExtractResult = {
@@ -133,7 +202,7 @@ describe('documentIngestion client pipeline', () => {
 
     const applied = applyExtractionToDocument({
       returnId: 'ret-1',
-      taxYear: 2025,
+      taxYear: 2024,
       document: baseDoc(),
       extracted,
     });
@@ -155,11 +224,13 @@ describe('documentIngestion client pipeline', () => {
     expect(ss?.status).toBe('extracted');
     expect(ss?.value).toBe(0);
     expect(ss?.sourceDocumentId).toBe(documentIdFromHash(HASH));
+    expect(ss?.taxYear).toBe(2024);
 
     for (const fact of applied.facts.filter((f) => f.status === 'extracted')) {
       expect(fact.sourceDocumentId).toBe(documentIdFromHash(HASH));
       expect(fact.sourceFileName).toBe('w2.pdf');
       expect(fact.extractor.length).toBeGreaterThan(0);
+      expect(fact.taxYear).toBe(2024);
     }
 
     expect(loadTaxFacts('ret-1').length).toBe(applied.facts.length);
@@ -194,7 +265,7 @@ describe('documentIngestion client pipeline', () => {
       };
       const applied = applyExtractionToDocument({
         returnId: 'ret-1',
-        taxYear: 2025,
+        taxYear: 2026,
         document: baseDoc({ fileName: `${item.incomeType}.pdf` }),
         extracted,
       });
@@ -204,6 +275,7 @@ describe('documentIngestion client pipeline', () => {
       expect(extractedFacts.length).toBeGreaterThan(0);
       for (const fact of extractedFacts) {
         expect(fact.sourceDocumentId).toBe(documentIdFromHash(HASH));
+        expect(fact.taxYear).toBe(2026);
       }
     }
   });

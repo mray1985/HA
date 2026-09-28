@@ -35,11 +35,34 @@ describe('document ingestion (work-order step 3)', () => {
       screenDocument({ fileName: 'notes.txt', mimeType: 'text/plain', byteLength: 12 }).ok,
     ).toBe(false);
     expect(
+      screenDocument({ fileName: 'notes.txt', mimeType: '', byteLength: 12 }).ok,
+    ).toBe(false);
+    expect(
       screenDocument({ fileName: 'w2.pdf', mimeType: 'application/pdf', byteLength: 1200 }).ok,
     ).toBe(true);
     expect(
       screenDocument({ fileName: 'scan.PNG', mimeType: '', byteLength: 800 }).ok,
     ).toBe(true);
+    expect(
+      screenDocument({ fileName: 'photo.jpg', mimeType: '', byteLength: 800 }).ok,
+    ).toBe(true);
+  });
+
+  it('rejects content hashes that are not exactly 64 hex characters', () => {
+    expect(() => documentIdFromHash('abcd')).toThrow(/64 hex/);
+    expect(() => documentIdFromHash('0'.repeat(63))).toThrow(/64 hex/);
+    expect(() => documentIdFromHash('0'.repeat(65))).toThrow(/64 hex/);
+    expect(() =>
+      createIngestedDocument({
+        returnId: 'ret-1',
+        meta: {
+          fileName: 'w2.pdf',
+          mimeType: 'application/pdf',
+          byteLength: 10,
+          contentHash: 'not-a-real-hash',
+        },
+      }),
+    ).toThrow(/64 hex/);
   });
 
   it('detects duplicate documents by content hash', () => {

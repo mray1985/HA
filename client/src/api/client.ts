@@ -24,6 +24,7 @@ import {
   lock,
 } from '../services/crypto';
 import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersistence';
+import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
 
 import { RETURN_LIST_KEY, returnStorageKey } from '../services/storageScope';
 
@@ -339,6 +340,7 @@ export function deleteReturn(id: string): { success: boolean } {
   localStorage.removeItem(returnKey(id));
   returnCache.delete(id);
   deleteChatHistory(id);
+  deleteDocuments(id);
   const ids = getReturnIds().filter((i) => i !== id);
   saveReturnIds(ids);
   return { success: true };
@@ -367,6 +369,7 @@ export async function wipeAllData(): Promise<void> {
   localStorage.removeItem('hatax:ai-key-migrate');
   localStorage.removeItem('hatax:expense-scanner-enc');
   deleteAllChatHistory();
+  deleteAllDocuments();
 
   // 2. Clear sessionStorage
   sessionStorage.clear();
