@@ -22,8 +22,8 @@ import { round2 } from './utils.js';
  *
  * Collectibles gain is the long-term gain already identified on the return
  * (1099-B `isCollectible`). It is removed from the 0%/15%/20% bucket and
- * taxed at the 28% maximum. Section 1202 gain is not an input on the return
- * and is not computed here.
+ * taxed at the 28% maximum. Section 1202 gain that was not excluded is included
+ * in that 28% amount by Schedule D.
  *
  * @authority
  *   IRC: Section 1(h) — maximum capital gains rate
@@ -33,7 +33,7 @@ import { round2 } from './utils.js';
  *   Form: Form 1040, Qualified Dividends and Capital Gain Tax Worksheet
  *   Form: Schedule D Tax Worksheet (when Section 1250 or 28% rate gain is present)
  * @scope Preferential rate tax for qualified dividends and LTCG (0%/15%/20%), 25% Section 1250 zone, and 28% collectibles
- * @limitations Does not compute the 28% rate on section 1202 gain
+ * @limitations None
  */
 export function calculatePreferentialRateTax(
   taxableIncome: number,

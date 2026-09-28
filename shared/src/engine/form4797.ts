@@ -22,7 +22,7 @@ import { round2 } from './utils.js';
  *   Form: Form 4797 — Sales of Business Property
  * @scope Section 1231/1245/1250 depreciation recapture for sold business property
  * @limitations
- *   Does not model Section 1231 lookback (5-year ordinary loss recapture rule)
+ *   Section 1231(c) lookback is applied by the Form 1040 orchestrator
  *   Does not model installment sale method (§453)
  *   Does not model like-kind exchanges (§1031) interaction
  *   Does not model casualty/theft gains (Part III special rules)

@@ -1,5 +1,6 @@
 import { FilingStatus, Income1099B, ScheduleDResult } from '../types/index.js';
 import { getTaxConstants } from '../constants/taxConstants.js';
+import { applySection1202 } from './qsbs.js';
 import { round2 } from './utils.js';
 
 /**
@@ -26,7 +27,7 @@ import { round2 } from './utils.js';
  *   Form: Schedule D (Form 1040)
  *   Pub: Publication 550 — Investment Income and Expenses
  * @scope Capital gains/losses with $3k loss limit and carryforward
- * @limitations No Form 4797 (Section 1231/1245/1250 recapture)
+ * @limitations Section 1231 gain is netted by the Form 1040 orchestrator, not here.
  */
 export function calculateScheduleD(
   transactions: Income1099B[],
@@ -99,6 +100,13 @@ export function calculateScheduleD(
     longTermLoss += cfLT;
   }
 
+  // IRC §1202: remove excluded QSBS gain. The non-excluded eligible gain
+  // stays in long-term gain and is added to the 28% rate gain below.
+  const section1202 = applySection1202(transactions, filingStatus);
+  if (section1202.excludedGain > 0) {
+    longTermGain = round2(Math.max(0, longTermGain - section1202.excludedGain));
+  }
+
   // Schedule D Line 13: Capital gain distributions from 1099-DIV Box 2a
   // These are always long-term (mutual fund distributions of realized LT gains)
   const capGainDist = Math.max(0, capitalGainDistributions || 0);
@@ -114,7 +122,13 @@ export function calculateScheduleD(
   // carryover. The result cannot exceed net long-term gain. Section 1231
   // gain is added later and the cap is applied again against that total.
   const netCollectibles = round2(collectiblesLongTermGain - collectiblesLongTermLoss);
-  const collectiblesRateGain = collectibles28RateGain(netCollectibles, netShortTerm, cfLT);
+  // Combine collectibles with non-excluded §1202 gain, then apply the
+  // short-term loss and long-term carryover to that combined 28% amount.
+  const collectiblesRateGain = collectibles28RateGain(
+    round2(netCollectibles + section1202.rateGain),
+    netShortTerm,
+    cfLT,
+  );
   const collectiblesGain = capCollectiblesGain(collectiblesRateGain, netLongTerm);
 
   const limited = limitCapitalLoss(netShortTerm, netLongTerm, filingStatus, taxYear);
@@ -129,6 +143,10 @@ export function calculateScheduleD(
     netGainOrLoss,
     collectiblesRateGain,
     collectiblesGain,
+    section1202ExcludedGain: section1202.excludedGain,
+    section1202RateGain: section1202.rateGain,
+    section1202AmtPreference: section1202.amtPreference,
+    section1202HadDisposition: section1202.hadDisposition,
     capitalLossDeduction: limited.capitalLossDeduction,
     capitalLossCarryforward: limited.capitalLossCarryforward,
     capitalLossCarryforwardST: limited.capitalLossCarryforwardST,
@@ -137,15 +155,16 @@ export function calculateScheduleD(
 }
 
 /**
- * 28% Rate Gain Worksheet amount before the net-long-term cap: net
- * collectibles, minus a net short-term loss and the long-term carryover.
+ * 28% Rate Gain Worksheet amount before the net-long-term cap.
+ * `rateGainBeforeLosses` is net collectibles plus non-excluded §1202 gain.
+ * A net short-term loss and the long-term carryover are subtracted after that sum.
  */
 export function collectibles28RateGain(
-  netCollectibles: number,
+  rateGainBeforeLosses: number,
   netShortTerm: number,
   ltCarryover: number,
 ): number {
-  let rateGain = netCollectibles;
+  let rateGain = rateGainBeforeLosses;
   if (netShortTerm < 0) {
     rateGain = round2(rateGain - Math.abs(netShortTerm));
   }

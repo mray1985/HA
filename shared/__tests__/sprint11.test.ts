@@ -763,10 +763,10 @@ describe('33. Adoption Credit (Form 8839)', () => {
       },
     });
     const result = calculateForm1040(tr);
-    expect(result.credits.adoptionCredit).toBe(10000);
-    expect(result.credits.totalNonRefundable).toBeGreaterThanOrEqual(10000);
-    expect(result.adoptionCredit).toBeDefined();
-    expect(result.adoptionCredit!.credit).toBe(10000);
+    expect(result.adoptionCredit!.creditAvailable).toBe(10000);
+    expect(result.credits.adoptionCredit).toBe(result.adoptionCredit!.credit);
+    expect(result.adoptionCredit!.credit + result.adoptionCredit!.carryforward).toBe(10000);
+    expect(result.credits.totalNonRefundable).toBeGreaterThanOrEqual(result.credits.adoptionCredit!);
   });
 });
 
@@ -916,9 +916,12 @@ describe('Sprint 11 Integration', () => {
     // NOL deduction reduces taxable income
     expect(result.form1040.nolDeduction).toBe(3000);
 
-    // Adoption credit is non-refundable
-    expect(result.credits.adoptionCredit).toBe(12000);
-    expect(result.credits.totalNonRefundable).toBeGreaterThanOrEqual(12000);
+    // Adoption credit is non-refundable. Tax that is less than the credit
+    // carries the rest forward.
+    expect(result.adoptionCredit!.creditAvailable).toBe(12000);
+    expect(result.credits.adoptionCredit).toBe(result.adoptionCredit!.credit);
+    expect(result.adoptionCredit!.credit + result.adoptionCredit!.carryforward).toBe(12000);
+    expect(result.credits.totalNonRefundable).toBeGreaterThanOrEqual(result.credits.adoptionCredit!);
 
     // Schedule H tax included (combined employer+employee rates)
     // SS: min(15000, 176100) * 0.124 = 1860

@@ -18,7 +18,7 @@ import { round2 } from './utils.js';
  *   IRC: Section 121 — exclusion of gain from sale of principal residence
  *   Pub: Publication 523 — Selling Your Home
  * @scope Sale of home exclusion ($250k/$500k) with ownership/residence tests
- * @limitations No partial exclusion for reduced maximum
+ * @limitations The reduced maximum requires a qualifying reason on the sale.
  */
 export function calculateHomeSaleExclusion(
   info: HomeSaleInfo,
@@ -47,10 +47,25 @@ export function calculateHomeSaleExclusion(
   const maxExclusion = isMFJ ? HOME_SALE_EXCLUSION.MFJ_MAX : HOME_SALE_EXCLUSION.SINGLE_MAX;
 
   // Check eligibility for exclusion
-  const meetsOwnership = info.ownedMonths >= HOME_SALE_EXCLUSION.OWNERSHIP_MONTHS_REQUIRED;
-  const meetsResidence = info.usedAsResidenceMonths >= HOME_SALE_EXCLUSION.RESIDENCE_MONTHS_REQUIRED;
+  const monthsRequired = HOME_SALE_EXCLUSION.OWNERSHIP_MONTHS_REQUIRED;
+  const meetsOwnership = info.ownedMonths >= monthsRequired;
+  const meetsResidence = info.usedAsResidenceMonths >= monthsRequired;
   const noPriorExclusion = !info.priorExclusionUsedWithin2Years;
-  const qualifiesForExclusion = meetsOwnership && meetsResidence && noPriorExclusion;
+  const qualifiesForFullExclusion = meetsOwnership && meetsResidence && noPriorExclusion;
+  const qualifiesForReducedMaximum = !!info.reducedMaximumReason
+    && (!meetsOwnership || !meetsResidence || !noPriorExclusion);
+
+  let exclusionCap = maxExclusion;
+  let qualifiesForExclusion = qualifiesForFullExclusion;
+  if (qualifiesForReducedMaximum) {
+    // IRC §121(c): full exclusion × shortest qualifying period / 24 months.
+    const sincePrior = info.priorExclusionUsedWithin2Years
+      ? (info.monthsSincePriorExclusion ?? 0)
+      : monthsRequired;
+    const shortest = Math.min(info.ownedMonths, info.usedAsResidenceMonths, sincePrior);
+    exclusionCap = round2(maxExclusion * Math.max(0, Math.min(shortest, monthsRequired)) / monthsRequired);
+    qualifiesForExclusion = shortest > 0;
+  }
 
   if (!qualifiesForExclusion) {
     return {
@@ -58,11 +73,11 @@ export function calculateHomeSaleExclusion(
       exclusionAmount: 0,
       taxableGain: gainOrLoss,
       qualifiesForExclusion: false,
-      maxExclusion,
+      maxExclusion: qualifiesForReducedMaximum ? exclusionCap : maxExclusion,
     };
   }
 
-  const exclusionAmount = round2(Math.min(gainOrLoss, maxExclusion));
+  const exclusionAmount = round2(Math.min(gainOrLoss, exclusionCap));
   const taxableGain = round2(Math.max(0, gainOrLoss - exclusionAmount));
 
   return {
@@ -70,6 +85,6 @@ export function calculateHomeSaleExclusion(
     exclusionAmount,
     taxableGain,
     qualifiesForExclusion: true,
-    maxExclusion,
+    maxExclusion: exclusionCap,
   };
 }
