@@ -1,10 +1,11 @@
 import type { TaxFact } from '@hatax/engine';
 import {
+  extractStructuredFields,
   factsFromFields,
   fieldsForToolCall,
   invokeTaxTool,
+  normalizeGenericFields,
   ocrExtractorLabel,
-  pickToolFieldArgs,
   toolNameForIncomeType,
 } from '@hatax/engine';
 import type { PDFExtractResult } from './pdfExtractHelpers';
@@ -56,17 +57,22 @@ export function factsForExtraction(input: {
   const tool = toolNameForIncomeType(input.extracted.incomeType);
 
   if (tool) {
+    const structured = extractStructuredFields(
+      input.extracted.incomeType,
+      input.extracted.extractedData,
+    );
     const result = invokeTaxTool({
       tool,
-      // Extraction may include extra AI keys; pick known fields before validation.
+      // Unreadable amounts are undefined arguments, so the tool records them as unknown.
       // Direct model tool calls still reject unknown fields via invokeTaxTool.
-      args: pickToolFieldArgs(tool, input.extracted.extractedData),
+      args: structured.args,
       context: {
         returnId: input.returnId,
         taxYear: input.taxYear,
         sourceDocumentId: input.documentId,
         sourceFileName: input.fileName,
         extractor,
+        rawText: structured.rawText,
       },
     });
     if (!result.ok) {
@@ -85,18 +91,20 @@ export function factsForExtraction(input: {
   }
 
   const prefix = (input.extracted.incomeType || input.extracted.formType || 'DOC').toUpperCase();
+  const generic = normalizeGenericFields(input.extracted.extractedData);
   const facts = factsFromFields({
     returnId: input.returnId,
     taxYear: input.taxYear,
     documentId: input.documentId,
     fileName: input.fileName,
     extractor,
-    fields: input.extracted.extractedData,
+    fields: generic.fields,
     factTypeFor: (field) => `${prefix}_${field}`,
+    rawText: generic.rawText,
   });
   return {
     facts,
-    toolFields: fieldsForToolCall(input.extracted.extractedData),
+    toolFields: fieldsForToolCall(generic.fields),
     incomeType: input.extracted.incomeType,
   };
 }

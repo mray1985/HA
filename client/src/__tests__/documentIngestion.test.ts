@@ -249,6 +249,62 @@ describe('documentIngestion client pipeline', () => {
     expect(loadDocuments('ret-1')[0].status).toBe('extracted');
   });
 
+  it('normalizes printed W-2 money and keeps an unreadable box unknown', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: '$61,482.17',
+        federalTaxWithheld: '$0.00',
+        medicareWages: '12O.00',
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      ocrUsed: true,
+      ocrAvailable: true,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'low',
+          matchedKeywords: ['wage and tax statement'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'test',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.pieces[0].toolError).toBeUndefined();
+    expect(applied.pieces[0].toolFields).toEqual({
+      employerName: 'Acme',
+      wages: 61482.17,
+      federalTaxWithheld: 0,
+    });
+    const wages = applied.facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.status).toBe('extracted');
+    expect(wages?.value).toBe(61482.17);
+    expect(wages?.rawText).toBe('$61,482.17');
+    const medicare = applied.facts.find((f) => f.sourceField === 'medicareWages');
+    expect(medicare?.status).toBe('unknown');
+    expect(medicare?.rawText).toBe('12O.00');
+    expect(medicare && 'value' in medicare).toBe(false);
+  });
+
   it('routes listed 1099 income types through the tool API with provenance', () => {
     const cases: Array<{
       incomeType: string;
