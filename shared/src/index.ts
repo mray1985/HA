@@ -160,3 +160,4 @@ export * from './migrations/index.js';
 export * from './wizard/conditionTypes.js';
 export * from './wizard/conditionEvaluator.js';
 export * from './taxfacts/taxFact.js';
+export * from './taxfacts/taxTools.js';

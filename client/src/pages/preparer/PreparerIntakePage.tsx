@@ -88,15 +88,25 @@ export default function PreparerIntakePage() {
         }));
         const facts = bundled.flatMap((item) => item.facts);
         appendTaxFacts(id, facts);
-        const actions = pieces.flatMap((piece, index) => buildActionsFromExtraction({
-          ...piece,
-          extractedData: bundled[index].toolFields,
-        }).actions);
+        const toolErrors = bundled.map((item) => item.toolError).filter(Boolean) as string[];
+        const actions = pieces.flatMap((piece, index) => {
+          const { toolFields, incomeType, toolError } = bundled[index];
+          if (toolError || Object.keys(toolFields).length === 0) return [];
+          return buildActionsFromExtraction({
+            ...piece,
+            incomeType: incomeType ?? piece.incomeType,
+            extractedData: toolFields,
+          }).actions;
+        });
         if (actions.length === 0) {
           next.push({
             fileName: file.name,
             summary: 'Nothing usable was read',
-            detail: extracted.errors.concat(extracted.warnings).join(' ') || 'The form was stored as unknown. Missing amounts were not written as zero.',
+            detail: [
+              ...toolErrors,
+              ...extracted.errors,
+              ...extracted.warnings,
+            ].filter(Boolean).join(' ') || 'The form was stored as unknown. Missing amounts were not written as zero.',
             facts,
           });
           continue;
