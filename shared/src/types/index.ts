@@ -206,6 +206,15 @@ export interface Income1099B {
   washSaleLossDisallowed?: number; // Box 1g: Wash sale loss disallowed
   basisReportedToIRS?: boolean;    // Box 12: true (default) = covered security, broker basis is authoritative
   isCollectible?: boolean;         // True if asset is a collectible (IRC §408(m)) — art, antiques, metals, gems, stamps, etc.
+  /** Qualified small business stock (IRC §1202). Held more than 5 years to be eligible. */
+  isQSBS?: boolean;
+  /** Issuer name. Lots of the same issuer share the per-issuer dollar cap. */
+  qsbsIssuer?: string;
+  /**
+   * Eligible gain from this issuer already taken into account under §1202(a)
+   * in prior years. Reduces the $10 million ($5 million MFS) cap.
+   */
+  qsbsPriorEligibleGain?: number;
 }
 
 export interface IncomeSSA1099 {
@@ -532,6 +541,16 @@ export interface DepreciationAsset {
   disposed?: boolean;                     // Asset disposed/sold during year (skip depreciation)
   businessId?: string;                    // Multi-business routing (optional)
   convention?: 'half-year' | 'mid-quarter'; // Convention used when first depreciated (for prior-year continuation)
+  /**
+   * GDS is the default. ADS is straight-line over the class life.
+   * Business use of 50% or less already turns off bonus depreciation and section 179.
+   */
+  depreciationSystem?: 'gds' | 'ads';
+  /**
+   * ADS class life in years. Defaults to the shortest class life in the GDS class
+   * (3→4, 5→5, 7→10, 10→16, 15→20, 20→25). Set this when the asset's class life is longer.
+   */
+  adsRecoveryYears?: number;
   quarterPlaced?: 1 | 2 | 3 | 4;         // Quarter placed in service (derived from dateInService)
   isSoftware?: boolean;                   // Off-the-shelf software: 36-month SL amortization per IRC §167(f)(1)
 }
@@ -1163,15 +1182,30 @@ export interface ScheduleHResult {
 }
 
 // Adoption Credit (Form 8839)
+export interface AdoptionCarryforwardYear {
+  /** Year the unused credit arose. Usable for the next five tax years. */
+  taxYear: number;
+  amount: number;
+}
+
 export interface AdoptionCreditInfo {
   qualifiedExpenses: number;            // Qualified adoption expenses per child
   numberOfChildren?: number;            // Number of children adopted (default 1)
   isSpecialNeeds?: boolean;             // Special needs adoption (full credit regardless of expenses)
+  /** Unused credit from the prior five years, oldest first. */
+  priorCarryforwards?: AdoptionCarryforwardYear[];
 }
 
 export interface AdoptionCreditResult {
   expensesBasis: number;
+  /** Credit allowed this year after the tax-liability limit. */
   credit: number;
+  /** This year's credit before the tax-liability limit, including carryforwards. */
+  creditAvailable: number;
+  /** Unused credit still available next year, within the five-year window. */
+  carryforward: number;
+  carryforwardByYear: AdoptionCarryforwardYear[];
+  expired: number;
 }
 
 // Form 4797 — Sales of Business Property
@@ -1437,6 +1471,16 @@ export interface HomeSaleInfo {
   ownedMonths: number;                   // Months owned in last 5 years (need ≥24)
   usedAsResidenceMonths: number;         // Months used as primary residence in last 5 years (need ≥24)
   priorExclusionUsedWithin2Years?: boolean; // Used Section 121 exclusion within last 2 years
+  /**
+   * Months between this sale and the most recent sale to which §121 applied.
+   * Used in the reduced-maximum fraction when that period is under 24 months.
+   */
+  monthsSincePriorExclusion?: number;
+  /**
+   * IRC §121(c) reduced maximum. Set when the sale is because of a change in
+   * employment, health, or unforeseen circumstances.
+   */
+  reducedMaximumReason?: 'change_of_employment' | 'health' | 'unforeseen_circumstances';
 }
 
 export interface HomeSaleResult {
@@ -1635,6 +1679,12 @@ export interface TaxReturn {
   capitalLossCarryforwardLT?: number;  // Long-term carryforward from prior year
   unrecapturedSection1250Gain?: number; // IRC §1(h)(1)(E) — unrecaptured §1250 gain (25% rate zone, from Form 4797 or direct)
   form4797Properties?: Form4797Property[]; // Form 4797 — Sales of Business Property (Sprint 23 integration)
+  /**
+   * Net section 1231 gain (positive) or loss (negative) for each of the five
+   * preceding tax years. IRC §1231(c) recharacterizes a current gain as ordinary
+   * to the extent of unrecaptured losses in that window.
+   */
+  section1231Lookback?: { taxYear: number; netGainOrLoss: number }[];
   otherIncome: number;
 
   // 1099-Q (529 distributions)
@@ -2025,10 +2075,17 @@ export interface ScheduleDResult {
   netLongTerm: number;
   netGainOrLoss: number;
   /**
-   * 28% rate gain before the net-long-term cap. Section 1231 gain is long-term
-   * and is applied after Schedule D, so the cap is recomputed against that total.
+   * 28% rate gain before the net-long-term cap. Includes collectibles and the
+   * non-excluded section 1202 gain. Section 1231 gain is applied after Schedule D,
+   * so the cap is recomputed against that total.
    */
   collectiblesRateGain: number;
+  /** IRC §1202 gain excluded from gross income. */
+  section1202ExcludedGain: number;
+  /** Eligible section 1202 gain that was not excluded, taxed at a maximum of 28%. */
+  section1202RateGain: number;
+  /** Form 6251 line 2h: 7% of the excluded gain on 50% and 75% stock. */
+  section1202AmtPreference: number;
   /**
    * Long-term collectibles gain taxed at the 28% maximum (IRC §1(h)(4)).
    * Lesser of the 28% rate gain and net long-term gain, including section 1231.
@@ -2305,6 +2362,7 @@ export interface Form1040Result {
   movingExpenses: number;                // Form 3903 — military moving expenses (Schedule 1 Line 14)
   feieExclusion: number;                 // Foreign Earned Income Exclusion (Form 2555)
   nolDeduction: number;                  // Net Operating Loss deduction
+  currentYearNOL: number;                 // NOL generated this year; not deducted here
   totalAdjustments: number;
 
   // AGI and deductions
@@ -2435,8 +2493,12 @@ export interface CalculationResult {
   scholarshipCredit?: ScholarshipCreditResult;
   form4562?: Form4562Result;
   form4797?: Form4797Result;
-  /** Positive combined section 1231 gain taxed as long-term. Already in total income. */
+  /** Positive combined section 1231 gain taxed as long-term, after the five-year lookback. */
   section1231LongTermGain?: number;
+  /** Section 1231 gain recharacterized as ordinary under the five-year lookback. */
+  section1231LookbackOrdinary?: number;
+  /** NOL generated this year under IRC §172. Not deducted on this return. */
+  currentYearNOL?: number;
   form4137?: Form4137Result;
   scheduleF?: ScheduleFResult;
   scheduleR?: ScheduleRResult;

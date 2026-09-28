@@ -34,7 +34,7 @@ import { round2 } from './utils.js';
  *   IRC: Section 167(f)(1) — Computer software (36-month straight-line)
  *   Form: Form 4562 — Depreciation and Amortization
  *   Pub: Publication 946 — How to Depreciate Property
- * @scope GDS half-year and mid-quarter conventions. Software amortization. No ADS.
+ * @scope GDS and ADS, half-year and mid-quarter conventions. Software amortization.
  */
 export function calculateForm4562(
   assets: DepreciationAsset[],
@@ -376,8 +376,6 @@ function computeCurrentYearAsset(
   taxYear: number = 2025,
 ): Form4562AssetDetail {
   const BONUS_DEPRECIATION_RATE_2025 = getBonusDepreciationRate(taxYear);
-  const MACRS_GDS_RATES = getMacrsGdsRates(taxYear);
-  const MACRS_GDS_RATES_MID_QUARTER = getMacrsGdsRatesMidQuarter(taxYear);
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
@@ -429,17 +427,8 @@ function computeCurrentYearAsset(
   // MACRS on remaining basis after 179 + bonus
   const afterBonus = round2(Math.max(0, afterSection179 - bonusDepreciation));
 
-  let macrsRate = 0;
-  if (convention === 'mid-quarter') {
-    const quarter = getQuarter(asset.dateInService);
-    const mqRates = MACRS_GDS_RATES_MID_QUARTER[asset.propertyClass];
-    if (mqRates && mqRates[quarter - 1]) {
-      macrsRate = mqRates[quarter - 1][0];
-    }
-  } else {
-    const rates = MACRS_GDS_RATES[asset.propertyClass];
-    macrsRate = rates && rates.length > 0 ? rates[0] : 0;
-  }
+  const rates = depreciationRates(asset, convention, taxYear);
+  const macrsRate = rates.length > 0 ? rates[0] : 0;
   const macrsDepreciation = round2(afterBonus * macrsRate);
 
   const totalDepreciation = round2(section179Amount + bonusDepreciation + macrsDepreciation);
@@ -476,8 +465,6 @@ function computeCurrentYearAsset(
  * asset.convention/asset.quarterPlaced), continues using mid-quarter rates.
  */
 function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025): Form4562AssetDetail {
-  const MACRS_GDS_RATES = getMacrsGdsRates(taxYear);
-  const MACRS_GDS_RATES_MID_QUARTER = getMacrsGdsRatesMidQuarter(taxYear);
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
@@ -515,17 +502,7 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
 
   // Determine which rate table to use based on stored convention
   const assetConvention = asset.convention || 'half-year';
-  let rates: readonly number[] | undefined;
-
-  if (assetConvention === 'mid-quarter') {
-    // Derive quarter from stored field or fall back to dateInService
-    // (prevents data corruption when convention is stored but quarterPlaced is missing)
-    const quarter = asset.quarterPlaced || getQuarter(asset.dateInService);
-    const mqRates = MACRS_GDS_RATES_MID_QUARTER[asset.propertyClass];
-    rates = mqRates?.[quarter - 1];
-  } else {
-    rates = MACRS_GDS_RATES[asset.propertyClass];
-  }
+  const rates = depreciationRates(asset, assetConvention, taxYear);
 
   // If year index exceeds the rate table, asset is fully depreciated
   if (!rates || yearIndex >= rates.length) {
@@ -579,6 +556,74 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
  * Determine the calendar quarter from a date string.
  * Returns 1-4 (Q1 = Jan–Mar, Q2 = Apr–Jun, Q3 = Jul–Sep, Q4 = Oct–Dec).
  */
+/**
+ * ADS class life for a GDS recovery class: the shortest class life in that class.
+ * IRC §168(e)(1), §168(g)(2). Override with adsRecoveryYears when the class life is longer.
+ */
+export function defaultAdsLife(propertyClass: MACRSPropertyClass): number {
+  const lives: Record<MACRSPropertyClass, number> = {
+    3: 4,
+    5: 5,
+    7: 10,
+    10: 16,
+    15: 20,
+    20: 25,
+  };
+  return lives[propertyClass];
+}
+
+/** An explicit ADS election uses straight-line over the class life. */
+export function assetUsesADS(asset: DepreciationAsset): boolean {
+  return asset.depreciationSystem === 'ads';
+}
+
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
+}
+
+/** Straight-line ADS rates. Half-year, or mid-quarter by the quarter placed in service. */
+export function adsStraightLineRates(
+  lifeYears: number,
+  convention: 'half-year' | 'mid-quarter',
+  quarter: 1 | 2 | 3 | 4 = 1,
+): number[] {
+  const life = Math.max(1, Math.round(lifeYears));
+  const full = 1 / life;
+  const firstFraction = convention === 'half-year'
+    ? 0.5
+    : (10.5 - (quarter - 1) * 3) / 12;
+  const rates: number[] = [round4(full * firstFraction)];
+  let used = rates[0];
+  for (let i = 1; i < life; i++) {
+    const rate = round4(Math.min(full, 1 - used));
+    rates.push(rate);
+    used = round4(used + rate);
+  }
+  if (used < 0.9999) {
+    rates.push(round4(1 - used));
+  }
+  return rates;
+}
+
+function depreciationRates(
+  asset: DepreciationAsset,
+  convention: 'half-year' | 'mid-quarter',
+  taxYear: number,
+): readonly number[] {
+  if (assetUsesADS(asset)) {
+    const life = asset.adsRecoveryYears && asset.adsRecoveryYears > 0
+      ? asset.adsRecoveryYears
+      : defaultAdsLife(asset.propertyClass);
+    const quarter = asset.quarterPlaced || getQuarter(asset.dateInService);
+    return adsStraightLineRates(life, convention, quarter);
+  }
+  if (convention === 'mid-quarter') {
+    const quarter = asset.quarterPlaced || getQuarter(asset.dateInService);
+    return getMacrsGdsRatesMidQuarter(taxYear)[asset.propertyClass]?.[quarter - 1] || [];
+  }
+  return getMacrsGdsRates(taxYear)[asset.propertyClass] || [];
+}
+
 export function getQuarter(dateInService?: string): 1 | 2 | 3 | 4 {
   if (!dateInService) return 1;
   const date = new Date(dateInService + 'T00:00:00');

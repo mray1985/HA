@@ -48,6 +48,8 @@ import { calculateEITC } from './eitc.js';
 import { calculateNIIT } from './niit.js';
 import { calculateAdditionalMedicareTaxW2 } from './additionalMedicare.js';
 import { calculateScheduleD, capCollectiblesGain, limitCapitalLoss } from './scheduleD.js';
+import { applySection1231Lookback } from './section1231Lookback.js';
+import { figureCurrentYearNOL } from './nol.js';
 import { calculateTaxableSocialSecurity } from './socialSecurity.js';
 import { calculateScheduleE } from './scheduleE.js';
 import { calculateDependentCareCredit } from './dependentCare.js';
@@ -65,7 +67,7 @@ import { calculateEstimatedTaxPenalty } from './estimatedTaxPenalty.js';
 import { calculateKiddieTax, KiddieTaxResult } from './kiddieTax.js';
 import { calculateFEIE, FEIEResult } from './feie.js';
 import { calculateScheduleH } from './scheduleH.js';
-import { calculateAdoptionCredit } from './adoptionCredit.js';
+import { calculateAdoptionCredit, limitAdoptionCredit } from './adoptionCredit.js';
 import { calculateEVRefuelingCredit } from './form8911.js';
 import { calculatePremiumTaxCredit, calculatePTCHouseholdIncome } from './premiumTaxCredit.js';
 import { calculateSchedule1A } from './schedule1A.js';
@@ -198,6 +200,8 @@ export interface Form1040Context {
   form4797Section1231GainOrLoss: number;
   form4797Unrecaptured1250: number;
   form4797LTCGContribution: number;
+  section1231LookbackOrdinary: number;
+  currentYearNOL: number;
   scheduleDNetGain: number;
   capitalLossDeduction: number;
   scheduleDLongTermGain: number;
@@ -386,6 +390,8 @@ export function createForm1040Context(
     form4797Section1231GainOrLoss: 0,
     form4797Unrecaptured1250: 0,
     form4797LTCGContribution: 0,
+    section1231LookbackOrdinary: 0,
+    currentYearNOL: 0,
     scheduleDNetGain: 0,
     capitalLossDeduction: 0,
     scheduleDLongTermGain: 0,
@@ -1006,17 +1012,20 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
 
   // IRC §1231(a): net K-1 box 10 with Form 4797 section 1231 before
   // characterizing the result. A net gain is long-term. A net loss is ordinary.
-  // Section 1231(c) five-year lookback is not computed.
+  // IRC §1231(c): a net gain is ordinary to the extent of unrecaptured section
+  // 1231 losses from the five preceding tax years.
   const k1Section1231 = ctx.k1Routing?.netSection1231Gain || 0;
   const combinedSection1231 = round2(k1Section1231 + (ctx.form4797Section1231GainOrLoss || 0));
-  ctx.form4797LTCGContribution = combinedSection1231 > 0 ? combinedSection1231 : 0;
+  const lookback = applySection1231Lookback(combinedSection1231, taxReturn.section1231Lookback, _taxYear);
+  ctx.section1231LookbackOrdinary = lookback.ordinaryFromGain;
+  ctx.form4797LTCGContribution = lookback.longTermGain;
   ctx.form4797OrdinaryLoss = combinedSection1231 < 0 ? combinedSection1231 : 0;
-  // Unrecaptured §1250 is a slice of section 1231 gain. After K-1 box 10 is
-  // netted in, it cannot exceed the gain that is still taxed as long-term.
-  // A net section 1231 loss leaves no 25% gain from Form 4797. A direct
+  // Unrecaptured §1250 is a slice of section 1231 gain. It cannot exceed the
+  // gain that is still taxed as long-term after the lookback. A net section
+  // 1231 loss leaves no 25% gain from Form 4797. A direct
   // taxReturn.unrecapturedSection1250Gain is not part of this net.
-  const cappedUnrecaptured1250 = combinedSection1231 > 0
-    ? round2(Math.min(ctx.form4797Unrecaptured1250, combinedSection1231))
+  const cappedUnrecaptured1250 = lookback.longTermGain > 0
+    ? round2(Math.min(ctx.form4797Unrecaptured1250, lookback.longTermGain))
     : 0;
   ctx.form4797Unrecaptured1250 = cappedUnrecaptured1250;
   if (ctx.form4797Result) {
@@ -1092,7 +1101,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     ctx.k1OrdinaryIncome - ctx.k1Section179Deduction + ctx.k1ShortTermGain + ctx.k1LongTermGain +
     ctx.hsaDistributionTaxable +
     ctx.scheduleDNetGain - ctx.capitalLossDeduction +
-    ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss +
+    ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss + ctx.section1231LookbackOrdinary +
     ctx.dcFSATaxableExcess,
   );
 
@@ -1627,6 +1636,23 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
     ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
   }
 
+  ctx.currentYearNOL = figureCurrentYearNOL({
+    agi: ctx.agi,
+    deductionAmount: ctx.deductionAmount,
+    schedule1ADeduction: ctx.schedule1ADeduction,
+    capitalLossDeduction: ctx.capitalLossDeduction,
+    nonbusinessIncome: round2(
+      ctx.totalWages + ctx.allInterest + ctx.allOrdinaryDividends +
+      ctx.totalRetirementIncome + ctx.totalUnemployment + ctx.taxableSocialSecurity +
+      Math.max(0, ctx.scheduleDNetGain) + ctx.otherIncome + ctx.totalGamblingIncome +
+      ctx.alimonyReceivedIncome + ctx.taxable529Income + ctx.cancellationOfDebtIncome
+    ),
+    otherNonbusinessDeductions: round2(
+      ctx.studentLoanInterest + ctx.iraDeduction + ctx.educatorExpenses +
+      ctx.earlyWithdrawalPenalty + ctx.hsaDeduction + ctx.archerMSADeduction + ctx.movingExpenses
+    ),
+  });
+
   ctx.taxableIncome = round2(Math.max(0, taxableBeforeNOL - ctx.nolDeduction - ctx.qbiDeduction - ctx.schedule1ADeduction));
 
   // Trace: Deductions & Taxable Income
@@ -1728,6 +1754,7 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     unrecapturedSection1250Gain,
     _taxYear,
     collectiblesGain,
+    ctx.scheduleD?.section1202AmtPreference || 0,
   );
   ctx.amtAmount = ctx.amtResult.amtAmount;
 
@@ -2158,14 +2185,14 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
     }
   }
 
-  // Adoption Credit (Form 8839)
-  if (!isDeclined('adoption_credit') && taxReturn.adoptionCredit && (taxReturn.adoptionCredit.qualifiedExpenses > 0 || taxReturn.adoptionCredit.isSpecialNeeds)) {
+  // Adoption Credit (Form 8839). The tax-liability limit is applied in the
+  // liability section, after the other nonrefundable credits are known.
+  if (!isDeclined('adoption_credit') && taxReturn.adoptionCredit && (
+    taxReturn.adoptionCredit.qualifiedExpenses > 0
+    || taxReturn.adoptionCredit.isSpecialNeeds
+    || (taxReturn.adoptionCredit.priorCarryforwards || []).some(year => year.amount > 0)
+  )) {
     ctx.adoptionCreditResult = calculateAdoptionCredit(taxReturn.adoptionCredit, ctx.agi, _taxYear);
-    if (ctx.adoptionCreditResult.credit > 0) {
-      ctx.credits.adoptionCredit = ctx.adoptionCreditResult.credit;
-      ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + ctx.adoptionCreditResult.credit);
-      ctx.credits.totalCredits = round2(ctx.credits.totalCredits + ctx.adoptionCreditResult.credit);
-    }
   }
 
   // EV Refueling (Form 8911)
@@ -2264,6 +2291,23 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
 
 export function calculateLiabilitySection(ctx: Form1040Context): void {
   const { taxReturn } = ctx;
+
+  if (ctx.adoptionCreditResult && taxReturn.adoptionCredit) {
+    const otherNonRefundable = ctx.credits.totalNonRefundable;
+    const taxCapacity = Math.max(0, ctx.incomeTax + ctx.amtAmount + ctx.excessAPTCRepayment - otherNonRefundable);
+    const limited = limitAdoptionCredit(
+      taxReturn.adoptionCredit,
+      ctx.adoptionCreditResult.credit,
+      taxReturn.taxYear || 2025,
+      taxCapacity,
+    );
+    ctx.adoptionCreditResult = { ...ctx.adoptionCreditResult, ...limited };
+    if (limited.credit > 0) {
+      ctx.credits.adoptionCredit = limited.credit;
+      ctx.credits.totalNonRefundable = round2(ctx.credits.totalNonRefundable + limited.credit);
+      ctx.credits.totalCredits = round2(ctx.credits.totalCredits + limited.credit);
+    }
+  }
 
   // Apply non-refundable credits against income tax + AMT + excess APTC repayment
   // (Form 1040 Lines 16 + 17 = Line 18, then Line 22 = Line 18 − credits),
@@ -2468,7 +2512,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
       ctx.scheduleCNetProfit + ctx.scheduleFNetProfit + ctx.scheduleEIncome +
       ctx.totalUnemployment + ctx.total1099MISCIncome + ctx.totalGamblingIncome +
       ctx.cancellationOfDebtIncome + ctx.alimonyReceivedIncome + ctx.taxable529Income +
-      ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss + ctx.otherIncome
+      ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss + ctx.section1231LookbackOrdinary + ctx.otherIncome
     ),
     k1OrdinaryIncome: round2(ctx.k1OrdinaryIncome),
     k1SEIncome: round2(ctx.k1SEIncome),
@@ -2489,6 +2533,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     movingExpenses: round2(ctx.movingExpenses),
     feieExclusion: round2(ctx.feieExclusion),
     nolDeduction: round2(ctx.nolDeduction),
+    currentYearNOL: round2(ctx.currentYearNOL),
     alimonyDeduction: ctx.alimonyDeduction,
     totalAdjustments: ctx.totalAdjustments,
 
@@ -2619,6 +2664,8 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     scholarshipCredit: ctx.scholarshipCreditResult,
     form4797: ctx.form4797Result,
     section1231LongTermGain: ctx.form4797LTCGContribution,
+    section1231LookbackOrdinary: ctx.section1231LookbackOrdinary,
+    currentYearNOL: ctx.currentYearNOL,
     form4137: ctx.form4137Result,
     scheduleF: ctx.scheduleFResult,
     scheduleR: ctx.scheduleRResult,

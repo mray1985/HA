@@ -11,7 +11,7 @@
  *   IRC: Section 62 — adjusted gross income defined
  *   Form: Form 1040
  * @scope Main orchestrator — assembles all schedules, computes total tax, payments, refund/owed
- * @limitations AMT foreign tax credit and AMT NOL apply when those amounts are supplied. A regular NOL carryforward is deducted under IRC §172; a current-year NOL is not generated.
+ * @limitations AMT foreign tax credit and AMT NOL apply when those amounts are supplied. A prior-year NOL carryforward is deducted under IRC §172. A current-year NOL is computed and reported, and is not deducted on this return.
  */
 
 import { FilingStatus, TaxReturn, CalculationResult } from '../types/index.js';
