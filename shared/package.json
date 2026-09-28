@@ -48,7 +48,8 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "test": "npm run typecheck:tests && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
