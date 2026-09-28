@@ -6,7 +6,10 @@ import { buildActionsFromExtraction } from '../../services/documentToActions';
 import { executeActions } from '../../services/intentExecutor';
 import { crossValidate, extractFieldsWithAI } from '../../services/aiExtractionService';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
-import { factsForExtraction, appendTaxFacts } from '../../services/preparerTaxFacts';
+import {
+  applyExtractionToDocument,
+  registerDroppedDocument,
+} from '../../services/documentIngestion';
 import type { PDFExtractResult, SupportedFormType } from '../../services/pdfExtractHelpers';
 import type { TaxFact } from '@hatax/engine';
 
@@ -15,6 +18,7 @@ interface IntakeRow {
   summary: string;
   detail: string;
   facts: TaxFact[];
+  documentId?: string;
 }
 
 export default function PreparerIntakePage() {
@@ -76,63 +80,99 @@ export default function PreparerIntakePage() {
     const next: IntakeRow[] = [];
     for (const file of Array.from(list)) {
       try {
+        const registered = await registerDroppedDocument({ returnId: id, file });
+        if (registered.rejected) {
+          next.push({
+            fileName: file.name,
+            summary: 'File rejected',
+            detail: registered.document.rejectReason || 'This file cannot be ingested.',
+            facts: [],
+            documentId: registered.document.documentId,
+          });
+          continue;
+        }
+        if (registered.duplicate) {
+          next.push({
+            fileName: file.name,
+            summary: 'Already on this return',
+            detail: `Same file content was ingested earlier as ${registered.document.documentId}.`,
+            facts: [],
+            documentId: registered.document.documentId,
+          });
+          continue;
+        }
+
         const extracted = await withModel(await readOne(file));
-        const pieces = [extracted, ...(extracted.additionalResults ?? [])];
-        const documentId = `DOC-${file.name}-${file.size}-${file.lastModified}`;
-        const bundled = pieces.map((piece) => factsForExtraction({
+        const applied = applyExtractionToDocument({
           returnId: id,
           taxYear: 2025,
-          documentId,
-          fileName: file.name,
-          extracted: piece,
-        }));
-        const facts = bundled.flatMap((item) => item.facts);
-        appendTaxFacts(id, facts);
-        const toolErrors = bundled.map((item) => item.toolError).filter(Boolean) as string[];
-        const actions = pieces.flatMap((piece, index) => {
-          const { toolFields, incomeType, toolError } = bundled[index];
-          if (toolError || Object.keys(toolFields).length === 0) return [];
+          document: registered.document,
+          extracted,
+        });
+
+        if (applied.provenanceError) {
+          next.push({
+            fileName: file.name,
+            summary: 'Could not store facts',
+            detail: applied.provenanceError,
+            facts: [],
+            documentId: applied.document.documentId,
+          });
+          continue;
+        }
+
+        const toolErrors = applied.pieces
+          .map((item) => item.toolError)
+          .filter(Boolean) as string[];
+        const actions = applied.pieces.flatMap((piece) => {
+          if (piece.toolError || Object.keys(piece.toolFields).length === 0) return [];
           return buildActionsFromExtraction({
-            ...piece,
-            incomeType: incomeType ?? piece.incomeType,
-            extractedData: toolFields,
+            ...piece.extracted,
+            incomeType: piece.incomeType ?? piece.extracted.incomeType,
+            extractedData: piece.toolFields,
           }).actions;
         });
+
         if (actions.length === 0) {
           next.push({
             fileName: file.name,
             summary: 'Nothing usable was read',
             detail: [
+              `Stored as ${applied.document.documentId}.`,
               ...toolErrors,
               ...extracted.errors,
               ...extracted.warnings,
             ].filter(Boolean).join(' ') || 'The form was stored as unknown. Missing amounts were not written as zero.',
-            facts,
+            facts: applied.facts,
+            documentId: applied.document.documentId,
           });
           continue;
         }
-        const applied = executeActions(actions, id);
-        const labels = pieces
-          .map((piece) => piece.formType || 'form')
+
+        const executed = executeActions(actions, id);
+        const labels = applied.pieces
+          .map((piece) => piece.extracted.formType || 'form')
           .join(', ');
         next.push({
           fileName: file.name,
-          summary: `${labels} · ${applied.successCount} added`,
+          summary: `${labels} · ${executed.successCount} added`,
           detail: [
+            `Source ${applied.document.documentId}.`,
             extracted.aiEnhanced ? 'The model checked the scanned fields.' : 'Read on this computer.',
             ...toolErrors,
             ...extracted.warnings,
-            ...applied.results.filter((r) => !r.success).map((r) => r.error || r.summary),
+            ...executed.results.filter((r) => !r.success).map((r) => r.error || r.summary),
           ].filter(Boolean).join(' '),
-          facts,
+          facts: applied.facts,
+          documentId: applied.document.documentId,
         });
       } catch (err) {
-          next.push({
-            fileName: file.name,
-            summary: 'Could not read this file',
-            detail: err instanceof Error ? err.message : 'Unknown error',
-            facts: [],
-          });
+        next.push({
+          fileName: file.name,
+          summary: 'Could not read this file',
+          detail: err instanceof Error ? err.message : 'Unknown error',
+          facts: [],
+        });
       }
     }
     setRows((prev) => [...next, ...prev]);
@@ -152,7 +192,7 @@ export default function PreparerIntakePage() {
         <p className="text-xs uppercase tracking-wide text-HATaxService-orange-400 mb-2">New client</p>
         <h1 className="text-3xl font-bold text-white mb-3">Drop the client’s forms</h1>
         <p className="text-slate-300 text-sm leading-relaxed mb-6">
-          W-2s and 1099s are read into this return. The assistant only writes values it can see on the form. It does not invent income. You still review the return before anyone files it.
+          W-2s and 1099s are read into this return. Each file is hashed and stored with provenance. The assistant only writes values it can see on the form. It does not invent income. You still review the return before anyone files it.
         </p>
         <label className="block border border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-HATaxService-orange-500">
           <span className="text-white font-medium">{busy ? 'Reading forms...' : 'Choose PDFs or photos'}</span>
@@ -177,9 +217,12 @@ export default function PreparerIntakePage() {
         {rows.length > 0 && (
           <ul className="mt-6 space-y-3">
             {rows.map((row, index) => (
-              <li key={`${row.fileName}-${index}`} className="bg-surface-800 border border-slate-700 rounded-lg p-4">
+              <li key={`${row.documentId ?? row.fileName}-${index}`} className="bg-surface-800 border border-slate-700 rounded-lg p-4">
                 <p className="text-white text-sm font-medium">{row.fileName}</p>
                 <p className="text-HATaxService-orange-400 text-sm mt-1">{row.summary}</p>
+                {row.documentId && (
+                  <p className="text-slate-500 text-xs mt-1 font-mono">{row.documentId}</p>
+                )}
                 {row.detail && <p className="text-slate-400 text-xs mt-1">{row.detail}</p>}
                 {row.facts.length > 0 && (
                   <ul className="mt-2 space-y-1">
