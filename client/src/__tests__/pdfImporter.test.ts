@@ -443,14 +443,14 @@ describe('extractW2Fields', () => {
     expect(data.state).toBe('NY');
   });
 
-  it('returns zeros for blocks with no matching labels', () => {
+  it('returns undefined for blocks with no matching labels', () => {
     const blocks = [
       makeBlock('xy', 30, 300), // too short for fallback (< 3 chars)
       makeBlock('ab', 30, 340),
     ];
     const data = extractW2Fields(blocks);
-    expect(data.wages).toBe(0);
-    expect(data.federalTaxWithheld).toBe(0);
+    expect(data.wages).toBeUndefined();
+    expect(data.federalTaxWithheld).toBeUndefined();
     expect(data.employerName).toBe('');
   });
 
@@ -465,7 +465,24 @@ describe('extractW2Fields', () => {
     const data = extractW2Fields(blocks);
     expect(data.employerName).toBe('Test Company');
     expect(data.wages).toBe(50000);
+    expect(data.federalTaxWithheld).toBeUndefined();
+  });
+
+  it('keeps an explicit printed zero distinct from a missing box', () => {
+    const blocks = [
+      makeBlock("Employer's name", 30, 100),
+      makeBlock('Zero Corp', 30, 120),
+      makeBlock('1 Wages, tips', 30, 160),
+      makeBlock('0.00', 250, 160),
+      makeBlock('2 Federal income tax withheld', 30, 200),
+      makeBlock('0', 250, 200),
+      makeBlock('employer', 30, 50),
+      makeBlock('social security', 30, 300),
+    ];
+    const data = extractW2Fields(blocks);
+    expect(data.wages).toBe(0);
     expect(data.federalTaxWithheld).toBe(0);
+    expect(data.socialSecurityWages).toBeUndefined();
   });
 });
 
@@ -545,11 +562,11 @@ describe('extract1099BFields', () => {
     expect(data.isLongTerm).toBe(false);
   });
 
-  it('returns zeros when no matching fields exist', () => {
+  it('omits amounts when no matching fields exist', () => {
     const blocks = [makeBlock('Department of the Treasury', 30, 100)];
     const data = extract1099BFields(blocks);
-    expect(data.proceeds).toBe(0);
-    expect(data.costBasis).toBe(0);
+    expect(data.proceeds).toBeUndefined();
+    expect(data.costBasis).toBeUndefined();
     expect(data.brokerName).toBe('');
   });
 });
@@ -563,9 +580,9 @@ describe('extract1099KFields', () => {
     expect(data.federalTaxWithheld).toBe(4200);
   });
 
-  it('returns zeros for empty blocks', () => {
+  it('omits amounts for empty blocks', () => {
     const data = extract1099KFields([]);
-    expect(data.grossAmount).toBe(0);
+    expect(data.grossAmount).toBeUndefined();
     expect(data.platformName).toBe('');
   });
 });
@@ -615,7 +632,7 @@ describe('extract1099QFields', () => {
     expect(data.qualifiedExpenses).toBe(0);
   });
 
-  it('returns default values for missing fields', () => {
+  it('omits missing amount fields instead of writing zero', () => {
     const blocks = [
       makeBlock("Trustee's name", 30, 100),
       makeBlock('State 529 Plan', 30, 120),
@@ -625,8 +642,8 @@ describe('extract1099QFields', () => {
     const data = extract1099QFields(blocks);
     expect(data.payerName).toBe('State 529 Plan');
     expect(data.grossDistribution).toBe(5000);
-    expect(data.earnings).toBe(0);
-    expect(data.basisReturn).toBe(0);
+    expect(data.earnings).toBeUndefined();
+    expect(data.basisReturn).toBeUndefined();
     expect(data.distributionType).toBe('qualified');
   });
 });
@@ -693,13 +710,13 @@ describe('edge cases', () => {
     expect(data.wages).toBe(75000);
   });
 
-  it('handles blocks where numeric value is far away (>200px) — returns 0', () => {
+  it('handles blocks where numeric value is far away — omits the amount', () => {
     const blocks = [
       makeBlock('1 Wages, tips', 30, 100),
       makeBlock('75000', 500, 500), // 400+ pixels away
     ];
     const data = extractW2Fields(blocks);
-    expect(data.wages).toBe(0);
+    expect(data.wages).toBeUndefined();
   });
 
   it('prefers the nearest numeric value when multiple exist', () => {
@@ -827,27 +844,27 @@ describe('generateImportTrace', () => {
     expect(wagesEntry!.label).toBe('Wages, Tips (Box 1)');
   });
 
-  it('marks not_found fields correctly when value is 0', () => {
-    // Partial W-2 — wages present but stateWages absent
+  it('marks explicit zero as found and omitted amounts as not_found', () => {
+    // Partial W-2 — wages and withheld present (including $0); state wages absent
     const extractedData = {
       employerName: 'Acme',
       wages: 50000,
       federalTaxWithheld: 0,
-      socialSecurityWages: 0,
-      socialSecurityTax: 0,
-      medicareWages: 0,
-      medicareTax: 0,
-      stateTaxWithheld: 0,
-      stateWages: 0,
+      socialSecurityWages: undefined,
+      stateWages: undefined,
     };
     const trace = generateImportTrace('W-2', 'high', ['form w-2'], extractedData, 10, 1);
 
     const fedTax = trace.fields.find(f => f.field === 'federalTaxWithheld');
-    expect(fedTax!.status).toBe('not_found');
-    expect(fedTax!.value).toBeUndefined();
+    expect(fedTax!.status).toBe('found');
+    expect(fedTax!.value).toBe('$0');
 
     const wages = trace.fields.find(f => f.field === 'wages');
     expect(wages!.status).toBe('found');
+
+    const stateWages = trace.fields.find(f => f.field === 'stateWages');
+    expect(stateWages!.status).toBe('not_found');
+    expect(stateWages!.value).toBeUndefined();
   });
 
   it('handles null form type (unrecognized PDF)', () => {
@@ -880,11 +897,18 @@ describe('generateImportTrace', () => {
   });
 
   it('summary shows correct found/total counts', () => {
-    // 3 fields, 2 found
-    const extractedData = { payerName: 'Bank', amount: 500, federalTaxWithheld: 0 };
+    // 3 fields: 2 found, 1 missing (undefined withheld is not a printed zero)
+    const extractedData = { payerName: 'Bank', amount: 500, federalTaxWithheld: undefined };
     const trace = generateImportTrace('1099-INT', 'high', ['1099-int'], extractedData, 15, 1);
 
     expect(trace.summary).toContain('2 of 3');
+  });
+
+  it('counts an explicit zero as found in the summary', () => {
+    const extractedData = { payerName: 'Bank', amount: 500, federalTaxWithheld: 0 };
+    const trace = generateImportTrace('1099-INT', 'high', ['1099-int'], extractedData, 15, 1);
+
+    expect(trace.summary).toContain('3 of 3');
   });
 
   it('formats currency values correctly', () => {

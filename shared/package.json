@@ -1,7 +1,7 @@
 {
   "name": "@hatax/engine",
   "version": "0.1.0",
-  "description": "Open-source federal tax calculation engine for the 2025 tax year. Pure TypeScript, zero dependencies.",
+  "description": "Open-source federal tax calculation engine for the 2025 tax year. Pure TypeScript; zod is used for tax-tool schemas.",
   "license": "MIT",
   "author": "HATax",
   "repository": {
@@ -51,6 +51,9 @@
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
     "test": "npm run typecheck:tests && vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "fast-check": "^4.5.3",

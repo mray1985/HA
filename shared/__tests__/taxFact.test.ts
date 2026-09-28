@@ -77,6 +77,28 @@ describe('TaxFact unknown-is-not-zero', () => {
     expect(labeled.confidence).toBe(0.2);
   });
 
+  it('retains structured W-2 box12/box13 values for tool fields and facts', () => {
+    const box12 = [{ code: 'D', amount: 5000 }, { code: 'DD', amount: 0 }];
+    const box13 = { retirementPlan: true, thirdPartySickPay: false };
+    const fields = fieldsForToolCall({
+      wages: 60000,
+      box12,
+      box13,
+      missingBox: undefined,
+    });
+    expect(fields).toEqual({ wages: 60000, box12, box13 });
+    expect(isExtractedValue(box12)).toBe(true);
+    expect(isExtractedValue(box13)).toBe(true);
+    expect(isExtractedValue([])).toBe(false);
+
+    const facts = factsFromFields({
+      ...source,
+      fields: { box12, box13 },
+    });
+    expect(facts.find((f) => f.sourceField === 'box12')?.value).toEqual(box12);
+    expect(facts.find((f) => f.sourceField === 'box13')?.value).toEqual(box13);
+  });
+
   it('scores confidence per field and leaves an unscored field null', () => {
     const facts = factsFromFields({
       ...source,

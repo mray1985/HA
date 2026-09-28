@@ -7,7 +7,13 @@
 
 export type TaxFactStatus = 'extracted' | 'unknown';
 
-export type TaxFactValue = string | number | boolean;
+/** Scalar or nested structured values (W-2 box12/box13, simplified method, etc.). */
+export type TaxFactValue =
+  | string
+  | number
+  | boolean
+  | TaxFactValue[]
+  | { readonly [key: string]: TaxFactValue };
 
 interface TaxFactBase {
   factId: string;
@@ -46,7 +52,19 @@ export function isExtractedValue(value: unknown): value is TaxFactValue {
   if (value === undefined || value === null) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
   if (typeof value === 'number' && !Number.isFinite(value)) return false;
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    // Empty arrays are treated as missing (omit), not as an extracted value.
+    return value.length > 0 && value.every(isExtractedValue);
+  }
+  if (typeof value === 'object') {
+    const entries = Object.values(value as Record<string, unknown>);
+    // Empty objects are missing; nested values must themselves be extractable.
+    return entries.length > 0 && entries.every(isExtractedValue);
+  }
+  return false;
 }
 
 /** Fields safe to send to a tax-engine tool. Missing keys are omitted, not zeroed. */
