@@ -8,6 +8,8 @@ export interface Section1202Result {
   rateGain: number;
   /** 7% of the excluded gain on 50% and 75% stock. Zero for 100% stock. */
   amtPreference: number;
+  /** True when the return has at least one QSBS disposition, even if none is excluded. */
+  hadDisposition: boolean;
 }
 
 const TEN_MILLION = 10_000_000;
@@ -108,5 +110,5 @@ export function applySection1202(
     }
   }
 
-  return { excludedGain, rateGain, amtPreference };
+  return { excludedGain, rateGain, amtPreference, hadDisposition: lots.length > 0 };
 }

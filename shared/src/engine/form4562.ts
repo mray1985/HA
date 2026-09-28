@@ -416,9 +416,10 @@ function computeCurrentYearAsset(
   // Remaining basis after Section 179 (uses elected for basis reduction)
   const afterSection179 = round2(Math.max(0, businessUseBasis - section179BasisReduction));
 
-  // Bonus depreciation: 100% of remaining basis (Part II, Line 14)
-  // Requires > 50% business use for listed property (IRC §168(k)(2)(D)(i) / §280F).
-  // Applied to all assets as a conservative default since we don't track listed vs non-listed.
+  // Bonus depreciation: 100% of remaining basis (Part II, Line 14).
+  // Business use of 50% or less is not qualified property (IRC §280F(b), §168(k)(2)(D)).
+  // An election to use ADS under §168(g)(7) does not remove bonus eligibility.
+  // §168(k)(2)(D)(i)(I) disregards that election when testing the ADS exception.
   const bonusEligible = (asset.businessUsePercent ?? 100) > 50;
   const bonusDepreciation = bonusEligible
     ? round2(afterSection179 * BONUS_DEPRECIATION_RATE_2025)
@@ -558,7 +559,9 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
  */
 /**
  * ADS class life for a GDS recovery class: the shortest class life in that class.
- * IRC §168(e)(1), §168(g)(2). Override with adsRecoveryYears when the class life is longer.
+ * IRC §168(e)(1) and §168(g)(2). Ten-year property has a class life of 16 years
+ * or more and less than 20, so the default is 16, not 15. Override with
+ * adsRecoveryYears when the asset's class life is longer.
  */
 export function defaultAdsLife(propertyClass: MACRSPropertyClass): number {
   const lives: Record<MACRSPropertyClass, number> = {

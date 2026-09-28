@@ -1642,7 +1642,9 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
     schedule1ADeduction: ctx.schedule1ADeduction,
     capitalLossDeduction: ctx.capitalLossDeduction,
     nonbusinessIncome: round2(
-      ctx.totalWages + ctx.allInterest + ctx.allOrdinaryDividends +
+      // Wages are business income for the NOL (Pub. 536). They must not
+      // absorb the standard deduction before the nonbusiness-deduction addback.
+      ctx.allInterest + ctx.allOrdinaryDividends +
       ctx.totalRetirementIncome + ctx.totalUnemployment + ctx.taxableSocialSecurity +
       Math.max(0, ctx.scheduleDNetGain) + ctx.otherIncome + ctx.totalGamblingIncome +
       ctx.alimonyReceivedIncome + ctx.taxable529Income + ctx.cancellationOfDebtIncome
@@ -1754,7 +1756,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     unrecapturedSection1250Gain,
     _taxYear,
     collectiblesGain,
-    ctx.scheduleD?.section1202AmtPreference || 0,
+    ctx.scheduleD?.section1202HadDisposition
+      ? (ctx.scheduleD.section1202AmtPreference || 0)
+      : undefined,
   );
   ctx.amtAmount = ctx.amtResult.amtAmount;
 

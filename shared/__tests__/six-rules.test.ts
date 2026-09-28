@@ -143,6 +143,70 @@ describe('section 1202', () => {
     expect(half.scheduleD?.section1202AmtPreference).toBe(350);
     expect(half.form1040.incomeTax - ordinaryLtcg.form1040.incomeTax).toBe(650);
   });
+
+  it('applies a short-term loss to included section 1202 gain', () => {
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages(220000),
+      income1099B: [
+        {
+          id: 'qsbs',
+          brokerName: 'Transfer',
+          description: 'Old Co',
+          dateAcquired: '2005-01-01',
+          dateSold: '2025-06-01',
+          proceeds: 10000,
+          costBasis: 0,
+          isLongTerm: true,
+          isQSBS: true,
+          qsbsIssuer: 'Old Co',
+        },
+        {
+          id: 'lt',
+          brokerName: 'Broker',
+          description: 'Fund',
+          dateAcquired: '2020-01-01',
+          dateSold: '2025-06-01',
+          proceeds: 10000,
+          costBasis: 0,
+          isLongTerm: true,
+        },
+        {
+          id: 'st',
+          brokerName: 'Broker',
+          description: 'Short',
+          dateAcquired: '2025-01-01',
+          dateSold: '2025-06-01',
+          proceeds: 0,
+          costBasis: 3000,
+          isLongTerm: false,
+        },
+      ],
+    }));
+    expect(result.scheduleD?.section1202RateGain).toBe(5000);
+    expect(result.scheduleD?.collectiblesGain).toBe(2000);
+  });
+
+  it('does not apply a typed QSBS preference when a 100% exclusion was computed', () => {
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages(220000),
+      income1099B: [{
+        id: 'qsbs',
+        brokerName: 'Transfer',
+        description: 'QSBS Co',
+        dateAcquired: '2015-01-01',
+        dateSold: '2025-06-01',
+        proceeds: 10000,
+        costBasis: 0,
+        isLongTerm: true,
+        isQSBS: true,
+        qsbsIssuer: 'QSBS Co',
+      }],
+      amtData: { qsbsExclusion: 5000 },
+    }));
+    expect(result.scheduleD?.section1202HadDisposition).toBe(true);
+    expect(result.scheduleD?.section1202AmtPreference).toBe(0);
+    expect(result.amt?.adjustments.qsbsExclusion).toBe(0);
+  });
 });
 
 describe('current-year NOL', () => {
@@ -163,6 +227,15 @@ describe('current-year NOL', () => {
       nonbusinessIncome: 0,
       otherNonbusinessDeductions: 0,
     })).toBe(0);
+  });
+
+  it('does not let wages absorb the standard deduction before the NOL addback', () => {
+    const result = calculateForm1040(makeReturn({
+      w2Income: wages(10000),
+      income1099NEC: [{ id: 'nec', payerName: 'Client', amount: 0 }],
+      expenses: [{ id: 'e1', scheduleCLine: 27, category: 'other', amount: 20000 }],
+    }));
+    expect(result.currentYearNOL).toBe(10000);
   });
 
   it('reports a Schedule C loss as an NOL and does not deduct it this year', () => {

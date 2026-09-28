@@ -122,8 +122,12 @@ export function calculateScheduleD(
   // carryover. The result cannot exceed net long-term gain. Section 1231
   // gain is added later and the cap is applied again against that total.
   const netCollectibles = round2(collectiblesLongTermGain - collectiblesLongTermLoss);
-  const collectiblesRateGain = round2(
-    collectibles28RateGain(netCollectibles, netShortTerm, cfLT) + section1202.rateGain,
+  // Combine collectibles with non-excluded §1202 gain, then apply the
+  // short-term loss and long-term carryover to that combined 28% amount.
+  const collectiblesRateGain = collectibles28RateGain(
+    round2(netCollectibles + section1202.rateGain),
+    netShortTerm,
+    cfLT,
   );
   const collectiblesGain = capCollectiblesGain(collectiblesRateGain, netLongTerm);
 
@@ -142,6 +146,7 @@ export function calculateScheduleD(
     section1202ExcludedGain: section1202.excludedGain,
     section1202RateGain: section1202.rateGain,
     section1202AmtPreference: section1202.amtPreference,
+    section1202HadDisposition: section1202.hadDisposition,
     capitalLossDeduction: limited.capitalLossDeduction,
     capitalLossCarryforward: limited.capitalLossCarryforward,
     capitalLossCarryforwardST: limited.capitalLossCarryforwardST,
@@ -150,15 +155,16 @@ export function calculateScheduleD(
 }
 
 /**
- * 28% Rate Gain Worksheet amount before the net-long-term cap: net
- * collectibles, minus a net short-term loss and the long-term carryover.
+ * 28% Rate Gain Worksheet amount before the net-long-term cap.
+ * `rateGainBeforeLosses` is net collectibles plus non-excluded §1202 gain.
+ * A net short-term loss and the long-term carryover are subtracted after that sum.
  */
 export function collectibles28RateGain(
-  netCollectibles: number,
+  rateGainBeforeLosses: number,
   netShortTerm: number,
   ltCarryover: number,
 ): number {
-  let rateGain = netCollectibles;
+  let rateGain = rateGainBeforeLosses;
   if (netShortTerm < 0) {
     rateGain = round2(rateGain - Math.abs(netShortTerm));
   }

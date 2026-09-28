@@ -171,7 +171,7 @@ export function calculateAMT(
   unrecapturedSection1250Gain?: number,
   taxYear: number = 2025,
   collectiblesGain: number = 0,
-  section1202AmtPreference: number = 0,
+  section1202AmtPreference?: number,
 ): AMTResult {
   const amtData = taxReturn.amtData;
 
@@ -216,8 +216,8 @@ export function calculateAMT(
   const privateActivityBondInterest = amtData?.privateActivityBondInterest || 0;
 
   // Line 2h: 7% of excluded §1202 gain on 50% and 75% stock.
-  // Sales on the return compute the preference. A typed amount is used when there is no sale.
-  const qsbsExclusion = section1202AmtPreference > 0
+  // A computed sale, including a 100% exclusion with a zero preference, replaces a typed amount.
+  const qsbsExclusion = section1202AmtPreference !== undefined
     ? section1202AmtPreference
     : (amtData?.qsbsExclusion || 0);
 

@@ -2086,6 +2086,8 @@ export interface ScheduleDResult {
   section1202RateGain: number;
   /** Form 6251 line 2h: 7% of the excluded gain on 50% and 75% stock. */
   section1202AmtPreference: number;
+  /** True when a QSBS disposition was on the return, including a 100% exclusion. */
+  section1202HadDisposition: boolean;
   /**
    * Long-term collectibles gain taxed at the 28% maximum (IRC §1(h)(4)).
    * Lesser of the 28% rate gain and net long-term gain, including section 1231.
