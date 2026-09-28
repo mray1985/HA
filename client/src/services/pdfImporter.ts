@@ -339,6 +339,12 @@ function processTextBlocks(
       if (spanNumericFields.length === 0) {
         spanWarnings.push('No numeric values were extracted. The PDF layout may not be in a recognized format.');
       }
+      // Scope OCR text to this form's pages — classifyExtractionPiece needs
+      // per-piece rawOCRText or it treats missing text as an empty scan and
+      // wipes detectedFormType / matchedMarkers for secondary forms.
+      const spanRawOCRText = ocrUsed
+        ? spanBlocks.map((b) => b.text).join('\n')
+        : undefined;
       additionalResults.push({
         formType: span.type,
         confidence: span.confidence,
@@ -350,6 +356,7 @@ function processTextBlocks(
         textBlockCount: spanBlocks.length,
         trace: generateImportTrace(span.type, span.confidence, span.matchedKeywords, spanData.extractedData, spanBlocks.length, span.endPage - span.startPage + 1),
         ocrUsed,
+        rawOCRText: spanRawOCRText,
       });
     }
     // Filter out results with zero extracted values (non-form pages)

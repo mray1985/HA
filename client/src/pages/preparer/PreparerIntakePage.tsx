@@ -11,7 +11,7 @@ import {
   registerDroppedDocument,
 } from '../../services/documentIngestion';
 import type { PDFExtractResult, SupportedFormType } from '../../services/pdfExtractHelpers';
-import type { TaxFact } from '@hatax/engine';
+import { selectDocumentExtractKind, type TaxFact } from '@hatax/engine';
 
 interface IntakeRow {
   fileName: string;
@@ -34,11 +34,25 @@ export default function PreparerIntakePage() {
   };
 
   const readOne = async (file: File): Promise<PDFExtractResult> => {
-    if (file.type.startsWith('image/')) {
+    // Step 5: images and scanned PDFs use the existing Tesseract OCR path.
+    // Digital PDFs stay on the text-layer extractor. No new OCR engine.
+    const kind = selectDocumentExtractKind({
+      mimeType: file.type,
+      fileName: file.name,
+    });
+    if (kind === 'image') {
       return extractFromImage(file);
     }
     const digital = await extractFromPDF(file);
-    if (digital.ocrAvailable || digital.errors.some((e) => /scan/i.test(e))) {
+    const afterProbe = selectDocumentExtractKind({
+      mimeType: file.type,
+      fileName: file.name,
+      digital: {
+        ocrAvailable: digital.ocrAvailable,
+        errors: digital.errors,
+      },
+    });
+    if (afterProbe === 'scanned_pdf') {
       return extractFromPDFWithOCR(file);
     }
     return digital;
@@ -215,14 +229,14 @@ export default function PreparerIntakePage() {
         <p className="text-xs uppercase tracking-wide text-HATaxService-orange-400 mb-2">New client</p>
         <h1 className="text-3xl font-bold text-white mb-3">Drop the client’s forms</h1>
         <p className="text-slate-300 text-sm leading-relaxed mb-6">
-          W-2s and 1099s are identified from form markers, then read into this return. Each file is hashed and stored with provenance. Unrecognized documents stay unclassified and are not written as income. The assistant does not invent form types or amounts. You still review the return before anyone files it.
+          W-2s and 1099s are identified from form markers, then read into this return. Photos and scanned PDFs use the local OCR path already in the app; digital PDFs use the text layer. Each file is hashed and stored with provenance. Empty or unreadable scans stay unclassified and are not written as income. Low OCR confidence stays low. The assistant does not invent form types or amounts. You still review the return before anyone files it.
         </p>
         <label className="block border border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-HATaxService-orange-500">
           <span className="text-white font-medium">{busy ? 'Reading forms...' : 'Choose PDFs or photos'}</span>
           <p className="text-xs text-slate-400 mt-2">
             {byok
-              ? 'Scanned pages are sent to the model after names and ID numbers are stripped.'
-              : 'Digital PDFs are read on this computer. Turn on the assistant key to read scans.'}
+              ? 'Scans are read with local OCR on this computer; the model may check fields after names and ID numbers are stripped.'
+              : 'Digital PDFs and scans are read on this computer with the built-in OCR path. No cloud model is required.'}
           </p>
           <input
             type="file"

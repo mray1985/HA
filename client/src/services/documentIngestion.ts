@@ -1,17 +1,20 @@
 /**
- * Preparer document ingestion pipeline (work-order steps 3–4).
- * Hashes the dropped file, stores provenance metadata, classifies form type
- * from extractor markers, then turns extracted fields into TaxFacts through
- * the existing tax-tool API. Unclassified documents never write income.
- * Reuses the existing PDF/image extract path — no new OCR engine or model download.
+ * Preparer document ingestion pipeline (work-order steps 3–5).
+ * Hashes the dropped file, stores provenance metadata, runs the existing
+ * PDF/OCR extract path, classifies form type from OCR/text markers, then
+ * turns extracted fields into TaxFacts through the tax-tool API.
+ * Unclassified / empty-OCR documents never write income.
+ * No new OCR engine or model download — Tesseract path already in the client.
  */
 
 import {
   assertImportedValuesHaveSource,
   classificationAllowsIncomeWrite,
   classifyDocument,
+  classificationInputFromOcr,
   createIngestedDocument,
   findDocumentByHash,
+  ocrExtractorLabel,
   screenDocument,
   type DocumentClassification,
   type DocumentClassificationRecord,
@@ -146,16 +149,18 @@ function classificationRecord(c: DocumentClassification): DocumentClassification
 }
 
 /**
- * Classify one extraction piece from text / importer markers already on the result.
- * Does not invent a form type when markers are missing.
+ * Classify one extraction piece via the OCR bridge (step 5) then classifier (step 4).
+ * Empty OCR text clears form labels; OCR confidence is never upgraded.
  */
 export function classifyExtractionPiece(extracted: PDFExtractResult): DocumentClassification {
-  return classifyDocument({
+  const bridge = classificationInputFromOcr({
     text: extracted.rawOCRText ?? null,
+    ocrUsed: extracted.ocrUsed === true,
+    confidence: extracted.confidence,
     detectedFormType: extracted.formType,
     matchedMarkers: extracted.trace?.formDetection.matchedKeywords ?? [],
-    detectedConfidence: extracted.confidence,
   });
+  return classifyDocument(bridge.classifyInput);
 }
 
 /**
@@ -292,9 +297,10 @@ export function applyExtractionToDocument(input: {
     .filter((p) => classificationAllowsIncomeWrite(p.classification))
     .map((p) => p.classification.formType)
     .filter((t): t is NonNullable<typeof t> => Boolean(t));
+  const anyOcr = piecesRaw.some((p) => p.ocrUsed === true);
   const extractor =
     pieces.find((p) => p.facts[0]?.extractor)?.facts[0]?.extractor ??
-    (input.extracted.aiEnhanced ? 'local-pdf+byok' : input.extracted.ocrUsed ? 'local-ocr' : 'local-pdf');
+    ocrExtractorLabel(anyOcr || input.extracted.ocrUsed === true, input.extracted.aiEnhanced === true);
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
   const classificationRecords = classifications.map(classificationRecord);
