@@ -16,8 +16,7 @@
  */
 
 import { encrypt, decrypt, getActiveKey } from './crypto';
-
-const CHAT_KEY_PREFIX = 'hatax:chat:';
+import { CHAT_KEY_PREFIX } from './storageScope';
 
 function chatKey(returnId: string): string {
   return `${CHAT_KEY_PREFIX}${returnId}`;

@@ -137,7 +137,7 @@ function classifyError(err: any): {
 /** Scrub potential API keys and secrets from error messages before logging. */
 function scrubSecrets(text: string): string {
   // Anthropic API keys: sk-ant-api03-...
-  let scrubbed = text.replace(/sk-ant-[A-Za-z0-9_-]{10,}/g, '[REDACTED_API_KEY]');
+  let scrubbed = text.replace(/sk-(?:ant|or)-[A-Za-z0-9_-]{10,}/g, '[REDACTED_API_KEY]');
   // Generic Bearer tokens
   scrubbed = scrubbed.replace(/Bearer\s+[A-Za-z0-9_.-]{20,}/gi, 'Bearer [REDACTED]');
   // Truncate to prevent excessively long error dumps

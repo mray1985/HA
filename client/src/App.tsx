@@ -6,7 +6,6 @@ import PledgePage from './pages/PledgePage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import OfflineBanner from './components/common/OfflineBanner';
-import LockScreen from './components/common/LockScreen';
 import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './services/crypto';
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useAISettingsStore } from './store/aiSettingsStore';

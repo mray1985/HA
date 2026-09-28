@@ -18,7 +18,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { handleLLMError, handleRouteError } from '../services/errorSanitizer.js';
-import { rawAnthropicCompletionWithKey } from '../services/anthropicClient.js';
+import { apiKeyError, rawCompletionWithUserKey } from '../services/llmProvider.js';
 import { config } from '../config.js';
 import { stripPII } from '../services/piiStripper.js';
 import { checkRateLimit as sharedCheckRateLimit, getClientIp, sendRateLimitResponse } from '../services/rateLimiter.js';
@@ -35,9 +35,9 @@ const router = Router();
 const FieldExtractionSchema = z.object({
   ocrText: z.string().min(10).max(20_000),
   formTypeHint: z.string().max(20).nullable(),
-  provider: z.literal('anthropic'),
-  apiKey: z.string().min(1).max(200),
-  model: z.string().min(1).max(100),
+  provider: z.enum(['anthropic', 'openrouter']),
+  apiKey: z.string().min(1).max(300),
+  model: z.string().min(1).max(150),
 });
 
 // ─── Route ──────────────────────────────────────────
@@ -74,15 +74,12 @@ router.post('/fields', async (req: Request, res: Response) => {
       return;
     }
 
-    const { ocrText, formTypeHint, apiKey, model } = parseResult.data;
+    const { ocrText, formTypeHint, apiKey, model, provider } = parseResult.data;
 
-    // 3. Validate API key format
-    if (!apiKey.startsWith('sk-ant-')) {
+    const keyError = apiKeyError(provider, apiKey);
+    if (keyError) {
       res.status(400).json({
-        error: {
-          message: 'Invalid Anthropic API key format. Keys start with "sk-ant-".',
-          code: 'INVALID_API_KEY',
-        },
+        error: { message: keyError, code: 'INVALID_API_KEY' },
       });
       return;
     }
@@ -104,7 +101,7 @@ router.post('/fields', async (req: Request, res: Response) => {
     // 6. Dispatch to Anthropic
     let raw: string;
     try {
-      raw = await rawAnthropicCompletionWithKey(apiKey, model, messages, EXTRACTION_SYSTEM_PROMPT);
+      raw = await rawCompletionWithUserKey(provider, apiKey, model, messages, EXTRACTION_SYSTEM_PROMPT);
     } catch (err: any) {
       if (handleLLMError(err, res, 'extract')) return;
       throw err;

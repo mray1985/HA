@@ -1,12 +1,42 @@
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getActiveKey, encrypt as encryptStr, decrypt as decryptStr } from '../services/crypto';
+
+export type AccountRole = 'taxpayer' | 'preparer';
+
+function apiUrl(path: string): string {
+  const base = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
+  return `${base}${path}`;
+}
+
+function roleAllowed(role: string, audience?: AccountRole): boolean {
+  if (!audience) return true;
+  if (audience === 'taxpayer') return role === 'taxpayer';
+  return role === 'preparer' || role === 'admin';
+}
+
+function wrongAudienceMessage(audience: AccountRole): string {
+  return audience === 'taxpayer'
+    ? 'This account belongs to the preparer app.'
+    : 'This account belongs to the taxpayer app.';
+}
 
 export interface User {
   id: number;
   email: string;
   name: string;
   role: string;
+  subscriptionStatus?: string;
+  subscriptionUntil?: string | null;
+}
+
+export function preparerSeatActive(user: User | null): boolean {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (user.role !== 'preparer') return false;
+  if (user.subscriptionStatus !== 'active' || !user.subscriptionUntil) return false;
+  return new Date(user.subscriptionUntil).getTime() > Date.now();
 }
 
 interface AuthState {
@@ -16,9 +46,10 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (email: string, password: string, audience?: AccountRole) => Promise<void>;
+  register: (email: string, password: string, name: string, role: AccountRole) => Promise<void>;
   logout: () => Promise<void>;
+  activateSeason: () => Promise<void>;
   fetchMe: () => Promise<void>;
   setUser: (user: User | null) => void;
   setAccessToken: (token: string | null) => void;
@@ -74,10 +105,10 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, audience?: AccountRole) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch('/api/auth/login', {
+          const res = await fetch(apiUrl('/api/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -87,6 +118,13 @@ export const useAuthStore = create<AuthState>()(
           const data = await res.json();
           if (!res.ok) {
             throw new Error(data.error?.message || 'Login failed');
+          }
+
+          if (!roleAllowed(data.data.user.role, audience)) {
+            await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
+            const message = wrongAudienceMessage(audience || 'taxpayer');
+            set({ user: null, accessToken: null, isAuthenticated: false, error: message, isLoading: false });
+            throw new Error(message);
           }
 
           const newState = {
@@ -104,19 +142,19 @@ export const useAuthStore = create<AuthState>()(
 
           set(newState);
         } catch (err: any) {
-          set({ error: err.message, isLoading: false });
+          set({ error: err.message, isLoading: false, user: null, accessToken: null, isAuthenticated: false });
           throw err;
         }
       },
 
-      register: async (email: string, password: string, name: string) => {
+      register: async (email: string, password: string, name: string, role: AccountRole) => {
         set({ isLoading: true, error: null });
         try {
-          const res = await fetch('/api/auth/register', {
+          const res = await fetch(apiUrl('/api/auth/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ email, password, name }),
+            body: JSON.stringify({ email, password, name, role }),
           });
 
           const data = await res.json();
@@ -144,9 +182,36 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      activateSeason: async () => {
+        const token = get().accessToken;
+        set({ isLoading: true, error: null });
+        try {
+          const res = await fetch(apiUrl('/api/auth/subscription/activate'), {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: 'include',
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error?.message || 'Could not start the season');
+          }
+          const next = {
+            user: data.data.user,
+            accessToken: get().accessToken,
+            isAuthenticated: true,
+          };
+          const enc = await encryptAuthState(next);
+          if (enc) localStorage.setItem(AUTH_ENC_KEY, enc);
+          set({ ...next, isLoading: false });
+        } catch (err: any) {
+          set({ error: err.message, isLoading: false });
+          throw err;
+        }
+      },
+
       logout: async () => {
         try {
-          await fetch('/api/auth/logout', {
+          await fetch(apiUrl('/api/auth/logout'), {
             method: 'POST',
             credentials: 'include',
           });
@@ -167,7 +232,7 @@ export const useAuthStore = create<AuthState>()(
 
         set({ isLoading: true });
         try {
-          const res = await fetch('/api/auth/me', {
+          const res = await fetch(apiUrl('/api/auth/me'), {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -227,3 +292,12 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+export function useAuthHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+  useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) setHydrated(true);
+    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+  }, []);
+  return hydrated;
+}

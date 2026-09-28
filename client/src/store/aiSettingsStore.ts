@@ -38,6 +38,7 @@ interface AISettingsState extends AISettings {
   // BYOK
   setBYOKApiKey: (key: string) => void;
   setBYOKModel: (model: string) => void;
+  setBYOKProvider: (provider: 'anthropic' | 'openrouter') => void;
   clearBYOKKey: () => void;
 
   // Encryption lifecycle
@@ -67,17 +68,23 @@ export const useAISettingsStore = create<AISettingsState>()(
       setBYOKApiKey: (key) => {
         set({
           byokApiKey: '', // Clear plaintext from persisted state
-          byokApiKeys: { anthropic: '' },
+          byokApiKeys: { anthropic: '', openrouter: '' },
           _decryptedApiKey: key,
         });
         // Encrypt and save asynchronously
         get().saveApiKeyEncrypted(key);
       },
       setBYOKModel: (byokModel) => set({ byokModel }),
+      setBYOKProvider: (byokProvider: 'anthropic' | 'openrouter') => set((state) => ({
+        byokProvider,
+        byokModel: byokProvider === 'openrouter'
+          ? (state.byokModel.includes('/') ? state.byokModel : 'openai/gpt-4o-mini')
+          : (state.byokModel.startsWith('claude-') ? state.byokModel : 'claude-haiku-4-5-20251001'),
+      })),
       clearBYOKKey: () => {
         set({
           byokApiKey: '',
-          byokApiKeys: { anthropic: '' },
+          byokApiKeys: { anthropic: '', openrouter: '' },
           _decryptedApiKey: '',
         });
         localStorage.removeItem(ENC_KEY_STORAGE);
@@ -142,7 +149,7 @@ export const useAISettingsStore = create<AISettingsState>()(
           try {
             const encrypted = await encryptStr(oldKey, cryptoKey);
             localStorage.setItem(ENC_KEY_STORAGE, encrypted);
-            set({ byokApiKey: '', byokApiKeys: { anthropic: '' }, _decryptedApiKey: oldKey });
+            set({ byokApiKey: '', byokApiKeys: { anthropic: '', openrouter: '' }, _decryptedApiKey: oldKey });
           } catch { /* encryption failed */ }
           // Clean up migration stash
           localStorage.removeItem('hatax:ai-key-migrate');
@@ -165,11 +172,11 @@ export const useAISettingsStore = create<AISettingsState>()(
     }),
     {
       name: 'hatax:ai-settings',
-      version: 5,
+      version: 6,
       // Exclude _decryptedApiKey and byokApiKey from persistence
       partialize: (state) => {
         const { _decryptedApiKey, byokApiKey, byokApiKeys, ...rest } = state;
-        return { ...rest, byokApiKey: '', byokApiKeys: { anthropic: '' } };
+        return { ...rest, byokApiKey: '', byokApiKeys: { anthropic: '', openrouter: '' } };
       },
       migrate: (persisted: any, version: number) => {
         if (version < 2) {
@@ -189,6 +196,12 @@ export const useAISettingsStore = create<AISettingsState>()(
           delete persisted.paidProvider;
           delete persisted.paidSessionToken;
           delete persisted.paidSessionExpiry;
+        }
+        if (version < 6) {
+          persisted.byokApiKeys = {
+            anthropic: persisted.byokApiKeys?.anthropic || '',
+            openrouter: persisted.byokApiKeys?.openrouter || '',
+          };
         }
         if (version < 5) {
           // v4 → v5: Stash the plaintext key in a separate localStorage key

@@ -14,7 +14,9 @@ import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useAISettingsStore } from './store/aiSettingsStore';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
-import { useAuthStore } from './store/authStore';
+import { preparerSeatActive, useAuthHydrated, useAuthStore } from './store/authStore';
+import PreparerPaywallPage from './pages/preparer/PreparerPaywallPage';
+import PreparerIntakePage from './pages/preparer/PreparerIntakePage';
 
 type AppState = 'initializing' | 'lock-setup' | 'lock-unlock' | 'unlocked';
 
@@ -25,7 +27,8 @@ export default function PreparerApp() {
   const [lockError, setLockError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hiddenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { isAuthenticated, fetchMe } = useAuthStore();
+  const authHydrated = useAuthHydrated();
+  const { isAuthenticated, user, fetchMe } = useAuthStore();
   const location = useLocation();
 
   const handleUnlock = async (passphrase: string): Promise<boolean> => {
@@ -127,8 +130,8 @@ export default function PreparerApp() {
   if (isPublicPage) {
     return (
       <Routes>
-        <Route path="/preparer/login" element={<LoginPage />} />
-        <Route path="/preparer/register" element={<RegisterPage />} />
+        <Route path="/preparer/login" element={<LoginPage audience="preparer" />} />
+        <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
         <Route path="/pledge" element={<PledgePage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
@@ -156,8 +159,18 @@ export default function PreparerApp() {
         />
       );
     }
-    if (!isAuthenticated) {
+    if (!authHydrated) {
+      return (
+        <div className="min-h-screen bg-surface-900 flex items-center justify-center">
+          <p className="text-slate-400 animate-pulse">Loading...</p>
+        </div>
+      );
+    }
+    if (!isAuthenticated || (user?.role !== 'preparer' && user?.role !== 'admin')) {
       return <Navigate to="/preparer/login" replace />;
+    }
+    if (!preparerSeatActive(user)) {
+      return <PreparerPaywallPage />;
     }
     return <>{children}</>;
   };
@@ -173,8 +186,8 @@ export default function PreparerApp() {
       </a>
       <main id="main-content">
         <Routes>
-          <Route path="/preparer/login" element={<LoginPage />} />
-          <Route path="/preparer/register" element={<RegisterPage />} />
+          <Route path="/preparer/login" element={<LoginPage audience="preparer" />} />
+          <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
           <Route
             path="/preparer"
             element={
@@ -196,6 +209,14 @@ export default function PreparerApp() {
             element={
               <ProtectedRoute>
                 <PreparerClientPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/preparer/intake/:id"
+            element={
+              <ProtectedRoute>
+                <PreparerIntakePage />
               </ProtectedRoute>
             }
           />

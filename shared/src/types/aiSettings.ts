@@ -17,7 +17,7 @@
 export type AIMode = 'private' | 'byok';
 
 /** Cloud LLM provider supported for BYOK mode. */
-export type AIProvider = 'anthropic';
+export type AIProvider = 'anthropic' | 'openrouter';
 
 // ─── Settings Shape ───────────────────────────────
 
@@ -27,11 +27,11 @@ export interface AISettings {
   mode: AIMode;
 
   // ── BYOK settings ──
-  /** Cloud provider for BYOK mode (always Anthropic). */
+  /** Cloud provider for BYOK mode. */
   byokProvider: AIProvider;
-  /** User's Anthropic API key. */
+  /** User's API key for the active provider. */
   byokApiKey: string;
-  /** Per-provider API keys (Anthropic only). */
+  /** Per-provider API keys. */
   byokApiKeys: Record<AIProvider, string>;
   /** Model to use with the BYOK provider. */
   byokModel: string;
@@ -46,7 +46,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   mode: 'private',
   byokProvider: 'anthropic',
   byokApiKey: '',
-  byokApiKeys: { anthropic: '' },
+  byokApiKeys: { anthropic: '', openrouter: '' },
   byokModel: 'claude-haiku-4-5-20251001',
   hasConsentedToCloudAI: false,
 };

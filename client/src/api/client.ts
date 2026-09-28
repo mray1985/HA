@@ -25,8 +25,10 @@ import {
 } from '../services/crypto';
 import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersistence';
 
-const RETURNS_KEY = 'hatax:returns';
-const returnKey = (id: string) => `hatax:return:${id}`;
+import { RETURN_LIST_KEY, returnStorageKey } from '../services/storageScope';
+
+const RETURNS_KEY = RETURN_LIST_KEY;
+const returnKey = (id: string) => returnStorageKey(id);
 
 // ─── In-Memory Cache (populated on unlock) ──────
 

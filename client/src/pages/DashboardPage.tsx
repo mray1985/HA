@@ -113,6 +113,7 @@ interface DashboardProps {
 export default function DashboardPage({ lockMode, onUnlock, lockError }: DashboardProps = {}) {
   const isLocked = !!lockMode;
   const navigate = useNavigate();
+  const [installPrompt, setInstallPrompt] = useState<Event & { prompt: () => Promise<void> } | null>(null);
   const [returns, setReturns] = useState<TaxReturn[]>(() => isLocked ? [] : listReturns());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmWipeAll, setConfirmWipeAll] = useState(false);
@@ -215,6 +216,15 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, [refresh]);
+
+  useEffect(() => {
+    const onPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as Event & { prompt: () => Promise<void> });
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
 
   const hasConsented = () => localStorage.getItem('hatax:consent') !== null;
 
@@ -356,12 +366,23 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
     <div className="min-h-screen bg-surface-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
-        <div className="mb-2">
-          <h1 className="text-4xl sm:text-5xl font-bold">HA Tax service</h1>
-          <p className="text-slate-400 text-sm">2025 Tax Year</p>
+        <div className="mb-2 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-bold">HA Tax service</h1>
+            <p className="text-slate-400 text-sm">2025 Tax Year</p>
+          </div>
+          {!isLocked && installPrompt && (
+            <button
+              type="button"
+              onClick={() => { void installPrompt.prompt(); }}
+              className="text-sm text-slate-300 hover:text-white shrink-0 pt-2"
+            >
+              Install app
+            </button>
+          )}
         </div>
         <p className="text-slate-400 mb-8 mt-2">
-          Free, private, open-source tax prep.
+          Free, private, open-source tax prep. Install it from your browser to open it from this computer and keep working offline.
         </p>
 
         {/* Value props */}
@@ -386,7 +407,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
           >
             <Lock className="w-6 h-6 text-HATaxService-orange-400 mb-2.5" />
             <h3 className="font-semibold text-slate-200 text-sm mb-1 group-hover:text-white transition-colors">Private</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">Your tax data stays on your device. Nothing is sent to any server.</p>
+            <p className="text-xs text-slate-400 leading-relaxed">Your tax data stays on your device. After you install the app, it keeps working offline.</p>
             <span className="text-xs text-slate-400 mt-2 group-hover:text-white transition-colors">Learn more &rarr;</span>
           </button>
           {/* TODO: replace stub contact link */}
@@ -505,7 +526,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
             <button onClick={handleCreate} className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg bg-HATaxService-blue-600 hover:bg-HATaxService-blue-500 text-white transition-colors">
               <Plus className="w-5 h-5" /> Start My Tax Return
             </button>
-            <p className="text-xs text-slate-400 mt-4">Your data stays in your browser — no account needed.</p>
+            <p className="text-xs text-slate-400 mt-4">No account needed. Your return stays in this browser, encrypted with your passphrase.</p>
           </div>
         ) : (
           <div className="space-y-3">

@@ -58,6 +58,9 @@ jobs:
       - name: Type-check shared engine
         run: npx tsc -p shared/tsconfig.json --noEmit
 
+      - name: Type-check TaxFact compile-time assertions
+        run: npx tsc -p shared/tsconfig.tests.json --noEmit
+
       - name: Type-check client
         run: npx tsc -p client/tsconfig.json --noEmit
 

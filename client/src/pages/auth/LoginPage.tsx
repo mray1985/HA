@@ -1,20 +1,26 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, type AccountRole } from '../../store/authStore';
 import { CheckpointInput } from '../../hooks/useCheckpoint';
 
-export default function LoginPage() {
+const COPY: Record<AccountRole, { title: string; redirect: string; registerPath: string }> = {
+  taxpayer: { title: 'HATax', redirect: '/', registerPath: '/register' },
+  preparer: { title: 'HATax Preparer', redirect: '/preparer', registerPath: '/preparer/register' },
+};
+
+export default function LoginPage({ audience = 'preparer' }: { audience?: AccountRole }) {
   const navigate = useNavigate();
   const { login, error, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const copy = COPY[audience];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(email, password);
-      navigate('/preparer');
+      await login(email, password, audience);
+      navigate(copy.redirect);
     } catch {
       // Error handled by store
     }
@@ -24,7 +30,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-surface-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">HATax Preparer</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{copy.title}</h1>
           <p className="text-slate-400">Sign in to your account</p>
         </div>
 
@@ -90,7 +96,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-slate-400 text-sm">
             Don&apos;t have an account?{' '}
-            <Link to="/preparer/register" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
+            <Link to={copy.registerPath} className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
               Create an account
             </Link>
           </p>

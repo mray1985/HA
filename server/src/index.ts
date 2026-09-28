@@ -2,9 +2,13 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import chatRoutes from './routes/chat.js';
 import batchRoutes from './routes/batch.js';
 import extractRoutes from './routes/extract.js';
+import { authRoutes } from './routes/auth.js';
 import { config } from './config.js';
 
 const app = express();
@@ -21,12 +25,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'"],
-      connectSrc: ["'self'", ...(process.env.API_ORIGIN ? [process.env.API_ORIGIN] : [])],
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "blob:", ...(process.env.API_ORIGIN ? [process.env.API_ORIGIN] : [])],
       imgSrc: ["'self'", "data:", "blob:"],
       workerSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'", "blob:"],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -46,10 +51,15 @@ const DEFAULT_ORIGINS = [
   'http://localhost:5173',   // Vite dev server
   'http://localhost:4173',   // Vite preview
   'http://127.0.0.1:5173',
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
 ];
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
-  : DEFAULT_ORIGINS;
+const ALLOWED_ORIGINS = [
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+    : []),
+  ...DEFAULT_ORIGINS,
+];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -64,8 +74,10 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/batch', batchRoutes);
 app.use('/api/extract', extractRoutes);
@@ -86,6 +98,28 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Built site, when client/dist is present. Same origin as /api so sign-in works
+// without a separate dev proxy.
+function findClientDist(): string | null {
+  const candidates = [
+    process.env.CLIENT_DIST,
+    resolve(process.cwd(), 'client', 'dist'),
+    resolve(process.cwd(), '..', 'client', 'dist'),
+  ].filter((dir): dir is string => Boolean(dir));
+  return candidates.find((dir) => existsSync(resolve(dir, 'index.html'))) ?? null;
+}
+
+const clientDist = findClientDist();
+if (clientDist) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (req.path.startsWith('/api')) return next();
+    const preparer = req.path === '/preparer' || req.path.startsWith('/preparer/');
+    res.sendFile(resolve(clientDist, preparer ? 'preparer.html' : 'index.html'));
+  });
+}
+
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Server error:', err);
@@ -98,7 +132,10 @@ process.on('SIGINT', () => {
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`Tax API server running on http://0.0.0.0:${PORT}`);
+  console.log(`Tax API server running on http://127.0.0.1:${PORT}`);
+  if (clientDist) {
+    console.log(`Site: http://127.0.0.1:${PORT}`);
+  }
 });
 
 export default app;

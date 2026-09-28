@@ -98,11 +98,14 @@ export class BYOKTransport implements ChatTransport {
     }
 
     // Basic format validation
-    if (!this.apiKey.startsWith('sk-ant-')) {
+    const prefix = this.provider === 'openrouter' ? 'sk-or-' : 'sk-ant-';
+    if (!this.apiKey.startsWith(prefix)) {
       return {
         ready: false,
         model: null,
-        error: 'Invalid Anthropic API key format. Keys start with "sk-ant-".',
+        error: this.provider === 'openrouter'
+          ? 'Invalid OpenRouter API key format. Keys start with "sk-or-".'
+          : 'Invalid Anthropic API key format. Keys start with "sk-ant-".',
       };
     }
 

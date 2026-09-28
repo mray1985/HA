@@ -6,6 +6,7 @@
 import type { Page } from '@playwright/test';
 import type { FuzzerTaxReturn } from '../generators/base';
 import { handleEncryptionGate, setupEncryptionProgrammatically, FUZZER_PASSPHRASE } from './lock-screen';
+import { ensureTaxpayerSession } from '../../helpers/unlock';
 
 const USE_PROGRAMMATIC_ENCRYPTION = process.env.FUZZER_ENCRYPTION === 'programmatic';
 
@@ -35,9 +36,10 @@ export async function injectAndOpen(page: Page, taxReturn: FuzzerTaxReturn): Pro
   // client-side click after the gate is dismissed.
   await page.reload();
   await handleEncryptionGate(page);
+  await ensureTaxpayerSession(page);
 
   const openReturn = page.getByRole('button', { name: /Continue where you left off/i });
-  await openReturn.waitFor({ state: 'visible', timeout: 10000 });
+  await openReturn.waitFor({ state: 'visible', timeout: 30000 });
   await openReturn.click();
   await page.waitForURL(new RegExp(`/return/${taxReturn.id}`));
   await page.getByRole('button', { name: /Let.*Go|^Continue$|^Done/i }).first()

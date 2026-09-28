@@ -11,7 +11,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { stripPII, stripConversationHistory, stripContext } from '../services/piiStripper.js';
-import { anthropicCompletionWithKey } from '../services/anthropicClient.js';
+import { apiKeyError, completionWithUserKey } from '../services/llmProvider.js';
 import { config } from '../config.js';
 import { getSystemPrompt } from '../services/systemPrompt.js';
 import { handleLLMError, handleRouteError } from '../services/errorSanitizer.js';
@@ -39,9 +39,9 @@ const ChatRequestSchema = z.object({
 });
 
 const BYOKRequestSchema = ChatRequestSchema.extend({
-  provider: z.literal('anthropic'),
-  apiKey: z.string().min(1).max(200),
-  model: z.string().min(1).max(100),
+  provider: z.enum(['anthropic', 'openrouter']),
+  apiKey: z.string().min(1).max(300),
+  model: z.string().min(1).max(150),
   taxYear: z.number().int().min(2020).max(2030).default(2025),
 });
 
@@ -128,16 +128,13 @@ router.post('/byok', async (req: Request, res: Response) => {
       return;
     }
 
-    const { message, conversationHistory, context, apiKey, model, taxYear } =
+    const { message, conversationHistory, context, apiKey, model, taxYear, provider } =
       parseResult.data;
 
-    // 3. Validate API key format (basic sanity check — never log the key)
-    if (!apiKey.startsWith('sk-ant-')) {
+    const keyError = apiKeyError(provider, apiKey);
+    if (keyError) {
       res.status(400).json({
-        error: {
-          message: 'Invalid Anthropic API key format. Keys start with "sk-ant-".',
-          code: 'INVALID_API_KEY',
-        },
+        error: { message: keyError, code: 'INVALID_API_KEY' },
       });
       return;
     }
@@ -152,7 +149,8 @@ router.post('/byok', async (req: Request, res: Response) => {
     // 5. Call Anthropic with the user's key (one-shot, key never stored)
     let response: ChatResponse;
     try {
-      response = await anthropicCompletionWithKey(
+      response = await completionWithUserKey(
+        provider,
         apiKey,
         model,
         messages,
