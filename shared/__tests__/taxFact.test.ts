@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { factsFromFields, fieldsForToolCall, isExtractedValue, type TaxFact } from '../src/taxfacts/taxFact.js';
+import {
+  factsFromFields,
+  fieldsForToolCall,
+  isExtractedValue,
+  normalizeSourceLocation,
+  type TaxFact,
+} from '../src/taxfacts/taxFact.js';
 
 const source = {
   returnId: 'ret-1',
@@ -202,5 +208,57 @@ describe('TaxFact unknown-is-not-zero', () => {
     });
     expect(invented.sourcePage).toBeUndefined();
     expect(invented.sourceBox).toBeUndefined();
+  });
+
+  it('rejects page 0, zero-size, and negative-size boxes as non-locatable', () => {
+    expect(
+      normalizeSourceLocation({ page: 0, box: { x: 10, y: 10, width: 20, height: 8 } }),
+    ).toBeUndefined();
+    expect(
+      normalizeSourceLocation({ page: 1.5, box: { x: 10, y: 10, width: 20, height: 8 } }),
+    ).toBeUndefined();
+    expect(
+      normalizeSourceLocation({ page: 1, box: { x: 10, y: 10, width: 0, height: 8 } }),
+    ).toBeUndefined();
+    expect(
+      normalizeSourceLocation({ page: 1, box: { x: 10, y: 10, width: 20, height: 0 } }),
+    ).toBeUndefined();
+    expect(
+      normalizeSourceLocation({ page: 1, box: { x: 10, y: 10, width: -2, height: 8 } }),
+    ).toBeUndefined();
+    expect(
+      normalizeSourceLocation({ page: 1, box: { x: Number.NaN, y: 10, width: 20, height: 8 } }),
+    ).toBeUndefined();
+
+    const [zeroPage] = factsFromFields({
+      ...source,
+      fields: { wages: 100 },
+      sourceLocation: { wages: { page: 0, box: { x: 1, y: 1, width: 10, height: 5 } } },
+    });
+    expect(zeroPage.sourcePage).toBeUndefined();
+    expect(zeroPage.sourceBox).toBeUndefined();
+
+    const [zeroWidth] = factsFromFields({
+      ...source,
+      fields: { wages: 100 },
+      sourceLocation: { wages: { page: 1, box: { x: 1, y: 1, width: 0, height: 5 } } },
+    });
+    expect(zeroWidth.sourcePage).toBeUndefined();
+    expect(zeroWidth.sourceBox).toBeUndefined();
+  });
+
+  it('does not collapse per-entry box12 locations onto a single TaxFact box', () => {
+    const entries = [
+      { page: 1, box: { x: 10, y: 20, width: 30, height: 8 } },
+      { page: 1, box: { x: 10, y: 40, width: 30, height: 8 } },
+    ];
+    const [fact] = factsFromFields({
+      ...source,
+      fields: { box12: [{ code: 'D', amount: 5000 }, { code: 'DD', amount: 1200 }] },
+      sourceLocation: { box12: entries },
+    });
+    expect(fact.sourcePage).toBeUndefined();
+    expect(fact.sourceBox).toBeUndefined();
+    expect(fact.value).toEqual([{ code: 'D', amount: 5000 }, { code: 'DD', amount: 1200 }]);
   });
 });

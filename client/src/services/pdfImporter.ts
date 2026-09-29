@@ -56,6 +56,7 @@ export type {
   TextBlock,
   PDFExtractResult,
   FieldSourceLocation,
+  FieldSourceLocationValue,
   ImportTrace,
   ImportTraceEntry,
   FormDetectionTrace,
@@ -89,7 +90,7 @@ import {
   FORM_TYPE_LABELS,
   type TextBlock,
   type PDFExtractResult,
-  type FieldSourceLocation,
+  type FieldSourceLocationValue,
   type FormPageSpan,
 } from './pdfExtractHelpers';
 
@@ -108,12 +109,12 @@ function extractFormData(
   extractedData: Record<string, unknown>;
   payerName: string;
   fieldRawTokens: Record<string, string>;
-  fieldSourceLocations: Record<string, FieldSourceLocation>;
+  fieldSourceLocations: Record<string, FieldSourceLocationValue>;
 } {
   let extractedData: Record<string, unknown> = {};
   let payerName = '';
   const fieldRawTokens: Record<string, string> = {};
-  const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
+  const fieldSourceLocations: Record<string, FieldSourceLocationValue> = {};
   switch (formType) {
     case 'W-2':
       extractedData = extractW2Fields(blocks, fieldRawTokens, fieldSourceLocations);

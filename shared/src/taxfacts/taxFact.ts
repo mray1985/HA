@@ -74,9 +74,18 @@ export type FieldRawTextSource =
   | Record<string, string>
   | ((field: string) => string | undefined);
 
+/**
+ * Per-field provenance. Scalar fields map to one location.
+ * Multi-entry fields (W-2 box12) may map to one entry per located item;
+ * those arrays are not collapsed into a single TaxFact box.
+ */
+export type FieldSourceLocationValue =
+  | TaxFactSourceLocation
+  | Array<TaxFactSourceLocation | undefined>;
+
 export type FieldSourceLocationSource =
-  | Record<string, TaxFactSourceLocation | undefined>
-  | ((field: string) => TaxFactSourceLocation | undefined);
+  | Record<string, FieldSourceLocationValue | undefined>
+  | ((field: string) => FieldSourceLocationValue | undefined);
 
 export function isExtractedValue(value: unknown): value is TaxFactValue {
   if (value === undefined || value === null) return false;
@@ -128,7 +137,8 @@ export function normalizeSourceLocation(
 ): TaxFactSourceLocation | undefined {
   if (!location) return undefined;
   const { page, box } = location;
-  if (!isFiniteNumber(page)) return undefined;
+  // 1-based page only — page 0 / fractional / negative cannot identify a token.
+  if (!Number.isInteger(page) || page < 1) return undefined;
   if (!box || typeof box !== 'object') return undefined;
   if (
     !isFiniteNumber(box.x) ||
@@ -138,6 +148,8 @@ export function normalizeSourceLocation(
   ) {
     return undefined;
   }
+  // Zero or negative size cannot highlight a token (e.g. Syncfusion missing bounds).
+  if (box.width <= 0 || box.height <= 0) return undefined;
   return {
     page,
     box: { x: box.x, y: box.y, width: box.width, height: box.height },
@@ -150,6 +162,8 @@ function sourceLocationForField(
 ): TaxFactSourceLocation | undefined {
   if (!source) return undefined;
   const location = typeof source === 'function' ? source(field) : source[field];
+  // Per-entry arrays (box12) are not a single fact box — leave the fact without one.
+  if (Array.isArray(location)) return undefined;
   return normalizeSourceLocation(location);
 }
 

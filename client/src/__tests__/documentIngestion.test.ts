@@ -1055,4 +1055,133 @@ describe('documentIngestion client pipeline', () => {
     expect(applied.facts.every((f) => f.sourceField !== 'amount' || f.status === 'unknown')).toBe(true);
     expect(applied.unclassified).toBeUndefined();
   });
+
+  it('drops stale source box when an AI override changes the value', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const wagesBox = { x: 417, y: 75, width: 50, height: 7 };
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: 62000, // AI changed from 61482.17
+        federalTaxWithheld: 0,
+      },
+      fieldRawTokens: {
+        wages: '$61,482.17',
+        federalTaxWithheld: '$0.00',
+        employerName: 'Acme',
+      },
+      fieldSourceLocations: {
+        wages: { page: 1, box: wagesBox },
+        federalTaxWithheld: { page: 1, box: { x: 540, y: 75, width: 25, height: 7 } },
+        employerName: { page: 1, box: { x: 39, y: 100, width: 80, height: 7 } },
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      aiEnhanced: true,
+      ocrUsed: true,
+      ocrAvailable: true,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'test',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: baseDoc(),
+      extracted,
+    });
+
+    const wages = applied.facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.value).toBe(62000);
+    expect(wages?.rawText).not.toBe('$61,482.17');
+    expect(wages?.sourcePage).toBeUndefined();
+    expect(wages?.sourceBox).toBeUndefined();
+
+    // Unchanged printed 0 still keeps its source
+    const withheld = applied.facts.find((f) => f.sourceField === 'federalTaxWithheld');
+    expect(withheld?.value).toBe(0);
+    expect(withheld?.rawText).toBe('$0.00');
+    expect(withheld?.sourcePage).toBe(1);
+    expect(withheld?.sourceBox).toEqual({ x: 540, y: 75, width: 25, height: 7 });
+
+    // Employer name still agrees with its token — keep the box
+    const employer = applied.facts.find((f) => f.sourceField === 'employerName');
+    expect(employer?.value).toBe('Acme');
+    expect(employer?.sourcePage).toBe(1);
+    expect(employer?.sourceBox).toEqual({ x: 39, y: 100, width: 80, height: 7 });
+  });
+
+  it('keeps source box when an AI override leaves the same text', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const wagesBox = { x: 417, y: 75, width: 50, height: 7 };
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: 61482.17,
+        federalTaxWithheld: 0,
+      },
+      fieldRawTokens: {
+        wages: '$61,482.17',
+        federalTaxWithheld: '$0.00',
+        employerName: 'Acme',
+      },
+      fieldSourceLocations: {
+        wages: { page: 1, box: wagesBox },
+        federalTaxWithheld: { page: 1, box: { x: 540, y: 75, width: 25, height: 7 } },
+        employerName: { page: 1, box: { x: 39, y: 100, width: 80, height: 7 } },
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 4,
+      aiEnhanced: true,
+      ocrUsed: true,
+      ocrAvailable: true,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'test',
+        textBlockCount: 4,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: baseDoc(),
+      extracted,
+    });
+
+    const wages = applied.facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.value).toBe(61482.17);
+    expect(wages?.rawText).toBe('$61,482.17');
+    expect(wages?.sourcePage).toBe(1);
+    expect(wages?.sourceBox).toEqual(wagesBox);
+  });
 });
