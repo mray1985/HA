@@ -1,9 +1,15 @@
 /**
- * OCR bridge (work-order step 5 / HA-AI-014 development-order OCR).
+ * OCR bridge (work-order step 5 / HA-AI-014).
  *
- * Does NOT download models or add a new OCR engine. Callers run the existing
- * client extractors (extractFromPDFWithOCR / extractFromImage / digital PDF)
- * and pass those signals here before classification and tax tools.
+ * Spec OCR models (Q4_K_M GGUF via llama-cpp-python — see ggufOcr.ts):
+ *   Tier 1: ibm-granite/granite-docling-258M
+ *   Tier 2: lightonai/LightOnOCR-2-1B
+ * Tesseract remains only when both model files are absent (or the GGUF
+ * runtime fails). Callers run preferred OCR then pass signals here before
+ * classification and tax tools. CI must not download weights.
+ *
+ * This module stays browser-safe (no node:fs / spawn). Node resolve + invoke
+ * live in ggufOcr.ts (import directly from Node/tests, like lfmToolCaller).
  *
  * Invariants:
  * - OCR confidence is preserved and never upgraded through classification.
@@ -28,15 +34,33 @@ const CONFIDENCE_RANK: Record<ClassificationConfidence, number> = {
 /** Which existing client extract path should run for a dropped file. */
 export type DocumentExtractKind = 'image' | 'scanned_pdf' | 'digital_pdf';
 
+/** OCR backend cascade: Granite Docling → LightOnOCR → Tesseract. */
+export type OcrBackend = 'granite-docling' | 'lightonocr' | 'tesseract';
+
 /**
- * Signals produced by the existing PDF / image extractors (Tesseract OCR or
- * digital text layer). Shared code stays free of DOM / File APIs.
+ * Pure engine selection from local Q4_K_M presence flags.
+ * Granite Docling first, then LightOnOCR, else Tesseract.
+ */
+export function selectOcrBackend(presence: {
+  granitePresent: boolean;
+  lightonPresent: boolean;
+}): OcrBackend {
+  if (presence.granitePresent) return 'granite-docling';
+  if (presence.lightonPresent) return 'lightonocr';
+  return 'tesseract';
+}
+
+/**
+ * Signals produced by PDF / image extractors (Granite Docling / LightOnOCR /
+ * Tesseract, or digital text layer). Shared code stays free of DOM / File APIs.
  */
 export interface OcrExtractionSignals {
   /** Raw OCR or extract text (preferred classification haystack). */
   text?: string | null;
-  /** True when Tesseract (or equivalent existing local OCR) produced the text. */
+  /** True when local OCR produced the text. */
   ocrUsed?: boolean;
+  /** Which OCR backend produced the text (when known). */
+  ocrEngine?: OcrBackend | null;
   /** Extractor-reported form / field confidence. */
   confidence?: ClassificationConfidence | null;
   detectedFormType?: string | null;
@@ -64,7 +88,7 @@ export function ocrSourceConfidence(input: {
   if (!input.ocrUsed) {
     return input.confidence ?? null;
   }
-  // Existing Tesseract path reports low; never upgrade past that floor policy.
+  // Local OCR path reports low; never upgrade past that floor policy.
   const reported = input.confidence ?? 'low';
   return CONFIDENCE_RANK[reported] <= CONFIDENCE_RANK.low ? reported : 'low';
 }
@@ -158,8 +182,27 @@ export function selectDocumentExtractKind(input: {
   return 'digital_pdf';
 }
 
+/** Provenance stamp for a concrete OCR engine. */
+export function ocrModelExtractorLabel(engine: OcrBackend): string {
+  if (engine === 'granite-docling') return 'local-ocr-granite-docling';
+  if (engine === 'lightonocr') return 'local-ocr-lightonocr';
+  return 'local-ocr';
+}
+
 /** Extractor stamp for provenance when OCR was used. */
-export function ocrExtractorLabel(ocrUsed: boolean, aiEnhanced?: boolean): string {
-  if (aiEnhanced) return ocrUsed ? 'local-ocr+byok' : 'local-pdf+byok';
-  return ocrUsed ? 'local-ocr' : 'local-pdf';
+export function ocrExtractorLabel(
+  ocrUsed: boolean,
+  aiEnhanced?: boolean,
+  engine?: OcrBackend | null,
+): string {
+  if (aiEnhanced) {
+    if (!ocrUsed) return 'local-pdf+byok';
+    if (engine && engine !== 'tesseract') {
+      return `${ocrModelExtractorLabel(engine)}+byok`;
+    }
+    return 'local-ocr+byok';
+  }
+  if (!ocrUsed) return 'local-pdf';
+  if (engine && engine !== 'tesseract') return ocrModelExtractorLabel(engine);
+  return 'local-ocr';
 }

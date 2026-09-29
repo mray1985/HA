@@ -34,7 +34,8 @@ export default function PreparerIntakePage() {
   };
 
   const readOne = async (file: File): Promise<PDFExtractResult> => {
-    // Step 5: images and scanned PDFs use the existing Tesseract OCR path.
+    // Step 5: images and scanned PDFs prefer Granite Docling / LightOnOCR Q4_K_M,
+    // then fall back to Tesseract when both GGUFs are absent.
     // Digital PDFs stay on the text-layer extractor. No new OCR engine.
     const kind = selectDocumentExtractKind({
       mimeType: file.type,

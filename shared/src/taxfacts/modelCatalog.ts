@@ -80,10 +80,12 @@ export const WORK_ORDER_MODELS: readonly WorkOrderModelEntry[] = [
     role: 'classifier',
     ggufRepoId: null,
     q4FileName: null,
-    localRelativeDir: null,
+    // Transformers safetensors live here (gitignored). Not a GGUF path.
+    localRelativeDir: join('models', 'hsarfraz', 'donut-irs-tax-docs-classifier'),
     availability: 'unavailable',
+    // Q4_K_M does not exist for this Donut vision architecture.
     unavailableReason:
-      'No official GGUF or Q4_K_M published; Donut vision classifier is not a llama.cpp text GGUF target',
+      'No official GGUF or Q4_K_M published; Donut vision classifier uses native transformers (not llama.cpp)',
   },
   {
     repoId: 'ibm-granite/granite-docling-258M',

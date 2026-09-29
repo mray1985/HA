@@ -1,10 +1,14 @@
 /**
- * Deterministic document classifier (work-order step 4 / HA-AI-013).
- * Identifies IRS form type from text / importer markers already produced by
- * the existing PDF extract path. No OCR engine, no model download, no guessing.
+ * Document classifier (work-order step 4 / HA-AI-013).
+ *
+ * Spec model: hsarfraz/donut-irs-tax-docs-classifier (native transformers /
+ * Donut vision — see donutClassifier.ts). Q4_K_M does not exist for this
+ * architecture; do not invent a GGUF. Keyword markers below are the FALLBACK
+ * when Donut weights are absent or the vision runtime cannot run.
  *
  * UNKNOWN / unclassified must never become a form type or a zero amount.
- * Every classified result cites which marker matched.
+ * Every classified result cites which marker matched (or the Donut label).
+ * The model proposes a type; tax tools / validation still decide writes.
  */
 
 /** Form types the classifier can assert from markers. */
@@ -59,6 +63,7 @@ export type ClassifiedIncomeType =
 export type ClassificationConfidence = 'high' | 'medium' | 'low';
 
 export type ClassificationSource =
+  | 'donut_model'
   | 'text_markers'
   | 'importer_markers'
   | 'none';

@@ -35,7 +35,11 @@ export function appendTaxFacts(returnId: string, facts: TaxFact[]): TaxFact[] {
 }
 
 function extractorLabel(extracted: PDFExtractResult): string {
-  return ocrExtractorLabel(extracted.ocrUsed === true, extracted.aiEnhanced === true);
+  return ocrExtractorLabel(
+    extracted.ocrUsed === true,
+    extracted.aiEnhanced === true,
+    extracted.ocrEngine ?? null,
+  );
 }
 
 /**

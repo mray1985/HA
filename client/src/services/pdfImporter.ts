@@ -6,7 +6,9 @@
  *   that traditional text extraction misses
  * - Structured text extraction — bounding boxes for proximity matching
  *
- * Uses Tesseract.js (lazy-loaded) for OCR on scanned/image PDFs.
+ * OCR cascade for scanned/image PDFs (work-order models):
+ *   Granite Docling Q4_K_M → LightOnOCR Q4_K_M → Tesseract.js fallback
+ * (see ocrService / modelOcrBridge / shared ggufOcr).
  * Uses pdf-lib for PDF generation (unchanged).
  *
  * All processing runs client-side. Data never leaves the browser.
@@ -211,11 +213,12 @@ function extractFormData(
 function processTextBlocks(
   textBlocks: TextBlock[],
   pagesScanned: number,
-  meta?: { ocrUsed?: boolean },
+  meta?: { ocrUsed?: boolean; ocrEngine?: PDFExtractResult['ocrEngine'] },
 ): PDFExtractResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const ocrUsed = meta?.ocrUsed ?? false;
+  const ocrEngine = meta?.ocrEngine;
 
   if (ocrUsed) {
     warnings.push('This data was extracted using OCR from a scanned document. Accuracy is limited — please carefully verify every value.');
@@ -297,6 +300,7 @@ function processTextBlocks(
       textBlockCount: textBlocks.length,
       trace: generateImportTrace(null, 'low', matchedKeywords, {}, textBlocks.length, pagesScanned, pageRangeInfo),
       ocrUsed,
+      ocrEngine,
     };
   }
 
@@ -372,6 +376,7 @@ function processTextBlocks(
         textBlockCount: spanBlocks.length,
         trace: generateImportTrace(span.type, span.confidence, span.matchedKeywords, spanData.extractedData, spanBlocks.length, span.endPage - span.startPage + 1),
         ocrUsed,
+        ocrEngine,
         rawOCRText: spanRawOCRText,
       });
     }
@@ -398,6 +403,7 @@ function processTextBlocks(
     textBlockCount: effectiveBlocks.length,
     trace: generateImportTrace(type, confidence, matchedKeywords, extractedData, effectiveBlocks.length, pagesScanned, pageRangeInfo),
     ocrUsed,
+    ocrEngine,
     rawOCRText,
     additionalResults,
   };
@@ -477,7 +483,8 @@ export async function extractFromPDF(file: File): Promise<PDFExtractResult> {
 
 /**
  * Extract data from a scanned/image-based PDF using OCR.
- * Renders pages to canvas at 300 DPI, then runs Tesseract.js OCR.
+ * Renders pages to canvas at 300 DPI, then runs preferred OCR
+ * (Granite Docling → LightOnOCR → Tesseract).
  */
 export async function extractFromPDFWithOCR(
   file: File,
@@ -486,7 +493,7 @@ export async function extractFromPDFWithOCR(
   const canvases: HTMLCanvasElement[] = [];
   try {
     // Lazy-load OCR modules to keep them out of the main bundle
-    const [{ renderPDFToImages }, { recognizeImages }] = await Promise.all([
+    const [{ renderPDFToImages }, { recognizeImages, getLastOcrEngine }] = await Promise.all([
       import('./pdfToImages'),
       import('./ocrService'),
     ]);
@@ -500,6 +507,7 @@ export async function extractFromPDFWithOCR(
     // BEFORE groupWordsToLines(), so yTolerance=5 operates in point space
     // and findNearbyNumber(maxDistance=200) searches the expected range.
     const textBlocks = await recognizeImages(canvases, onProgress, dpi / 72);
+    const ocrEngine = getLastOcrEngine();
 
     if (textBlocks.length === 0) {
       return {
@@ -512,10 +520,11 @@ export async function extractFromPDFWithOCR(
         errors: ['OCR could not extract any text from this document. The image quality may be too low.'],
         textBlockCount: 0,
         ocrUsed: true,
+        ocrEngine,
       };
     }
 
-    return processTextBlocks(textBlocks, canvases.length, { ocrUsed: true });
+    return processTextBlocks(textBlocks, canvases.length, { ocrUsed: true, ocrEngine });
   } catch (err: any) {
     return {
       formType: null,
@@ -582,7 +591,7 @@ export async function extractFromImage(
   let imageBitmap: ImageBitmap | null = null;
   try {
     // Lazy-load OCR module
-    const { recognizeImage } = await import('./ocrService');
+    const { recognizeImage, getLastOcrEngine } = await import('./ocrService');
 
     onProgress?.('loading', 5);
 
@@ -611,6 +620,7 @@ export async function extractFromImage(
     const scaleFactor = imageBitmap.width > 0 ? imageBitmap.width / PDF_LETTER_WIDTH : 1;
 
     const textBlocks = await recognizeImage(imageBitmap, onProgress, scaleFactor);
+    const ocrEngine = getLastOcrEngine();
 
     // Close bitmap immediately after OCR — free GPU/memory before processing results
     imageBitmap.close();
@@ -627,10 +637,11 @@ export async function extractFromImage(
         errors: ['OCR could not extract any text from this image. Try a clearer photo with good lighting.'],
         textBlockCount: 0,
         ocrUsed: true,
+        ocrEngine,
       };
     }
 
-    return processTextBlocks(textBlocks, 1, { ocrUsed: true });
+    return processTextBlocks(textBlocks, 1, { ocrUsed: true, ocrEngine });
   } catch (err: any) {
     return {
       formType: null,

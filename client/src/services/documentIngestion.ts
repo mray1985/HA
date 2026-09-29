@@ -1,10 +1,11 @@
 /**
  * Preparer document ingestion pipeline (work-order steps 3–5).
- * Hashes the dropped file, stores provenance metadata, runs the existing
- * PDF/OCR extract path, classifies form type from OCR/text markers, then
- * turns extracted fields into TaxFacts through the tax-tool API.
+ * Hashes the dropped file, stores provenance metadata, runs the preferred
+ * OCR path (Granite Docling → LightOnOCR → Tesseract), classifies form type
+ * (Donut when weights are present; keyword markers as fallback), then turns
+ * extracted fields into TaxFacts through the tax-tool API.
  * Unclassified / empty-OCR documents never write income.
- * No new OCR engine or model download — Tesseract path already in the client.
+ * CI must not download model weights.
  */
 
 import {
@@ -306,9 +307,17 @@ export function applyExtractionToDocument(input: {
     .map((p) => p.classification.formType)
     .filter((t): t is NonNullable<typeof t> => Boolean(t));
   const anyOcr = piecesRaw.some((p) => p.ocrUsed === true);
+  const ocrEngine =
+    input.extracted.ocrEngine ??
+    piecesRaw.find((p) => p.ocrEngine)?.ocrEngine ??
+    null;
   const extractor =
     pieces.find((p) => p.facts[0]?.extractor)?.facts[0]?.extractor ??
-    ocrExtractorLabel(anyOcr || input.extracted.ocrUsed === true, input.extracted.aiEnhanced === true);
+    ocrExtractorLabel(
+      anyOcr || input.extracted.ocrUsed === true,
+      input.extracted.aiEnhanced === true,
+      ocrEngine,
+    );
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
   const classificationRecords = classifications.map(classificationRecord);

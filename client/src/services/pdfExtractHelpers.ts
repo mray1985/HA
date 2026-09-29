@@ -59,6 +59,8 @@ export interface PDFExtractResult {
   textBlockCount: number;
   trace?: ImportTrace;
   ocrUsed?: boolean;             // true when OCR was used (lower confidence)
+  /** Which OCR backend produced text: granite-docling | lightonocr | tesseract. */
+  ocrEngine?: 'granite-docling' | 'lightonocr' | 'tesseract';
   ocrAvailable?: boolean;        // true when PDF appears scanned and OCR can be tried
   rawOCRText?: string;           // Raw OCR text for AI enhancement (only when ocrUsed)
   aiEnhanced?: boolean;          // Set after AI enhancement applied
