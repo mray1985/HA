@@ -60,6 +60,7 @@ export function factsForExtraction(input: {
     const structured = extractStructuredFields(
       input.extracted.incomeType,
       input.extracted.extractedData,
+      input.extracted.fieldRawTokens,
     );
     const result = invokeTaxTool({
       tool,
@@ -91,7 +92,10 @@ export function factsForExtraction(input: {
   }
 
   const prefix = (input.extracted.incomeType || input.extracted.formType || 'DOC').toUpperCase();
-  const generic = normalizeGenericFields(input.extracted.extractedData);
+  const generic = normalizeGenericFields(
+    input.extracted.extractedData,
+    input.extracted.fieldRawTokens,
+  );
   const facts = factsFromFields({
     returnId: input.returnId,
     taxYear: input.taxYear,

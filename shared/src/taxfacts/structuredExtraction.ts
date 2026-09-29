@@ -187,7 +187,7 @@ function normalizeBox12(value: unknown): Normalized {
   for (const item of value) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
     const row = item as Record<string, unknown>;
-    const code = typeof row.code === 'string' ? row.code.trim() : '';
+    const code = typeof row.code === 'string' ? row.code.trim().toUpperCase() : '';
     if (typeof row.amount === 'string' && code) rawParts.push(`${code}:${row.amount}`);
     if (!code) continue;
     const amount = normalizeMoney(row.amount);
@@ -246,7 +246,13 @@ function normalizeSimplifiedMethod(value: unknown): Normalized {
   };
   if (Object.prototype.hasOwnProperty.call(row, 'combinedAge')) {
     const combined = normalizeMoney(row.combinedAge);
-    if (combined.status === 'extracted') simplified.combinedAge = combined.value;
+    // A supplied but unreadable combinedAge must not silently drop — the engine
+    // would fall back to the single-life table under joint-and-survivor and
+    // compute the wrong taxable pension. Keep the whole worksheet unknown.
+    if (combined.status !== 'extracted') {
+      return { status: 'unknown', rawText: rawOf(row.combinedAge) };
+    }
+    simplified.combinedAge = combined.value;
   }
   if (Object.prototype.hasOwnProperty.call(row, 'priorYearTaxFreeRecovery')) {
     const prior = normalizeMoney(row.priorYearTaxFreeRecovery);
@@ -283,10 +289,13 @@ function normalizeField(kind: FieldKind, value: unknown): Normalized {
 /**
  * Normalize one classified form's extractor bag into tax-tool arguments.
  * Unknown form types return no tool and an empty argument list.
+ * `fieldRawTokens` carries the extractor's original OCR/PDF tokens when the
+ * bag already holds parsed numbers (or undefined for an unreadable token).
  */
 export function extractStructuredFields(
   incomeType: string | null | undefined,
   data: Record<string, unknown>,
+  fieldRawTokens?: Record<string, string>,
 ): StructuredExtraction {
   const tool = toolNameForIncomeType(incomeType);
   if (!tool) return { tool: null, args: {}, rawText: {} };
@@ -295,10 +304,23 @@ export function extractStructuredFields(
   const args: Record<string, unknown> = {};
   const rawText: Record<string, string> = {};
 
-  for (const [key, kind] of Object.entries(schema)) {
-    if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
-    const normalized = normalizeField(kind, data[key]);
-    if (normalized.rawText) rawText[key] = normalized.rawText;
+  const keys = new Set([
+    ...Object.keys(data),
+    ...(fieldRawTokens ? Object.keys(fieldRawTokens) : []),
+  ]);
+
+  for (const key of keys) {
+    const kind = schema[key];
+    if (!kind) continue;
+    const hasData = Object.prototype.hasOwnProperty.call(data, key);
+    const externalRaw = fieldRawTokens?.[key];
+    // A raw token alone (unreadable OCR, value already stripped) still yields an unknown fact.
+    if (!hasData && externalRaw === undefined) continue;
+    const normalized = hasData
+      ? normalizeField(kind, data[key])
+      : { status: 'unknown' as const, rawText: '' };
+    const raw = externalRaw || normalized.rawText;
+    if (raw) rawText[key] = raw;
     if (normalized.status === 'extracted') args[key] = normalized.value;
     else args[key] = undefined;
   }
@@ -306,23 +328,48 @@ export function extractStructuredFields(
   return { tool, args, rawText };
 }
 
+/** Currency punctuation or a decimal marks an amount-shaped token (not a bare integer). */
+function isAmountShapedToken(value: string): boolean {
+  return /[$(),]/.test(value) || value.includes('.');
+}
+
 /**
  * Generic bags (forms without a tax tool): money-shaped strings become numbers.
- * Other text stays text. Unreadable money is not coerced. Numbers are not reprinted.
+ * Other text stays text. Unreadable money stays unknown. Numbers are not reprinted.
+ * `fieldRawTokens` preserves extractor OCR tokens when values are already numbers.
  */
-export function normalizeGenericFields(data: Record<string, unknown>): {
+export function normalizeGenericFields(
+  data: Record<string, unknown>,
+  fieldRawTokens?: Record<string, string>,
+): {
   fields: Record<string, unknown>;
   rawText: Record<string, string>;
 } {
   const fields: Record<string, unknown> = {};
   const rawText: Record<string, string> = {};
-  for (const [key, value] of Object.entries(data)) {
+  const keys = new Set([
+    ...Object.keys(data),
+    ...(fieldRawTokens ? Object.keys(fieldRawTokens) : []),
+  ]);
+  for (const key of keys) {
+    const hasData = Object.prototype.hasOwnProperty.call(data, key);
+    const externalRaw = fieldRawTokens?.[key];
+    if (!hasData) {
+      if (externalRaw !== undefined) {
+        fields[key] = undefined;
+        rawText[key] = externalRaw;
+      }
+      continue;
+    }
+    const value = data[key];
     if (value === undefined || value === null) {
       fields[key] = undefined;
+      if (externalRaw) rawText[key] = externalRaw;
       continue;
     }
     if (typeof value === 'number') {
       fields[key] = Number.isFinite(value) ? finishNumber(value) : undefined;
+      if (externalRaw) rawText[key] = externalRaw;
       continue;
     }
     if (typeof value === 'object') {
@@ -339,7 +386,8 @@ export function normalizeGenericFields(data: Record<string, unknown>): {
       const money = parseMoneyToken(value);
       // Currency punctuation or a decimal marks a money token.
       // A bare integer stays text so an account number is not turned into an amount.
-      if (money !== undefined && (/[$(),]/.test(value) || value.includes('.'))) {
+      if (isAmountShapedToken(value)) {
+        // Readable → number. Unreadable amount-shaped → unknown (not a string).
         fields[key] = money;
         rawText[key] = value;
         continue;

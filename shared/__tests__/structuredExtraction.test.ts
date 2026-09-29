@@ -164,4 +164,111 @@ describe('structured extraction', () => {
     expect(plain.fields.box12).toEqual([{ code: 'D', amount: 1 }]);
     expect(plain.fields.bad).toBeUndefined();
   });
+
+  it('rejects a joint-annuity worksheet when combinedAge is supplied but unreadable', () => {
+    const structured = extractStructuredFields('1099r', {
+      payerName: 'Plan',
+      grossDistribution: 10000,
+      useSimplifiedMethod: true,
+      simplifiedMethod: {
+        totalContributions: '$50,000',
+        ageAtStartDate: '65',
+        isJointAndSurvivor: 'yes',
+        paymentsThisYear: '12000',
+        combinedAge: '12O',
+      },
+    });
+    expect(structured.args.useSimplifiedMethod).toBe(true);
+    expect(structured.args.simplifiedMethod).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(structured.args, 'simplifiedMethod')).toBe(true);
+  });
+
+  it('keeps a readable combinedAge of 0 and omits a never-supplied combinedAge', () => {
+    const withZero = extractStructuredFields('1099r', {
+      simplifiedMethod: {
+        totalContributions: 50000,
+        ageAtStartDate: 65,
+        isJointAndSurvivor: true,
+        paymentsThisYear: 12000,
+        combinedAge: 0,
+      },
+    });
+    expect(withZero.args.simplifiedMethod).toEqual({
+      totalContributions: 50000,
+      ageAtStartDate: 65,
+      isJointAndSurvivor: true,
+      paymentsThisYear: 12000,
+      combinedAge: 0,
+    });
+    const omitted = extractStructuredFields('1099r', {
+      simplifiedMethod: {
+        totalContributions: 50000,
+        ageAtStartDate: 65,
+        isJointAndSurvivor: true,
+        paymentsThisYear: 12000,
+      },
+    });
+    expect(omitted.args.simplifiedMethod).toEqual({
+      totalContributions: 50000,
+      ageAtStartDate: 65,
+      isJointAndSurvivor: true,
+      paymentsThisYear: 12000,
+    });
+  });
+
+  it('keeps amount-shaped but unreadable generic tokens unknown', () => {
+    const generic = normalizeGenericFields({
+      totalBenefits: '12O.00',
+      federalTaxWithheld: '$0.00',
+      payerName: 'SSA',
+      account: '12345',
+    });
+    expect(generic.fields.totalBenefits).toBeUndefined();
+    expect(generic.rawText.totalBenefits).toBe('12O.00');
+    expect(generic.fields.federalTaxWithheld).toBe(0);
+    expect(generic.rawText.federalTaxWithheld).toBe('$0.00');
+    expect(generic.fields.payerName).toBe('SSA');
+    expect(generic.fields.account).toBe('12345');
+  });
+
+  it('uppercases Box 12 codes and drops an empty code', () => {
+    const structured = extractStructuredFields('w2', {
+      wages: 50000,
+      box12: [
+        { code: 'd', amount: '$1,200.00' },
+        { code: '  ee ', amount: 100 },
+        { code: '   ', amount: 50 },
+        { code: 'W', amount: 0 },
+      ],
+    });
+    expect(structured.args.box12).toEqual([
+      { code: 'D', amount: 1200 },
+      { code: 'EE', amount: 100 },
+      { code: 'W', amount: 0 },
+    ]);
+  });
+
+  it('applies extractor fieldRawTokens instead of stringifying numbers', () => {
+    const structured = extractStructuredFields(
+      'w2',
+      {
+        employerName: 'Acme',
+        wages: 61482.17,
+        federalTaxWithheld: 0,
+        medicareWages: undefined,
+      },
+      {
+        wages: '$61,482.17',
+        federalTaxWithheld: '$0.00',
+        medicareWages: '12O.00',
+      },
+    );
+    expect(structured.args.wages).toBe(61482.17);
+    expect(structured.args.federalTaxWithheld).toBe(0);
+    expect(structured.args.medicareWages).toBeUndefined();
+    expect(structured.rawText.wages).toBe('$61,482.17');
+    expect(structured.rawText.federalTaxWithheld).toBe('$0.00');
+    expect(structured.rawText.medicareWages).toBe('12O.00');
+    expect(structured.rawText.wages).not.toBe('61482.17');
+  });
 });
