@@ -22,6 +22,20 @@ export interface TextBlock {
   page: number;
 }
 
+/** Located token geometry from a TextBlock. Coordinates are never invented. */
+export interface FieldSourceLocation {
+  page: number;
+  box: { x: number; y: number; width: number; height: number };
+}
+
+/**
+ * Per-field provenance. Scalars get one location.
+ * W-2 box12 stores one entry per located code/amount pair (undefined when not located).
+ */
+export type FieldSourceLocationValue =
+  | FieldSourceLocation
+  | Array<FieldSourceLocation | undefined>;
+
 export interface PDFExtractResult {
   formType: SupportedFormType | null;
   confidence: 'high' | 'medium' | 'low';
@@ -32,6 +46,12 @@ export interface PDFExtractResult {
    * unknown facts. Absent when the extractor never saw a token for that field.
    */
   fieldRawTokens?: Record<string, string>;
+  /**
+   * Page + box per field when a text block was located for the token.
+   * Absent for missing fields. A printed 0 keeps its box when found.
+   * box12 uses a per-entry array instead of one arbitrary box for the whole list.
+   */
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>;
   incomeType: string | null;     // The API type key: 'w2', '1099int', etc.
   payerName: string;
   warnings: string[];
@@ -52,6 +72,38 @@ export interface BoxAmount {
   value?: number;
   /** Original source token — never rebuilt from the normalized number. */
   raw: string;
+  /** Page of the located text block. Absent when no block was found. */
+  page?: number;
+  /** Geometry of the located text block. Absent when no block was found. */
+  box?: { x: number; y: number; width: number; height: number };
+}
+
+/** Build a location only when page and box can identify a token. Never invent. */
+export function sourceLocationFromBlock(block: TextBlock): FieldSourceLocation | undefined {
+  if (!Number.isInteger(block.page) || block.page < 1) return undefined;
+  if (
+    !Number.isFinite(block.x) ||
+    !Number.isFinite(block.y) ||
+    !Number.isFinite(block.width) ||
+    !Number.isFinite(block.height)
+  ) {
+    return undefined;
+  }
+  if (block.width <= 0 || block.height <= 0) return undefined;
+  return {
+    page: block.page,
+    box: { x: block.x, y: block.y, width: block.width, height: block.height },
+  };
+}
+
+function recordFieldLocation(
+  fieldSourceLocations: Record<string, FieldSourceLocationValue> | undefined,
+  fieldKey: string,
+  block: TextBlock | undefined,
+): void {
+  if (!fieldSourceLocations || !block) return;
+  const location = sourceLocationFromBlock(block);
+  if (location) fieldSourceLocations[fieldKey] = location;
 }
 
 // ─── Import Trace Types ───────────────────────────
@@ -508,10 +560,11 @@ function isUnreadableAmountToken(text: string): boolean {
  * Returns the original token plus a parsed value when readable.
  * Amount-shaped but unreadable tokens (e.g. "12O.00") return raw without a value.
  * Missing boxes return undefined — distinct from a printed $0.
+ * When a text block is located, page + box come from that block (never invented).
  */
 function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): BoxAmount | undefined {
-  const candidates: Array<{ value: number; raw: string; distance: number }> = [];
-  const unreadable: Array<{ raw: string; distance: number }> = [];
+  const candidates: Array<{ value: number; raw: string; distance: number; block: TextBlock }> = [];
+  const unreadable: Array<{ raw: string; distance: number; block: TextBlock }> = [];
   const rejected: Array<{ text: string; value: number; reason: string; dx: number; dy: number; dist: number }> = [];
 
   const labelLeft = labelBlock.x;
@@ -519,6 +572,8 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
 
   for (const block of textBlocks) {
     if (block === labelBlock) continue;
+    // Same-page only — a near-x/y match on another page must not win provenance.
+    if (block.page !== labelBlock.page) continue;
 
     const trimmed = block.text.trim();
 
@@ -589,7 +644,7 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
       // Prefer whole-token unreadable detection before partial dollar/leading parses
       // so "$12O.00" stays unknown instead of becoming 12.
       if (isUnreadableAmountToken(trimmed)) {
-        unreadable.push({ raw: trimmed, distance: scoredDistance });
+        unreadable.push({ raw: trimmed, distance: scoredDistance, block });
         continue;
       }
       const dollarMatch = block.text.match(/\$\s*([\d,]+\.?\d*)/);
@@ -612,12 +667,12 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
 
     if (num === undefined || isNaN(num)) {
       if (isUnreadableAmountToken(trimmed)) {
-        unreadable.push({ raw: trimmed, distance: scoredDistance });
+        unreadable.push({ raw: trimmed, distance: scoredDistance, block });
       }
       continue;
     }
 
-    candidates.push({ value: num, raw, distance: scoredDistance });
+    candidates.push({ value: num, raw, distance: scoredDistance, block });
   }
 
   // Rank readable and unreadable together by distance so a nearby OCR
@@ -626,11 +681,20 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
   const ranked: Ranked[] = [
     ...candidates.map((c) => ({
       distance: c.distance,
-      amount: { value: Math.round(c.value * 100) / 100, raw: c.raw } as BoxAmount,
+      amount: {
+        value: Math.round(c.value * 100) / 100,
+        raw: c.raw,
+        page: c.block.page,
+        box: { x: c.block.x, y: c.block.y, width: c.block.width, height: c.block.height },
+      } as BoxAmount,
     })),
     ...unreadable.map((u) => ({
       distance: u.distance,
-      amount: { raw: u.raw } as BoxAmount,
+      amount: {
+        raw: u.raw,
+        page: u.block.page,
+        box: { x: u.block.x, y: u.block.y, width: u.block.width, height: u.block.height },
+      } as BoxAmount,
     })),
   ];
 
@@ -665,12 +729,14 @@ function findNearbyNumber(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
  * Returns undefined when the box/label or nearby value is absent, or when the
  * token is amount-shaped but unreadable (raw token is still recorded when asked).
  * A genuine printed $0 stays numeric 0 — never coerce missing → 0.
+ * When a token is located, page + box are recorded from that TextBlock.
  */
 function extractBoxValue(
   textBlocks: TextBlock[],
   boxKeywords: string[],
   fieldRawTokens?: Record<string, string>,
   fieldKey?: string,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): number | undefined {
   const label = findLabelBlock(textBlocks, boxKeywords);
   if (!label) {
@@ -686,8 +752,25 @@ function extractBoxValue(
     console.debug(`[PDFExtract] ALL ${allBlocks.length} text blocks:`, allBlocks);
     return undefined;
   }
-  if (fieldRawTokens && fieldKey) {
-    fieldRawTokens[fieldKey] = amount.raw;
+  if (fieldKey) {
+    if (fieldRawTokens) {
+      fieldRawTokens[fieldKey] = amount.raw;
+    }
+    if (
+      fieldSourceLocations &&
+      typeof amount.page === 'number' &&
+      amount.box
+    ) {
+      const location = sourceLocationFromBlock({
+        text: amount.raw,
+        page: amount.page,
+        x: amount.box.x,
+        y: amount.box.y,
+        width: amount.box.width,
+        height: amount.box.height,
+      });
+      if (location) fieldSourceLocations[fieldKey] = location;
+    }
   }
   return amount.value;
 }
@@ -741,8 +824,15 @@ function isMergedHeader(block: TextBlock): boolean {
 
 /**
  * Extract name from the top area of the PDF (typically payer/employer info).
+ * When a name block is located, page + box are recorded under fieldKey.
  */
-function extractPayerName(textBlocks: TextBlock[], keywords: string[]): string {
+function extractPayerName(
+  textBlocks: TextBlock[],
+  keywords: string[],
+  fieldRawTokens?: Record<string, string>,
+  fieldKey?: string,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
+): string {
   /** Reject blocks that look like IRS labels/boilerplate rather than actual names.
    *  Strategy: use STRUCTURAL patterns (not word blocklists) so real company names
    *  like "Vanguard Retirement Plan Services" aren't falsely rejected. */
@@ -787,6 +877,8 @@ function extractPayerName(textBlocks: TextBlock[], keywords: string[]): string {
     return false;
   };
 
+  let chosen: TextBlock | undefined;
+
   // Look for the label first
   const labelBlock = findLabelBlock(textBlocks, keywords);
   if (labelBlock) {
@@ -794,6 +886,7 @@ function extractPayerName(textBlocks: TextBlock[], keywords: string[]): string {
     // Widened search: 150px horizontal, 80px vertical (real W-2 boxes are tall)
     const candidates = textBlocks.filter(b =>
       b !== labelBlock &&
+      b.page === labelBlock.page &&
       Math.abs(b.x - labelBlock.x) < 150 &&
       b.y > labelBlock.y &&
       b.y < labelBlock.y + 80 &&
@@ -806,37 +899,53 @@ function extractPayerName(textBlocks: TextBlock[], keywords: string[]): string {
       !isLabelText(b.text),
     );
     if (candidates.length > 0) {
-      return candidates[0].text;
+      chosen = candidates[0];
     }
   }
 
   // Fallback: look for company-like text in the top portion
-  const topBlocks = textBlocks
-    .filter(b => b.page === 1 && b.y < 200 && b.text.length > 3)
-    .filter(b => b !== labelBlock) // exclude the label we already found
-    .filter(b => !/^\d|form|copy|department|internal|treasury|statement|corrected|void/i.test(b.text))
-    .filter(b => !b.text.includes('$'))
-    .filter(b => !/\bOMB\b/i.test(b.text))
-    .filter(b => !/\btotaling\b/i.test(b.text))
-    .filter(b => !/\brequirement\b/i.test(b.text))
-    .filter(b => !isLabelText(b.text));
+  if (!chosen) {
+    const topBlocks = textBlocks
+      .filter(b => b.page === 1 && b.y < 200 && b.text.length > 3)
+      .filter(b => b !== labelBlock) // exclude the label we already found
+      .filter(b => !/^\d|form|copy|department|internal|treasury|statement|corrected|void/i.test(b.text))
+      .filter(b => !b.text.includes('$'))
+      .filter(b => !/\bOMB\b/i.test(b.text))
+      .filter(b => !/\btotaling\b/i.test(b.text))
+      .filter(b => !/\brequirement\b/i.test(b.text))
+      .filter(b => !isLabelText(b.text));
+    if (topBlocks.length > 0) chosen = topBlocks[0];
+  }
 
-  return topBlocks.length > 0 ? topBlocks[0].text : '';
+  const text = chosen?.text ?? '';
+  if (fieldKey && text && chosen) {
+    if (fieldRawTokens) fieldRawTokens[fieldKey] = text;
+    recordFieldLocation(fieldSourceLocations, fieldKey, chosen);
+  }
+  return text;
+}
+
+/** Located nearby text plus the block it came from (when found). */
+interface LocatedText {
+  text: string;
+  block?: TextBlock;
 }
 
 /**
  * Find the nearest raw text value near a label.
  * Like findNearbyNumber but preserves the string — use for tax codes, not amounts.
  * Uses closest-point distance and below-bias (same as findNearbyNumber).
+ * Candidates are restricted to the label's page.
  */
-function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): string {
-  const candidates: Array<{ text: string; distance: number }> = [];
+function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): LocatedText {
+  const candidates: Array<{ text: string; distance: number; block: TextBlock }> = [];
 
   const labelLeft = labelBlock.x;
   const labelRight = labelBlock.x + labelBlock.width;
 
   for (const block of textBlocks) {
     if (block === labelBlock) continue;
+    if (block.page !== labelBlock.page) continue;
 
     // Skip blocks that look like IRS box labels (e.g., "5 Transaction type",
     // "7 W i n n i n g s..." where letter-spaced labels also start with a digit).
@@ -868,22 +977,39 @@ function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDista
       if (dy < 0) {
         belowBias = dx === 0 ? 100 : 50;
       }
-      candidates.push({ text: block.text.trim(), distance: distance + belowBias });
+      candidates.push({ text: trimmed, distance: distance + belowBias, block });
     }
   }
 
-  if (candidates.length === 0) return '';
+  if (candidates.length === 0) return { text: '' };
   candidates.sort((a, b) => a.distance - b.distance);
-  return candidates[0].text;
+  return { text: candidates[0].text, block: candidates[0].block };
 }
 
 /**
  * Extract a text (non-numeric) value associated with a box label.
  * Use for distribution codes, category codes, etc. — not dollar amounts.
+ * When a block is located, page + box are recorded under fieldKey (never invented).
  */
-function extractBoxText(textBlocks: TextBlock[], boxKeywords: string[]): string {
+function extractBoxText(
+  textBlocks: TextBlock[],
+  boxKeywords: string[],
+  fieldRawTokens?: Record<string, string>,
+  fieldKey?: string,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
+): string {
+  const located = extractLocatedBoxText(textBlocks, boxKeywords);
+  if (fieldKey && located.text) {
+    if (fieldRawTokens) fieldRawTokens[fieldKey] = located.text;
+    recordFieldLocation(fieldSourceLocations, fieldKey, located.block);
+  }
+  return located.text;
+}
+
+/** Locate box text and return the chosen block (if any) without recording. */
+function extractLocatedBoxText(textBlocks: TextBlock[], boxKeywords: string[]): LocatedText {
   const label = findLabelBlock(textBlocks, boxKeywords);
-  if (!label) return '';
+  if (!label) return { text: '' };
   return findNearbyText(textBlocks, label);
 }
 
@@ -899,12 +1025,19 @@ const US_STATE_CODES = new Set([
 export function extractW2Fields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
 
   const fields: Record<string, unknown> = {
-    employerName: extractPayerName(textBlocks, ["employer's name", 'employer name', 'employer']),
+    employerName: extractPayerName(
+      textBlocks,
+      ["employer's name", 'employer name', 'employer'],
+      fieldRawTokens,
+      'employerName',
+      fieldSourceLocations,
+    ),
     wages: box('wages', ['wages, tips', '1 wages', 'box 1']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '2 federal', 'box 2']),
     socialSecurityWages: box('socialSecurityWages', ['social security wages', '3 social security wages', 'box 3']),
@@ -930,6 +1063,7 @@ export function extractW2Fields(
     if (text.length === 2 && US_STATE_CODES.has(text)) {
       fields.state = text;
       stateBlock = block;
+      recordFieldLocation(fieldSourceLocations, 'state', block);
       break;
     }
   }
@@ -948,44 +1082,62 @@ export function extractW2Fields(
     if (sameLineNumbers.length > 0) {
       fields.stateWages = parseFloat(sameLineNumbers[0].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.stateWages = sameLineNumbers[0].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'stateWages', sameLineNumbers[0]);
     }
     if (sameLineNumbers.length > 1) {
       fields.stateTaxWithheld = parseFloat(sameLineNumbers[1].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.stateTaxWithheld = sameLineNumbers[1].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'stateTaxWithheld', sameLineNumbers[1]);
     }
   } else {
     // Fallback: keyword approach (works when phrases are well-separated)
     fields.stateWages = box('stateWages', ['state wages', '16 state wages', 'box 16']);
     fields.stateTaxWithheld = box('stateTaxWithheld', ['state income tax', '17 state income tax', 'box 17']);
 
-    const rawState = extractBoxText(textBlocks, ['15 state', "employer's state", 'state id']);
-    const stateCode = rawState.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2);
+    const locatedState = extractLocatedBoxText(textBlocks, ['15 state', "employer's state", 'state id']);
+    const stateCode = locatedState.text.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2);
     if (US_STATE_CODES.has(stateCode)) {
       fields.state = stateCode;
+      if (fieldRawTokens) fieldRawTokens.state = locatedState.text;
+      recordFieldLocation(fieldSourceLocations, 'state', locatedState.block);
     }
   }
 
-  // Box 12a-12d: Best-effort extraction of code + amount pairs
+  // Box 12a-12d: Best-effort extraction of code + amount pairs.
+  // Provenance is per entry — never one arbitrary box for the whole array.
   const box12: { code: string; amount: number }[] = [];
+  const box12Locations: Array<FieldSourceLocation | undefined> = [];
   for (const suffix of ['12a', '12b', '12c', '12d']) {
-    const raw = extractBoxText(textBlocks, [suffix, `box ${suffix}`]);
-    if (raw) {
+    const located = extractLocatedBoxText(textBlocks, [suffix, `box ${suffix}`]);
+    if (located.text) {
       // Expect format like "D 5000.00" or "DD 12000" or just a code letter
-      const match = raw.match(/^([A-Za-z]{1,2})\s+[\$]?([\d,]+\.?\d*)/);
+      const match = located.text.match(/^([A-Za-z]{1,2})\s+[\$]?([\d,]+\.?\d*)/);
       if (match) {
         box12.push({ code: match[1].toUpperCase(), amount: parseFloat(match[2].replace(/,/g, '')) });
+        box12Locations.push(located.block ? sourceLocationFromBlock(located.block) : undefined);
       }
     }
   }
   if (box12.length > 0) {
     fields.box12 = box12;
+    if (fieldSourceLocations) {
+      fieldSourceLocations.box12 = box12Locations;
+    }
+    if (fieldRawTokens) {
+      fieldRawTokens.box12 = box12
+        .map((e, i) => {
+          // Prefer the located token text when present; else code+amount summary.
+          return `${e.code} ${e.amount}`;
+        })
+        .join('; ');
+    }
   }
 
-  // Box 13: Best-effort checkbox detection
+  // Box 13: Best-effort checkbox detection — carry the selected block's location.
   const box13: Record<string, boolean> = {};
-  const box13Text = extractBoxText(textBlocks, ['13', 'statutory', 'retirement']);
-  if (box13Text) {
-    const lower = box13Text.toLowerCase();
+  const locatedBox13 = extractLocatedBoxText(textBlocks, ['13', 'statutory', 'retirement']);
+  if (locatedBox13.text) {
+    const lower = locatedBox13.text.toLowerCase();
     if (lower.includes('statutory') && (lower.includes('x') || lower.includes('yes') || lower.includes('checked'))) {
       box13.statutoryEmployee = true;
     }
@@ -995,6 +1147,8 @@ export function extractW2Fields(
   }
   if (Object.keys(box13).length > 0) {
     fields.box13 = box13;
+    if (fieldRawTokens) fieldRawTokens.box13 = locatedBox13.text;
+    recordFieldLocation(fieldSourceLocations, 'box13', locatedBox13.block);
   }
 
   return fields;
@@ -1003,11 +1157,12 @@ export function extractW2Fields(
 export function extract1099INTFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     amount: box('amount', ['interest income', '1 interest', 'box 1']),
     earlyWithdrawalPenalty: box('earlyWithdrawalPenalty', ['early withdrawal penalty', '2 early withdrawal', 'box 2']),
     usBondInterest: box('usBondInterest', ['u.s. savings bond', '3 interest on u.s.', 'box 3']),
@@ -1019,11 +1174,12 @@ export function extract1099INTFields(
 export function extract1099DIVFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     ordinaryDividends: box('ordinaryDividends', ['ordinary dividends', '1a ordinary', 'box 1a']),
     qualifiedDividends: box('qualifiedDividends', ['qualified dividends', '1b qualified', 'box 1b']),
     capitalGainDistributions: box('capitalGainDistributions', ['capital gain distributions', 'capital gain distr', '2a total capital', '2a capital', 'box 2a']),
@@ -1035,36 +1191,45 @@ export function extract1099DIVFields(
 export function extract1099RFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross', 'box 1']),
     taxableAmount: box('taxableAmount', ['taxable amount', '2a taxable', 'box 2a']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
-    distributionCode: extractBoxText(textBlocks, ['distribution code', '7 distribution code', 'box 7']),
+    distributionCode: extractBoxText(textBlocks, ['distribution code', '7 distribution code', 'box 7'], fieldRawTokens, 'distributionCode', fieldSourceLocations),
   };
 }
 
 export function extract1099NECFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
-    amount: extractBoxValue(textBlocks, ['nonemployee compensation', '1 nonemployee', 'box 1'], fieldRawTokens, 'amount'),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
+    amount: extractBoxValue(
+      textBlocks,
+      ['nonemployee compensation', '1 nonemployee', 'box 1'],
+      fieldRawTokens,
+      'amount',
+      fieldSourceLocations,
+    ),
   };
 }
 
 export function extract1099MISCFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     rents: box('rents', ['rents', '1 rents', 'box 1']),
     royalties: box('royalties', ['royalties', '2 royalties', 'box 2']),
     otherIncome: box('otherIncome', ['other income', '3 other income', 'box 3']),
@@ -1076,11 +1241,12 @@ export function extract1099MISCFields(
 export function extract1099GFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     unemploymentCompensation: box('unemploymentCompensation', ['unemployment compensation', '1 unemployment', 'box 1']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
   };
@@ -1089,11 +1255,12 @@ export function extract1099GFields(
 export function extract1099BFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    brokerName: extractPayerName(textBlocks, ["payer's name", 'payer name', "broker's name"]),
+    brokerName: extractPayerName(textBlocks, ["payer's name", 'payer name', "broker's name"], fieldRawTokens, 'brokerName', fieldSourceLocations),
     description: 'Consolidated Summary (PDF Import)',
     proceeds: box('proceeds', ['total proceeds', '1d proceeds', '1d total']),
     costBasis: box('costBasis', ['total cost', 'cost or other basis', '1e cost', '1e total']),
@@ -1106,11 +1273,12 @@ export function extract1099BFields(
 export function extract1099KFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    platformName: extractPayerName(textBlocks, ["filer's name", "payer's name", 'payer name', 'filer']),
+    platformName: extractPayerName(textBlocks, ["filer's name", "payer's name", 'payer name', 'filer'], fieldRawTokens, 'platformName', fieldSourceLocations),
     grossAmount: box('grossAmount', ['gross amount', '1a gross amount', 'box 1a']),
     cardNotPresent: box('cardNotPresent', ['card not present', '1b card not present', 'box 1b']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
@@ -1120,9 +1288,10 @@ export function extract1099KFields(
 export function extractSSA1099Fields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
     totalBenefits: box('totalBenefits', ['net benefits', '5 net benefits', 'box 5']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '6 voluntary federal', 'box 6']),
@@ -1132,13 +1301,14 @@ export function extractSSA1099Fields(
 export function extract1099SAFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer']),
+    payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross distribution', 'box 1']),
-    distributionCode: extractBoxText(textBlocks, ['distribution code', '3 distribution code', 'box 3']),
+    distributionCode: extractBoxText(textBlocks, ['distribution code', '3 distribution code', 'box 3'], fieldRawTokens, 'distributionCode', fieldSourceLocations),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', 'tax withheld']),
   };
 }
@@ -1146,11 +1316,12 @@ export function extract1099SAFields(
 export function extract1099QFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer']),
+    payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross distribution', 'box 1']),
     earnings: box('earnings', ['earnings', '2 earnings', 'box 2']),
     basisReturn: box('basisReturn', ['basis', '3 basis', 'box 3']),
@@ -1162,11 +1333,12 @@ export function extract1099QFields(
 export function extract1098Fields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient']),
+    lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient'], fieldRawTokens, 'lenderName', fieldSourceLocations),
     mortgageInterest: box('mortgageInterest', ['mortgage interest received', '1 mortgage interest', 'box 1']),
     outstandingPrincipal: box('outstandingPrincipal', ['outstanding mortgage principal', '2 outstanding', 'box 2']),
     mortgageInsurance: box('mortgageInsurance', ['mortgage insurance premiums', '5 mortgage insurance', 'box 5']),
@@ -1176,11 +1348,12 @@ export function extract1098Fields(
 export function extract1098TFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    institutionName: extractPayerName(textBlocks, ["filer's name", 'institution name', 'institution']),
+    institutionName: extractPayerName(textBlocks, ["filer's name", 'institution name', 'institution'], fieldRawTokens, 'institutionName', fieldSourceLocations),
     tuitionPayments: box('tuitionPayments', ['payments received', '1 payments received', 'box 1']),
     scholarships: box('scholarships', ['scholarships or grants', '5 scholarships', 'box 5']),
   };
@@ -1189,21 +1362,29 @@ export function extract1098TFields(
 export function extract1098EFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   return {
-    lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient']),
-    interestPaid: extractBoxValue(textBlocks, ['student loan interest', '1 student loan interest', 'box 1'], fieldRawTokens, 'interestPaid'),
+    lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient'], fieldRawTokens, 'lenderName', fieldSourceLocations),
+    interestPaid: extractBoxValue(
+      textBlocks,
+      ['student loan interest', '1 student loan interest', 'box 1'],
+      fieldRawTokens,
+      'interestPaid',
+      fieldSourceLocations,
+    ),
   };
 }
 
 export function extract1095AFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   // Policy issuer name is Box 3 — use specific keywords first to avoid matching
   // the header "Health Insurance Marketplace Statement"
   const fields: Record<string, unknown> = {
-    marketplaceName: extractPayerName(textBlocks, ["policy issuer", "issuer's name", 'issuer name']),
+    marketplaceName: extractPayerName(textBlocks, ["policy issuer", "issuer's name", 'issuer name'], fieldRawTokens, 'marketplaceName', fieldSourceLocations),
     annualEnrollmentPremium: 0,
     annualSLCSP: 0,
     annualAdvancePTC: 0,
@@ -1226,14 +1407,17 @@ export function extract1095AFields(
     if (sameLineNumbers.length > 0) {
       fields.annualEnrollmentPremium = parseFloat(sameLineNumbers[0].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.annualEnrollmentPremium = sameLineNumbers[0].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'annualEnrollmentPremium', sameLineNumbers[0]);
     }
     if (sameLineNumbers.length > 1) {
       fields.annualSLCSP = parseFloat(sameLineNumbers[1].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.annualSLCSP = sameLineNumbers[1].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'annualSLCSP', sameLineNumbers[1]);
     }
     if (sameLineNumbers.length > 2) {
       fields.annualAdvancePTC = parseFloat(sameLineNumbers[2].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.annualAdvancePTC = sameLineNumbers[2].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'annualAdvancePTC', sameLineNumbers[2]);
     }
   }
 
@@ -1243,11 +1427,12 @@ export function extract1095AFields(
 export function extractK1Fields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    entityName: extractPayerName(textBlocks, ["partnership's name", "corporation's name", "estate's name", "trust's name", 'entity name']),
+    entityName: extractPayerName(textBlocks, ["partnership's name", "corporation's name", "estate's name", "trust's name", 'entity name'], fieldRawTokens, 'entityName', fieldSourceLocations),
     ordinaryBusinessIncome: box('ordinaryBusinessIncome', ['ordinary business income', '1 ordinary business', 'box 1']),
     rentalIncome: box('rentalIncome', ['net rental real estate', '2 net rental', 'box 2']),
     guaranteedPayments: box('guaranteedPayments', ['guaranteed payments', '4 guaranteed', 'box 4']),
@@ -1263,20 +1448,26 @@ export function extractK1Fields(
 export function extractW2GFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   const fields: Record<string, unknown> = {
-    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer']),
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossWinnings: box('grossWinnings', ['reportable winnings', 'gross winnings', '1 reportable', '1 gross winnings', 'box 1']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal income tax', '4 federal', 'income tax withheld', 'federal income tax', 'box 4']),
   };
 
   // Box 3: Type of Wager — extract and clean address prefixes
-  let wagerType = extractBoxText(textBlocks, ['type of wager', '3 type of wager', 'box 3']);
+  const locatedWager = extractLocatedBoxText(textBlocks, ['type of wager', '3 type of wager', 'box 3']);
+  let wagerType = locatedWager.text;
   // Strip leading address fragments (e.g., "Las Vegas, NV 89109 Slot Machine" → "Slot Machine")
   wagerType = wagerType.replace(/^[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}(-\d{4})?\s*/, '');
   fields.typeOfWager = wagerType;
+  if (locatedWager.text) {
+    if (fieldRawTokens) fieldRawTokens.typeOfWager = locatedWager.text;
+    recordFieldLocation(fieldSourceLocations, 'typeOfWager', locatedWager.block);
+  }
 
   // State section (Boxes 13-15): Use the same approach as W-2 — find a standalone
   // 2-letter state code in the bottom portion, then pick up nearby numbers.
@@ -1292,6 +1483,7 @@ export function extractW2GFields(
     if (text.length === 2 && US_STATE_CODES.has(text)) {
       fields.stateCode = text;
       stateBlock = block;
+      recordFieldLocation(fieldSourceLocations, 'stateCode', block);
       break;
     }
   }
@@ -1311,6 +1503,7 @@ export function extractW2GFields(
     if (sameLineNumbers.length > 1) {
       fields.stateTaxWithheld = parseFloat(sameLineNumbers[1].text.replace(/[$,\s]/g, ''));
       if (fieldRawTokens) fieldRawTokens.stateTaxWithheld = sameLineNumbers[1].text.trim();
+      recordFieldLocation(fieldSourceLocations, 'stateTaxWithheld', sameLineNumbers[1]);
     } else if (sameLineNumbers.length === 1) {
       // If only one number, it could be either — use keyword fallback
       fields.stateTaxWithheld = box('stateTaxWithheld', ['15 state income tax withheld', '15 state tax', 'state income tax withheld', 'box 15']);
@@ -1318,11 +1511,13 @@ export function extractW2GFields(
   } else {
     // Fallback: keyword approach
     fields.stateTaxWithheld = box('stateTaxWithheld', ['15 state income tax withheld', '15 state tax', 'state income tax withheld', 'state tax withheld', 'box 15']);
-    const rawState = extractBoxText(textBlocks, ['13 state', 'state/payer']);
-    const stateMatch = rawState.match(/\b([A-Z]{2})\b/i);
+    const locatedState = extractLocatedBoxText(textBlocks, ['13 state', 'state/payer']);
+    const stateMatch = locatedState.text.match(/\b([A-Z]{2})\b/i);
     const stateCode = stateMatch ? stateMatch[1].toUpperCase() : '';
     if (US_STATE_CODES.has(stateCode)) {
       fields.stateCode = stateCode;
+      if (fieldRawTokens) fieldRawTokens.stateCode = locatedState.text;
+      recordFieldLocation(fieldSourceLocations, 'stateCode', locatedState.block);
     }
   }
 
@@ -1332,28 +1527,30 @@ export function extractW2GFields(
 export function extract1099CFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    payerName: extractPayerName(textBlocks, ["creditor's name", "payer's name", 'creditor', 'payer']),
+    payerName: extractPayerName(textBlocks, ["creditor's name", "payer's name", 'creditor', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     amountCancelled: box('amountCancelled', ['amount of debt discharged', 'amount of debt', '2 amount of debt', 'box 2']),
     interestIncluded: box('interestIncluded', ['interest if included', '3 interest', 'box 3']),
-    debtDescription: extractBoxText(textBlocks, ['description of debt', '4 debt description', 'box 4']),
-    identifiableEventCode: extractBoxText(textBlocks, ['identifiable event code', '6 identifiable', 'box 6']),
+    debtDescription: extractBoxText(textBlocks, ['description of debt', '4 debt description', 'box 4'], fieldRawTokens, 'debtDescription', fieldSourceLocations),
+    identifiableEventCode: extractBoxText(textBlocks, ['identifiable event code', '6 identifiable', 'box 6'], fieldRawTokens, 'identifiableEventCode', fieldSourceLocations),
   };
 }
 
 export function extract1099SFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
-    extractBoxValue(textBlocks, keywords, fieldRawTokens, key);
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    settlementAgent: extractPayerName(textBlocks, ["filer's name", "transferee's name", 'settlement agent', 'filer']),
+    settlementAgent: extractPayerName(textBlocks, ["filer's name", "transferee's name", 'settlement agent', 'filer'], fieldRawTokens, 'settlementAgent', fieldSourceLocations),
     grossProceeds: box('grossProceeds', ['gross proceeds', '2 gross proceeds', 'box 2']),
-    closingDate: extractBoxText(textBlocks, ['date of closing', '1 date of closing', 'box 1']),
+    closingDate: extractBoxText(textBlocks, ['date of closing', '1 date of closing', 'box 1'], fieldRawTokens, 'closingDate', fieldSourceLocations),
     buyerRealEstateTax: box('buyerRealEstateTax', ["buyer's part of real estate tax", "6 buyer's part", '6 real estate tax', 'box 6']),
   };
 }

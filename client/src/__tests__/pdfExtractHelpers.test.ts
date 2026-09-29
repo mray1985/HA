@@ -19,6 +19,7 @@ import {
   extractK1Fields,
   extractW2GFields,
   type TextBlock,
+  type FieldSourceLocation,
 } from '../services/pdfExtractHelpers';
 
 // ── Helper: build TextBlock from bbox data ────────────
@@ -286,7 +287,8 @@ describe('extractW2Fields with phrase-level blocks', () => {
       tb('1236.13', 544, 123, 29, 7),
     ];
     const fieldRawTokens: Record<string, string> = {};
-    const fields = extractW2Fields(blocks, fieldRawTokens);
+    const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
+    const fields = extractW2Fields(blocks, fieldRawTokens, fieldSourceLocations);
 
     expect(fields.wages).toBe(61482.17);
     expect(fields.federalTaxWithheld).toBe(0);
@@ -296,6 +298,88 @@ describe('extractW2Fields with phrase-level blocks', () => {
     expect(fieldRawTokens.federalTaxWithheld).toBe('$0.00');
     expect(fieldRawTokens.medicareWages).toBe('12O.00');
     expect(fieldRawTokens.wages).not.toBe('61482.17');
+
+    expect(fieldSourceLocations.wages).toEqual({
+      page: 1,
+      box: { x: 417, y: 75, width: 50, height: 7 },
+    });
+    expect(fieldSourceLocations.federalTaxWithheld).toEqual({
+      page: 1,
+      box: { x: 540, y: 75, width: 25, height: 7 },
+    });
+    expect(fieldSourceLocations.medicareWages).toEqual({
+      page: 1,
+      box: { x: 418, y: 123, width: 34, height: 7 },
+    });
+    // socialSecurityWages was never located — no invented box
+    expect(fieldSourceLocations.socialSecurityWages).toBeUndefined();
+
+    // Printed 0 keeps its source location
+    expect(fields.federalTaxWithheld).toBe(0);
+    expect(fieldSourceLocations.federalTaxWithheld).toBeDefined();
+
+    // Text field (employer name) stores page+box when a block is found
+    expect(fields.employerName).toContain('Acme');
+    expect(fieldSourceLocations.employerName).toEqual({
+      page: 1,
+      box: { x: 39, y: 100, width: 80, height: 7 },
+    });
+    expect(fieldRawTokens.employerName).toBe('Acme Corporation Inc.');
+  });
+
+  it('stores no location for a text field when no name block is found', () => {
+    const blocks = [
+      tb('Form W-2', 40, 20, 40, 10),
+      tb('Wage and Tax Statement', 90, 20, 100, 8),
+      tb('1 Wages, tips, other compensation', 339, 61, 104, 8),
+      tb('1000.00', 417, 75, 40, 7),
+    ];
+    const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
+    const fields = extractW2Fields(blocks, {}, fieldSourceLocations);
+    expect(fields.employerName).toBe('');
+    expect(fieldSourceLocations.employerName).toBeUndefined();
+  });
+
+  it('does not choose a nearby amount on another page', () => {
+    const blocks = [
+      tb('Form W-2', 40, 20, 40, 10, 1),
+      tb('1 Wages, tips, other compensation', 339, 61, 104, 8, 1),
+      // Same x/y on page 2 — must not win over a same-page miss
+      tb('99999.00', 417, 75, 40, 7, 2),
+      // Real value on page 1, farther but same page
+      tb('1234.56', 417, 90, 40, 7, 1),
+    ];
+    const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
+    const fields = extractW2Fields(blocks, {}, fieldSourceLocations);
+    expect(fields.wages).toBe(1234.56);
+    expect(fieldSourceLocations.wages).toEqual({
+      page: 1,
+      box: { x: 417, y: 90, width: 40, height: 7 },
+    });
+  });
+
+  it('records per-entry locations for W-2 box12', () => {
+    const blocks = [
+      tb('Form W-2', 40, 20, 40, 10),
+      tb('Wage and Tax Statement', 90, 20, 100, 8),
+      tb("c Employer's name, address, and ZIP code", 42, 85, 137, 8),
+      tb('Acme Corporation Inc.', 39, 100, 80, 7),
+      tb('12a', 40, 200, 20, 8),
+      tb('D 5000.00', 70, 210, 55, 7),
+      tb('12b', 40, 230, 20, 8),
+      tb('DD 1200.00', 70, 240, 60, 7),
+    ];
+    const fieldSourceLocations: Record<string, FieldSourceLocation | Array<FieldSourceLocation | undefined>> = {};
+    const fields = extractW2Fields(blocks, {}, fieldSourceLocations);
+    expect(fields.box12).toEqual([
+      { code: 'D', amount: 5000 },
+      { code: 'DD', amount: 1200 },
+    ]);
+    expect(Array.isArray(fieldSourceLocations.box12)).toBe(true);
+    const locs = fieldSourceLocations.box12 as Array<FieldSourceLocation | undefined>;
+    expect(locs).toHaveLength(2);
+    expect(locs[0]).toEqual({ page: 1, box: { x: 70, y: 210, width: 55, height: 7 } });
+    expect(locs[1]).toEqual({ page: 1, box: { x: 70, y: 240, width: 60, height: 7 } });
   });
 
   it('extracts employer name', () => {
@@ -513,6 +597,35 @@ describe('extract1099RFields with phrase-level blocks', () => {
     expect(fields.grossDistribution).toBe(25000);
     expect(fields.taxableAmount).toBe(22500);
     expect(fields.federalTaxWithheld).toBe(3750);
+  });
+
+  it('stores page+box for distribution code when located, and none when missing', () => {
+    const withCode: TextBlock[] = [
+      tb("PAYER'S name", 30, 20, 50, 8),
+      tb('Fidelity Retirement Services', 30, 40, 100, 7),
+      tb('1099-R', 300, 20, 30, 10),
+      tb('7 Distribution code', 340, 200, 80, 8),
+      tb('7', 430, 212, 10, 7),
+    ];
+    const locs: Record<string, FieldSourceLocation> = {};
+    const fields = extract1099RFields(withCode, {}, locs);
+    expect(fields.distributionCode).toBe('7');
+    expect(locs.distributionCode).toEqual({
+      page: 1,
+      box: { x: 430, y: 212, width: 10, height: 7 },
+    });
+
+    const withoutCode: TextBlock[] = [
+      tb("PAYER'S name", 30, 20, 50, 8),
+      tb('Fidelity Retirement Services', 30, 40, 100, 7),
+      tb('1099-R', 300, 20, 30, 10),
+      tb('1 Gross distribution', 340, 65, 70, 8),
+      tb('1000.00', 420, 78, 35, 7),
+    ];
+    const locsMissing: Record<string, FieldSourceLocation> = {};
+    const missing = extract1099RFields(withoutCode, {}, locsMissing);
+    expect(missing.distributionCode).toBe('');
+    expect(locsMissing.distributionCode).toBeUndefined();
   });
 });
 

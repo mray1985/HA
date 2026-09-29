@@ -11,6 +11,7 @@ import {
   fieldsForToolCall,
   type FieldConfidenceSource,
   type FieldRawTextSource,
+  type FieldSourceLocationSource,
   type TaxFact,
 } from './taxFact.js';
 
@@ -239,6 +240,11 @@ export interface TaxToolCallContext {
   confidence?: FieldConfidenceSource;
   /** Original source text by field. A missing field stays empty. */
   rawText?: FieldRawTextSource;
+  /**
+   * Page + box when the extractor located the token.
+   * Absent when no text block was found. Never invent coordinates.
+   */
+  sourceLocation?: FieldSourceLocationSource;
 }
 
 export interface TaxToolSuccess {
@@ -312,6 +318,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       factTypeFor: () => 'FILING_STATUS_CANDIDATE',
       confidence: context.confidence,
       rawText: context.rawText,
+      sourceLocation: context.sourceLocation,
     });
     return {
       ok: true,
@@ -353,6 +360,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     factTypeFor: (field) => `${prefix}_${field}`,
     confidence: context.confidence,
     rawText: context.rawText,
+    sourceLocation: context.sourceLocation,
   });
 
   return {
