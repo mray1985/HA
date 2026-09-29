@@ -167,3 +167,5 @@ export * from './taxfacts/documentOcr.js';
 export * from './taxfacts/structuredExtraction.js';
 export * from './taxfacts/factValidation.js';
 export * from './taxfacts/toolCaller.js';
+// lfmToolCaller is Node-only (transformers spawn + local weights). Import from
+// `./taxfacts/lfmToolCaller.js` in Node/tests — do not barrel-export for the client.

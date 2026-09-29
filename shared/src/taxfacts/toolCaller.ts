@@ -1,15 +1,16 @@
 /**
- * Tool caller (development-order step 9).
+ * Tool caller (development-order step 9 / work-order §5).
  *
- * Work-order §5 ("TOOL-CALLING / AUTOMATION MODEL") describes a local
- * tool-calling *model*. This phase implements the caller *interface* and the
- * deterministic path that already-extracted fields use. It does **not**
- * download model weights or require a local LLM — a future model must still
- * propose calls through this interface and the tax-engine tool API.
+ * Spec path: local tool-calling model `LiquidAI/LFM2-1.2B-Tool` via Hugging Face
+ * transformers (see `lfmToolCaller.ts`). The model proposes schema-validated
+ * calls; this module + `invokeTaxTool` / validation still decide what is written.
+ *
+ * Deterministic mapping below is FALLBACK ONLY when the LFM model directory is
+ * absent or the transformers runtime fails to load — never the preferred path.
  *
  * Responsibilities:
- * - Map structured fields → tax-engine tools (`add_w2`, `add_1099_*`,
- *   `set_filing_status_candidate` as a candidate fact only)
+ * - Accept model (or fallback) proposals for `add_w2`, `add_1099_*`,
+ *   `set_filing_status_candidate` (candidate fact only)
  * - Never invoke a tool with a field that validation rejected
  * - Never calculate tax / never call calculate_return
  * - Preserve UNKNOWN != ZERO; keep a real numeric 0; leave invalid fields unwritten
@@ -60,8 +61,9 @@ const BLOCKED_TOOL_NAMES = new Set([
 ]);
 
 /**
- * A proposed tool call — from the deterministic extraction path or, later,
- * from a local tool-calling model. Models must not write return tables directly.
+ * A proposed tool call — from LiquidAI/LFM2-1.2B-Tool (spec) or the
+ * deterministic FALLBACK when the model is absent/unloadable.
+ * Models must not write return tables directly.
  */
 export interface ToolCallProposal {
   tool: string;
@@ -98,8 +100,8 @@ export interface ToolCallerExecuteResult {
 }
 
 /**
- * Caller interface. A future local tool-calling model proposes calls; the
- * deterministic implementation below is what already-extracted fields use today.
+ * Caller interface. Spec: LFM proposes; `execute` always validates then
+ * invokes tax-engine tools. Deterministic proposal is fallback-only.
  */
 export interface ToolCaller {
   execute(input: ToolCallerExecuteInput): ToolCallerExecuteResult;
@@ -157,8 +159,10 @@ export function proposeFilingStatusCandidate(
 }
 
 /**
- * Deterministic tool caller: validate → strip rejected fields → invokeTaxTool.
- * Does not download models, invent amounts, or calculate tax.
+ * Deterministic FALLBACK path: validate → strip rejected fields → invokeTaxTool.
+ * Prefer `proposeToolCallWithLfm` (LiquidAI/LFM2-1.2B-Tool + transformers).
+ * Use this proposal path only when the model file is absent or runtime fails.
+ * Does not invent amounts or calculate tax.
  */
 export function executeDeterministicToolCall(
   input: ToolCallerExecuteInput,
@@ -275,7 +279,10 @@ export function executeDeterministicToolCall(
   };
 }
 
-/** Shared deterministic caller instance (no model weights). */
+/**
+ * Shared deterministic FALLBACK caller (used when LFM weights are absent or
+ * transformers fails). Spec path is `lfmToolCaller` / `proposeToolCallWithLfm`.
+ */
 export const deterministicToolCaller: ToolCaller = {
   execute: executeDeterministicToolCall,
 };

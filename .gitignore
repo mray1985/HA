@@ -25,3 +25,9 @@ client/UX-REVIEW*.md
 
 # Archive (private files, research, strategy, test data)
 Archive/
+
+# Local ML model weights (never commit GGUF / ONNX / safetensors / tokenizers)
+models/
+*.gguf
+*.onnx
+*.safetensors
