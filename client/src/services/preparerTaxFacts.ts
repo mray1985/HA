@@ -1,9 +1,9 @@
 import type { FactValidationResult, TaxFact } from '@hatax/engine';
 import {
+  callIncomeToolFromStructuredFields,
   extractStructuredFields,
   factsFromFields,
   fieldsForToolCall,
-  invokeTaxTool,
   normalizeGenericFields,
   ocrExtractorLabel,
   omitInvalidToolFields,
@@ -168,10 +168,10 @@ export function factsForExtraction(input: {
       input.extracted.extractedData,
       reconciled.fieldRawTokens,
     );
-    const result = invokeTaxTool({
-      tool,
-      // Unreadable amounts are undefined arguments, so the tool records them as unknown.
-      // Direct model tool calls still reject unknown fields via invokeTaxTool.
+    // Development-order step 9: deterministic tool caller. Validates first,
+    // then invokes tax-engine tools without rejected fields. No local LLM.
+    const called = callIncomeToolFromStructuredFields({
+      incomeType: input.extracted.incomeType,
       args: structured.args,
       context: {
         returnId: input.returnId,
@@ -183,24 +183,23 @@ export function factsForExtraction(input: {
         sourceLocation: reconciled.fieldSourceLocations,
       },
     });
-    if (!result.ok) {
+    if (!called.ok || !called.result?.ok) {
+      const toolError =
+        called.error ??
+        (called.result && !called.result.ok ? called.result.error : 'Tool call failed');
       return {
-        facts: [],
+        facts: called.facts,
         toolFields: {},
         incomeType: null,
-        toolError: result.error,
-        // No facts to validate; toolError carries the failure separately.
-        validation: { ready: true, issues: [] },
+        toolError,
+        validation: called.validation,
       };
     }
-    // Validate after facts exist; do not rewrite or invent amounts.
-    // Invalid fields are omitted from toolFields so intake cannot write them.
-    const validation = validateImportedFacts(result.facts, { taxYear: input.taxYear });
     return {
-      facts: result.facts,
-      toolFields: omitInvalidToolFields(result.fields, result.facts, validation),
-      incomeType: result.incomeType ?? input.extracted.incomeType,
-      validation,
+      facts: called.facts,
+      toolFields: called.appliedArgs,
+      incomeType: called.result.incomeType ?? input.extracted.incomeType,
+      validation: called.validation,
     };
   }
 

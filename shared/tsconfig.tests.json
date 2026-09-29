@@ -10,7 +10,8 @@
   "include": [
     "__tests__/taxFact.test.ts",
     "__tests__/structuredExtraction.test.ts",
-    "__tests__/factValidation.test.ts"
+    "__tests__/factValidation.test.ts",
+    "__tests__/toolCaller.test.ts"
   ],
   "exclude": ["dist"]
 }
