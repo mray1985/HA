@@ -12,7 +12,8 @@
     "__tests__/structuredExtraction.test.ts",
     "__tests__/factValidation.test.ts",
     "__tests__/toolCaller.test.ts",
-    "__tests__/lfmToolCaller.test.ts"
+    "__tests__/lfmToolCaller.test.ts",
+    "__tests__/modelCatalog.test.ts"
   ],
   "exclude": ["dist"]
 }

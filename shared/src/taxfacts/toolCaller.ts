@@ -1,12 +1,13 @@
 /**
  * Tool caller (development-order step 9 / work-order §5).
  *
- * Spec path: local tool-calling model `LiquidAI/LFM2-1.2B-Tool` via Hugging Face
- * transformers (see `lfmToolCaller.ts`). The model proposes schema-validated
- * calls; this module + `invokeTaxTool` / validation still decide what is written.
+ * Spec path: local tool-calling model `LiquidAI/LFM2-1.2B-Tool` as GGUF
+ * Q4_K_M via llama-cpp-python (see `lfmToolCaller.ts`). The model proposes
+ * schema-validated calls; this module + `invokeTaxTool` / validation still
+ * decide what is written.
  *
- * Deterministic mapping below is FALLBACK ONLY when the LFM model directory is
- * absent or the transformers runtime fails to load — never the preferred path.
+ * Deterministic mapping below is FALLBACK ONLY when the LFM Q4_K_M GGUF is
+ * absent or the llama.cpp runtime fails to load — never the preferred path.
  *
  * Responsibilities:
  * - Accept model (or fallback) proposals for `add_w2`, `add_1099_*`,
@@ -160,8 +161,8 @@ export function proposeFilingStatusCandidate(
 
 /**
  * Deterministic FALLBACK path: validate → strip rejected fields → invokeTaxTool.
- * Prefer `proposeToolCallWithLfm` (LiquidAI/LFM2-1.2B-Tool + transformers).
- * Use this proposal path only when the model file is absent or runtime fails.
+ * Prefer `proposeToolCallWithLfm` (LiquidAI/LFM2-1.2B-Tool Q4_K_M GGUF).
+ * Use this proposal path only when the GGUF is absent or runtime fails.
  * Does not invent amounts or calculate tax.
  */
 export function executeDeterministicToolCall(

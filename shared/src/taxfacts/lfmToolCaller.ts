@@ -4,16 +4,15 @@
  * Spec (work order #5 TOOL-CALLING / AUTOMATION MODEL):
  *   Primary candidate HF repo id: `LiquidAI/LFM2-1.2B-Tool`
  *
- * The work order does not name a quantization or runtime string. The Hub
- * model card for that exact repo lists under "How to run":
- *   - Hugging Face (transformers) — this path
- *   - llama.cpp — separate `LFM2-1.2B-Tool-GGUF` repo (not substituted here)
- *   - LEAP
- * Weights in `LiquidAI/LFM2-1.2B-Tool` ship as BF16 safetensors.
+ * User policy: every named model uses GGUF Q4_K_M.
+ * Official GGUF repo: `LiquidAI/LFM2-1.2B-Tool-GGUF`
+ * Exact file the loader requests: `LFM2-1.2B-Tool-Q4_K_M.gguf`
+ * Runtime: llama-cpp-python (llama.cpp). BF16 safetensors / transformers
+ * are not used on the live path.
  *
  * Spec path = local LFM proposes a schema-validated tool call.
- * Deterministic mapping is FALLBACK ONLY when the model directory is absent
- * or the transformers runtime fails to load / run.
+ * Deterministic mapping is FALLBACK ONLY when the Q4_K_M GGUF is absent
+ * or the llama.cpp runtime fails to load / run.
  *
  * The model must not calculate tax and must not invent amounts.
  * UNKNOWN must not become zero; a real numeric 0 is kept.
@@ -25,6 +24,11 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  HA_GGUF_RUNTIME,
+  HA_QUANTIZATION,
+  getWorkOrderModel,
+} from './modelCatalog.js';
 import {
   TOOL_CALLER_ALLOWED_TOOLS,
   executeDeterministicToolCall,
@@ -38,18 +42,24 @@ import {
 /** Exact Hugging Face repo id from work-order §5. */
 export const LFM_TOOL_MODEL_REPO_ID = 'LiquidAI/LFM2-1.2B-Tool' as const;
 
-/**
- * Runtime used for that repo (model card "How to run" → Hugging Face).
- * Not llama.cpp/ONNX/MLX — those are not named for this Hub repo id.
- */
-export const LFM_TOOL_RUNTIME = 'transformers' as const;
+/** Official GGUF Hub repo for that model family. */
+export const LFM_TOOL_GGUF_REPO_ID = 'LiquidAI/LFM2-1.2B-Tool-GGUF' as const;
 
-/** Relative path under the repo where weights are downloaded (gitignored). */
-export const LFM_TOOL_MODEL_RELATIVE_DIR = join(
-  'models',
-  'LiquidAI',
-  'LFM2-1.2B-Tool',
-);
+/** Exact Q4_K_M filename the loader requests. */
+export const LFM_TOOL_Q4_K_M_FILENAME = 'LFM2-1.2B-Tool-Q4_K_M.gguf' as const;
+
+/** Runtime for Q4_K_M GGUF (not transformers / BF16 safetensors). */
+export const LFM_TOOL_RUNTIME = HA_GGUF_RUNTIME;
+
+/** Quantization label (policy). */
+export const LFM_TOOL_QUANTIZATION = HA_QUANTIZATION;
+
+const LFM_ENTRY = getWorkOrderModel('LiquidAI/LFM2-1.2B-Tool');
+
+/** Relative directory under the repo where the Q4_K_M GGUF is stored. */
+export const LFM_TOOL_MODEL_RELATIVE_DIR =
+  LFM_ENTRY.localRelativeDir ??
+  join('models', 'LiquidAI', 'LFM2-1.2B-Tool-GGUF');
 
 export type LfmProposeSource = 'lfm' | 'deterministic_fallback';
 
@@ -174,49 +184,68 @@ const TOOL_SCHEMAS: ReadonlyArray<{
 const ALLOWED = new Set<string>(TOOL_CALLER_ALLOWED_TOOLS);
 
 function repoRootFromThisModule(): string {
-  // shared/src/taxfacts → shared/src → shared → repo root
   const here = dirname(fileURLToPath(import.meta.url));
   return resolve(here, '../../..');
 }
 
+function isQ4KmGgufPath(abs: string): boolean {
+  const base = abs.replace(/\\/g, '/');
+  return (
+    base.endsWith(LFM_TOOL_Q4_K_M_FILENAME) ||
+    base.includes(`/${LFM_TOOL_Q4_K_M_FILENAME}`)
+  );
+}
+
 /**
- * Resolve the local LiquidAI/LFM2-1.2B-Tool directory.
- * Returns null when weights are absent (CI / machines without the download).
+ * Resolve the local LFM2-1.2B-Tool Q4_K_M GGUF path.
+ * Returns null when the GGUF is absent (CI / machines without the download).
  *
- * When `modelDir` is passed explicitly, only that path is checked (no
- * fall-through to the repo `models/` tree) so tests can assert missing-file
- * behavior without requiring a clean machine.
+ * When `modelPath` / `modelDir` is passed explicitly, only that path is
+ * checked (no fall-through) so tests can assert missing-file behavior.
  */
 export function resolveLfmModelDir(options?: {
+  /** @deprecated Prefer modelPath — still accepted as a file or directory. */
   modelDir?: string;
+  modelPath?: string;
   repoRoot?: string;
 }): string | null {
-  if (options?.modelDir !== undefined) {
-    const abs = resolve(options.modelDir);
-    if (existsSync(join(abs, 'config.json')) && existsSync(join(abs, 'model.safetensors'))) {
+  const explicit = options?.modelPath ?? options?.modelDir;
+  if (explicit !== undefined) {
+    const abs = resolve(explicit);
+    if (existsSync(abs) && isQ4KmGgufPath(abs)) {
       return abs;
+    }
+    // Directory containing the Q4_K_M file.
+    const nested = join(abs, LFM_TOOL_Q4_K_M_FILENAME);
+    if (existsSync(nested) && isQ4KmGgufPath(nested)) {
+      return nested;
     }
     return null;
   }
 
+  const envPath = process.env.HA_LFM_TOOL_MODEL_PATH?.trim();
   const envDir = process.env.HA_LFM_TOOL_MODEL_DIR?.trim();
   const candidates = [
-    envDir,
+    envPath,
+    envDir ? join(envDir, LFM_TOOL_Q4_K_M_FILENAME) : undefined,
     options?.repoRoot
-      ? join(options.repoRoot, LFM_TOOL_MODEL_RELATIVE_DIR)
+      ? join(options.repoRoot, LFM_TOOL_MODEL_RELATIVE_DIR, LFM_TOOL_Q4_K_M_FILENAME)
       : undefined,
-    join(repoRootFromThisModule(), LFM_TOOL_MODEL_RELATIVE_DIR),
-    join(process.cwd(), LFM_TOOL_MODEL_RELATIVE_DIR),
+    join(repoRootFromThisModule(), LFM_TOOL_MODEL_RELATIVE_DIR, LFM_TOOL_Q4_K_M_FILENAME),
+    join(process.cwd(), LFM_TOOL_MODEL_RELATIVE_DIR, LFM_TOOL_Q4_K_M_FILENAME),
   ].filter((p): p is string => typeof p === 'string' && p.length > 0);
 
-  for (const dir of candidates) {
-    const abs = resolve(dir);
-    if (existsSync(join(abs, 'config.json')) && existsSync(join(abs, 'model.safetensors'))) {
+  for (const path of candidates) {
+    const abs = resolve(path);
+    if (existsSync(abs) && isQ4KmGgufPath(abs)) {
       return abs;
     }
   }
   return null;
 }
+
+/** @deprecated Alias — resolves the Q4_K_M GGUF file path. */
+export const resolveLfmGgufPath = resolveLfmModelDir;
 
 export function lfmRuntimeScriptPath(repoRoot?: string): string {
   const root = repoRoot ?? repoRootFromThisModule();
@@ -330,7 +359,6 @@ export function parseLfmToolCallText(text: string): {
         if (eq < 0) continue;
         const key = part.slice(0, eq).trim();
         const parsed = parseScalar(part.slice(eq + 1));
-        // Drop null/undefined so UNKNOWN stays omitted; keep real 0.
         if (parsed === undefined || parsed === null) continue;
         args[key] = parsed;
       }
@@ -372,8 +400,8 @@ export function parseToolCallJson(value: unknown): {
   return { proposal: { tool, args } };
 }
 
-async function runPythonRuntime(input: {
-  modelDir: string;
+async function runGgufRuntime(input: {
+  modelPath: string;
   userMessage: string;
   scriptPath: string;
   pythonPath?: string;
@@ -381,7 +409,7 @@ async function runPythonRuntime(input: {
 }): Promise<{ ok: boolean; raw?: string; calls?: unknown[]; error?: string }> {
   const python = input.pythonPath ?? process.env.HA_PYTHON ?? 'python';
   const payload = JSON.stringify({
-    model_dir: input.modelDir,
+    model_path: input.modelPath,
     user_message: input.userMessage,
     tools: TOOL_SCHEMAS,
     max_new_tokens: 128,
@@ -400,7 +428,7 @@ async function runPythonRuntime(input: {
       child.kill();
       resolvePromise({
         ok: false,
-        error: `LFM transformers runtime timed out after ${input.timeoutMs ?? 600_000}ms`,
+        error: `LFM llama.cpp runtime timed out after ${input.timeoutMs ?? 600_000}ms`,
       });
     }, input.timeoutMs ?? 600_000);
 
@@ -479,14 +507,15 @@ function deterministicFallbackProposal(
 }
 
 /**
- * Spec path: ask LiquidAI/LFM2-1.2B-Tool (transformers) for a tool proposal.
- * Falls back to deterministic mapping only when the model file is absent or
- * the runtime fails — never invents tax amounts.
+ * Spec path: ask LiquidAI/LFM2-1.2B-Tool (Q4_K_M GGUF via llama-cpp-python)
+ * for a tool proposal. Falls back to deterministic mapping only when the
+ * GGUF is absent or the runtime fails — never invents tax amounts.
  */
 export async function proposeToolCallWithLfm(
   evidence: LfmEvidenceInput,
   options?: {
     modelDir?: string;
+    modelPath?: string;
     repoRoot?: string;
     pythonPath?: string;
     timeoutMs?: number;
@@ -505,22 +534,22 @@ export async function proposeToolCallWithLfm(
     };
   }
 
-  const modelDir = resolveLfmModelDir({
+  const modelPath = resolveLfmModelDir({
     modelDir: options?.modelDir,
+    modelPath: options?.modelPath,
     repoRoot: options?.repoRoot,
   });
 
-  if (!modelDir) {
-    // FALLBACK: model weights absent (CI / fresh clone without download).
+  if (!modelPath) {
     const proposal = deterministicFallbackProposal(evidence.structuredFallback);
     return {
       ok: Boolean(proposal),
       source: 'deterministic_fallback',
       proposal,
-      fallbackReason: `LFM model directory missing for ${LFM_TOOL_MODEL_REPO_ID} (expected under models/ or HA_LFM_TOOL_MODEL_DIR)`,
+      fallbackReason: `LFM Q4_K_M GGUF missing for ${LFM_TOOL_MODEL_REPO_ID} (expected ${LFM_TOOL_Q4_K_M_FILENAME} under models/ or HA_LFM_TOOL_MODEL_PATH)`,
       error: proposal
         ? undefined
-        : `LFM model absent and no deterministic fallback proposal`,
+        : `LFM Q4_K_M GGUF absent and no deterministic fallback proposal`,
     };
   }
 
@@ -536,8 +565,8 @@ export async function proposeToolCallWithLfm(
     };
   }
 
-  const runtime = await runPythonRuntime({
-    modelDir,
+  const runtime = await runGgufRuntime({
+    modelPath,
     userMessage: evidence.userMessage,
     scriptPath,
     pythonPath: options?.pythonPath,
@@ -545,13 +574,12 @@ export async function proposeToolCallWithLfm(
   });
 
   if (!runtime.ok) {
-    // FALLBACK: transformers runtime failed to load or run.
     const proposal = deterministicFallbackProposal(evidence.structuredFallback);
     return {
       ok: Boolean(proposal),
       source: 'deterministic_fallback',
       proposal,
-      fallbackReason: runtime.error ?? 'LFM transformers runtime failed',
+      fallbackReason: runtime.error ?? 'LFM llama.cpp runtime failed',
       raw: runtime.raw,
       error: proposal
         ? undefined
@@ -559,7 +587,6 @@ export async function proposeToolCallWithLfm(
     };
   }
 
-  // Prefer structured calls from the Python runtime; re-parse raw as safety net.
   let proposal: ToolCallProposal | null = null;
   const rejected: string[] = [];
 
@@ -621,10 +648,14 @@ export function createLfmBackedToolCaller(): ToolCaller & {
   propose: typeof proposeToolCallWithLfm;
   modelRepoId: typeof LFM_TOOL_MODEL_REPO_ID;
   runtime: typeof LFM_TOOL_RUNTIME;
+  quantization: typeof LFM_TOOL_QUANTIZATION;
+  q4FileName: typeof LFM_TOOL_Q4_K_M_FILENAME;
 } {
   return {
     modelRepoId: LFM_TOOL_MODEL_REPO_ID,
     runtime: LFM_TOOL_RUNTIME,
+    quantization: LFM_TOOL_QUANTIZATION,
+    q4FileName: LFM_TOOL_Q4_K_M_FILENAME,
     propose: proposeToolCallWithLfm,
     execute(input: ToolCallerExecuteInput): ToolCallerExecuteResult {
       return executeDeterministicToolCall(input);

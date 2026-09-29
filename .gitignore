@@ -31,3 +31,6 @@ models/
 *.gguf
 *.onnx
 *.safetensors
+
+# Local llama.cpp binaries (quantize / cli) — not part of the product tree
+tools/llama-cpp/
