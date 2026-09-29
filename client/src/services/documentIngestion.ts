@@ -18,12 +18,15 @@ import {
   screenDocument,
   type DocumentClassification,
   type DocumentClassificationRecord,
+  type FactValidationResult,
   type IngestedDocument,
   type TaxFact,
 } from '@hatax/engine';
 import type { PDFExtractResult } from './pdfExtractHelpers';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
+
+const EMPTY_VALIDATION: FactValidationResult = { ready: true, issues: [] };
 
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -189,6 +192,8 @@ export interface IngestExtractionPiece {
   toolFields: Record<string, unknown>;
   incomeType: string | null;
   toolError?: string;
+  /** Structural validation issues for this piece — values are never rewritten. */
+  validation: FactValidationResult;
   extracted: PDFExtractResult;
   classification: DocumentClassification;
 }
@@ -232,6 +237,7 @@ export function applyExtractionToDocument(input: {
         facts: [],
         toolFields: {},
         incomeType: null,
+        validation: EMPTY_VALIDATION,
         extracted: piece,
         classification: classifications[i] ?? primary,
       })),
@@ -249,6 +255,7 @@ export function applyExtractionToDocument(input: {
         toolFields: {},
         incomeType: null,
         toolError: `Unclassified form piece skipped: ${classification.reason}`,
+        validation: EMPTY_VALIDATION,
         extracted: piece,
         classification,
       };
@@ -273,6 +280,7 @@ export function applyExtractionToDocument(input: {
       toolFields: built.toolFields,
       incomeType: built.incomeType,
       toolError: built.toolError,
+      validation: built.validation,
       extracted: extractedForTools,
       classification,
     };

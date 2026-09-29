@@ -1,4 +1,4 @@
-import type { TaxFact } from '@hatax/engine';
+import type { FactValidationResult, TaxFact } from '@hatax/engine';
 import {
   extractStructuredFields,
   factsFromFields,
@@ -6,7 +6,9 @@ import {
   invokeTaxTool,
   normalizeGenericFields,
   ocrExtractorLabel,
+  omitInvalidToolFields,
   toolNameForIncomeType,
+  validateImportedFacts,
 } from '@hatax/engine';
 import type { FieldSourceLocationValue, PDFExtractResult } from './pdfExtractHelpers';
 import { taxFactStorageKey } from './storageScope';
@@ -149,6 +151,8 @@ export function factsForExtraction(input: {
   toolFields: Record<string, unknown>;
   incomeType: string | null;
   toolError?: string;
+  /** Structural validation of imported facts — never rewrites values. */
+  validation: FactValidationResult;
 } {
   const extractor = extractorLabel(input.extracted);
   const tool = toolNameForIncomeType(input.extracted.incomeType);
@@ -185,12 +189,18 @@ export function factsForExtraction(input: {
         toolFields: {},
         incomeType: null,
         toolError: result.error,
+        // No facts to validate; toolError carries the failure separately.
+        validation: { ready: true, issues: [] },
       };
     }
+    // Validate after facts exist; do not rewrite or invent amounts.
+    // Invalid fields are omitted from toolFields so intake cannot write them.
+    const validation = validateImportedFacts(result.facts, { taxYear: input.taxYear });
     return {
       facts: result.facts,
-      toolFields: result.fields,
+      toolFields: omitInvalidToolFields(result.fields, result.facts, validation),
       incomeType: result.incomeType ?? input.extracted.incomeType,
+      validation,
     };
   }
 
@@ -210,9 +220,15 @@ export function factsForExtraction(input: {
     rawText: generic.rawText,
     sourceLocation: reconciled.fieldSourceLocations,
   });
+  const validation = validateImportedFacts(facts, { taxYear: input.taxYear });
   return {
     facts,
-    toolFields: fieldsForToolCall(generic.fields),
+    toolFields: omitInvalidToolFields(
+      fieldsForToolCall(generic.fields),
+      facts,
+      validation,
+    ),
     incomeType: input.extracted.incomeType,
+    validation,
   };
 }
