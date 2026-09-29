@@ -30,7 +30,10 @@ const US_STATE_CODES = new Set([
   'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
 ]);
 
-/** Source fields that structurally cannot be negative on imported income docs. */
+/**
+ * Source fields that structurally cannot be negative on imported income docs.
+ * Covers tax-tool forms and generic classified-form money fields the pipeline extracts.
+ */
 const NON_NEGATIVE_AMOUNT_FIELDS = new Set([
   'wages',
   'federalTaxWithheld',
@@ -54,7 +57,36 @@ const NON_NEGATIVE_AMOUNT_FIELDS = new Set([
   'rothContributionBasis',
   'qcdAmount',
   'earlyDistributionExceptionAmount',
+  // Generic classified-form money fields (W-2G, 1099-G, 1099-K, 1098, …).
+  'grossWinnings',
+  'unemploymentCompensation',
+  'grossAmount',
+  'mortgageInterest',
+  'rents',
+  'royalties',
+  'otherIncome',
+  'proceeds',
+  'costBasis',
+  'cardNotPresent',
+  'totalBenefits',
+  'earnings',
+  'basisReturn',
+  'outstandingPrincipal',
+  'mortgageInsurance',
+  'tuitionPayments',
+  'scholarships',
+  'interestPaid',
+  'annualEnrollmentPremium',
+  'annualSLCSP',
+  'annualAdvancePTC',
 ]);
+
+/** Monetary members of a 1099-R simplifiedMethod object. */
+const SIMPLIFIED_METHOD_MONEY_FIELDS = [
+  'totalContributions',
+  'paymentsThisYear',
+  'priorYearTaxFreeRecovery',
+] as const;
 
 export type FactValidationSeverity = 'error' | 'warning';
 
@@ -132,6 +164,53 @@ function isW2Document(fields: Map<string, TaxFact>): boolean {
   return [...fields.values()].some((f) => f.factType.startsWith('W2_'));
 }
 
+function pushNegativeAmount(
+  fact: TaxFact,
+  sourceField: string,
+  amount: number,
+  issues: FactValidationIssue[],
+): void {
+  issues.push(
+    issue({
+      code: 'NEGATIVE_AMOUNT',
+      message: `Field "${sourceField}" is negative (${amount}). Recorded as extracted; not rewritten.`,
+      factId: fact.factId,
+      sourceField: fact.sourceField,
+      sourceDocumentId: fact.sourceDocumentId,
+      observed: amount,
+    }),
+  );
+}
+
+function validateSimplifiedMethodAmounts(fact: TaxFact, issues: FactValidationIssue[]): void {
+  if (fact.sourceField !== 'simplifiedMethod') return;
+  if (fact.status === 'unknown') return;
+  if (!fact.value || typeof fact.value !== 'object' || Array.isArray(fact.value)) return;
+
+  const row = fact.value as Record<string, unknown>;
+  for (const key of SIMPLIFIED_METHOD_MONEY_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
+    const amount = row[key];
+    if (typeof amount !== 'number') continue;
+    if (!Number.isFinite(amount)) {
+      issues.push(
+        issue({
+          code: 'NON_FINITE_AMOUNT',
+          message: `Field "simplifiedMethod.${key}" is not a finite number and cannot be used as a tax amount.`,
+          factId: fact.factId,
+          sourceField: fact.sourceField,
+          sourceDocumentId: fact.sourceDocumentId,
+          observed: fact.value,
+        }),
+      );
+      continue;
+    }
+    if (amount < 0) {
+      pushNegativeAmount(fact, `simplifiedMethod.${key}`, amount, issues);
+    }
+  }
+}
+
 function validateScalarAmounts(facts: TaxFact[], issues: FactValidationIssue[]): void {
   for (const fact of facts) {
     if (fact.status === 'unknown') {
@@ -155,16 +234,7 @@ function validateScalarAmounts(facts: TaxFact[], issues: FactValidationIssue[]):
         continue;
       }
       if (NON_NEGATIVE_AMOUNT_FIELDS.has(fact.sourceField) && fact.value < 0) {
-        issues.push(
-          issue({
-            code: 'NEGATIVE_AMOUNT',
-            message: `Field "${fact.sourceField}" is negative (${fact.value}). Recorded as extracted; not rewritten.`,
-            factId: fact.factId,
-            sourceField: fact.sourceField,
-            sourceDocumentId: fact.sourceDocumentId,
-            observed: fact.value,
-          }),
-        );
+        pushNegativeAmount(fact, fact.sourceField, fact.value, issues);
       }
     }
 
@@ -183,8 +253,23 @@ function validateScalarAmounts(facts: TaxFact[], issues: FactValidationIssue[]):
             }),
           );
         }
+      } else {
+        // Non-string extracted identifiers (e.g. state: 12) are not state codes.
+        // Do not invent a two-letter replacement.
+        issues.push(
+          issue({
+            code: 'INVALID_STATE_IDENTIFIER',
+            message: `State identifier is not a recognized US state/DC code (observed non-string value).`,
+            factId: fact.factId,
+            sourceField: fact.sourceField,
+            sourceDocumentId: fact.sourceDocumentId,
+            observed: fact.value,
+          }),
+        );
       }
     }
+
+    validateSimplifiedMethodAmounts(fact, issues);
 
     if (fact.sourceField === 'box12' && Array.isArray(fact.value)) {
       for (const entry of fact.value) {
@@ -202,16 +287,7 @@ function validateScalarAmounts(facts: TaxFact[], issues: FactValidationIssue[]):
             }),
           );
         } else if (typeof amount === 'number' && amount < 0) {
-          issues.push(
-            issue({
-              code: 'NEGATIVE_AMOUNT',
-              message: `W-2 box12 entry amount is negative (${amount}). Recorded as extracted; not rewritten.`,
-              factId: fact.factId,
-              sourceField: 'box12',
-              sourceDocumentId: fact.sourceDocumentId,
-              observed: amount,
-            }),
-          );
+          pushNegativeAmount(fact, 'box12', amount, issues);
         }
       }
     }
@@ -364,10 +440,25 @@ export function validateImportedFacts(
   return { ready, issues };
 }
 
+/** True when an error-level issue targets this exact fact (not another document's field). */
+export function factHasValidationError(
+  fact: TaxFact,
+  validation: FactValidationResult,
+): boolean {
+  return validation.issues.some(
+    (i) =>
+      i.severity === 'error' &&
+      (i.factId === fact.factId ||
+        (i.sourceDocumentId === fact.sourceDocumentId &&
+          i.sourceField === fact.sourceField)),
+  );
+}
+
 /**
  * True when a fact may be treated as a known tool/return value.
  * Unknown facts are never ready as amounts (including never as zero).
  * Structurally invalid extracted amounts are also not ready.
+ * Matching is scoped to the fact identity / same document — never by sourceField alone.
  */
 export function isFactAmountReady(
   fact: TaxFact,
@@ -375,9 +466,26 @@ export function isFactAmountReady(
 ): boolean {
   if (fact.status === 'unknown') return false;
   if (typeof fact.value === 'number' && !Number.isFinite(fact.value)) return false;
-  return !validation.issues.some(
-    (i) =>
-      i.severity === 'error' &&
-      (i.factId === fact.factId || i.sourceField === fact.sourceField),
-  );
+  return !factHasValidationError(fact, validation);
+}
+
+/**
+ * Drop tool/return fields that failed structural validation.
+ * Does not rewrite values — invalid keys are omitted so they stay unapplied.
+ * Valid fields on the same form are kept. Missing amounts stay omitted (not zero).
+ */
+export function omitInvalidToolFields(
+  toolFields: Record<string, unknown>,
+  facts: TaxFact[],
+  validation: FactValidationResult,
+): Record<string, unknown> {
+  if (validation.ready) return toolFields;
+  const byField = new Map(facts.map((f) => [f.sourceField, f]));
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(toolFields)) {
+    const fact = byField.get(key);
+    if (fact && factHasValidationError(fact, validation)) continue;
+    out[key] = value;
+  }
+  return out;
 }

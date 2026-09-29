@@ -249,6 +249,195 @@ describe('documentIngestion client pipeline', () => {
     expect(loadDocuments('ret-1')[0].status).toBe('extracted');
   });
 
+  it('does not write negative wages to toolFields while keeping a valid field on the same form', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc()]);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'Acme',
+        wages: -500,
+        federalTaxWithheld: 1200,
+        socialSecurityWages: 50_000,
+        socialSecurityTax: 3_100,
+        medicareWages: 50_000,
+        medicareTax: 725,
+      },
+      incomeType: 'w2',
+      payerName: 'Acme',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 10,
+      ocrUsed: false,
+      ocrAvailable: false,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'test',
+        textBlockCount: 10,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: baseDoc(),
+      extracted,
+    });
+
+    expect(applied.pieces[0].validation.ready).toBe(false);
+    expect(
+      applied.pieces[0].validation.issues.some((i) => i.code === 'NEGATIVE_AMOUNT'),
+    ).toBe(true);
+    // Invalid wages are not applied to the return path; valid fields remain.
+    expect(applied.pieces[0].toolFields).not.toHaveProperty('wages');
+    expect(applied.pieces[0].toolFields.federalTaxWithheld).toBe(1200);
+    expect(applied.pieces[0].toolFields.employerName).toBe('Acme');
+    // Fact keeps the observed negative — not rewritten to zero or another value.
+    const wages = applied.facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.status).toBe('extracted');
+    expect(wages?.value).toBe(-500);
+  });
+
+  it('keeps one document\'s valid wages ready when another document has negative wages', () => {
+    saveTaxFacts('ret-1', []);
+    const badDoc = baseDoc({ documentId: 'DOC-bad', fileName: 'bad-w2.pdf' });
+    const goodDoc = baseDoc({ documentId: 'DOC-good', fileName: 'good-w2.pdf' });
+    saveDocuments('ret-1', [badDoc, goodDoc]);
+
+    const badExtracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: { employerName: 'BadCo', wages: -100, federalTaxWithheld: 10 },
+      incomeType: 'w2',
+      payerName: 'BadCo',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: false,
+      ocrAvailable: false,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'bad',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+    const goodExtracted: PDFExtractResult = {
+      formType: 'W-2',
+      extractedData: {
+        employerName: 'GoodCo',
+        wages: 40_000,
+        federalTaxWithheld: 4_000,
+        socialSecurityWages: 40_000,
+        socialSecurityTax: 2_480,
+        medicareWages: 40_000,
+        medicareTax: 580,
+      },
+      incomeType: 'w2',
+      payerName: 'GoodCo',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 8,
+      ocrUsed: false,
+      ocrAvailable: false,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2',
+          confidence: 'high',
+          matchedKeywords: ['wage and tax statement', 'employer', 'wages'],
+          reasoning: 'Matched W-2 markers',
+        },
+        fields: [],
+        summary: 'good',
+        textBlockCount: 8,
+        pagesScanned: 1,
+      },
+    };
+
+    const badApplied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: badDoc,
+      extracted: badExtracted,
+    });
+    const goodApplied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: goodDoc,
+      extracted: goodExtracted,
+    });
+
+    expect(badApplied.pieces[0].toolFields).not.toHaveProperty('wages');
+    expect(badApplied.pieces[0].validation.ready).toBe(false);
+    expect(goodApplied.pieces[0].toolFields.wages).toBe(40_000);
+    expect(goodApplied.pieces[0].validation.ready).toBe(true);
+  });
+
+  it('flags negative grossWinnings on a generic classified form and omits them from toolFields', () => {
+    saveTaxFacts('ret-1', []);
+    saveDocuments('ret-1', [baseDoc({ fileName: 'w2g.pdf' })]);
+    const extracted: PDFExtractResult = {
+      formType: 'W-2G',
+      extractedData: {
+        payerName: 'Casino',
+        grossWinnings: -100,
+        federalTaxWithheld: 25,
+      },
+      incomeType: 'w2g',
+      payerName: 'Casino',
+      confidence: 'high',
+      warnings: [],
+      errors: [],
+      textBlockCount: 6,
+      ocrUsed: false,
+      ocrAvailable: false,
+      rawOCRText: `
+        Form W-2G Certain Gambling Winnings
+        Reportable winnings
+        Federal income tax withheld
+      `,
+      trace: {
+        formDetection: {
+          detectedType: 'W-2G',
+          confidence: 'high',
+          matchedKeywords: ['certain gambling winnings', 'reportable winnings'],
+          reasoning: 'Matched W-2G markers',
+        },
+        fields: [],
+        summary: 'w2g',
+        textBlockCount: 6,
+        pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      document: baseDoc({ fileName: 'w2g.pdf' }),
+      extracted,
+    });
+
+    expect(applied.pieces[0].validation.ready).toBe(false);
+    expect(applied.pieces[0].toolFields).not.toHaveProperty('grossWinnings');
+    expect(applied.pieces[0].toolFields.federalTaxWithheld).toBe(25);
+    expect(applied.facts.find((f) => f.sourceField === 'grossWinnings')?.value).toBe(-100);
+  });
+
   it('normalizes printed W-2 money and keeps an unreadable box unknown', () => {
     saveTaxFacts('ret-1', []);
     saveDocuments('ret-1', [baseDoc()]);

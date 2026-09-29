@@ -6,6 +6,7 @@ import {
   invokeTaxTool,
   normalizeGenericFields,
   ocrExtractorLabel,
+  omitInvalidToolFields,
   toolNameForIncomeType,
   validateImportedFacts,
 } from '@hatax/engine';
@@ -192,12 +193,14 @@ export function factsForExtraction(input: {
         validation: { ready: true, issues: [] },
       };
     }
+    // Validate after facts exist; do not rewrite or invent amounts.
+    // Invalid fields are omitted from toolFields so intake cannot write them.
+    const validation = validateImportedFacts(result.facts, { taxYear: input.taxYear });
     return {
       facts: result.facts,
-      toolFields: result.fields,
+      toolFields: omitInvalidToolFields(result.fields, result.facts, validation),
       incomeType: result.incomeType ?? input.extracted.incomeType,
-      // Validate after facts exist; do not rewrite or invent amounts.
-      validation: validateImportedFacts(result.facts, { taxYear: input.taxYear }),
+      validation,
     };
   }
 
@@ -217,10 +220,15 @@ export function factsForExtraction(input: {
     rawText: generic.rawText,
     sourceLocation: reconciled.fieldSourceLocations,
   });
+  const validation = validateImportedFacts(facts, { taxYear: input.taxYear });
   return {
     facts,
-    toolFields: fieldsForToolCall(generic.fields),
+    toolFields: omitInvalidToolFields(
+      fieldsForToolCall(generic.fields),
+      facts,
+      validation,
+    ),
     incomeType: input.extracted.incomeType,
-    validation: validateImportedFacts(facts, { taxYear: input.taxYear }),
+    validation,
   };
 }

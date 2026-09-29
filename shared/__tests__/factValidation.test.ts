@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { addW2 } from '../src/taxfacts/taxTools.js';
+import { add1099R, addW2 } from '../src/taxfacts/taxTools.js';
+import { factsFromFields } from '../src/taxfacts/taxFact.js';
 import type { TaxFact } from '../src/taxfacts/taxFact.js';
 import {
   amountFromFact,
   isFactAmountReady,
   numericOrMissing,
+  omitInvalidToolFields,
   validateImportedFacts,
 } from '../src/taxfacts/factValidation.js';
 
@@ -16,8 +18,11 @@ const ctx = {
   extractor: 'local-ocr',
 };
 
-function w2Facts(args: Record<string, unknown>): TaxFact[] {
-  const result = addW2(args, ctx);
+function w2Facts(
+  args: Record<string, unknown>,
+  documentId = 'DOC-1',
+): TaxFact[] {
+  const result = addW2(args, { ...ctx, sourceDocumentId: documentId });
   expect(result.ok).toBe(true);
   if (!result.ok) return [];
   return result.facts;
@@ -58,6 +63,162 @@ describe('fact validation (development-order step 8)', () => {
     expect(isFactAmountReady(wages, validation)).toBe(false);
   });
 
+  it('omits invalid tool fields while keeping valid fields on the same form', () => {
+    const facts = w2Facts({
+      wages: -500,
+      federalTaxWithheld: 1200,
+      employerName: 'Acme',
+    });
+    const validation = validateImportedFacts(facts);
+    const toolFields = {
+      wages: -500,
+      federalTaxWithheld: 1200,
+      employerName: 'Acme',
+    };
+    const ready = omitInvalidToolFields(toolFields, facts, validation);
+
+    expect(validation.ready).toBe(false);
+    expect(ready).not.toHaveProperty('wages');
+    expect(ready.federalTaxWithheld).toBe(1200);
+    expect(ready.employerName).toBe('Acme');
+    // Extracted facts keep the observed negative — not rewritten.
+    expect(facts.find((f) => f.sourceField === 'wages')!.value).toBe(-500);
+  });
+
+  it('does not let one document\'s bad wages mark another document\'s wages unready', () => {
+    const bad = w2Facts({ wages: -100, employerName: 'BadCo' }, 'DOC-bad');
+    const good = w2Facts(
+      {
+        wages: 50_000,
+        federalTaxWithheld: 5_000,
+        socialSecurityWages: 50_000,
+        socialSecurityTax: 3_100,
+        medicareWages: 50_000,
+        medicareTax: 725,
+        employerName: 'GoodCo',
+      },
+      'DOC-good',
+    );
+    const validation = validateImportedFacts([...bad, ...good], { taxYear: 2025 });
+    const badWages = bad.find((f) => f.sourceField === 'wages')!;
+    const goodWages = good.find((f) => f.sourceField === 'wages')!;
+
+    expect(isFactAmountReady(badWages, validation)).toBe(false);
+    expect(isFactAmountReady(goodWages, validation)).toBe(true);
+    expect(goodWages.value).toBe(50_000);
+  });
+
+  it('flags negative money on generic classified forms without inventing a replacement', () => {
+    const facts = factsFromFields({
+      returnId: 'ret-1',
+      taxYear: 2025,
+      documentId: 'DOC-w2g',
+      fileName: 'w2g.pdf',
+      extractor: 'local-pdf',
+      fields: {
+        payerName: 'Casino',
+        grossWinnings: -100,
+        federalTaxWithheld: 25,
+        unemploymentCompensation: -50,
+        grossAmount: -10,
+        mortgageInterest: -200,
+      },
+      factTypeFor: (field) => `W2G_${field}`,
+    });
+    const validation = validateImportedFacts(facts);
+
+    expect(validation.ready).toBe(false);
+    const negativeFields = validation.issues
+      .filter((i) => i.code === 'NEGATIVE_AMOUNT')
+      .map((i) => i.sourceField);
+    expect(negativeFields).toEqual(
+      expect.arrayContaining([
+        'grossWinnings',
+        'unemploymentCompensation',
+        'grossAmount',
+        'mortgageInterest',
+      ]),
+    );
+    expect(facts.find((f) => f.sourceField === 'grossWinnings')!.value).toBe(-100);
+    expect(isFactAmountReady(facts.find((f) => f.sourceField === 'grossWinnings')!, validation)).toBe(
+      false,
+    );
+    expect(
+      isFactAmountReady(facts.find((f) => f.sourceField === 'federalTaxWithheld')!, validation),
+    ).toBe(true);
+  });
+
+  it('flags negative simplifiedMethod money without rewriting nested amounts', () => {
+    const result = add1099R(
+      {
+        payerName: 'Fidelity',
+        grossDistribution: 20000,
+        taxableAmount: 15000,
+        useSimplifiedMethod: true,
+        simplifiedMethod: {
+          totalContributions: -40000,
+          ageAtStartDate: 65,
+          isJointAndSurvivor: false,
+          paymentsThisYear: -12,
+          priorYearTaxFreeRecovery: -100,
+        },
+      },
+      { ...ctx, sourceFileName: '1099r.pdf' },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const simplified = result.facts.find((f) => f.sourceField === 'simplifiedMethod')!;
+    const validation = validateImportedFacts(result.facts);
+
+    expect(simplified.status).toBe('extracted');
+    expect(simplified.value).toEqual({
+      totalContributions: -40000,
+      ageAtStartDate: 65,
+      isJointAndSurvivor: false,
+      paymentsThisYear: -12,
+      priorYearTaxFreeRecovery: -100,
+    });
+    expect(validation.ready).toBe(false);
+    expect(
+      validation.issues.filter((i) => i.code === 'NEGATIVE_AMOUNT').length,
+    ).toBeGreaterThanOrEqual(3);
+    expect(isFactAmountReady(simplified, validation)).toBe(false);
+    expect(
+      isFactAmountReady(
+        result.facts.find((f) => f.sourceField === 'grossDistribution')!,
+        validation,
+      ),
+    ).toBe(true);
+
+    const readyFields = omitInvalidToolFields(result.fields, result.facts, validation);
+    expect(readyFields).not.toHaveProperty('simplifiedMethod');
+    expect(readyFields.grossDistribution).toBe(20000);
+  });
+
+  it('flags a non-string state identifier without inventing a state code', () => {
+    const fact: TaxFact = {
+      factId: 'DOC-1:state',
+      returnId: 'ret-1',
+      taxYear: 2025,
+      factType: 'W2_state',
+      sourceDocumentId: 'DOC-1',
+      sourceFileName: 'w2.pdf',
+      sourceField: 'state',
+      rawText: '12',
+      confidence: null,
+      extractor: 'local-ocr',
+      verified: false,
+      status: 'extracted',
+      value: 12,
+    };
+    const validation = validateImportedFacts([fact]);
+    expect(validation.ready).toBe(false);
+    expect(validation.issues.some((i) => i.code === 'INVALID_STATE_IDENTIFIER')).toBe(true);
+    expect(fact.value).toBe(12);
+    expect(isFactAmountReady(fact, validation)).toBe(false);
+  });
+
   it('flags a non-finite extracted amount without inventing a replacement', () => {
     const fact: TaxFact = {
       factId: 'DOC-1:wages',
@@ -81,7 +242,7 @@ describe('fact validation (development-order step 8)', () => {
     expect(fact.value).toBeNaN();
   });
 
-  it('flags an invalid state identifier without inventing a state code', () => {
+  it('flags an invalid string state identifier without inventing a state code', () => {
     const facts = w2Facts({ wages: 1000, state: 'ZZ' });
     const state = facts.find((f) => f.sourceField === 'state')!;
     const validation = validateImportedFacts(facts);

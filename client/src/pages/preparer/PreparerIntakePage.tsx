@@ -156,6 +156,11 @@ export default function PreparerIntakePage() {
         const toolErrors = applied.pieces
           .map((item) => item.toolError)
           .filter(Boolean) as string[];
+        // toolFields already omit structurally invalid values (e.g. negative wages).
+        // Surface validation issues so the preparer sees why a field was not applied.
+        const validationMessages = applied.pieces.flatMap((piece) =>
+          piece.validation.issues.map((issue) => issue.message),
+        );
         const actions = applied.pieces.flatMap((piece) => {
           if (piece.toolError || Object.keys(piece.toolFields).length === 0) return [];
           return buildActionsFromExtraction({
@@ -168,13 +173,16 @@ export default function PreparerIntakePage() {
         if (actions.length === 0) {
           next.push({
             fileName: file.name,
-            summary: 'Nothing usable was read',
+            summary: validationMessages.length > 0
+              ? 'Validation blocked income write'
+              : 'Nothing usable was read',
             detail: [
               `Stored as ${applied.document.documentId}.`,
               applied.classification
                 ? `${applied.classification.formType}: ${applied.classification.reason}`
                 : null,
               ...toolErrors,
+              ...validationMessages,
               ...extracted.errors,
               ...extracted.warnings,
             ].filter(Boolean).join(' ') || 'The form was stored as unknown. Missing amounts were not written as zero.',
@@ -197,6 +205,7 @@ export default function PreparerIntakePage() {
             applied.classification?.reason,
             extracted.aiEnhanced ? 'The model checked the scanned fields.' : 'Read on this computer.',
             ...toolErrors,
+            ...validationMessages,
             ...extracted.warnings,
             ...executed.results.filter((r) => !r.success).map((r) => r.error || r.summary),
           ].filter(Boolean).join(' '),
