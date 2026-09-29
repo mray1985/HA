@@ -74,6 +74,7 @@ export function factsForExtraction(input: {
         sourceFileName: input.fileName,
         extractor,
         rawText: structured.rawText,
+        sourceLocation: input.extracted.fieldSourceLocations,
       },
     });
     if (!result.ok) {
@@ -105,6 +106,7 @@ export function factsForExtraction(input: {
     fields: generic.fields,
     factTypeFor: (field) => `${prefix}_${field}`,
     rawText: generic.rawText,
+    sourceLocation: input.extracted.fieldSourceLocations,
   });
   return {
     facts,

@@ -55,6 +55,7 @@ export type {
   SupportedFormType,
   TextBlock,
   PDFExtractResult,
+  FieldSourceLocation,
   ImportTrace,
   ImportTraceEntry,
   FormDetectionTrace,
@@ -88,6 +89,7 @@ import {
   FORM_TYPE_LABELS,
   type TextBlock,
   type PDFExtractResult,
+  type FieldSourceLocation,
   type FormPageSpan,
 } from './pdfExtractHelpers';
 
@@ -102,93 +104,99 @@ export type { OCRStage } from './ocrService';
 function extractFormData(
   formType: ReturnType<typeof detectFormType>['type'],
   blocks: TextBlock[],
-): { extractedData: Record<string, unknown>; payerName: string; fieldRawTokens: Record<string, string> } {
+): {
+  extractedData: Record<string, unknown>;
+  payerName: string;
+  fieldRawTokens: Record<string, string>;
+  fieldSourceLocations: Record<string, FieldSourceLocation>;
+} {
   let extractedData: Record<string, unknown> = {};
   let payerName = '';
   const fieldRawTokens: Record<string, string> = {};
+  const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
   switch (formType) {
     case 'W-2':
-      extractedData = extractW2Fields(blocks, fieldRawTokens);
+      extractedData = extractW2Fields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.employerName as string) || '';
       break;
     case '1099-INT':
-      extractedData = extract1099INTFields(blocks, fieldRawTokens);
+      extractedData = extract1099INTFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-DIV':
-      extractedData = extract1099DIVFields(blocks, fieldRawTokens);
+      extractedData = extract1099DIVFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-R':
-      extractedData = extract1099RFields(blocks, fieldRawTokens);
+      extractedData = extract1099RFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-NEC':
-      extractedData = extract1099NECFields(blocks, fieldRawTokens);
+      extractedData = extract1099NECFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-MISC':
-      extractedData = extract1099MISCFields(blocks, fieldRawTokens);
+      extractedData = extract1099MISCFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-G':
-      extractedData = extract1099GFields(blocks, fieldRawTokens);
+      extractedData = extract1099GFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-B':
-      extractedData = extract1099BFields(blocks, fieldRawTokens);
+      extractedData = extract1099BFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.brokerName as string) || '';
       break;
     case '1099-K':
-      extractedData = extract1099KFields(blocks, fieldRawTokens);
+      extractedData = extract1099KFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.platformName as string) || '';
       break;
     case 'SSA-1099':
-      extractedData = extractSSA1099Fields(blocks, fieldRawTokens);
+      extractedData = extractSSA1099Fields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = 'Social Security Administration';
       break;
     case '1099-SA':
-      extractedData = extract1099SAFields(blocks, fieldRawTokens);
+      extractedData = extract1099SAFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-Q':
-      extractedData = extract1099QFields(blocks, fieldRawTokens);
+      extractedData = extract1099QFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1098':
-      extractedData = extract1098Fields(blocks, fieldRawTokens);
+      extractedData = extract1098Fields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.lenderName as string) || '';
       break;
     case '1098-T':
-      extractedData = extract1098TFields(blocks, fieldRawTokens);
+      extractedData = extract1098TFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.institutionName as string) || '';
       break;
     case '1098-E':
-      extractedData = extract1098EFields(blocks, fieldRawTokens);
+      extractedData = extract1098EFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.lenderName as string) || '';
       break;
     case '1095-A':
-      extractedData = extract1095AFields(blocks, fieldRawTokens);
+      extractedData = extract1095AFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.marketplaceName as string) || '';
       break;
     case 'K-1':
-      extractedData = extractK1Fields(blocks, fieldRawTokens);
+      extractedData = extractK1Fields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.entityName as string) || '';
       break;
     case 'W-2G':
-      extractedData = extractW2GFields(blocks, fieldRawTokens);
+      extractedData = extractW2GFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-C':
-      extractedData = extract1099CFields(blocks, fieldRawTokens);
+      extractedData = extract1099CFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.payerName as string) || '';
       break;
     case '1099-S':
-      extractedData = extract1099SFields(blocks, fieldRawTokens);
+      extractedData = extract1099SFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.settlementAgent as string) || '';
       break;
   }
-  return { extractedData, payerName, fieldRawTokens };
+  return { extractedData, payerName, fieldRawTokens, fieldSourceLocations };
 }
 
 /**
@@ -296,7 +304,7 @@ function processTextBlocks(
   }
 
   // Extract fields based on form type — using effectiveBlocks (scoped to form pages)
-  const { extractedData, payerName, fieldRawTokens } = extractFormData(type, effectiveBlocks);
+  const { extractedData, payerName, fieldRawTokens, fieldSourceLocations } = extractFormData(type, effectiveBlocks);
 
   // Add form-specific warnings
   if (type === '1099-B') {
@@ -353,6 +361,9 @@ function processTextBlocks(
         fieldRawTokens: Object.keys(spanData.fieldRawTokens).length > 0
           ? spanData.fieldRawTokens
           : undefined,
+        fieldSourceLocations: Object.keys(spanData.fieldSourceLocations).length > 0
+          ? spanData.fieldSourceLocations
+          : undefined,
         incomeType: span.incomeType,
         payerName: spanData.payerName,
         warnings: spanWarnings,
@@ -376,6 +387,9 @@ function processTextBlocks(
     confidence,
     extractedData,
     fieldRawTokens: Object.keys(fieldRawTokens).length > 0 ? fieldRawTokens : undefined,
+    fieldSourceLocations: Object.keys(fieldSourceLocations).length > 0
+      ? fieldSourceLocations
+      : undefined,
     incomeType,
     payerName,
     warnings,

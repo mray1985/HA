@@ -135,4 +135,72 @@ describe('TaxFact unknown-is-not-zero', () => {
     expect(missingValue.status).toBe('extracted');
     expect(carriedValue.status).toBe('unknown');
   });
+
+  it('stores page and box for a located token and leaves missing fields without a box', () => {
+    const wagesBox = { x: 417, y: 75, width: 50, height: 7 };
+    const zeroBox = { x: 540, y: 75, width: 25, height: 7 };
+    const facts = factsFromFields({
+      ...source,
+      fields: {
+        wages: 61482.17,
+        federalTaxWithheld: 0,
+        medicareWages: undefined,
+      },
+      rawText: {
+        wages: '$61,482.17',
+        federalTaxWithheld: '$0.00',
+        medicareWages: '',
+      },
+      sourceLocation: {
+        wages: { page: 1, box: wagesBox },
+        federalTaxWithheld: { page: 1, box: zeroBox },
+        // medicareWages intentionally absent — missing field gets no fake box
+      },
+    });
+
+    const wages = facts.find((f) => f.sourceField === 'wages');
+    expect(wages?.status).toBe('extracted');
+    expect(wages?.value).toBe(61482.17);
+    expect(wages?.rawText).toBe('$61,482.17');
+    expect(wages?.rawText).not.toBe('61482.17');
+    expect(wages?.sourcePage).toBe(1);
+    expect(wages?.sourceBox).toEqual(wagesBox);
+
+    const withheld = facts.find((f) => f.sourceField === 'federalTaxWithheld');
+    expect(withheld?.status).toBe('extracted');
+    expect(withheld?.value).toBe(0);
+    expect(withheld?.rawText).toBe('$0.00');
+    expect(withheld?.sourcePage).toBe(1);
+    expect(withheld?.sourceBox).toEqual(zeroBox);
+
+    const medicare = facts.find((f) => f.sourceField === 'medicareWages');
+    expect(medicare?.status).toBe('unknown');
+    expect(medicare && 'value' in medicare).toBe(false);
+    expect(medicare?.sourcePage).toBeUndefined();
+    expect(medicare?.sourceBox).toBeUndefined();
+  });
+
+  it('keeps a located box on an unreadable unknown token and rejects invented coordinates', () => {
+    const badBox = { x: 418, y: 123, width: 34, height: 7 };
+    const [unreadable] = factsFromFields({
+      ...source,
+      fields: { medicareWages: undefined },
+      rawText: { medicareWages: '12O.00' },
+      sourceLocation: { medicareWages: { page: 1, box: badBox } },
+    });
+    expect(unreadable.status).toBe('unknown');
+    expect(unreadable.rawText).toBe('12O.00');
+    expect(unreadable.sourcePage).toBe(1);
+    expect(unreadable.sourceBox).toEqual(badBox);
+
+    const [invented] = factsFromFields({
+      ...source,
+      fields: { wages: 100 },
+      sourceLocation: {
+        wages: { page: Number.NaN, box: { x: 0, y: 0, width: 1, height: 1 } },
+      },
+    });
+    expect(invented.sourcePage).toBeUndefined();
+    expect(invented.sourceBox).toBeUndefined();
+  });
 });

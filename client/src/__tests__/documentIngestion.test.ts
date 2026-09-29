@@ -317,11 +317,17 @@ describe('documentIngestion client pipeline', () => {
         wages: 61482.17,
         federalTaxWithheld: 0,
         medicareWages: undefined,
+        socialSecurityWages: undefined,
       },
       fieldRawTokens: {
         wages: '$61,482.17',
         federalTaxWithheld: '$0.00',
         medicareWages: '12O.00',
+      },
+      fieldSourceLocations: {
+        wages: { page: 1, box: { x: 417, y: 75, width: 50, height: 7 } },
+        federalTaxWithheld: { page: 1, box: { x: 540, y: 75, width: 25, height: 7 } },
+        medicareWages: { page: 1, box: { x: 418, y: 123, width: 34, height: 7 } },
       },
       incomeType: 'w2',
       payerName: 'Acme',
@@ -360,9 +366,22 @@ describe('documentIngestion client pipeline', () => {
     const wages = applied.facts.find((f) => f.sourceField === 'wages');
     expect(wages?.rawText).toBe('$61,482.17');
     expect(wages?.rawText).not.toBe('61482.17');
+    expect(wages?.sourcePage).toBe(1);
+    expect(wages?.sourceBox).toEqual({ x: 417, y: 75, width: 50, height: 7 });
+    const withheld = applied.facts.find((f) => f.sourceField === 'federalTaxWithheld');
+    expect(withheld?.value).toBe(0);
+    expect(withheld?.rawText).toBe('$0.00');
+    expect(withheld?.sourcePage).toBe(1);
+    expect(withheld?.sourceBox).toEqual({ x: 540, y: 75, width: 25, height: 7 });
     const medicare = applied.facts.find((f) => f.sourceField === 'medicareWages');
     expect(medicare?.status).toBe('unknown');
     expect(medicare?.rawText).toBe('12O.00');
+    expect(medicare?.sourcePage).toBe(1);
+    expect(medicare?.sourceBox).toEqual({ x: 418, y: 123, width: 34, height: 7 });
+    const ss = applied.facts.find((f) => f.sourceField === 'socialSecurityWages');
+    expect(ss?.status).toBe('unknown');
+    expect(ss?.sourcePage).toBeUndefined();
+    expect(ss?.sourceBox).toBeUndefined();
   });
 
   it('routes listed 1099 income types through the tool API with provenance', () => {

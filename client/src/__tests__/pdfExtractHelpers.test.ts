@@ -19,6 +19,7 @@ import {
   extractK1Fields,
   extractW2GFields,
   type TextBlock,
+  type FieldSourceLocation,
 } from '../services/pdfExtractHelpers';
 
 // ── Helper: build TextBlock from bbox data ────────────
@@ -286,7 +287,8 @@ describe('extractW2Fields with phrase-level blocks', () => {
       tb('1236.13', 544, 123, 29, 7),
     ];
     const fieldRawTokens: Record<string, string> = {};
-    const fields = extractW2Fields(blocks, fieldRawTokens);
+    const fieldSourceLocations: Record<string, FieldSourceLocation> = {};
+    const fields = extractW2Fields(blocks, fieldRawTokens, fieldSourceLocations);
 
     expect(fields.wages).toBe(61482.17);
     expect(fields.federalTaxWithheld).toBe(0);
@@ -296,6 +298,21 @@ describe('extractW2Fields with phrase-level blocks', () => {
     expect(fieldRawTokens.federalTaxWithheld).toBe('$0.00');
     expect(fieldRawTokens.medicareWages).toBe('12O.00');
     expect(fieldRawTokens.wages).not.toBe('61482.17');
+
+    expect(fieldSourceLocations.wages).toEqual({
+      page: 1,
+      box: { x: 417, y: 75, width: 50, height: 7 },
+    });
+    expect(fieldSourceLocations.federalTaxWithheld).toEqual({
+      page: 1,
+      box: { x: 540, y: 75, width: 25, height: 7 },
+    });
+    expect(fieldSourceLocations.medicareWages).toEqual({
+      page: 1,
+      box: { x: 418, y: 123, width: 34, height: 7 },
+    });
+    // socialSecurityWages was never located — no invented box
+    expect(fieldSourceLocations.socialSecurityWages).toBeUndefined();
   });
 
   it('extracts employer name', () => {
