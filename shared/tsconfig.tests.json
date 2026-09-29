@@ -7,6 +7,6 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["__tests__/taxFact.test.ts"],
+  "include": ["__tests__/taxFact.test.ts", "__tests__/structuredExtraction.test.ts"],
   "exclude": ["dist"]
 }

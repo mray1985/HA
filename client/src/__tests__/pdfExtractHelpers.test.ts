@@ -270,6 +270,34 @@ describe('extractW2Fields with phrase-level blocks', () => {
     expect(fields.medicareTax).toBe(1236.13);
   });
 
+  it('preserves original OCR tokens including unreadable amounts', () => {
+    const blocks = [
+      tb('Form W-2', 40, 20, 40, 10),
+      tb('Wage and Tax Statement', 90, 20, 100, 8),
+      tb("c Employer's name, address, and ZIP code", 42, 85, 137, 8),
+      tb('Acme Corporation Inc.', 39, 100, 80, 7),
+      tb('1 Wages, tips, other compensation', 339, 61, 104, 8),
+      tb('$61,482.17', 417, 75, 50, 7),
+      tb('2 Federal income tax withheld', 461, 61, 98, 8),
+      tb('$0.00', 540, 75, 25, 7),
+      tb('5 Medicare wages and tips', 339, 109, 88, 8),
+      tb('12O.00', 418, 123, 34, 7),
+      tb('6 Medicare tax withheld', 461, 109, 79, 8),
+      tb('1236.13', 544, 123, 29, 7),
+    ];
+    const fieldRawTokens: Record<string, string> = {};
+    const fields = extractW2Fields(blocks, fieldRawTokens);
+
+    expect(fields.wages).toBe(61482.17);
+    expect(fields.federalTaxWithheld).toBe(0);
+    expect(fields.medicareWages).toBeUndefined();
+    expect(fields.medicareTax).toBe(1236.13);
+    expect(fieldRawTokens.wages).toBe('$61,482.17');
+    expect(fieldRawTokens.federalTaxWithheld).toBe('$0.00');
+    expect(fieldRawTokens.medicareWages).toBe('12O.00');
+    expect(fieldRawTokens.wages).not.toBe('61482.17');
+  });
+
   it('extracts employer name', () => {
     const fields = extractW2Fields(makeW2Blocks());
     expect(fields.employerName).toBeTruthy();
