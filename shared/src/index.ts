@@ -165,3 +165,4 @@ export * from './taxfacts/documentIngestion.js';
 export * from './taxfacts/documentClassifier.js';
 export * from './taxfacts/documentOcr.js';
 export * from './taxfacts/structuredExtraction.js';
+export * from './taxfacts/factValidation.js';

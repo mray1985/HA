@@ -1,4 +1,4 @@
-import type { TaxFact } from '@hatax/engine';
+import type { FactValidationResult, TaxFact } from '@hatax/engine';
 import {
   extractStructuredFields,
   factsFromFields,
@@ -7,6 +7,7 @@ import {
   normalizeGenericFields,
   ocrExtractorLabel,
   toolNameForIncomeType,
+  validateImportedFacts,
 } from '@hatax/engine';
 import type { FieldSourceLocationValue, PDFExtractResult } from './pdfExtractHelpers';
 import { taxFactStorageKey } from './storageScope';
@@ -149,6 +150,8 @@ export function factsForExtraction(input: {
   toolFields: Record<string, unknown>;
   incomeType: string | null;
   toolError?: string;
+  /** Structural validation of imported facts — never rewrites values. */
+  validation: FactValidationResult;
 } {
   const extractor = extractorLabel(input.extracted);
   const tool = toolNameForIncomeType(input.extracted.incomeType);
@@ -185,12 +188,16 @@ export function factsForExtraction(input: {
         toolFields: {},
         incomeType: null,
         toolError: result.error,
+        // No facts to validate; toolError carries the failure separately.
+        validation: { ready: true, issues: [] },
       };
     }
     return {
       facts: result.facts,
       toolFields: result.fields,
       incomeType: result.incomeType ?? input.extracted.incomeType,
+      // Validate after facts exist; do not rewrite or invent amounts.
+      validation: validateImportedFacts(result.facts, { taxYear: input.taxYear }),
     };
   }
 
@@ -214,5 +221,6 @@ export function factsForExtraction(input: {
     facts,
     toolFields: fieldsForToolCall(generic.fields),
     incomeType: input.extracted.incomeType,
+    validation: validateImportedFacts(facts, { taxYear: input.taxYear }),
   };
 }
