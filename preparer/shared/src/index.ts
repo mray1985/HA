@@ -150,6 +150,7 @@ export * from './services/buildIrsReferenceData.js';
 // Calculation trace engine (inspired by IRS Direct File Fact Graph)
 export * from './engine/traceBuilder.js';
 export * from './engine/plausibility.js';
+export * from './diagnostics/index.js';
 
 // SSN utilities
 export * from './utils/ssn.js';
