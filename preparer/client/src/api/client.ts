@@ -419,7 +419,8 @@ export async function wipeAllData(): Promise<void> {
 
 // ─── Income Items (generic CRUD for arrays) ──────
 
-const ARRAY_FIELD_MAP: Record<string, keyof TaxReturn> = {
+/** Item type → the return array that holds it. */
+export const ARRAY_FIELD_MAP: Record<string, keyof TaxReturn> = {
   w2: 'w2Income',
   '1099nec': 'income1099NEC',
   '1099k': 'income1099K',
