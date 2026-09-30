@@ -53,6 +53,12 @@ export const PA_ANSWER = {
 
 const PA_YEAR = 2025;
 const RATE = 0.0307;
+/**
+ * Working Pennsylvanians Tax Credit (Act 45 of 2025): 10% of the federal
+ * earned income credit, at most $805 (Department of Revenue). For 2025 it is
+ * not on the PA-40; the department figures and applies it.
+ */
+const WPTC = { rate: 0.1, max: 805 };
 const STUDENT_LOAN_INTEREST_CAP = 2500;
 /** Schedule SP: 100% up to the base, then 10 points less for each $250 more (Eligibility Income Tables 1 and 2). */
 const SP = { unmarried: 6500, married: 13000, perDependent: 9500, step: 250, steps: 9 };
@@ -401,6 +407,10 @@ export function withPennsylvaniaResident(calculator: StateCalculator | null): St
           line8Gambling: lines.line8,
           line9TotalTaxable: lines.line9,
           line21TaxForgiveness: lines.line21,
+          // Not part of the 2025 PA-40: the department figures and applies it.
+          ...(federalResult.credits.eitcCredit > 0
+            ? { workingPennsylvaniansCreditEstimate: round2(Math.min(WPTC.max, federalResult.credits.eitcCredit * WPTC.rate)) }
+            : {}),
           ...(lines.eligibilityIncome !== undefined ? { eligibilityIncome: lines.eligibilityIncome, forgivenessRate: lines.forgivenessRate } : {}),
           ...(lines.losses.line4 ? { line4NetLoss: 1 } : {}),
           ...(lines.losses.line5 ? { line5NetLoss: 1 } : {}),

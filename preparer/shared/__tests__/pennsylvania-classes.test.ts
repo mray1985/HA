@@ -106,6 +106,20 @@ describe('the PA-40 income classes', () => {
   });
 });
 
+describe('the Working Pennsylvanians Tax Credit (not on the 2025 PA-40)', () => {
+  it('estimates 10% of the federal EITC without changing the PA-40', () => {
+    const w2Income = [{ id: 'w', employerName: 'Acme', wages: 18000, federalTaxWithheld: 0, state: 'PA', stateWages: 18000, stateTaxWithheld: 552.6 }];
+    const dependents = [{ id: 'k', firstName: 'Ava', lastName: 'Payer', relationship: 'Daughter', dateOfBirth: '2016-04-01', monthsLivedWithYou: 12 }];
+    const { result, state } = run({ filingStatus: FilingStatus.HeadOfHousehold, w2Income, dependents, stateReturns: [pa({ paOtherEligibilityIncome: 5000 })] } as Partial<TaxReturn>);
+    const eitc = result.credits.eitcCredit;
+    expect(eitc).toBeGreaterThan(0);
+    expect(state?.additionalLines?.workingPennsylvaniansCreditEstimate).toBe(Math.round(eitc * 0.1 * 100) / 100);
+    // The PA-40 figures do not include it: 3.07% × $18,000 = $552.60, less tax forgiveness.
+    expect(state?.stateIncomeTax).toBe(552.6);
+    expect(state?.stateRefundOrOwed).toBe(Math.round((552.6 - (state?.totalStateTax ?? 0)) * 100) / 100);
+  });
+});
+
 describe('what the PA-40 needs, or cannot figure', () => {
   it('asks for Pennsylvania compensation when box 16 is not Pennsylvania wages', () => {
     const { findings } = run({ w2Income: [{ id: 'nj', employerName: 'Jersey Co', wages: 50000, federalTaxWithheld: 5000, state: 'NJ', stateWages: 50000, stateTaxWithheld: 900 }], stateReturns: [pa()] });

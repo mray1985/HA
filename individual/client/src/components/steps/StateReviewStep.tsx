@@ -140,6 +140,12 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
           </>
         )}
         {iowaRefundable > 0 && <Row label="Refundable credits (child care, earned income)" value={-iowaRefundable} green />}
+        {pennsylvania && (sr.additionalLines?.workingPennsylvaniansCreditEstimate ?? 0) > 0 && (
+          <p className="text-xs text-slate-400 py-1">
+            Pennsylvania adds the Working Pennsylvanians Tax Credit (10% of your federal earned income credit, about $
+            {(sr.additionalLines?.workingPennsylvaniansCreditEstimate ?? 0).toLocaleString()}) itself after you file, so your refund can be larger than shown here.
+          </p>
+        )}
 
         <div className="border-t border-slate-700/50 my-2" />
         <div className="flex items-center justify-between py-1">

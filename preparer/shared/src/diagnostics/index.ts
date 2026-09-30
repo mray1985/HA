@@ -88,6 +88,18 @@ export function runReturnDiagnostics(taxReturn: TaxReturn, calculation?: Calcula
     });
   }
 
+  // Pennsylvania's Working Pennsylvanians Tax Credit is applied by the department, not on the 2025 PA-40.
+  const wptc = calculation?.stateResults?.find((s) => s.stateCode === 'PA')?.additionalLines?.workingPennsylvaniansCreditEstimate;
+  if (typeof wptc === 'number' && wptc > 0) {
+    out.push({
+      id: 'state:PA:working-pennsylvanians-credit',
+      category: 'INFORMATIONAL',
+      source: 'suggestion',
+      section: 'state_pa',
+      message: `Pennsylvania's Working Pennsylvanians Tax Credit, 10% of the federal earned income credit (about $${wptc.toLocaleString('en-US')}), is figured and applied by the Department of Revenue, so the refund it pays can be larger than this PA-40 shows.`,
+    });
+  }
+
   // What the engine cannot compute to the official rules is never approximated (engine/unsupported.ts).
   for (const u of calculation?.unsupported ?? findUnsupportedPatterns(taxReturn)) {
     out.push({

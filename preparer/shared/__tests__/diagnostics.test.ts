@@ -120,3 +120,16 @@ describe('what the engine cannot compute is BLOCKING (fail closed)', () => {
     expect(found).toEqual([expect.objectContaining({ id: 'unsupported:TAX-008:CA', category: 'BLOCKING', section: 'state_ca', message: expect.stringContaining('California part-year return') })]);
   });
 });
+
+describe("Pennsylvania's Working Pennsylvanians Tax Credit", () => {
+  it('tells the preparer the department applies it, when the federal EITC is claimed', () => {
+    const tr = makeTaxReturn({
+      taxYear: 2025, filingStatus: FilingStatus.HeadOfHousehold,
+      w2Income: [{ id: 'w', employerName: 'Acme', wages: 18000, federalTaxWithheld: 0, state: 'PA', stateWages: 18000, stateTaxWithheld: 552.6 }],
+      dependents: [{ id: 'k', firstName: 'Ava', lastName: 'Payer', relationship: 'Daughter', dateOfBirth: '2016-04-01', monthsLivedWithYou: 12 }],
+      stateReturns: [{ stateCode: 'PA', residencyType: 'resident', stateSpecificData: { paOtherItems: false, paContributed529: false, paOtherEligibilityIncome: 5000 } }],
+    } as Partial<TaxReturn>);
+    const d = runReturnDiagnostics(tr, calculateForm1040(tr)).find((x) => x.id === 'state:PA:working-pennsylvanians-credit');
+    expect(d).toMatchObject({ category: 'INFORMATIONAL', section: 'state_pa', message: expect.stringContaining('figured and applied by the Department of Revenue') });
+  });
+});
