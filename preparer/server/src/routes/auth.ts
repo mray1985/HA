@@ -1,34 +1,74 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
-import { db, createUser, getUserByEmail, getUserById, updateUserLastLogin, activateSubscription, createSession, getSession, deleteSession, deleteExpiredSessions } from '../database.js';
+import { createHash, randomBytes } from 'crypto';
+import {
+  DATA_DIR,
+  activateSubscription,
+  createSession,
+  createUser,
+  deleteExpiredSessions,
+  deleteSession,
+  deleteUser,
+  getSession,
+  getUserByEmail,
+  getUserById,
+  updateUserLastLogin,
+} from '../database.js';
+import { resolveJwtSecret } from '../jwtSecret.js';
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+const JWT_SECRET = resolveJwtSecret(DATA_DIR);
 const TOKEN_EXPIRY = '7d';
-const REFRESH_EXPIRY = '30d';
+const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 const BCRYPT_ROUNDS = 12;
 
-function generateToken(): string {
-  return randomBytes(32).toString('hex');
+interface TokenPayload {
+  userId: number;
+  email: string;
+  role: string;
+  /** Session the token belongs to; signing out deletes it, which revokes the token. */
+  sid: string;
 }
 
-function hashToken(token: string): string {
-  return bcrypt.hashSync(token, 1);
+function sha256(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
 }
 
-function createAccessToken(userId: number, email: string, role: string): string {
-  return jwt.sign({ userId, email, role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-}
-
-function verifyAccessToken(token: string): { userId: number; email: string; role: string } | null {
+function verifyAccessToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: number; email: string; role: string };
+    const payload = jwt.verify(token, JWT_SECRET) as Partial<TokenPayload>;
+    return typeof payload.userId === 'number' && typeof payload.sid === 'string' ? (payload as TokenPayload) : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * A signed token is accepted only while its session exists and was issued
+ * with that exact token — so signing out (or deleting the user) ends it.
+ */
+function sessionFor(token: string): TokenPayload | null {
+  const payload = verifyAccessToken(token);
+  if (!payload) return null;
+  const session = getSession.get(payload.sid);
+  if (!session || session.user_id !== payload.userId || session.token_hash !== sha256(token)) return null;
+  return payload;
+}
+
+/** Start a session for a user and issue its token (also set as a cookie). */
+function startSession(res: Response, user: { id: number; email: string; role: string }): string {
+  const sid = randomBytes(32).toString('hex');
+  const token = jwt.sign({ userId: user.id, email: user.email, role: user.role, sid }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+  createSession.run(sid, user.id, sha256(token), new Date(Date.now() + SESSION_MS).toISOString());
+  setTokenCookie(res, token);
+  return token;
+}
+
+function requestToken(req: Request): string | undefined {
+  const header = req.headers.authorization;
+  return (header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined) || req.cookies?.access_token;
 }
 
 function setTokenCookie(res: Response, token: string): void {
@@ -46,16 +86,13 @@ function clearTokenCookie(res: Response): void {
 }
 
 function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  const cookieToken = req.cookies?.access_token;
-  const token = authHeader?.replace('Bearer ', '') || cookieToken;
-
+  const token = requestToken(req);
   if (!token) {
     res.status(401).json({ error: { message: 'Authentication required', code: 'UNAUTHORIZED' } });
     return;
   }
 
-  const payload = verifyAccessToken(token);
+  const payload = sessionFor(token);
   if (!payload) {
     res.status(401).json({ error: { message: 'Invalid or expired token', code: 'INVALID_TOKEN' } });
     return;
@@ -132,17 +169,9 @@ router.post('/register', async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const result = createUser.run(normalizedEmail, passwordHash, name || '', userRole);
 
-    const userId = result.lastInsertRowid as number;
+    const userId = Number(result.lastInsertRowid);
     updateUserLastLogin.run(userId);
-
-    const accessToken = createAccessToken(userId, normalizedEmail, userRole);
-    const sessionToken = generateToken();
-    const tokenHash = hashToken(sessionToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    createSession.run(sessionToken, userId, tokenHash, expiresAt);
-
-    setTokenCookie(res, accessToken);
+    const accessToken = startSession(res, { id: userId, email: normalizedEmail, role: userRole });
 
     res.status(201).json({
       data: {
@@ -182,15 +211,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     updateUserLastLogin.run(user.id);
-
-    const accessToken = createAccessToken(user.id, user.email, user.role);
-    const sessionToken = generateToken();
-    const tokenHash = hashToken(sessionToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    createSession.run(sessionToken, user.id, tokenHash, expiresAt);
-
-    setTokenCookie(res, accessToken);
+    const accessToken = startSession(res, user);
 
     res.json({
       data: {
@@ -205,13 +226,10 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 router.post('/logout', (req: Request, res: Response) => {
-  const cookieToken = req.cookies?.access_token;
-  if (cookieToken) {
-    const payload = jwt.decode(cookieToken) as any;
-    if (payload?.userId) {
-      deleteExpiredSessions.run();
-    }
-  }
+  const token = requestToken(req);
+  const payload = token ? verifyAccessToken(token) : null;
+  if (payload) deleteSession.run(payload.sid);
+  deleteExpiredSessions.run();
   clearTokenCookie(res);
   res.json({ data: { message: 'Logged out' } });
 });
@@ -222,7 +240,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
   if (!user) {
     return res.status(401).json({ error: { message: 'Invalid or expired token', code: 'INVALID_TOKEN' } });
   }
-  res.json({ data: { user: publicUser(user as any) } });
+  res.json({ data: { user: publicUser(user) } });
 });
 
 router.post('/subscription/activate', requireAuth, (req: Request, res: Response) => {
@@ -237,12 +255,21 @@ router.post('/subscription/activate', requireAuth, (req: Request, res: Response)
   if (!user) {
     return res.status(404).json({ error: { message: 'User not found', code: 'NOT_FOUND' } });
   }
-  res.json({ data: { user: publicUser(user as any) } });
+  res.json({ data: { user: publicUser(user) } });
 });
 
+/** A positive integer user id from the route, or null. */
+function userIdParam(req: Request): number | null {
+  const id = Number(String(req.params.id));
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 router.get('/user/:id', requireAuth, (req: Request, res: Response) => {
-  const requestingUser = (req as any).user;
-  const targetId = parseInt(req.params.id, 10);
+  const requestingUser = (req as any).user as TokenPayload;
+  const targetId = userIdParam(req);
+  if (targetId === null) {
+    return res.status(400).json({ error: { message: 'Invalid user id', code: 'VALIDATION_ERROR' } });
+  }
 
   if (requestingUser.role !== 'admin' && requestingUser.userId !== targetId) {
     return res.status(403).json({ error: { message: 'Forbidden', code: 'FORBIDDEN' } });
@@ -253,19 +280,21 @@ router.get('/user/:id', requireAuth, (req: Request, res: Response) => {
     return res.status(404).json({ error: { message: 'User not found', code: 'NOT_FOUND' } });
   }
 
-  res.json({ data: { user: publicUser(user as any) } });
+  res.json({ data: { user: publicUser(user) } });
 });
 
 router.delete('/user/:id', requireAuth, requireRole('admin'), (req: Request, res: Response) => {
-  const targetId = parseInt(req.params.id, 10);
-  const requestingUser = (req as any).user;
+  const targetId = userIdParam(req);
+  const requestingUser = (req as any).user as TokenPayload;
+  if (targetId === null) {
+    return res.status(400).json({ error: { message: 'Invalid user id', code: 'VALIDATION_ERROR' } });
+  }
 
   if (requestingUser.userId === targetId) {
     return res.status(400).json({ error: { message: 'Cannot delete yourself', code: 'SELF_DELETE' } });
   }
 
-  const stmt = db.prepare('DELETE FROM users WHERE id = ?');
-  const result = stmt.run(targetId);
+  const result = deleteUser.run(targetId);
 
   if (result.changes === 0) {
     return res.status(404).json({ error: { message: 'User not found', code: 'NOT_FOUND' } });

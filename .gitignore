@@ -10,6 +10,8 @@ dist/
 */server/data/*.db
 */server/data/*.db-shm
 */server/data/*.db-wal
+# Per-install token-signing key (created on first start when JWT_SECRET is unset)
+*/server/data/jwt-secret
 
 # Claude project files
 .claude/
