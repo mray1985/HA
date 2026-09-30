@@ -17,13 +17,30 @@ Ryzen AI 7 350 with 15 GB RAM, using llama.cpp `llama-server` build 11262.
    (`formSchemas`) → deterministic page evidence (`formEvidence`) →
    `mapBoxesToTool` → `extractStructuredFields`, then scores tool arguments,
    located values, and any value reported for a blank box.
-5. `run-tools.ts` scores tool-calling models on §56 metrics: tool selection,
+5. `render-scans.mjs` degrades each case into an office scan (300 dpi, 1.2°
+   skew, noise, JPEG, blur), a fax (200 dpi, -2.5° skew, 1-bit threshold) and
+   a faded copy (200 dpi, 45% contrast). `run.ts --scan <variant>` reads them
+   with no text layer: Tesseract straightens the page and supplies the word
+   boxes, and the model sees the straightened page.
+6. With `--second-model`, a second document model (GLM-OCR) reads only the
+   boxes the page could not confirm and the boxes the primary model left blank
+   although the page prints an amount (§33, `secondReading.ts`). Every tool
+   value is scored as confirmed (by the page or the second model), recovered,
+   unconfirmed, conflict or missed; "confirmed wrong" counts wrong values that
+   would have been applied without review.
+7. `checkboxes.ts` scores the deterministic checkbox reader alone on every
+   case and page variant; no model is involved.
+8. `run-tools.ts` scores tool-calling models on §56 metrics: tool selection,
    missing / extra / wrong / invalid arguments, hallucinated tools, duplicate
    calls, and unknown facts passed as values.
 
 ```bash
 node local-ai/gauntlet/render-cases.mjs --dpi 150 --suffix -150dpi
-npx tsx local-ai/gauntlet/run.ts --model <gguf> --mmproj <mmproj.gguf> --image-suffix -150dpi --style plain
+node local-ai/gauntlet/render-scans.mjs
+npx tsx local-ai/gauntlet/run.ts --model <gguf> --mmproj <mmproj.gguf> \
+  --second-model <glm-ocr.gguf> --second-mmproj <glm-mmproj.gguf> --style plain \
+  --image-suffix -150dpi            # or: --scan scan|fax|faded
+npx tsx local-ai/gauntlet/checkboxes.ts
 npx tsx local-ai/gauntlet/run-tools.ts --model <gguf>
 ```
 
@@ -52,12 +69,42 @@ With 1099-DIV and 1098-T cases added and every Phase 1 form wired to a tool
 SSA-1099 → `add_ssa_1099`; SSA-1099 has no official fillable blank, so it is
 covered by unit tests):
 
-| Model (Q4_K_M) + page evidence | Classified | Tool args | Invented values | s/page |
-|---|---|---|---|---|
-| **Qwen3.5-0.8B** | 7/7 | **55/55** (model alone 49) | 0 | 35 |
+Qwen3.5-0.8B reads, GLM-OCR is the second reader, page evidence throughout:
 
-The 1099-DIV Section 199A amount (box 5, no engine field) routes to review,
-and every CORRECTED checkbox reads as unchecked.
+| Page | Classified | Tool args | Invented | Confirmed wrong | Confirmed by page / by GLM-OCR | s/page |
+|---|---|---|---|---|---|---|
+| Native PDF, 150 dpi | 7/7 | **55/55** (model alone 49) | 0 | 0 | 50 / 0 | 35 |
+| Office scan | 7/7 | **55/55** (model alone 48) | 0 | 0 | 39 / 11, 1 recovered | 83 |
+| Fax | 7/7 | 54/55 (model alone 48) | 0 | 0 | 34 / 16, 1 recovered | 83 |
+| Faded copy | 7/7 | 48/55 (model alone 47) | 0 | 0 | 26 / 21 | 91 |
+
+The native run scored 54/55 before one fix, measured in that run and
+confirmed by replaying its saved output: the model copied the 1099-INT box 1
+amount into "Payer's RTN" as well, and the page token went to the box that
+comes first in form order. It now goes to the box whose printed label it sits
+under.
+
+Every miss is an explicit unknown routed to review, never a wrong value: on
+the fax the 1098-T half-time checkbox label is unreadable; on the faded copy
+four checkboxes go unread (three labels OCR cannot read, one square it cannot
+find), OCR misses the W-2 box 12 entry and a state
+code, and the model left the 1099-DIV withholding blank. "Recovered" is a box
+the model left blank that GLM-OCR and the page's own text both read (1099-DIV
+box 4, `0.00`). The 1099-DIV Section 199A amount (box 5, no engine field)
+routes to review.
+
+### Checkbox reader alone (`checkboxes.ts`, 21 checkboxes per variant)
+
+| Page | Right | Unknown (review) | Wrong |
+|---|---|---|---|
+| Native PDF, 200 dpi | 21 | 0 | 0 |
+| Office scan | 20 | 1 | 0 |
+| Fax | 17 | 4 | 0 |
+| Faded copy | 14 | 7 | 0 |
+
+Most unknowns are labels OCR cannot read at all. W-2 box 13's labels are never
+readable on a scan, so its squares are found from the table cell below box 11
+(or of box 13 / above box 14a), which must hold exactly three squares.
 
 Findings that shaped the product code:
 
@@ -69,6 +116,24 @@ Findings that shaped the product code:
   deterministically; a checkbox the page cannot settle routes to review.
 - A JSON grammar that forbids `""` made a model write `0` into every blank box.
   Grammars must always allow an explicit blank.
+- A value is confirmed only by the page token that belongs to its box. A token
+  on a printed label never counts (1098 box 9 holds "1", which is also box 1's
+  number); a W-2 box 12 code only by the code printed beside its own amount
+  (every slot prints "Code" vertically, and a model read its "C" into 12a and
+  into the empty 12b–12d); a code with no amount is dropped.
+- OCR misses tokens, so an amount OCR saw once but two boxes claim leaves the
+  second box unconfirmed rather than dropped (a faded W-2's boxes 5 and 16
+  were real). On a text layer, which holds every token, the copy is dropped.
+- Name/address blocks a model returns on one line get their line breaks back
+  from the page, so the payer name is not the whole address.
+- Checkboxes: squares are told from letters by size in label ems (measured
+  from the label's glyphs, bounded by its width — OCR boxes swell on noisy
+  pages), ink on all four edges and all four corners; ruling lines are masked;
+  pieces of a broken fax outline are joined; a mark is judged against the
+  square's own outline and paper levels. Each rule came from a measured wrong
+  or missed reading. Stale renders from before the pdf.js font fix had no
+  checkmark glyphs, which once made a 1099-R IRA box look checked for the
+  wrong reason; every render was regenerated.
 
 ## Tool calling (8 cases)
 

@@ -44,6 +44,7 @@
     "16": { "money": 52431.18, "field": "Box16_ReadOrder[0].f2_35[0]" },
     "17": { "money": 1420.55, "field": "Box17_ReadOrder[0].f2_37[0]" }
   },
+  "expectedKeys": {"c": {"firstLine": "RIVERBEND LOGISTICS LLC"}, "12a.code": {"text": "D"}, "15.state.1": {"text": "LA"}},
   "blankBoxes": ["7", "8", "9", "10", "11", "12b", "12c", "12d", "14", "14a", "14b", "18", "19", "20"],
   "expected": {
     "tool": "add_w2",

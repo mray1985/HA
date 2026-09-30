@@ -30,6 +30,7 @@
     "15": { "contains": "LA", "field": "RghtColumn[0].Boxes15_16_17[0].f2_23[0]" },
     "17": { "money": 12.85, "field": "RghtColumn[0].Boxes15_16_17[0].f2_27[0]" }
   },
+  "expectedKeys": {"payer.block": {"firstLine": "FIRST HARBOR BANK"}, "15.1": {"text": "LA"}},
   "blankBoxes": ["2", "5", "6", "7", "9", "10", "11", "12", "13", "14"],
   "expected": {
     "tool": "add_1099_int",

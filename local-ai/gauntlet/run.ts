@@ -8,20 +8,25 @@
  *      form number is an enum of the forms the pipeline knows (or OTHER)
  *   2. fill that form's extraction template under a JSON grammar (the image
  *      encoding from pass 1 is reused by llama-server's prompt cache)
- *   3. boxValuesFromTemplate → mapBoxesToTool → extractStructuredFields
- *   4. compare the resulting tax-tool arguments with the case's known values,
- *      and count any value reported for a box that is blank on the form.
+ *   3. page evidence: locate values, read checkboxes and box 12, and find
+ *      boxes the model left blank although the page prints an amount
+ *   4. with --second-model: a second document model (GLM-OCR) reads only the
+ *      boxes the page could not confirm plus the missed ones (§33)
+ *   5. boxValuesFromTemplate → mapBoxesToTool → extractStructuredFields
+ *   6. compare the resulting tax-tool arguments with the case's known values,
+ *      count any value reported for a box that is blank on the form, and count
+ *      confirmed values that are wrong (would be applied without review).
  *
  * Usage:
  *   npx tsx local-ai/gauntlet/run.ts --model <gguf> --mmproj <gguf>
- *        [--case id ...] [--image-suffix -150dpi] [--style glm|plain]
- *        [--out report.json]
+ *        [--second-model <gguf> --second-mmproj <gguf>]
+ *        [--case id ...] [--image-suffix -150dpi | --scan scan|fax|faded]
+ *        [--style glm|plain] [--out report.json]
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename, join, resolve } from 'node:path';
 
 import { CLASSIFIABLE_FORM_TYPES, type ClassifiableFormType } from '../src/documentClassifier.js';
 import {
@@ -32,22 +37,54 @@ import {
 } from '../src/formSchemas.js';
 import { extractStructuredFields, parseMoneyToken } from '../src/structuredExtraction.js';
 import { applyPageEvidence, type FormEvidenceResult } from '../src/formEvidence.js';
-import type { PageRaster, PageWord } from '../src/pageEvidence.js';
+import {
+  keysNeedingSecondReader,
+  secondReaderSchema,
+  valuesAfterVerification,
+  verifyReadings,
+  type FieldReading,
+} from '../src/secondReading.js';
 import { createRequire } from 'node:module';
+import { closeOcr, HERE, nativePage, OUT_DIR, REPO, scanPage } from './pages.js';
 
 const require = createRequire(import.meta.url);
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = resolve(HERE, '../..');
-const OUT_DIR = join(HERE, 'out');
-
-interface ExpectedBox { money?: number; text?: string; contains?: string }
+interface ExpectedBox { money?: number; text?: string; contains?: string; firstLine?: string }
 interface GauntletCase {
   id: string;
   formType: ClassifiableFormType;
   expectedBoxes: Record<string, ExpectedBox>;
+  /** Expectations by schema key, where a printed box holds several keys (12a code) or none (payer block). */
+  expectedKeys?: Record<string, ExpectedBox>;
   blankBoxes: string[];
   expected: { tool: string; args: Record<string, unknown> };
+}
+
+/** Second-model prompt: GLM-OCR's documented information-extraction prompt. */
+const SECOND_READER_PROMPT = '请按下列JSON格式输出图中信息:\n';
+
+/**
+ * Whether the value a reading would apply is right: by the case's expectation
+ * for the key, or for its printed box when the box is blank, holds one key, or
+ * this is its first money key. Undefined when the case does not say.
+ */
+function readingIsRight(c: GauntletCase, formType: ClassifiableFormType, r: FieldReading): boolean | undefined {
+  const schema = getFormExtractionSchema(formType)!;
+  const b = schema.boxes.find((x) => x.key === r.key);
+  if (!b) return undefined;
+  const text = r.status === 'recovered' ? r.second : r.primary;
+  if (b.box && c.blankBoxes.includes(b.box)) return text === undefined;
+  const sameBox = schema.boxes.filter((x) => b.box && x.box === b.box);
+  const byBox = b.box && (sameBox.length === 1 || (b.kind === 'money' && sameBox.find((x) => x.kind === 'money')?.key === b.key))
+    ? c.expectedBoxes[b.box] : undefined;
+  const spec = c.expectedKeys?.[r.key] ?? byBox;
+  if (!spec) return undefined;
+  if (text === undefined) return false;
+  if (spec.money !== undefined) return parseMoneyToken(text.replace(/\s+/g, '')) === spec.money;
+  if (spec.text !== undefined) return text.trim().toUpperCase() === spec.text.toUpperCase();
+  if (spec.firstLine !== undefined) return text.split(/\r?\n/)[0]!.trim().toUpperCase() === spec.firstLine.toUpperCase();
+  if (spec.contains !== undefined) return text.toUpperCase().includes(spec.contains.toUpperCase());
+  return undefined;
 }
 
 const TEMPLATE_PROMPTS: Record<string, string> = {
@@ -129,40 +166,14 @@ async function chat(port: number, image: string, prompt: string, extra: Record<s
   };
 }
 
-/**
- * Page evidence for a native-PDF case: text-layer words in PNG pixel space and
- * the PNG as grayscale. (Scanned-image cases use OCR word boxes instead.)
- */
-async function pageEvidenceFor(caseId: string, png: string): Promise<{ words: PageWord[]; raster: PageRaster }> {
+/** The model sees the scan at about 150 DPI (letter width 1275 px) to bound image tokens. */
+async function modelImageFor(bytes: Buffer): Promise<string> {
   const { loadImage, createCanvas } = require('@napi-rs/canvas') as typeof import('@napi-rs/canvas');
-  const img = await loadImage(readFileSync(png));
-  const canvas = createCanvas(img.width, img.height);
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0);
-  const rgba = ctx.getImageData(0, 0, img.width, img.height).data;
-  const gray = new Uint8Array(img.width * img.height);
-  for (let i = 0; i < gray.length; i++) {
-    gray[i] = Math.round(0.299 * rgba[i * 4]! + 0.587 * rgba[i * 4 + 1]! + 0.114 * rgba[i * 4 + 2]!);
-  }
-
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const fonts = join(dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts').split(sep).join('/') + '/';
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(readFileSync(join(OUT_DIR, `${caseId}.pdf`))), standardFontDataUrl: fonts }).promise;
-  const page = await doc.getPage(1);
-  const vp = page.getViewport({ scale: 1 });
-  const sx = img.width / vp.width;
-  const sy = img.height / vp.height;
-  const content = await page.getTextContent();
-  const words: PageWord[] = [];
-  for (const item of content.items as Array<{ str?: string; transform: number[]; width: number; height: number }>) {
-    if (!item.str || !item.str.trim()) continue;
-    const x = item.transform[4]!;
-    const y = item.transform[5]!;
-    const h = item.height || Math.abs(item.transform[3]!);
-    words.push({ text: item.str, source: 'pdf-text', box: [x * sx, (vp.height - y - h) * sy, (x + item.width) * sx, (vp.height - y) * sy] });
-  }
-  await doc.destroy();
-  return { words, raster: { width: img.width, height: img.height, gray } };
+  const img = await loadImage(bytes);
+  const scale = Math.min(1, 1275 / img.width);
+  const canvas = createCanvas(Math.round(img.width * scale), Math.round(img.height * scale));
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  return (await canvas.encode('png')).toString('base64');
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -186,12 +197,17 @@ function textByPrintedBox(formType: ClassifiableFormType, values: Record<string,
 async function main() {
   const model = resolve(argOf('--model')!);
   const mmproj = resolve(argOf('--mmproj')!);
+  const secondModel = argOf('--second-model') ? resolve(argOf('--second-model')!) : null;
+  const secondMmproj = argOf('--second-mmproj') ? resolve(argOf('--second-mmproj')!) : null;
+  if (!!secondModel !== !!secondMmproj) throw new Error('--second-model and --second-mmproj go together');
   const port = Number(argOf('--port', '18080'));
   const suffix = argOf('--image-suffix', '')!;
+  // --scan <variant>: read out/<case>-<variant>.png with OCR evidence (no text layer).
+  const scan = argOf('--scan');
   const style = argOf('--style', 'glm')!;
   const outFile = argOf('--out');
   const ids = argsOf('--case');
-  for (const f of [model, mmproj]) if (!existsSync(f)) throw new Error(`Missing ${f}`);
+  for (const f of [model, mmproj, secondModel, secondMmproj]) if (f && !existsSync(f)) throw new Error(`Missing ${f}`);
   if (!TEMPLATE_PROMPTS[style]) throw new Error(`Unknown --style ${style}`);
 
   const cases: GauntletCase[] = readdirSync(join(HERE, 'cases'))
@@ -200,13 +216,19 @@ async function main() {
     .filter((c) => ids.length === 0 || ids.includes(c.id));
 
   const { child, loadMs } = await startServer(model, mmproj, port);
-  const report: Record<string, unknown> = { model: basename(model), mmproj: basename(mmproj), style, loadMs, cases: [] };
+  const second = secondModel && secondMmproj ? await startServer(secondModel, secondMmproj, port + 1) : null;
+  const report: Record<string, unknown> = {
+    model: basename(model), mmproj: basename(mmproj), secondModel: secondModel ? basename(secondModel) : null, style, loadMs, cases: [],
+  };
   let totals = { argsOk: 0, argsTotal: 0, modelOnlyArgsOk: 0, invented: 0, classified: 0, cases: 0, ms: 0 };
+  const readingTotals: Record<string, number> = { confirmed: 0, confirmedByModel: 0, unconfirmed: 0, conflict: 0, missed: 0, recovered: 0, confirmedWrong: 0 };
   try {
     for (const c of cases) {
-      const png = join(OUT_DIR, `${c.id}${suffix}.png`);
-      if (!existsSync(png)) throw new Error(`Render ${c.id}${suffix} first (render-cases.mjs)`);
-      const image = readFileSync(png).toString('base64');
+      const png = join(OUT_DIR, scan ? `${c.id}-${scan}.png` : `${c.id}${suffix}.png`);
+      if (!existsSync(png)) throw new Error(`Render ${png} first (render-cases.mjs / render-scans.mjs)`);
+      // Scans: straighten and OCR first; the model then reads the upright page.
+      const scanned = scan ? await scanPage(png) : null;
+      const image = scanned ? await modelImageFor(scanned.deskewed) : readFileSync(png).toString('base64');
 
       // 1. Classify: printed form number + tax year, constrained to known forms.
       const classifyTemplate = { 'Form number': '', 'Tax year': '' };
@@ -252,11 +274,37 @@ async function main() {
       const modelOnlyValues = values;
       let evidence: FormEvidenceResult | null = null;
       if (schema) {
-        evidence = applyPageEvidence(schema, values, await pageEvidenceFor(c.id, png));
+        const page = scanned ?? (await nativePage(c.id, png));
+        evidence = applyPageEvidence(schema, values, page);
         values = evidence.values;
       }
 
-      // 4. Deterministic mapping → tool arguments (with and without page evidence).
+      // 4. Two-reader verification: the second model reads only what the page
+      //    could not confirm, plus boxes the primary model missed.
+      let readings: FieldReading[] = [];
+      let secondMs = 0;
+      if (schema && evidence) {
+        const keys = keysNeedingSecondReader(schema, evidence);
+        let secondValues: Record<string, string> | undefined;
+        if (second && keys.length > 0) {
+          const sub = secondReaderSchema(schema, keys);
+          const tpl = buildExtractionTemplate(sub);
+          const s2 = await chat(port + 1, image, SECOND_READER_PROMPT + JSON.stringify(tpl.template, null, 2), {
+            response_format: { type: 'json_schema', json_schema: { name: 'form', schema: tpl.jsonSchema } },
+          });
+          secondMs = s2.ms;
+          try { secondValues = boxValuesFromTemplate(JSON.parse(s2.content), tpl, sub); } catch { secondValues = {}; }
+        }
+        readings = verifyReadings(schema, evidence, secondValues);
+        values = valuesAfterVerification(values, readings);
+      }
+      const readingChecks = formType ? readings.map((r) => ({ ...r, right: readingIsRight(c, formType, r) })) : [];
+      const confirmedWrong = readingChecks.filter((r) => (r.status === 'confirmed' || r.status === 'recovered') && r.right === false);
+      for (const r of readings) readingTotals[r.status] = (readingTotals[r.status] ?? 0) + 1;
+      readingTotals.confirmedByModel! += readings.filter((r) => r.status === 'confirmed' && r.confirmedBy === 'model').length;
+      readingTotals.confirmedWrong! += confirmedWrong.length;
+
+      // 5. Deterministic mapping → tool arguments (with and without page evidence).
       const toArgs = (vals: Record<string, string>) => {
         const m = schema ? mapBoxesToTool(schema, vals) : null;
         return {
@@ -272,7 +320,7 @@ async function main() {
       const locatedCount = Object.values(evidence?.located ?? {}).filter(Boolean).length;
       const locatableCount = Object.keys(evidence?.located ?? {}).length;
 
-      // 4. Score.
+      // 6. Score.
       const argChecks = Object.entries(c.expected.args).map(([k, want]) => ({
         arg: k, want, got: args[k], ok: valuesEqual(args[k], want),
       }));
@@ -287,11 +335,12 @@ async function main() {
         );
         return { box: bx, ok, got, want: spec.money ?? spec.text ?? spec.contains };
       });
-      // An explicit "no" on a checkbox is the deterministic reader's "unchecked", not a value.
+      // An explicit "no" (unchecked) or "?" (unreadable → review) from the
+      // checkbox reader is not a value.
       const invented = c.blankBoxes
-        .filter((bx) => byBox.has(bx.toLowerCase()) && !/^(no\s*)+$/i.test(byBox.get(bx.toLowerCase())!.trim()))
+        .filter((bx) => byBox.has(bx.toLowerCase()) && !/^((no|\?)\s*)+$/i.test(byBox.get(bx.toLowerCase())!.trim()))
         .map((bx) => ({ box: bx, got: byBox.get(bx.toLowerCase()) }));
-      const ms = t.ms + (e?.ms ?? 0);
+      const ms = t.ms + (e?.ms ?? 0) + secondMs;
 
       const entry = {
         id: c.id, ms, transcribeMs: t.ms, extractMs: e?.ms ?? null,
@@ -300,6 +349,7 @@ async function main() {
         located: locatedCount, locatable: locatableCount, checkboxes: evidence?.checkboxes ?? {}, box12Codes: evidence?.box12Codes ?? {},
         boxesOk: boxChecks.filter((x) => x.ok).length, boxesTotal: boxChecks.length, boxChecks,
         invented, reviewBoxes: mapped?.reviewBoxes ?? [], finish: e?.finish, usage: { transcribe: t.usage, extract: e?.usage },
+        secondMs, readings: readingChecks, confirmedWrong, missed: evidence?.missed ?? [],
         transcript: t.content, extraction,
       };
       (report.cases as unknown[]).push(entry);
@@ -308,19 +358,32 @@ async function main() {
         invented: totals.invented + invented.length, classified: totals.classified + (entry.classificationOk ? 1 : 0),
         cases: totals.cases + 1, ms: totals.ms + ms,
       };
-      console.log(`${c.id}: ${(ms / 1000).toFixed(0)}s (classify ${(t.ms / 1000).toFixed(0)}s + extract ${((e?.ms ?? 0) / 1000).toFixed(0)}s) | class ${formType ?? 'none'} ${entry.classificationOk ? 'OK' : 'WRONG'} | tool args ${entry.argsOk}/${entry.argsTotal} (model only ${modelOnlyArgsOk}) | located ${locatedCount}/${locatableCount} | boxes ${entry.boxesOk}/${entry.boxesTotal} | invented ${invented.length} | review ${entry.reviewBoxes.length}`);
+      const tally = (st: string) => readings.filter((r) => r.status === st).length;
+      const byModel = readings.filter((r) => r.status === 'confirmed' && r.confirmedBy === 'model').length;
+      console.log(`${c.id}: ${(ms / 1000).toFixed(0)}s (classify ${(t.ms / 1000).toFixed(0)}s + extract ${((e?.ms ?? 0) / 1000).toFixed(0)}s + second ${(secondMs / 1000).toFixed(0)}s) | readings: confirmed ${tally('confirmed')} (${byModel} by second model), recovered ${tally('recovered')}, unconfirmed ${tally('unconfirmed')}, conflict ${tally('conflict')}, missed ${tally('missed')}, CONFIRMED WRONG ${confirmedWrong.length} | class ${formType ?? 'none'} ${entry.classificationOk ? 'OK' : 'WRONG'} | tool args ${entry.argsOk}/${entry.argsTotal} (model only ${modelOnlyArgsOk}) | located ${locatedCount}/${locatableCount} | boxes ${entry.boxesOk}/${entry.boxesTotal} | invented ${invented.length} | review ${entry.reviewBoxes.length}`);
       for (const x of argChecks) if (!x.ok) console.log(`   ARG ${x.arg}: want ${JSON.stringify(x.want)} got ${JSON.stringify(x.got)}`);
       for (const k of unexpectedArgs) console.log(`   EXTRA ARG ${k}: ${JSON.stringify(args[k])}`);
       for (const x of invented) console.log(`   INVENTED box ${x.box}: ${JSON.stringify(x.got)}`);
       for (const [k, r] of Object.entries(evidence?.checkboxes ?? {})) console.log(`   checkbox ${k}: ${r.state} (${r.reason}${r.inkRatio !== undefined ? `, ink ${r.inkRatio.toFixed(3)}` : ''})`);
       for (const [k, code] of Object.entries(evidence?.box12Codes ?? {})) console.log(`   box 12 ${k}: code ${code} read from page`);
+      for (const k of evidence?.phantoms ?? []) console.log(`   DROPPED ${k}: not backed by the page`);
+      for (const k of evidence?.relined ?? []) console.log(`   RELINED ${k}: line breaks restored from the page`);
       for (const [k, e2] of Object.entries(evidence?.box12FromPage ?? {})) console.log(`   box 12 ${k}: ${e2.code} ${e2.amount} read from page (model returned nothing)`);
+      for (const r of readingChecks) {
+        if (r.status === 'confirmed') continue;
+        console.log(`   ${r.status.toUpperCase()} ${r.key}: primary ${JSON.stringify(r.primary)} second ${JSON.stringify(r.second)}${r.page ? ` page ${JSON.stringify(r.page)}` : ''}${r.right === undefined ? '' : r.right ? ' (right)' : ' (wrong)'}`);
+      }
+      for (const r of confirmedWrong) console.log(`   CONFIRMED WRONG ${r.key}: ${JSON.stringify(r.primary ?? r.second)}`);
     }
   } finally {
     child.kill();
+    second?.child.kill();
+    await closeOcr();
   }
-  report.totals = totals;
+  report.totals = { ...totals, readings: readingTotals };
+  report.scan = scan ?? null;
   console.log(`TOTAL: class ${totals.classified}/${totals.cases} | tool args ${totals.argsOk}/${totals.argsTotal} (model only ${totals.modelOnlyArgsOk}) | invented ${totals.invented} | ${(totals.ms / 1000 / Math.max(1, totals.cases)).toFixed(0)}s per page`);
+  console.log(`READINGS: ${Object.entries(readingTotals).map(([k, v]) => `${k} ${v}`).join(' | ')}`);
   if (outFile) writeFileSync(resolve(outFile), JSON.stringify(report, null, 2));
 }
 

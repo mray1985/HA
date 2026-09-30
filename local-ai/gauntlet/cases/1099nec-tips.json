@@ -28,6 +28,7 @@
     "1b": { "money": 1120, "field": "RightCol[0].Box1b_ReadOrder[0].f2_21[0]" },
     "1c": { "text": "102", "field": "RightCol[0].f2_22[0]" }
   },
+  "expectedKeys": {"payer.name": {"firstLine": "BAYOU EVENTS CATERING INC"}},
   "blankBoxes": ["1d", "2", "3", "4", "5", "6", "7"],
   "expected": {
     "tool": "add_1099_nec",

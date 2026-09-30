@@ -28,6 +28,7 @@
     "1": { "money": 8420, "field": "RightCol[0].f2_19[0]" },
     "5": { "money": 3000, "field": "RightCol[0].f2_21[0]" }
   },
+  "expectedKeys": {"filer.name": {"firstLine": "BAYOU STATE UNIVERSITY"}, "student.name": {"firstLine": "JORDAN TESTPAYER"}},
   "blankBoxes": ["4", "6", "10"],
   "expected": {
     "tool": "add_education_expense",

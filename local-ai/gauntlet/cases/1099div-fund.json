@@ -34,6 +34,7 @@
     "7": { "money": 18.4, "field": "RghtCol[0].Box7_ReadOrder[0].f2_21[0]" },
     "16": { "money": 20, "field": "RghtCol[0].f2_31[0]" }
   },
+  "expectedKeys": {"payer.block": {"firstLine": "SUMMIT INDEX FUNDS"}, "14.1": {"text": "LA"}},
   "blankBoxes": ["2b", "2c", "2d", "2e", "2f", "3", "6", "9", "10", "12", "13"],
   "expected": {
     "tool": "add_1099_div",
