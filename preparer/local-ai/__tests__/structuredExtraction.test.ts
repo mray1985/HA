@@ -67,6 +67,11 @@ describe('structured extraction', () => {
     expect(structured.rawText.wages).not.toBe('61482.17');
   });
 
+  it('reads the first local line of a W-2: boxes 18, 19 and 20', () => {
+    const structured = extractStructuredFields('w2', { localWages: '57,500.00', localTaxWithheld: '1,161.50', localityName: 'MARION' });
+    expect(structured.args).toMatchObject({ localWages: 57500, localTaxWithheld: 1161.5, localityName: 'MARION' });
+  });
+
   it('keeps a numeric zero and does not invent raw text from it', () => {
     const structured = extractStructuredFields('1099int', {
       payerName: 'Bank',

@@ -269,12 +269,15 @@ function mapW2(form: Record<string, unknown>, warnings: string[]): FDXMappedItem
   };
 
   // State withholding from stateAndLocal array
-  const stateLocal = extractStateLocal(form.stateAndLocal);
+  const stateLocal = extractStateLocal(form.stateAndLocal) ?? extractFlatStateLocal(form);
   if (stateLocal) {
     if (stateLocal.stateTaxWithheld) data.stateTaxWithheld = stateLocal.stateTaxWithheld;
     if (stateLocal.stateWages) data.stateWages = stateLocal.stateWages;
     if (stateLocal.state) data.state = stateLocal.state;
   }
+  // Boxes 18-20 (first line), from the flat localTaxWithholding array (FDX v5 TaxW2).
+  const local = extractFlatLocal(form);
+  if (local) Object.assign(data, local);
 
   // EIN from issuer
   if (typeof form.issuer === 'object' && form.issuer !== null) {
@@ -759,6 +762,51 @@ function extractStateLocal(
   }
 
   return result;
+}
+
+/** An amount that is present, 0 included; undefined when absent or not a number. */
+function presentAmount(val: unknown): number | undefined {
+  if (typeof val === 'number' && isFinite(val)) return val;
+  if (typeof val === 'string' && val.trim() !== '') {
+    const parsed = Number(val.replace(/[$,\s]/g, ''));
+    return isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * State withholding from the flat stateTaxWithholding array (FDX v5 TaxW2:
+ * stateTaxWithheld, state, stateTaxId, stateIncome), first line only.
+ */
+function extractFlatStateLocal(form: Record<string, unknown>): { stateTaxWithheld?: number; stateWages?: number; state?: string } | null {
+  const rows = form.stateTaxWithholding;
+  if (!Array.isArray(rows) || rows.length === 0 || typeof rows[0] !== 'object' || rows[0] === null) return null;
+  const row = rows[0] as Record<string, unknown>;
+  const result: { stateTaxWithheld?: number; stateWages?: number; state?: string } = {};
+  if (typeof row.state === 'string' && row.state) result.state = row.state;
+  const withheld = num(row.stateTaxWithheld);
+  const income = num(row.stateIncome);
+  if (withheld !== 0) result.stateTaxWithheld = withheld;
+  if (income !== 0) result.stateWages = income;
+  return result;
+}
+
+/**
+ * W-2 boxes 18-20 from the flat localTaxWithholding array (FDX v5 TaxW2:
+ * localTaxWithheld, localityName, state, localIncome), first line only. A
+ * missing amount stays absent; a stated 0 is kept.
+ */
+function extractFlatLocal(form: Record<string, unknown>): { localWages?: number; localTaxWithheld?: number; localityName?: string } | null {
+  const rows = form.localTaxWithholding;
+  if (!Array.isArray(rows) || rows.length === 0 || typeof rows[0] !== 'object' || rows[0] === null) return null;
+  const row = rows[0] as Record<string, unknown>;
+  const result: { localWages?: number; localTaxWithheld?: number; localityName?: string } = {};
+  const withheld = presentAmount(row.localTaxWithheld);
+  const income = presentAmount(row.localIncome);
+  if (withheld !== undefined) result.localTaxWithheld = withheld;
+  if (income !== undefined) result.localWages = income;
+  if (typeof row.localityName === 'string' && row.localityName.trim()) result.localityName = row.localityName.trim();
+  return Object.keys(result).length > 0 ? result : null;
 }
 
 function emptyResult(error: string, errors: string[], warnings: string[] = []): FDXParseResult {

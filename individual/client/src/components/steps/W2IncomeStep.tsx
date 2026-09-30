@@ -67,6 +67,10 @@ const emptyW2 = {
   stateTaxWithheld: 0,
   stateWages: 0,
   state: '',
+  // Boxes 18-20: blank stays unknown (not $0).
+  localWages: undefined as number | undefined,
+  localTaxWithheld: undefined as number | undefined,
+  localityName: undefined as string | undefined,
   box12: [] as W2Box12Entry[],
   box13: { statutoryEmployee: false, retirementPlan: false, thirdPartySickPay: false } as W2Box13,
   isSpouse: false,
@@ -109,6 +113,9 @@ export default function W2IncomeStep() {
       stateTaxWithheld: item.stateTaxWithheld || 0,
       stateWages: item.stateWages || 0,
       state: item.state || '',
+      localWages: item.localWages,
+      localTaxWithheld: item.localTaxWithheld,
+      localityName: item.localityName,
       box12: item.box12 || [],
       box13: item.box13 || { statutoryEmployee: false, retirementPlan: false, thirdPartySickPay: false },
       isSpouse: item.isSpouse || false,
@@ -116,6 +123,7 @@ export default function W2IncomeStep() {
     // Auto-expand details section if any additional fields have data
     const hasDetails = item.employerEin || item.socialSecurityWages || item.socialSecurityTax
       || item.medicareWages || item.medicareTax || item.stateWages
+      || item.localWages !== undefined || item.localTaxWithheld !== undefined || item.localityName
       || (item.box12 && item.box12.length > 0)
       || (item.box13 && (item.box13.statutoryEmployee || item.box13.retirementPlan || item.box13.thirdPartySickPay));
     if (hasDetails) {
@@ -239,6 +247,15 @@ export default function W2IncomeStep() {
           </FormField>
           <FormField label="State Wages (Box 16)" optional tooltip="Wages subject to state income tax. May differ from Box 1 if you worked in multiple states or have state-specific adjustments." irsRef="Form W-2, Box 16">
             <CurrencyInput value={form.stateWages} onChange={(v) => setForm({ ...form, stateWages: v })} />
+          </FormField>
+          <FormField label="Local Wages (Box 18)" optional tooltip="Wages subject to local income tax, on the first local line." irsRef="Form W-2, Box 18">
+            <CurrencyInput optional value={form.localWages} onChange={(v) => setForm({ ...form, localWages: v })} />
+          </FormField>
+          <FormField label="Local Income Tax (Box 19)" optional tooltip="Local income tax withheld. For an Indiana W-2 this is your county tax withheld, which counts as a payment on your Indiana return." irsRef="Form W-2, Box 19">
+            <CurrencyInput optional value={form.localTaxWithheld} onChange={(v) => setForm({ ...form, localTaxWithheld: v })} />
+          </FormField>
+          <FormField label="Locality Name (Box 20)" optional tooltip="The city, county or school district the local tax is for." irsRef="Form W-2, Box 20">
+            <input className="input-field" value={form.localityName ?? ''} onChange={(e) => setForm({ ...form, localityName: e.target.value || undefined })} />
           </FormField>
 
           {/* Box 13 Checkboxes */}

@@ -200,6 +200,22 @@ describe('FDX W-2 Parsing', () => {
     expect(item.data.medicareTax).toBe(1233);
   });
 
+  it('reads the flat state and local withholding arrays of an FDX v5 TaxW2 (boxes 15-20)', () => {
+    // Shape and values from the FDX v5.0 /tax-forms POST example (taxdataexchange.org).
+    const result = parseFDX(v5DataList([{ taxW2: {
+      employerName: 'Kirtland Co', wages: 44416.74, federalTaxWithheld: 5000,
+      stateTaxWithholding: [{ stateTaxWithheld: 1726.78, state: 'OH', stateTaxId: 'OH 036-133505158F-01', stateIncome: 44416.74 }],
+      localTaxWithholding: [{ localTaxWithheld: 427.62, localityName: 'Kirtland', state: 'OH', localIncome: 44416.74 }],
+    } }]));
+    expect(result.groupedByType['w2'].items[0].data).toMatchObject({
+      state: 'OH', stateTaxWithheld: 1726.78, stateWages: 44416.74,
+      localWages: 44416.74, localTaxWithheld: 427.62, localityName: 'Kirtland',
+    });
+    // No local array: no local fields, never a $0.
+    const plain = parseFDX(v5DataList([{ taxW2: { employerName: 'Acme', wages: 100 } }]));
+    expect(plain.groupedByType['w2'].items[0].data).not.toHaveProperty('localTaxWithheld');
+  });
+
   it('extracts state withholding from stateAndLocal array', () => {
     const result = parseFDX(v6Statement([
       w2Form({ employer: 'Acme', wages: 75000, state: 'IL', stateTaxWithheld: 4200 }),

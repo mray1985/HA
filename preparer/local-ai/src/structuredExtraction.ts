@@ -10,6 +10,7 @@ import {
   isDocumentTool,
   formToolForIncomeType,
   W2C_CORRECTABLE,
+  W2C_TEXT_FIELDS,
   w2cField,
   type DocumentToolName,
 } from './taxTools.js';
@@ -43,6 +44,9 @@ const W2_FIELDS: Record<string, FieldKind> = {
   stateTaxWithheld: 'money',
   stateWages: 'money',
   state: 'text',
+  localWages: 'money',
+  localTaxWithheld: 'money',
+  localityName: 'text',
   box12: 'box12',
   box13: 'box13',
   isSpouse: 'boolean',
@@ -231,7 +235,7 @@ const W2C_FIELDS: Record<string, FieldKind> = {
   taxYearCorrected: 'integer',
   ...Object.fromEntries(W2C_CORRECTABLE.flatMap((f) => (['previous', 'correct'] as const).map((side) => [
     w2cField(side, f),
-    (f === 'state' ? 'text' : 'money') as FieldKind,
+    (W2C_TEXT_FIELDS.has(f) ? 'text' : 'money') as FieldKind,
   ]))),
   correctsSsnOrName: 'boolean',
   isSpouse: 'boolean',

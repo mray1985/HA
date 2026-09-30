@@ -41,6 +41,9 @@ const PREVIEW_FIELDS: PreviewField[] = [
   { key: 'state', label: 'State (Box 15)', type: 'text', forForms: ['W-2'] },
   { key: 'stateWages', label: 'State Wages (Box 16)', type: 'currency', forForms: ['W-2'] },
   { key: 'stateTaxWithheld', label: 'State Tax Withheld (Box 17)', type: 'currency', forForms: ['W-2'] },
+  { key: 'localWages', label: 'Local Wages (Box 18)', type: 'currency', forForms: ['W-2'] },
+  { key: 'localTaxWithheld', label: 'Local Income Tax (Box 19)', type: 'currency', forForms: ['W-2'] },
+  { key: 'localityName', label: 'Locality Name (Box 20)', type: 'text', forForms: ['W-2'] },
   // 1099 common
   { key: 'payerName', label: 'Payer Name', type: 'text', forForms: ['1099-INT', '1099-DIV', '1099-R', '1099-NEC', '1099-MISC', '1099-G'] },
   // 1099-INT

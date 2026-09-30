@@ -243,6 +243,10 @@ const AddW2FieldsSchema = z
     stateTaxWithheld: optionalAmount,
     stateWages: optionalAmount,
     state: optionalString,
+    /** Boxes 18-20, first line: local wages, local income tax, locality name. */
+    localWages: optionalAmount,
+    localTaxWithheld: optionalAmount,
+    localityName: optionalString,
     box12: optionalBox12,
     box13: optionalBox13,
     isSpouse: optionalBoolean,
@@ -512,9 +516,15 @@ export const W2C_CORRECTABLE = [
   'state',
   'stateWages',
   'stateTaxWithheld',
+  'localWages',
+  'localTaxWithheld',
+  'localityName',
 ] as const;
 
 export type W2cCorrectable = (typeof W2C_CORRECTABLE)[number];
+
+/** W-2c boxes that hold text, not an amount. */
+export const W2C_TEXT_FIELDS: ReadonlySet<W2cCorrectable> = new Set(['state', 'localityName']);
 
 const cap = (f: string) => f[0]!.toUpperCase() + f.slice(1);
 /** "wages" → "previousWages" / "correctWages". */
@@ -529,7 +539,7 @@ const AddW2cFieldsSchema = z
     taxYearCorrected: z.preprocess(asMissing, z.number().int().min(2000).max(2100).optional()),
     ...Object.fromEntries(W2C_CORRECTABLE.flatMap((f) => (['previous', 'correct'] as const).map((side) => [
       w2cField(side, f),
-      f === 'state' ? optionalString : optionalAmount,
+      W2C_TEXT_FIELDS.has(f) ? optionalString : optionalAmount,
     ]))),
     /** Box e: the SSN or name was corrected (not an amount correction). */
     correctsSsnOrName: optionalBoolean,

@@ -100,11 +100,18 @@ routes to review.
 ### Every case through the product reader (`src/documentReader.ts`)
 
 `run.ts` reads each page with the app's own pipeline module (the same calls
-the app makes through its model runtime). All 15 cases, native 150 dpi:
+the app makes through its model runtime). All 16 cases, native 150 dpi:
 
 | Classified | Tool args | Invented | Confirmed wrong | s/page |
 |---|---|---|---|---|
-| 15/15 | **105/105** (model alone 92) | 0 | 0 | 42 |
+| 16/16 | **121/121** (model alone 105) | 0 | 0 | 45 |
+
+`w2-indiana-local` fills W-2 boxes 18-20 (local wages, local income tax,
+locality name), which now feed the W-2 tool. Its first run read all three
+boxes but applied the employer name as "CIRCLE CITY MACHINING INC,": the model
+wrote the name-and-address block as one sentence, and the comma it put at the
+end of each printed line was kept. A comma closing a restored line is now
+dropped unless the page prints it there, and the name is taken without it.
 
 ### Work order §16 forms (7 cases, Qwen3.5-0.8B + page evidence + GLM-OCR)
 

@@ -37,6 +37,14 @@ describe('W-2c corrections', () => {
     expect(resolveW2Corrections([...w2, ...second, ...ambiguous], 2025)[0]!.problems[0]).toMatch(/2 W-2s from EIN 721234567/);
   });
 
+  it('corrects the local boxes (18-20) like the others', () => {
+    const local = read('add_w2', { employerEin: '35-7654321', wages: 57500, state: 'IN', localWages: 57500, localTaxWithheld: 1161.5, localityName: 'MARION' }, 'W2-IN');
+    const w2c = read('add_w2c', { employerEin: '35-7654321', previousLocalTaxWithheld: 1161.5, correctLocalTaxWithheld: 1265, previousLocalityName: 'MARION', correctLocalityName: 'HAMILTON' }, 'W2C-IN');
+    const [c] = resolveW2Corrections([...local, ...w2c], 2025);
+    expect(c).toMatchObject({ ready: true, changes: { localTaxWithheld: 1265, localityName: 'HAMILTON' } });
+    expect(applyW2Corrections('W2-IN#0', { localTaxWithheld: 1161.5, localityName: 'MARION' }, [c!])).toEqual({ localTaxWithheld: 1265, localityName: 'HAMILTON' });
+  });
+
   it('checks a second W-2c against the first one\'s result', () => {
     const first = read('add_w2c', { employerEin: '72-1234567', previousWages: 52431.18, correctWages: 54000 }, 'W2C-1');
     const second = read('add_w2c', { employerEin: '72-1234567', previousWages: 54000, correctWages: 55000 }, 'W2C-2');

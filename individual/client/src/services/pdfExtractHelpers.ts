@@ -840,6 +840,81 @@ const US_STATE_CODES = new Set([
   'VT','VA','WA','WV','WI','WY',
 ]);
 
+type W2StateColumn = '16' | '17' | '18' | '19' | '20';
+const W2_STATE_COLUMNS: readonly W2StateColumn[] = ['16', '17', '18', '19', '20'];
+const W2_STATE_COLUMN_FIELD: Record<W2StateColumn, string> = {
+  '16': 'stateWages', '17': 'stateTaxWithheld', '18': 'localWages', '19': 'localTaxWithheld', '20': 'localityName',
+};
+const W2_STATE_COLUMN_LABEL: Record<W2StateColumn, RegExp> = {
+  '16': /^16\s+state wages/i, '17': /^17\s+state income tax/i, '18': /^18\s+local wages/i, '19': /^19\s+local income tax/i, '20': /^20\s+locality name/i,
+};
+
+/**
+ * The first filled state row located by its printed labels: the label line
+ * "16 State wages" … "20 Locality name" (all five, same line) and, on the
+ * line below, a two-letter state code left of box 16. A page can print more
+ * than one copy; a copy whose row holds no state code is skipped.
+ */
+function findLabelledW2StateRow(page1Blocks: TextBlock[]): { stateBlock: TextBlock; columns: Record<W2StateColumn, number> } | null {
+  const rows = page1Blocks.filter((b) => W2_STATE_COLUMN_LABEL['16'].test(b.text.trim())).sort((a, b) => a.y - b.y);
+  for (const label16 of rows) {
+    const columns: Partial<Record<W2StateColumn, number>> = {};
+    for (const col of W2_STATE_COLUMNS) {
+      const label = page1Blocks.find((b) => Math.abs(b.y - label16.y) <= 3 && W2_STATE_COLUMN_LABEL[col].test(b.text.trim()));
+      if (label) columns[col] = label.x;
+    }
+    if (W2_STATE_COLUMNS.some((c) => columns[c] === undefined)) continue;
+    const stateBlock = page1Blocks.find((b) => b.y > label16.y && b.y - label16.y <= 25 && b.x < columns['16']!
+      && b.text.trim().length === 2 && US_STATE_CODES.has(b.text.trim().toUpperCase()));
+    if (stateBlock) return { stateBlock, columns: columns as Record<W2StateColumn, number> };
+  }
+  return null;
+}
+
+/**
+ * Boxes 16-20 of the first state row, each value taken from the column it
+ * starts in. A value printed right up against the next column (box 19 then the
+ * locality name) arrives as one block: an amount then a name. Anything else
+ * that does not fit a column is left unread — never guessed.
+ */
+function readW2StateRowByColumns(
+  textBlocks: TextBlock[],
+  stateBlock: TextBlock,
+  columns: Record<W2StateColumn, number>,
+  fields: Record<string, unknown>,
+): void {
+  const TOLERANCE = 3;
+  const columnOf = (x: number) => [...W2_STATE_COLUMNS].reverse().find((c) => x >= columns[c] - TOLERANCE);
+  const line = textBlocks
+    .filter((b) => b.page === stateBlock.page && Math.abs(b.y - stateBlock.y) <= 10 && b.x > stateBlock.x + stateBlock.width)
+    .sort((a, b) => a.x - b.x);
+  const read: Partial<Record<W2StateColumn, number | string>> = {};
+  let ambiguousLocal = false;
+  const isAmount = (t: string) => PURE_NUMERIC_RE.test(t.replace(/[$,]/g, ''));
+  for (const block of line) {
+    const col = columnOf(block.x);
+    if (!col) continue; // Box 15's state ID number.
+    const text = block.text.trim();
+    const tokens = text.split(/\s+/);
+    if (col === '20') {
+      if (!isAmount(text)) read['20'] = text;
+      else ambiguousLocal = true;
+    } else if (tokens.length === 1 && isAmount(text)) {
+      read[col] = parseFloat(text.replace(/[$,\s]/g, ''));
+    } else if (col === '19' && isAmount(tokens[0]!) && tokens.slice(1).every((t) => !isAmount(t))) {
+      read['19'] = parseFloat(tokens[0]!.replace(/[$,]/g, ''));
+      read['20'] = tokens.slice(1).join(' ');
+    } else if (col === '18' || col === '19') {
+      ambiguousLocal = true;
+    }
+  }
+  for (const col of W2_STATE_COLUMNS) {
+    const value = read[col];
+    if (value === undefined || (ambiguousLocal && (col === '18' || col === '19' || col === '20'))) continue;
+    fields[W2_STATE_COLUMN_FIELD[col]] = value;
+  }
+}
+
 export function extractW2Fields(textBlocks: TextBlock[]): Record<string, unknown> {
   const fields: Record<string, unknown> = {
     employerName: extractPayerName(textBlocks, ["employer's name", 'employer name', 'employer']),
@@ -872,7 +947,12 @@ export function extractW2Fields(textBlocks: TextBlock[]): Record<string, unknown
     }
   }
 
-  if (stateBlock) {
+  const labelled = findLabelledW2StateRow(page1Blocks);
+  if (labelled) {
+    // The printed labels "16 State wages" … "20 Locality name" give each column.
+    fields.state = labelled.stateBlock.text.trim().toUpperCase();
+    readW2StateRowByColumns(textBlocks, labelled.stateBlock, labelled.columns, fields);
+  } else if (stateBlock) {
     // Find pure numeric values on the same line as the state code, to its right.
     // On W-2s: first number = state wages (Box 16), second = state tax (Box 17).
     const sameLineNumbers = textBlocks.filter(b => {
@@ -1286,6 +1366,9 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
     medicareTax: 'Medicare Tax (Box 6)',
     stateTaxWithheld: 'State Tax Withheld (Box 17)',
     stateWages: 'State Wages (Box 16)',
+    localWages: 'Local Wages (Box 18)',
+    localTaxWithheld: 'Local Income Tax (Box 19)',
+    localityName: 'Locality Name (Box 20)',
   },
   '1099-INT': {
     payerName: 'Payer Name',

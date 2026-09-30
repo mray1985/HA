@@ -292,6 +292,19 @@ describe('restoreLineBreaks', () => {
     expect(restoreLineBreaks('SUMMIT INDEX FUNDS PO BOX 2200', words)).toBe('SUMMIT INDEX FUNDS\nPO BOX 2200');
   });
 
+  it('drops the comma a model used to join the lines, but keeps one the page prints', () => {
+    const line = (y: number, ...texts: Array<[string, number, number]>) => texts.map(([t, x0, x1]) => word(t, [x0, y, x1, y + 10]));
+    const words = [
+      ...line(10, ['CIRCLE', 10, 50], ['CITY', 54, 80], ['MACHINING', 84, 150], ['INC', 154, 178]),
+      ...line(23, ['200', 10, 30], ['W', 34, 42], ['WASHINGTON', 46, 120], ['ST', 124, 140]),
+      ...line(36, ['INDIANAPOLIS', 10, 90], ['IN', 94, 106], ['46204', 110, 145]),
+    ];
+    expect(restoreLineBreaks('CIRCLE CITY MACHINING INC, 200 W WASHINGTON ST, INDIANAPOLIS IN 46204', words))
+      .toBe('CIRCLE CITY MACHINING INC\n200 W WASHINGTON ST\nINDIANAPOLIS IN 46204');
+    const printed = [...line(10, ['ACME', 10, 50], ['CO.,', 54, 80]), ...line(23, ['MAIN', 10, 40], ['ST', 44, 60])];
+    expect(restoreLineBreaks('ACME CO., MAIN ST', printed)).toBe('ACME CO.,\nMAIN ST');
+  });
+
   it('refuses when the page does not show the whole value in block order', () => {
     const words = [word('SUMMIT INDEX FUNDS', [10, 10, 120, 20]), word('PO BOX 2200', [200, 60, 280, 70])];
     expect(restoreLineBreaks('SUMMIT INDEX FUNDS PO BOX 2200', words)).toBeNull();

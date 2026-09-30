@@ -69,6 +69,10 @@ export interface W2Income {
   stateTaxWithheld?: number;   // Box 17
   stateWages?: number;         // Box 16
   state?: string;              // Box 15
+  /** Boxes 18-20 (first line): local wages, local income tax, locality name. Blank is unknown, not $0. */
+  localWages?: number;         // Box 18
+  localTaxWithheld?: number;   // Box 19
+  localityName?: string;       // Box 20
   box12?: W2Box12Entry[];      // Box 12a-d: Coded benefit amounts
   box13?: W2Box13;             // Box 13: Checkboxes
   isSpouse?: boolean;          // True if this W-2 belongs to the spouse (for MFJ per-person SS cap)

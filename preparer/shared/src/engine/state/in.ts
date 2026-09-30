@@ -124,6 +124,19 @@ function hasIndianaWithholdingForms(taxReturn: TaxReturn): boolean {
     || byCode(taxReturn.income1099MISC) || byCode(taxReturn.income1099NEC);
 }
 
+/**
+ * IT-40 line 2's county tax from W-2 box 19, when the W-2s settle it: every
+ * form with Indiana withholding is a W-2, and each one's box 19 was read.
+ */
+function countyTaxFromW2s(taxReturn: TaxReturn): number | undefined {
+  const byCode = (items: { stateCode?: string }[] | undefined) => (items ?? []).some((i) => i.stateCode?.toUpperCase() === 'IN');
+  if (byCode(taxReturn.incomeW2G) || byCode(taxReturn.income1099R) || byCode(taxReturn.income1099G)
+    || byCode(taxReturn.income1099MISC) || byCode(taxReturn.income1099NEC)) return undefined;
+  const w2s = (taxReturn.w2Income ?? []).filter((w) => w.state?.toUpperCase() === 'IN');
+  if (w2s.length === 0 || w2s.some((w) => typeof w.localTaxWithheld !== 'number' || !Number.isFinite(w.localTaxWithheld))) return undefined;
+  return round2(w2s.reduce((s, w) => s + Math.max(0, w.localTaxWithheld!), 0));
+}
+
 function residentConfig(taxReturn: TaxReturn): StateReturnConfig | undefined {
   return (taxReturn.stateReturns ?? []).find((s) => s.stateCode.toUpperCase() === 'IN' && s.residencyType === 'resident');
 }
@@ -267,14 +280,17 @@ export function assessIndiana(taxReturn: TaxReturn, federalAGI?: number): Indian
 
   // ── IT-40 line 2: county tax withheld ──
   let countyTaxWithheld = 0;
-  if (hasIndianaWithholdingForms(taxReturn)) {
+  const fromW2s = countyTaxFromW2s(taxReturn);
+  if (fromW2s !== undefined) {
+    countyTaxWithheld = fromW2s;
+  } else if (hasIndianaWithholdingForms(taxReturn)) {
     const q: Question = {
       key: IN_ANSWER.countyTaxWithheld, kind: 'amount',
       prompt: 'Indiana county tax withheld: the total of box 19 on the Indiana W-2s and other forms ($0 if none)',
     };
     relevant.push(q);
     const a = amountAnswer(config, q.key);
-    if (a === undefined) find('county-withheld', 'Indiana county tax withheld is a payment (IT-40 line 2). HATax does not read the local tax boxes of the forms.', q);
+    if (a === undefined) find('county-withheld', 'Indiana county tax withheld is a payment (IT-40 line 2). Box 19 is not entered on every Indiana W-2, or another form has Indiana withholding.', q);
     else countyTaxWithheld = a;
   }
 

@@ -896,6 +896,15 @@ export function box12CodeAt(amount: PixelBox, words: readonly PageWord[]): { cod
  * Measured: a model returned "SUMMIT INDEX FUNDS PO BOX 2200 VALLEY FORGE PA
  * 19482" on one line, so the payer name took in the whole address.
  */
+/**
+ * A comma a model put at the end of a printed line (writing the block as one
+ * sentence) is a separator, not text: drop it unless the page prints it there.
+ */
+function dropSeparatorComma(line: string[], pageToken: { text: string }): void {
+  const last = line[line.length - 1]!;
+  if (/,$/.test(last) && !/,$/.test(pageToken.text)) line[line.length - 1] = last.replace(/,+$/, '');
+}
+
 export function restoreLineBreaks(value: string, words: readonly PageWord[]): string | null {
   if (/\n/.test(value)) return null;
   const wanted = value.trim().split(/\s+/);
@@ -919,6 +928,7 @@ export function restoreLineBreaks(value: string, words: readonly PageWord[]): st
         lines[lines.length - 1]!.push(w);
         prev = across;
       } else if (down) {
+        dropSeparatorComma(lines[lines.length - 1]!, prev);
         lines.push([w]);
         prev = down;
         lineStart = down;
@@ -927,7 +937,10 @@ export function restoreLineBreaks(value: string, words: readonly PageWord[]): st
         break;
       }
     }
-    if (ok && lines.length > 1) return lines.map((l) => l.join(' ')).join('\n');
+    if (ok && lines.length > 1) {
+      dropSeparatorComma(lines[lines.length - 1]!, prev);
+      return lines.map((l) => l.join(' ')).join('\n');
+    }
   }
   return null;
 }

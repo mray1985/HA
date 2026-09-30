@@ -70,6 +70,16 @@ describe('the Indiana county tax (Schedule CT-40)', () => {
     expect(run({ w2Income: [{ id: 'w', employerName: 'Acme', wages: 60000, federalTaxWithheld: 6000, state: 'OH' }], stateReturns: [indiana({ inCounty: '49' })] }).findings).toEqual([]);
   });
 
+  it('takes county tax withheld from W-2 box 19, and asks only when a W-2 does not show it', () => {
+    const w2 = (id: string, box19?: number) => ({ id, employerName: `Employer ${id}`, wages: 30000, federalTaxWithheld: 3000, state: 'IN', stateWages: 30000, stateTaxWithheld: 850, ...(box19 !== undefined ? { localTaxWithheld: box19, localityName: 'MARION' } : {}) });
+    // Both W-2s show box 19: $600 + $590 = $1,190, nothing asked. Line 7 $59,000 × .0202 = $1,191.80.
+    const read = run({ w2Income: [w2('a', 600), w2('b', 590)], stateReturns: [indiana({ inCounty: '49' })] });
+    expect(read.findings).toEqual([]);
+    expect(read.state).toMatchObject({ localTax: 1191.8, stateWithholding: 2890, additionalLines: expect.objectContaining({ countyTaxWithheld: 1190 }) });
+    // A W-2 without box 19 (not read, or blank): asked, never taken as $0.
+    expect(run({ w2Income: [w2('a', 600), w2('b')], stateReturns: [indiana({ inCounty: '49' })] }).findings.map((f) => f.itemId)).toEqual(['county-withheld']);
+  });
+
   it('stops spouses who lived in different counties', () => {
     const joint = { filingStatus: FilingStatus.MarriedFilingJointly, spouseFirstName: 'Pat', spouseDateOfBirth: '1986-01-01' };
     expect(run({ ...joint, stateReturns: [indiana({ inCounty: '29', inCountyTaxWithheld: 0 })] }).findings.map((f) => f.itemId)).toEqual(['spouse-county']);

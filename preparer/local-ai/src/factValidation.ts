@@ -40,6 +40,8 @@ const NON_NEGATIVE_AMOUNT_FIELDS = new Set([
   'medicareTax',
   'stateWages',
   'stateTaxWithheld',
+  'localWages',
+  'localTaxWithheld',
   'amount',
   'ordinaryDividends',
   'qualifiedDividends',

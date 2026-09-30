@@ -154,9 +154,9 @@ const W2_SCHEMA: FormExtractionSchema = {
       { key: '15.id', label: "Employer's state ID number", kind: 'text', use: 'info' },
       { key: '16', label: 'State wages, tips, etc.', kind: 'money', use: 'tool' },
       { key: '17', label: 'State income tax', kind: 'money', use: 'tool' },
-      { key: '18', label: 'Local wages, tips, etc.', kind: 'money', use: 'review' },
-      { key: '19', label: 'Local income tax', kind: 'money', use: 'review' },
-      { key: '20', label: 'Locality name', kind: 'text', use: 'review' },
+      { key: '18', label: 'Local wages, tips, etc.', kind: 'money', use: 'tool' },
+      { key: '19', label: 'Local income tax', kind: 'money', use: 'tool' },
+      { key: '20', label: 'Locality name', kind: 'text', use: 'tool' },
     ]),
   ],
 };
@@ -749,9 +749,9 @@ const W2C_SCHEMA: FormExtractionSchema = {
         ...correctedPair(`15.id.${row}`, `Employer's state ID number (line ${row})`, 'text', 'info'),
         ...correctedPair(`16.${row}`, `State wages, tips, etc. (line ${row})`, 'money', use),
         ...correctedPair(`17.${row}`, `State income tax (line ${row})`, 'money', use),
-        ...correctedPair(`18.${row}`, `Local wages, tips, etc. (line ${row})`, 'money', 'review'),
-        ...correctedPair(`19.${row}`, `Local income tax (line ${row})`, 'money', 'review'),
-        ...correctedPair(`20.${row}`, `Locality name (line ${row})`, 'text', 'review'),
+        ...correctedPair(`18.${row}`, `Local wages, tips, etc. (line ${row})`, 'money', use),
+        ...correctedPair(`19.${row}`, `Local income tax (line ${row})`, 'money', use),
+        ...correctedPair(`20.${row}`, `Locality name (line ${row})`, 'text', use),
       ];
     }),
   ],
@@ -920,8 +920,13 @@ export function stateCodeFromCell(text: string | undefined): string | undefined 
   return m ? m[1]!.toUpperCase() : undefined;
 }
 
+/**
+ * The first line of a name-and-address block. A comma closing the line is the
+ * separator before the next line (models write the block as one sentence), never
+ * part of the name.
+ */
 function firstLine(text: string): string {
-  return text.split(/\r?\n/)[0]!.trim();
+  return text.split(/\r?\n/)[0]!.trim().replace(/\s*,+$/, '');
 }
 
 /**
@@ -965,6 +970,9 @@ const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
       '6': 'medicareTax',
       '16.1': 'stateWages',
       '17.1': 'stateTaxWithheld',
+      '18.1': 'localWages',
+      '19.1': 'localTaxWithheld',
+      '20.1': 'localityName',
     },
     name: { keys: ['c'], field: 'employerName' },
     state: { key: '15.state.1', field: 'state' },
@@ -1130,6 +1138,9 @@ const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
       '6.prev': 'previousMedicareTax', '6.correct': 'correctMedicareTax',
       '16.1.prev': 'previousStateWages', '16.1.correct': 'correctStateWages',
       '17.1.prev': 'previousStateTaxWithheld', '17.1.correct': 'correctStateTaxWithheld',
+      '18.1.prev': 'previousLocalWages', '18.1.correct': 'correctLocalWages',
+      '19.1.prev': 'previousLocalTaxWithheld', '19.1.correct': 'correctLocalTaxWithheld',
+      '20.1.prev': 'previousLocalityName', '20.1.correct': 'correctLocalityName',
     },
     name: { keys: ['a'], field: 'employerName' },
     moreStates: [{ key: '15.state.1.prev', field: 'previousState' }, { key: '15.state.1.correct', field: 'correctState' }],

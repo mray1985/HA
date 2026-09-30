@@ -117,9 +117,22 @@ describe('mapBoxesToTool', () => {
   });
 
   it('routes filled boxes that no tool accepts to review instead of dropping them', () => {
-    const mapped = mapBoxesToTool(W2, { '1': '100.00', '2': '10.00', '10': '5,000.00', '18.1': '100.00' });
-    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['10', '18.1']);
+    // A second local line is a situation the tool cannot represent.
+    const mapped = mapBoxesToTool(W2, { '1': '100.00', '2': '10.00', '10': '5,000.00', '18.2': '100.00' });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['10', '18.2']);
     expect(mapped.bag).not.toHaveProperty('dependentCareBenefits');
+  });
+
+  it('takes the name from the first line, without the comma a model puts at its end', () => {
+    const mapped = mapBoxesToTool(W2, { c: 'CIRCLE CITY MACHINING INC,\n200 W WASHINGTON ST,\nINDIANAPOLIS IN 46204' });
+    expect(mapped.bag.employerName).toBe('CIRCLE CITY MACHINING INC');
+    expect(mapBoxesToTool(W2, { c: 'ACME CO., INC.\nMAIN ST' }).bag.employerName).toBe('ACME CO., INC.');
+  });
+
+  it('applies the first local line: boxes 18, 19 and 20', () => {
+    const mapped = mapBoxesToTool(W2, { '15.state.1': 'IN', '17.1': '1,800.00', '18.1': '60,000.00', '19.1': '1,212.00', '20.1': 'MARION' });
+    expect(mapped.reviewBoxes).toEqual([]);
+    expect(mapped.bag).toMatchObject({ state: 'IN', localWages: '60,000.00', localTaxWithheld: '1,212.00', localityName: 'MARION' });
   });
 
   it('routes a second state row to review', () => {

@@ -143,6 +143,9 @@ const FIELD_LABELS: Record<string, string> = {
   proceeds: 'Proceeds (box 1d)',
   wages: 'Wages (box 1)',
   federalTaxWithheld: 'Federal income tax withheld',
+  localWages: 'Local wages (box 18)',
+  localTaxWithheld: 'Local income tax (box 19)',
+  localityName: 'Locality name (box 20)',
   distributionCode: 'Distribution code',
 };
 
