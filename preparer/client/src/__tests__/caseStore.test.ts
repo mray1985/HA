@@ -55,6 +55,18 @@ describe('caseStore', () => {
     expect(useCaseStore.getState().review?.status).toBe('needs_attention');
   });
 
+  it('keeps what the return applier wrote when the evidence reloads', () => {
+    const s = useCaseStore.getState();
+    s.updateField('addressZip', '70803');
+    // The Documents flow: pending edits are saved, the applier writes the return, the case reloads.
+    flushCaseSave();
+    updateReturn(id, { income1099INT: [{ id: 'i1', payerName: 'Bayou Credit Union', amount: 212.5 }] });
+    s.reloadEvidence();
+    expect(getReturn(id).income1099INT).toHaveLength(1);
+    expect(getReturn(id).addressZip).toBe('70803');
+    expect(useCaseStore.getState().taxReturn?.income1099INT).toHaveLength(1);
+  });
+
   it('coalesces rapid edits to one field and keeps the value from before the first', () => {
     const t0 = new Date('2026-10-01T10:00:00Z');
     appendAudit(id, { kind: 'correction', field: 'addressZip', from: '70802', to: '7080' }, t0);

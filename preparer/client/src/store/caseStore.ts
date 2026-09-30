@@ -34,12 +34,16 @@ export type CaseTab = 'review' | 'documents' | 'return' | 'explain' | 'scenarios
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Write the open return now (before leaving the case, printing, or approving). */
+/**
+ * Write the preparer's pending edit now (before leaving the case, printing,
+ * approving, or letting the return applier read the return). Without a
+ * pending edit the stored return is already current — and may be newer than
+ * this copy, when the applier wrote it — so nothing is written.
+ */
 export function flushCaseSave(): void {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-  }
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
   const tr = useCaseStore.getState().taxReturn;
   if (tr) writeReturn(tr);
 }
