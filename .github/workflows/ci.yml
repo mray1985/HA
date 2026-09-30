@@ -90,6 +90,9 @@ jobs:
       - name: Type-check client
         run: npx tsc -p client/tsconfig.json --noEmit
 
+      - name: Type-check server
+        run: npx tsc -p server/tsconfig.json --noEmit
+
       - name: Dependency audit
         run: npm audit --audit-level=high || true
 
