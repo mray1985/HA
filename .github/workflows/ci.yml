@@ -1,4 +1,4 @@
-name: CI — HA Tax service Test Suite
+name: CI — HATax (individual and preparer apps)
 
 on:
   push:
@@ -10,14 +10,24 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The repository holds two self-contained apps, each with its own engine,
+# server, client and lockfile. Every job runs once per app, inside that app.
+
 jobs:
   # ──────────────────────────────────────────────
   # Job 1: Unit & Integration Tests (Vitest)
   # ──────────────────────────────────────────────
   unit-tests:
-    name: Unit & Integration Tests
+    name: Unit & Integration Tests (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [individual, preparer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
 
     steps:
       - uses: actions/checkout@v4
@@ -26,15 +36,17 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run shared engine tests
+      - name: Run engine tests
         run: npm test -w shared
 
-      - name: Run preparer local-AI tests
-        run: npm test -w @hatax/local-ai
+      - name: Run local-AI tests
+        if: matrix.app == 'preparer'
+        run: npm test -w local-ai
 
       - name: Run server tests
         run: npm test -w server
@@ -43,9 +55,16 @@ jobs:
   # Job 2: TypeScript Type-Check
   # ──────────────────────────────────────────────
   typecheck:
-    name: TypeScript Check
+    name: TypeScript Check (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [individual, preparer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
 
     steps:
       - uses: actions/checkout@v4
@@ -54,24 +73,22 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Type-check shared engine
+      - name: Type-check engine
         run: npx tsc -p shared/tsconfig.json --noEmit
 
-      - name: Type-check preparer local-AI package
-        run: npx tsc -p local-ai/tsconfig.json --noEmit
+      - name: Type-check local-AI package
+        if: matrix.app == 'preparer'
+        run: |
+          npx tsc -p local-ai/tsconfig.json --noEmit
+          npx tsc -p local-ai/tsconfig.tests.json --noEmit
 
-      - name: Type-check TaxFact compile-time assertions
-        run: npx tsc -p local-ai/tsconfig.tests.json --noEmit
-
-      - name: Type-check individual app
-        run: npx tsc -p apps/individual/tsconfig.json --noEmit
-
-      - name: Type-check preparer app
-        run: npx tsc -p apps/preparer/tsconfig.json --noEmit
+      - name: Type-check client
+        run: npx tsc -p client/tsconfig.json --noEmit
 
       - name: Dependency audit
         run: npm audit --audit-level=high || true
@@ -87,6 +104,9 @@ jobs:
       fail-fast: false
       matrix:
         app: [individual, preparer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}/client
 
     steps:
       - uses: actions/checkout@v4
@@ -95,33 +115,40 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+        working-directory: ${{ matrix.app }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        working-directory: apps/${{ matrix.app }}
 
       - name: Run E2E tests (Chromium)
         run: npx playwright test --project=chromium
-        working-directory: apps/${{ matrix.app }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-${{ matrix.app }}
-          path: apps/${{ matrix.app }}/playwright-report/
+          path: ${{ matrix.app }}/client/playwright-report/
           retention-days: 7
 
   # ──────────────────────────────────────────────
   # Job 4: Build Check
   # ──────────────────────────────────────────────
   build:
-    name: Production Build
+    name: Production Build (${{ matrix.app }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [individual, preparer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
 
     steps:
       - uses: actions/checkout@v4
@@ -130,15 +157,13 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared engine
-        run: npm run build -w shared
+      - name: Build engine
+        run: npm run build:shared
 
-      - name: Build individual app
-        run: npm run build:individual
-
-      - name: Build preparer app
-        run: npm run build:preparer
+      - name: Build client
+        run: npm run build
