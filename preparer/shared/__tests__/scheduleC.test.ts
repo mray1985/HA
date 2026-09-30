@@ -1109,3 +1109,38 @@ describe('Schedule C — Rent/Lease sub-line split (20a/20b)', () => {
     expect(result.totalExpenses).toBe(15000);
   });
 });
+
+describe('business receipts not reported on a 1099', () => {
+  it('adds them to line 1 alongside 1099-NEC and 1099-K amounts', () => {
+    const tr = makeTaxReturn({
+      income1099NEC: [{ id: 'n1', payerName: 'Client', amount: 12000 }],
+      income1099K: [{ id: 'k1', platformName: 'Platform', grossAmount: 3000 }],
+      businessReceipts: [{ id: 'r1', description: 'Cash and check sales', amount: 4500.5 }],
+    });
+    expect(calculateScheduleC(tr).grossReceipts).toBe(19500.5);
+  });
+
+  it('is enough on its own to put Schedule C and SE tax on the return', () => {
+    const tr = makeTaxReturn({
+      filingStatus: FilingStatus.Single,
+      businessReceipts: [{ id: 'r1', description: 'Invoices paid by check', amount: 20000 }],
+    });
+    const result = calculateForm1040(tr);
+    expect(result.scheduleC?.grossReceipts).toBe(20000);
+    expect(result.form1040.seTax).toBeGreaterThan(0);
+  });
+
+  it('routes receipts to the business they belong to', () => {
+    const tr = makeTaxReturn({
+      businesses: [
+        { id: 'a', businessName: 'Design', accountingMethod: 'cash', didStartThisYear: false },
+        { id: 'b', businessName: 'Catering', accountingMethod: 'cash', didStartThisYear: false },
+      ],
+      income1099NEC: [{ id: 'n1', payerName: 'Client', amount: 10000, businessId: 'a' }],
+      businessReceipts: [{ id: 'r1', description: 'Event deposits', amount: 6000, businessId: 'b' }],
+    });
+    const byId = new Map(calculateScheduleC(tr).businessResults!.map((b) => [b.businessId, b.grossIncome]));
+    expect(byId.get('a')).toBe(10000);
+    expect(byId.get('b')).toBe(6000);
+  });
+});

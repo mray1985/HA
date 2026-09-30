@@ -95,6 +95,20 @@ export interface Income1099K {
   businessId?: string;               // Associates with a specific Schedule C business (multi-business routing)
 }
 
+/**
+ * Business gross receipts not reported on any Form 1099-NEC or 1099-K
+ * (Schedule C line 1): cash and check sales, direct deposits, invoices paid,
+ * from the business's income records. 1099-NEC and 1099-K amounts are entered
+ * as those forms, never again here.
+ */
+export interface BusinessReceipt {
+  id: string;
+  /** What the receipts are, as the income records name them. */
+  description: string;
+  amount: number;
+  businessId?: string;               // Associates with a specific Schedule C business (multi-business routing)
+}
+
 export interface Income1099INT {
   id: string;
   payerName: string;
@@ -1659,6 +1673,7 @@ export interface TaxReturn {
   w2Income: W2Income[];
   income1099NEC: Income1099NEC[];
   income1099K: Income1099K[];
+  businessReceipts?: BusinessReceipt[];  // Schedule C line 1 receipts not on a 1099-NEC or 1099-K
   income1099INT: Income1099INT[];
   income1099OID?: Income1099OID[];
   income1099DIV: Income1099DIV[];
@@ -1933,6 +1948,8 @@ export interface StateReturnConfig {
   stateCode: string;                    // 2-letter abbreviation
   residencyType: StateResidencyType;
   daysLivedInState?: number;            // For part-year filers
+  /** State estimated tax payments for the year, including a prior-year overpayment applied to it. */
+  estimatedPayments?: number;
   stateSpecificData?: Record<string, unknown>;  // State-specific fields
 }
 
@@ -2002,7 +2019,7 @@ export interface StateTaxBracket {
 // Calculation results
 export interface ScheduleCResult {
   // Schedule C Lines 1-7 — Gross Income Pipeline
-  grossReceipts: number;              // Line 1: Total gross receipts (sum of all 1099-NEC + 1099-K)
+  grossReceipts: number;              // Line 1: Total gross receipts (1099-NEC + 1099-K + other business receipts)
   returnsAndAllowances: number;       // Line 2: Returns, allowances, adjustments
   netReceipts: number;                // Line 3: Line 1 - Line 2
   costOfGoodsSold: number;            // Line 4: Cost of goods sold (Part III)

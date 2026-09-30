@@ -159,6 +159,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
     (taxReturn.w2Income?.length || 0) > 0 ||
     (taxReturn.income1099NEC?.length || 0) > 0 ||
     (taxReturn.income1099K?.length || 0) > 0 ||
+    (taxReturn.businessReceipts?.length || 0) > 0 ||
     (taxReturn.income1099INT?.length || 0) > 0 ||
     (taxReturn.income1099OID?.length || 0) > 0 ||
     (taxReturn.income1099DIV?.length || 0) > 0 ||

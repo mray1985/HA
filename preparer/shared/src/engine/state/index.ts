@@ -234,6 +234,17 @@ export function applyBrackets(taxableIncome: number, brackets: StateTaxBracket[]
  * W-2 Box 17, W-2G Box 15, 1099-MISC Box 16, 1099-NEC Box 7,
  * 1099-R Box 14, 1099-G Box 11, 1099-INT Box 17, 1099-DIV Box 16.
  */
+/**
+ * State estimated tax payments for one state return: the config's
+ * `estimatedPayments`, else the older `stateSpecificData.estimatedPayments`
+ * entry (CA and NY). None entered is 0.
+ */
+export function getStateEstimatedPayments(config: StateReturnConfig): number {
+  if (typeof config.estimatedPayments === 'number') return Math.max(0, config.estimatedPayments);
+  const entered = config.stateSpecificData?.estimatedPayments;
+  return typeof entered === 'number' ? Math.max(0, entered) : 0;
+}
+
 export function getStateWithholding(taxReturn: TaxReturn, stateCode: string): number {
   const upper = stateCode.toUpperCase();
   const sumByState = (items: { stateCode?: string; stateTaxWithheld?: number }[] | undefined) =>

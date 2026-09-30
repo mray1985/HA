@@ -42,7 +42,7 @@ import {
 } from '../../constants/states/ny.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import { parseDateString, round2 } from '../utils.js';
 
 // ─── NY Additions / Subtractions ────────────────────────────────
@@ -823,8 +823,7 @@ function computeNYCoreTax(
   const totalRefundable = round2(nysRefundable + nycRefundable);
 
   const stateWithholding = getStateWithholding(taxReturn, 'NY');
-  const estimatedPayments = typeof stateData.estimatedPayments === 'number'
-    ? stateData.estimatedPayments : 0;
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
 
   // Refund/owed = payments - tax + refundable credits

@@ -502,6 +502,7 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
   const hasSelfEmployment =
     taxReturn.income1099NEC.length > 0 ||
     taxReturn.income1099K.length > 0 ||
+    (taxReturn.businessReceipts?.length || 0) > 0 ||
     !!taxReturn.business ||
     (taxReturn.businesses && taxReturn.businesses.length > 0);
   ctx.scheduleC = hasSelfEmployment

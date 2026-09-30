@@ -25,7 +25,7 @@ import { FLAT_TAX_CONSTANTS_2026, MA_PERSONAL_EXEMPTION_2026 } from '../../const
 import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -316,7 +316,7 @@ export function createFlatTaxCalculator(stateCode: string, taxYear: number = 202
 
       // ── Step 8: Withholding & Payments ───────────
       const stateWithholding = getStateWithholding(taxReturn, stateCode);
-      const estimatedPayments = 0; // Could be extended later
+      const estimatedPayments = getStateEstimatedPayments(stateConfig);
       const totalPayments = stateWithholding + estimatedPayments;
 
       const totalStateTax = tb.trace(

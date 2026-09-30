@@ -17,7 +17,7 @@ import {
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
 // ─── Config Interface ─────────────────────────────────────────────
@@ -344,7 +344,7 @@ export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig
 
       // ── Step 11: Withholding & Payments ──────────
       const stateWithholding = getStateWithholding(taxReturn, config.stateCode);
-      const estimatedPayments = 0;
+      const estimatedPayments = getStateEstimatedPayments(stateConfig);
       const totalPayments = stateWithholding + estimatedPayments;
 
       const totalStateTax = tb.trace(

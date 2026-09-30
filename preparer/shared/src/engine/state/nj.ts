@@ -27,7 +27,7 @@ import {
 } from '../../constants/states/nj.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 
 // ─── NJ Additions / Subtractions ────────────────────────────────
 
@@ -247,7 +247,7 @@ export function calculateNewJersey(
   );
 
   const stateWithholding = getStateWithholding(taxReturn, 'NJ');
-  const estimatedPayments = 0; // Could be extended later
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
 
   const refundOrOwedRaw = totalPayments - totalStateTax;

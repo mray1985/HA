@@ -15,7 +15,7 @@ import {
 } from '../../types/index.js';
 import { getTaxConstants } from '../../constants/taxConstants.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
 function countPersons(filingStatus: FilingStatus | undefined): number {
@@ -121,8 +121,9 @@ export function createNHCalculator(): StateCalculator {
       });
 
       const stateWithholding = getStateWithholding(taxReturn, 'NH');
+      const estimatedPayments = getStateEstimatedPayments(stateConfig);
       const totalStateTax = grossTax;
-      const refundOrOwedRaw = stateWithholding - totalStateTax;
+      const refundOrOwedRaw = stateWithholding + estimatedPayments - totalStateTax;
       const refundOrOwed = tb.trace(
         'state.refundOrOwed',
         refundOrOwedRaw >= 0 ? 'NH Refund' : 'NH Amount Owed',
@@ -157,7 +158,7 @@ export function createNHCalculator(): StateCalculator {
         localTax: 0,
         totalStateTax,
         stateWithholding,
-        stateEstimatedPayments: 0,
+        stateEstimatedPayments: estimatedPayments,
         stateRefundOrOwed: refundOrOwed,
         effectiveStateRate: effectiveRate,
         bracketDetails: taxableIdIncome > 0

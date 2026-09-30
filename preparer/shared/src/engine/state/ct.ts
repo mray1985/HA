@@ -28,7 +28,7 @@ import {
   type CTTableCParams, type CTTableDParams, type CTTableETier,
 } from '../../constants/states/ct.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 
 // ─── CT Additions / Subtractions ────────────────────────────────
 
@@ -300,7 +300,7 @@ export function calculateConnecticut(
   );
 
   const stateWithholding = getStateWithholding(taxReturn, 'CT');
-  const estimatedPayments = 0;
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
   const refundOrOwedRaw = totalPayments - totalStateTax + refundableExcess;
   const refundOrOwed = tb.trace(

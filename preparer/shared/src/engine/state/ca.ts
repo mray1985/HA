@@ -41,7 +41,7 @@ import {
 import { parseDateString } from '../utils.js';
 import { STATE_FORM_REFS, StateFormLineRefs } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import { round2 } from '../utils.js';
 
 // ─── CA Additions / Subtractions ────────────────────────────────
@@ -675,8 +675,7 @@ function calculate540NR(
 
   // Payments
   const stateWithholding = getStateWithholding(taxReturn, 'CA');
-  const estimatedPayments = typeof stateData.estimatedPayments === 'number'
-    ? stateData.estimatedPayments : 0;
+  const estimatedPayments = getStateEstimatedPayments(config);
   const refundOrOwed = round2(stateWithholding + estimatedPayments - totalStateTax + refundableExcess);
 
   const effectiveRate = allocatedAGI > 0
@@ -914,8 +913,7 @@ export function calculateCalifornia(
   const localTax = 0;
 
   const stateWithholding = getStateWithholding(taxReturn, 'CA');
-  const estimatedPayments = typeof stateData.estimatedPayments === 'number'
-    ? stateData.estimatedPayments : 0;
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
 
   const refundOrOwedRaw = totalPayments - totalStateTax + refundableExcess;

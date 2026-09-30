@@ -32,10 +32,12 @@ import { round2 } from './utils.js';
 export function calculateScheduleC(taxReturn: TaxReturn): ScheduleCResult {
   // ─── Schedule C Lines 1-7: Gross Income Pipeline ─────────
 
-  // Line 1: Gross receipts — sum of all 1099-NEC and 1099-K gross amounts
+  // Line 1: Gross receipts — 1099-NEC and 1099-K gross amounts, plus receipts
+  // no 1099 reports (cash, checks, direct deposits)
   const necIncome = taxReturn.income1099NEC.reduce((sum, i) => sum + (i.amount || 0), 0);
   const kIncome = taxReturn.income1099K.reduce((sum, i) => sum + (i.grossAmount || 0), 0);
-  const grossReceipts = round2(necIncome + kIncome);
+  const otherReceipts = (taxReturn.businessReceipts || []).reduce((sum, r) => sum + (r.amount || 0), 0);
+  const grossReceipts = round2(necIncome + kIncome + otherReceipts);
 
   // Line 2: Returns and allowances — 1099-K adjustments + direct returns/allowances
   const kAdjustments = taxReturn.income1099K.reduce(
@@ -197,7 +199,7 @@ export function calculateScheduleC(taxReturn: TaxReturn): ScheduleCResult {
   let businessResults: ScheduleCBusinessResult[] | undefined;
 
   if (businesses.length > 1) {
-    // Route income to businesses by businessId on 1099-NEC and 1099-K items
+    // Route income to businesses by businessId on 1099-NEC, 1099-K and receipt items
     const bizIncomeMap = computePerBusinessIncome(taxReturn, businesses, grossIncome);
     const anyAssigned = [...bizIncomeMap.values()].some(v => v > 0);
 
@@ -284,7 +286,7 @@ export function calculateScheduleC(taxReturn: TaxReturn): ScheduleCResult {
 }
 
 /**
- * Route 1099-NEC and 1099-K income to specific businesses by businessId.
+ * Route 1099-NEC, 1099-K and other business receipts to specific businesses by businessId.
  * Unassigned income (no businessId) is distributed proportionally among businesses
  * based on their share of assigned income.
  *
@@ -316,6 +318,14 @@ function computePerBusinessIncome(
       const netK = (k.grossAmount || 0) - (k.returnsAndAllowances || 0);
       bizIncome.set(k.businessId, round2((bizIncome.get(k.businessId) || 0) + netK));
       assignedTotal += netK;
+    }
+  }
+
+  // Route receipts no 1099 reports by businessId
+  for (const receipt of taxReturn.businessReceipts || []) {
+    if (receipt.businessId && bizIncome.has(receipt.businessId)) {
+      bizIncome.set(receipt.businessId, round2((bizIncome.get(receipt.businessId) || 0) + (receipt.amount || 0)));
+      assignedTotal += (receipt.amount || 0);
     }
   }
 

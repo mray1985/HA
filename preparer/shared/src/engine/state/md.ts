@@ -30,7 +30,7 @@ import {
 } from '../../constants/states/md.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 
 // ─── MD Additions / Subtractions ────────────────────────────────
 
@@ -303,7 +303,7 @@ export function calculateMaryland(
   );
 
   const stateWithholding = getStateWithholding(taxReturn, 'MD');
-  const estimatedPayments = 0; // Could be extended later
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
   const refundOrOwedRaw = totalPayments - totalStateTax + refundableExcess;
   const refundOrOwed = tb.trace(

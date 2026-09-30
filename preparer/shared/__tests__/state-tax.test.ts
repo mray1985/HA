@@ -1504,3 +1504,30 @@ describe('State Tax — Calculation Traces', () => {
     expect(credits!.formula).toContain('Table E');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE ESTIMATED PAYMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('state estimated payments', () => {
+  const incomeTaxStates = getSupportedStates().filter((s) => !NO_INCOME_TAX_STATES.includes(s) && s !== 'NH');
+
+  it('every income-tax state counts the estimated payments entered on its state return', () => {
+    expect(incomeTaxStates.length).toBeGreaterThan(25);
+    for (const state of incomeTaxStates) {
+      const without = makeW2Return(80000, state, 1500);
+      const withPayments = { ...without, stateReturns: [{ stateCode: state, residencyType: 'resident' as const, estimatedPayments: 1000 }] };
+      const base = calculateStateTaxes(without, calculateForm1040(without))[0]!;
+      const paid = calculateStateTaxes(withPayments, calculateForm1040(withPayments))[0]!;
+      expect(paid.stateEstimatedPayments, state).toBe(1000);
+      expect(paid.stateRefundOrOwed - base.stateRefundOrOwed, state).toBeCloseTo(1000, 2);
+    }
+  });
+
+  it('still reads the older CA/NY state-specific entry', () => {
+    for (const state of ['CA', 'NY']) {
+      const tr = { ...makeW2Return(80000, state, 1500), stateReturns: [{ stateCode: state, residencyType: 'resident' as const, stateSpecificData: { estimatedPayments: 750 } }] };
+      expect(calculateStateTaxes(tr, calculateForm1040(tr))[0]!.stateEstimatedPayments, state).toBe(750);
+    }
+  });
+});

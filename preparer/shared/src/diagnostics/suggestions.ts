@@ -104,7 +104,8 @@ export function getSuggestions(
     });
     const hasEarnedIncome = (taxReturn.w2Income || []).length > 0 ||
       (taxReturn.income1099NEC || []).length > 0 ||
-      (taxReturn.income1099K || []).length > 0;
+      (taxReturn.income1099K || []).length > 0 ||
+      (taxReturn.businessReceipts || []).length > 0;
 
     if (hasYoungChildren && hasEarnedIncome) {
       suggestions.push({
@@ -202,7 +203,8 @@ export function getSuggestions(
   // ── HSA: self-employed with no HSA deduction ──────────────────────────
   if (isUnclaimed('ded_hsa')) {
     const hasSelfEmployment = (taxReturn.income1099NEC || []).length > 0 ||
-      (taxReturn.income1099K || []).length > 0;
+      (taxReturn.income1099K || []).length > 0 ||
+      (taxReturn.businessReceipts || []).length > 0;
     // Only suggest if SE and no HSA entered — many SE filers have HDHPs
     if (hasSelfEmployment && (taxReturn.hsaDeduction || 0) === 0) {
       suggestions.push({

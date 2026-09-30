@@ -29,7 +29,7 @@ import {
 } from '../../constants/states/hi.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 
 // ─── HI Additions / Subtractions ────────────────────────────────
 
@@ -262,7 +262,7 @@ export function calculateHawaii(
   );
 
   const stateWithholding = getStateWithholding(taxReturn, 'HI');
-  const estimatedPayments = 0; // Could be extended later
+  const estimatedPayments = getStateEstimatedPayments(config);
   const totalPayments = stateWithholding + estimatedPayments;
   const refundOrOwedRaw = totalPayments - totalStateTax + refundableExcess;
   const refundOrOwed = tb.trace(
