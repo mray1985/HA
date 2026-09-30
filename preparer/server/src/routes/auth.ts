@@ -3,7 +3,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { db, createUser, getUserByEmail, getUserById, updateUserLastLogin, activateSubscription, createSession, getSession, deleteSession, deleteExpiredSessions } from '../database.js';
-import { config } from '../config.js';
 
 const router = Router();
 

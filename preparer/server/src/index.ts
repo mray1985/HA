@@ -5,11 +5,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
-import chatRoutes from './routes/chat.js';
-import batchRoutes from './routes/batch.js';
-import extractRoutes from './routes/extract.js';
 import { authRoutes } from './routes/auth.js';
-import { config } from './config.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -78,20 +74,6 @@ app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/batch', batchRoutes);
-app.use('/api/extract', extractRoutes);
-
-// Tip links (static URLs from config — no Stripe SDK needed)
-app.get('/api/tip-links', (_req, res) => {
-  res.json({
-    data: {
-      small: config.tipLinkSmall || null,
-      medium: config.tipLinkMedium || null,
-      large: config.tipLinkLarge || null,
-    },
-  });
-});
 
 // Health check
 app.get('/api/health', (_req, res) => {
