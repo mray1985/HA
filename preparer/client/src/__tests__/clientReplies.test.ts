@@ -5,7 +5,7 @@ import { clearReturnCache, createReturn, getReturn, updateReturn } from '../api/
 import { loadAudit, loadModelRuns } from '../services/caseAudit';
 import { clearRecordCache } from '../services/caseRecords';
 import { buildCaseReview } from '../services/caseReview';
-import { caseQuestionLetter, caseQuestions, readClientReply } from '../services/clientReplies';
+import { acceptNoteOffer, caseQuestionLetter, caseQuestions, readClientReply } from '../services/clientReplies';
 import { applyStatedFilingStatus } from '../services/preparerDecisions';
 import { loadTaxFacts, saveTaxFacts } from '../services/preparerTaxFacts';
 import { recordPriorYearDependents } from '../services/recordTools';
@@ -23,12 +23,13 @@ function installMemoryLocalStorage() {
 }
 
 /** The local reader, answering each question's prompt as `answers` says. */
-function stubReader(answers: Array<[RegExp, { quote: string; answer: string }]>) {
+function stubReader(answers: Array<[RegExp, Record<string, unknown>]>) {
   let n = 0;
   const fetchMock = vi.fn(async (_url: string, init?: { body?: string }) => {
     const { prompt } = JSON.parse(init?.body ?? '{}') as { prompt: string };
-    const question = prompt.split('\n')[1] ?? '';
-    const found = answers.find(([re]) => re.test(question));
+    // A question's text is on the prompt's second line; a note call is matched by its instruction.
+    const target = prompt.startsWith('A client of a tax preparer') ? prompt.split('\n').slice(-2).join('\n') : prompt.split('\n')[1] ?? '';
+    const found = answers.find(([re]) => re.test(target));
     n += 1;
     return new Response(JSON.stringify({
       content: JSON.stringify(found ? found[1] : { quote: '', answer: 'not_stated' }),
@@ -74,7 +75,9 @@ describe("a client's reply on a case (§24, §25)", () => {
     expect(getReturn(returnId).dependents).toEqual([expect.objectContaining({ firstName: 'Maya', lastName: 'Lee', monthsLivedWithYou: 12 })]);
     const months = loadTaxFacts(returnId).find((f) => f.factType === 'DEPENDENT_monthsLivedWithYou' && f.sourceKind === 'client_response');
     expect(months).toMatchObject({ value: 12, verified: true, rawText: 'Maya lived with us all year', modelRunId: 'run-2' });
-    expect(loadModelRuns(returnId).map((r) => r.runId)).toEqual(['run-1', 'run-2']);
+    // Two questions, then the reply read as a note (dependents and payments; it names no state).
+    expect(loadModelRuns(returnId).map((r) => r.runId)).toEqual(['run-1', 'run-2', 'run-3', 'run-4']);
+    expect(result.offers).toEqual([]);
 
     // The stated filing status waits for the preparer.
     expect(getReturn(returnId).filingStatus).toBeFalsy();
@@ -118,5 +121,22 @@ describe("a client's reply on a case (§24, §25)", () => {
     await readClientReply(returnId, 'For the 529, we paid $14,250 in tuition and fees.');
     expect(getReturn(returnId).income1099Q).toEqual([expect.objectContaining({ grossDistribution: 15000, qualifiedExpenses: 14250 })]);
     expect(loadTaxFacts(returnId).find((f) => f.factType === '1099Q_qualifiedExpenses')).toMatchObject({ sourceKind: 'client_response', verified: true, sourceDocumentId: 'Q-DOC', rawText: 'we paid $14,250 in tuition' });
+  });
+
+  it('offers a new dependent a note states, recorded only when the preparer adds it', async () => {
+    updateReturn(returnId, { filingStatus: FilingStatus.Single });
+    stubReader([[/List each child or relative/, { people: [{ quote: 'we had a baby girl, Lily Lee, born March 3, 2025', firstName: 'Lily', lastName: 'Lee', relationship: 'Daughter', dateOfBirth: '2025-03-03' }] }]]);
+    const result = await readClientReply(returnId, 'Big news: we had a baby girl, Lily Lee, born March 3, 2025!');
+    expect(result.offers.map((o) => o.description)).toEqual(['Add Lily Lee as a dependent (born 2025-03-03)']);
+    expect(result.offers[0]!.proposal.dropped).toEqual(['relationship']);
+    // Nothing is recorded until the preparer adds it.
+    expect(loadTaxFacts(returnId).some((f) => f.sourceFileName.startsWith('Client reply'))).toBe(false);
+
+    expect(acceptNoteOffer(returnId, result, result.offers[0]!, 0)).toMatchObject({ ok: true });
+    const lily = loadTaxFacts(returnId).filter((f) => f.factType.startsWith('DEPENDENT_') && f.sourceKind === 'client_response');
+    expect(lily.map((f) => [f.sourceField, f.value, f.verified])).toEqual([['firstName', 'Lily', true], ['lastName', 'Lee', true], ['dateOfBirth', '2025-03-03', true]]);
+    // What the note did not say is asked next.
+    expect(caseQuestions(returnId).map((q) => q.text)).toContain('How is Lily Lee related to you?');
+    expect(loadAudit(returnId)).toContainEqual(expect.objectContaining({ kind: 'client_note', accepted: true, description: 'Add Lily Lee as a dependent (born 2025-03-03)' }));
   });
 });

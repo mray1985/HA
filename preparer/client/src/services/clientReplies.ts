@@ -8,6 +8,10 @@
  * answer is a verified client-response fact, applied through the same tools
  * as any other evidence; everything else stays open for the preparer. The
  * reply itself is kept word for word in the case's audit trail.
+ *
+ * The same text is read as a note too (clientNotes.ts): new dependents, state
+ * moves and estimated payments it states become proposed record-tool calls,
+ * holding only values the client's words give, that the preparer accepts.
  */
 
 import {
@@ -16,7 +20,12 @@ import {
   clientAnswerSchema,
   clientQuestionLetter,
   confirmClientAnswer,
+  confirmNoteCall,
+  describeNoteProposal,
   generateClientQuestions,
+  noteCalls,
+  proposalIsKnown,
+  type NoteProposal,
   type ClientAnswerOutcome,
   type ClientAnswerValue,
   type ClientQuestion,
@@ -47,9 +56,20 @@ export interface ReplyAnswer {
   error?: string;
 }
 
+/** A new fact the reply states (not an answer to an open question), for the preparer to accept. */
+export interface NoteOffer {
+  id: string;
+  proposal: NoteProposal;
+  description: string;
+  modelRunId?: string;
+  extractor: string;
+}
+
 export interface ReadReplyResult {
   replyId: string;
+  label: string;
   answers: ReplyAnswer[];
+  offers: NoteOffer[];
   runs: ModelRunRecord[];
 }
 
@@ -104,6 +124,8 @@ export async function readClientReply(
   const names = [...new Set(questions.map((q) => q.subjectName).filter((n): n is string => Boolean(n)))];
   const runs: ModelRunRecord[] = [];
   const answers: ReplyAnswer[] = [];
+  const offers: NoteOffer[] = [];
+  const tr = getReturn(returnId);
 
   try {
     for (const [index, q] of questions.entries()) {
@@ -122,12 +144,26 @@ export async function readClientReply(
       });
       answers.push(recorded.ok ? { question: q, outcome, recorded: recorded.detail } : { question: q, outcome, error: recorded.error });
     }
+
+    // New facts the text states, offered to the preparer — not ones the answers above just recorded.
+    const calls = noteCalls(text, tr.taxYear);
+    for (const [i, call] of calls.entries()) {
+      onProgress?.(`Reading the reply for new facts (${i + 1} of ${calls.length})…`);
+      const { content, run } = await askLocalModel({ prompt: call.prompt, name: call.name, jsonSchema: call.schema as Record<string, unknown> }, runs);
+      for (const proposal of confirmNoteCall(call, text, content, tr.taxYear).proposals) {
+        if (proposalIsKnown(proposal, loadTaxFacts(returnId), tr.taxYear)) continue;
+        offers.push({
+          id: `${replyId}:${offers.length}`, proposal, description: describeNoteProposal(proposal),
+          extractor: `${run?.modelName ?? 'Local reader'} + the client's words`, ...(run ? { modelRunId: run.runId } : {}),
+        });
+      }
+    }
   } finally {
     appendModelRuns(returnId, runs);
   }
 
   const answered = answers.filter((a) => a.recorded !== undefined).length;
-  appendAudit(returnId, { kind: 'client_reply', replyId, text, answered, left: questions.length - answered }, now);
+  appendAudit(returnId, { kind: 'client_reply', replyId, text, answered, left: questions.length - answered, offered: offers.map((o) => o.description) }, now);
   for (const a of answers) {
     appendAudit(returnId, a.recorded !== undefined && a.outcome.status === 'answered'
       ? { kind: 'client_answer', replyId, question: a.question.text, recorded: true, answer: answerLabel(a.question, a.outcome.value), quote: a.outcome.quote, detail: a.recorded }
@@ -137,7 +173,36 @@ export async function readClientReply(
       }, now);
   }
   if (answered > 0) runReturnChecks(returnId);
-  return { replyId, answers, runs };
+  return { replyId, label, answers, offers, runs };
+}
+
+/**
+ * The preparer accepts a fact the reply stated: recorded by its record tool
+ * as a verified client response (the words give every value it holds), with
+ * the client's words as its source text.
+ */
+export function acceptNoteOffer(returnId: string, reply: Pick<ReadReplyResult, 'replyId' | 'label'>, offer: NoteOffer, index: number): { ok: true; detail: string } | { ok: false; error: string } {
+  const { proposal } = offer;
+  const { result, outcome } = recordEvidence(returnId, proposal.tool, proposal.args, {
+    documentId: `${reply.replyId}:note`,
+    index,
+    label: reply.label,
+    kind: 'client_response',
+    extractor: offer.extractor,
+    rawText: Object.fromEntries(Object.keys(proposal.args).map((k) => [k, proposal.quote])),
+    verified: true,
+    ...(offer.modelRunId ? { modelRunId: offer.modelRunId } : {}),
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+  const detail = describeOutcome(outcome!);
+  appendAudit(returnId, { kind: 'client_note', replyId: reply.replyId, accepted: true, description: offer.description, quote: proposal.quote, detail });
+  runReturnChecks(returnId);
+  return { ok: true, detail };
+}
+
+/** The preparer dismisses a fact the reply seemed to state. */
+export function dismissNoteOffer(returnId: string, reply: Pick<ReadReplyResult, 'replyId'>, offer: NoteOffer): void {
+  appendAudit(returnId, { kind: 'client_note', replyId: reply.replyId, accepted: false, description: offer.description, quote: offer.proposal.quote, detail: 'dismissed by the preparer' });
 }
 
 export { answerLabel };

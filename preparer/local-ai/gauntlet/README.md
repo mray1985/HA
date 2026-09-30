@@ -35,7 +35,8 @@ Ryzen AI 7 350 with 15 GB RAM, using llama.cpp `llama-server` build 11262.
 8. `run-tools.ts` scores tool-calling models on §56 metrics: tool selection,
    missing / extra / wrong / invalid arguments, hallucinated tools, duplicate
    calls, and unknown facts passed as values.
-9. `run-replies.ts` scores how client replies are read (see Client replies).
+9. `run-replies.ts` and `run-notes.ts` score how client replies and notes are
+   read (see Client replies and Client notes).
 
 ```bash
 node local-ai/gauntlet/render-cases.mjs --dpi 150 --suffix -150dpi
@@ -280,6 +281,37 @@ daughter" and a month count for "moved in in March" — every one refused
 because the client's words do not say it. The misses are the model declining
 or misreading, a sentence naming two people ("Leo - 11 months, Maya - 12"), and
 words the reader does not take as a yes ("every penny", "About the HSA: yes").
+
+## Client notes (work order §25)
+
+`run-notes.ts` reads notes that answer no open question — a new baby, a
+move, an estimated payment — as the app does (`src/clientNotes.ts`): the
+reader lists new dependents and estimated payments under one grammar each,
+and for every state the note names in full it answers that state's residency
+question. Every value is checked against the note's words: a value the words
+do not give is dropped (it stays unknown and is asked for), a proposal whose
+person, state or payment the words do not give is rejected, and what is left
+is offered to the preparer, who adds or dismisses each one.
+
+```bash
+npx tsx local-ai/gauntlet/run-notes.ts
+```
+
+Qwen3.5-0.8B Q4_K_M, 1.6 s per call, 2.6 calls per note:
+
+| Notes | Proposals right (every field) | Wrong | Missed | Rejected by the words |
+|---|---|---|---|---|
+| Tuned on (13 notes) | 11 (9) | 0 | 3 | 24 |
+| Held out (10 notes, run once) | 7 (7) | 0 | 1 | 14 |
+
+The reader gave an empty list for every state when asked to list states from
+51 codes ("I moved from Texas to Louisiana" gave none), so states are asked
+one named state at a time. The rejections are the model's inventions: people
+named "anyone", "Client" or "Sarah", a puppy and a visiting friend as
+dependents, a Louisiana payment "to the IRS", "part-year" for "I work in New
+Jersey but live in Pennsylvania". The misses: Texas in "moved from Texas to
+Louisiana" (Louisiana was proposed), Nevada in "been in Nevada since", and two
+state payments the model gave to the IRS.
 
 ## Official form blanks
 

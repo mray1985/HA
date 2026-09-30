@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleHelp, Copy, MessageSquareText } from 'lucide-react';
 import { clientQuestionLetter, generateClientQuestions } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
-import { answerLabel, readClientReply, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
+import { acceptNoteOffer, answerLabel, dismissNoteOffer, readClientReply, type NoteOffer, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
 import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 
 function AnswerLine({ answer }: { answer: ReplyAnswer }) {
@@ -38,6 +38,28 @@ function AnswerLine({ answer }: { answer: ReplyAnswer }) {
   );
 }
 
+type OfferState = { kind: 'accepted'; detail: string } | { kind: 'dismissed' } | { kind: 'error'; error: string };
+
+function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; state?: OfferState; onAccept: () => void; onDismiss: () => void }) {
+  const dropped = offer.proposal.dropped;
+  return (
+    <li className="text-sm rounded-lg border border-slate-700 bg-surface-900 p-3">
+      <p className="text-white">{offer.description}</p>
+      <p className="text-xs text-slate-500">“{offer.proposal.quote}”</p>
+      {dropped.length > 0 && <p className="text-xs text-slate-400">Not in the client's words, so left unknown: {dropped.join(', ')}.</p>}
+      {state?.kind === 'accepted' && <p className="text-xs text-emerald-300 mt-1">Added — {state.detail}.</p>}
+      {state?.kind === 'dismissed' && <p className="text-xs text-slate-400 mt-1">Dismissed.</p>}
+      {state?.kind === 'error' && <p role="alert" className="text-xs text-red-300 mt-1">{state.error}</p>}
+      {(!state || state.kind === 'error') && (
+        <div className="mt-2 flex gap-2 justify-end">
+          <button type="button" onClick={onDismiss} className="text-sm text-slate-400 hover:text-white px-3 py-1">Dismiss</button>
+          <button type="button" onClick={onAccept} className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1">Add</button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 export default function ClientPanel() {
   const returnId = useCaseStore((s) => s.returnId);
   const taxReturn = useCaseStore((s) => s.taxReturn);
@@ -48,6 +70,8 @@ export default function ClientPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ReadReplyResult | null>(null);
+  const [offerStates, setOfferStates] = useState<Record<string, OfferState>>({});
+  const act = useCaseStore((s) => s.act);
   const [copied, setCopied] = useState(false);
   const [runtime, setRuntime] = useState<LocalRuntimeStatus | null | undefined>(undefined);
 
@@ -79,6 +103,7 @@ export default function ClientPanel() {
   const read = async () => {
     setError(null);
     setResult(null);
+    setOfferStates({});
     // An edit made on another tab is saved before the reply's answers are recorded.
     flushCaseSave();
     try {
@@ -112,8 +137,9 @@ export default function ClientPanel() {
       <section className="rounded-xl border border-slate-700 bg-surface-800 p-5">
         <h2 className="text-white font-semibold flex items-center gap-2"><MessageSquareText className="w-4 h-4" /> The client's reply</h2>
         <p className="text-xs text-slate-400 mt-1">
-          Paste the client's reply. It is read on this computer, one open question at a time; an answer is recorded only when the
-          model and the client's own words agree, and the reply is kept word for word in the audit trail.
+          Paste the client's reply or note. It is read on this computer, one open question at a time; an answer is recorded only
+          when the model and the client's own words agree. New facts it states (a new dependent, a move, an estimated payment) are
+          offered for you to add. The reply is kept word for word in the audit trail.
         </p>
         {runtime !== undefined && !available && (
           <p className="text-xs text-amber-300 mt-2">
@@ -133,7 +159,7 @@ export default function ClientPanel() {
           <button
             type="button"
             onClick={() => void read()}
-            disabled={!available || !reply.trim() || questions.length === 0 || busy !== null}
+            disabled={!available || !reply.trim() || busy !== null}
             className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 disabled:opacity-40 text-white rounded px-4 py-2"
           >
             Read reply
@@ -148,6 +174,34 @@ export default function ClientPanel() {
             <ul className="mt-2 flex flex-col gap-2" aria-label="Answers read from the reply">
               {result.answers.map((a) => <AnswerLine key={a.question.id} answer={a} />)}
             </ul>
+            {result.offers.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-white">New in the reply — add each one that is right:</p>
+                <ul className="mt-2 flex flex-col gap-2" aria-label="New facts in the reply">
+                  {result.offers.map((offer, i) => (
+                    <OfferLine
+                      key={offer.id}
+                      offer={offer}
+                      state={offerStates[offer.id]}
+                      onAccept={() => {
+                        let outcome: OfferState = { kind: 'error', error: 'The case is not open.' };
+                        act((id) => {
+                          const r = acceptNoteOffer(id, result, offer, i);
+                          outcome = r.ok ? { kind: 'accepted', detail: r.detail } : { kind: 'error', error: r.error };
+                          return r.ok ? { ok: true, outcome: { kind: 'recorded' } } : r;
+                        });
+                        setOfferStates((s) => ({ ...s, [offer.id]: outcome }));
+                      }}
+                      onDismiss={() => {
+                        dismissNoteOffer(returnId, result, offer);
+                        reloadEvidence();
+                        setOfferStates((s) => ({ ...s, [offer.id]: { kind: 'dismissed' } }));
+                      }}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </section>

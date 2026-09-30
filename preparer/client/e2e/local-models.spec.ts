@@ -49,3 +49,22 @@ test("a client's reply is read by the local reader and completes a 1099-Q", asyn
   await expect(page.getByText(/Client reply read: \d answered/)).toBeVisible();
   await expect(page.getByText(/Client answered "How much did you pay in 2025 for qualified education expenses.*\$12,400\.00/)).toBeVisible();
 });
+
+test("a new dependent a client's note states is offered, and added when the preparer accepts it", async ({ page }) => {
+  await openCaseDashboard(page);
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.getByRole('link', { name: 'Client' }).click();
+  await expect(page.getByText(/Local AI unavailable/)).toHaveCount(0, { timeout: 60_000 });
+  await page.getByLabel("Client's reply").fill('Big news: we had a baby girl, Lily Lee, born March 3, 2025!');
+  await page.getByRole('button', { name: 'Read reply' }).click();
+
+  const offers = page.getByLabel('New facts in the reply');
+  await expect(offers).toContainText('Add Lily Lee as a dependent (born 2025-03-03)', { timeout: 120_000 });
+  await offers.getByRole('button', { name: 'Add' }).click();
+  await expect(offers).toContainText('Added');
+  // What the note did not say is asked next.
+  await expect(page.getByLabel('Message to the client')).toContainText('How is Lily Lee related to you?');
+  await expect(page.getByLabel('Message to the client')).toContainText('How many months of 2025 did Lily live with you?');
+});

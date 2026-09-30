@@ -26,8 +26,11 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   machine by Qwen3.5-0.8B, one question at a time under a grammar, and an
   answer is recorded (as a verified client-response fact) only when the model
   and a reading of the client's own words agree; everything else stays open
-  with the reason. A stated filing status waits for the preparer. The reply is
-  kept word for word in the audit trail.
+  with the reason. A stated filing status waits for the preparer. New facts a
+  reply or note states — a new dependent, a move, an estimated payment — are
+  offered with only the values the client's words give, and are added when
+  the preparer accepts them. The reply is kept word for word in the audit
+  trail.
 - **Review.** Every deterministic check of the return (the diagnostics engine
   in `shared/src/diagnostics`) and every piece of document evidence that needs
   a person — held forms, unread documents, credit choices — in one checklist.

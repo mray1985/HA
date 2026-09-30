@@ -20,7 +20,9 @@ export type CaseAuditEvent =
   /** A preparer's answer to what a form could not say (§38). */
   | { at: string; kind: 'decision'; subject: string; detail: string }
   /** A client's reply, kept word for word (§25), and how many open questions it answered. */
-  | { at: string; kind: 'client_reply'; replyId: string; text: string; answered: number; left: number }
+  | { at: string; kind: 'client_reply'; replyId: string; text: string; answered: number; left: number; offered?: string[] }
+  /** A new fact a client's reply stated, and whether the preparer accepted it. */
+  | { at: string; kind: 'client_note'; replyId: string; accepted: boolean; description: string; quote: string; detail: string }
   /** One answer read from a client's reply: recorded, or left for the preparer and why. */
   | { at: string; kind: 'client_answer'; replyId: string; question: string; recorded: boolean; answer?: string; quote?: string; detail: string };
 
