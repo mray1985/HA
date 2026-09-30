@@ -1,0 +1,53 @@
+{
+  "id": "1099r-ira",
+  "description": "2026 1099-R Copy B: normal IRA distribution (code 7, IRA/SEP/SIMPLE checked), withholding, Louisiana state withholding. Box 2b unchecked. Synthetic data.",
+  "form": "f1099r.pdf",
+  "formType": "1099-R",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "LeftCol[0].f2_1[0]": "SUMMIT STATE RETIREMENT TRUST",
+    "LeftCol[0].f2_2[0]": "8401 UNITED PLAZA BLVD",
+    "LeftCol[0].f2_4[0]": "BATON ROUGE",
+    "LeftCol[0].f2_6[0]": "LA",
+    "LeftCol[0].f2_8[0]": "70809",
+    "LeftCol[0].PayersTIN[0].f2_9[0]": "72-0099887",
+    "LeftCol[0].f2_10[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_11[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_12[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_14[0]": "BATON ROUGE",
+    "LeftCol[0].f2_15[0]": "LA",
+    "LeftCol[0].f2_17[0]": "70802",
+    "RightCol[0].f2_19[0]": "18,500.00",
+    "RightCol[0].f2_20[0]": "18,500.00",
+    "RightCol[0].f2_22[0]": "3,700.00",
+    "RightCol[0].f2_25[0]": "7",
+    "RightCol[0].Box7b_ReadOrder[0].c2_4[0]": true,
+    "Box14_ReadOrder[0].f2_34[0]": "740.00",
+    "Box15_ReadOrder[0].f2_36[0]": "LA/1234567",
+    "f2_38[0]": "18,500.00"
+  },
+  "expectedBoxes": {
+    "1": { "money": 18500, "field": "RightCol[0].f2_19[0]" },
+    "2a": { "money": 18500, "field": "RightCol[0].f2_20[0]" },
+    "4": { "money": 3700, "field": "RightCol[0].f2_22[0]" },
+    "7a": { "text": "7", "field": "RightCol[0].f2_25[0]" },
+    "7b": { "contains": "", "field": "RightCol[0].Box7b_ReadOrder[0].c2_4[0]" },
+    "14": { "money": 740, "field": "Box14_ReadOrder[0].f2_34[0]" },
+    "16": { "money": 18500, "field": "f2_38[0]" }
+  },
+  "blankBoxes": ["2b", "3", "5", "6", "7c", "7d", "8a", "8b", "9a", "9b", "10", "11", "17", "18", "19"],
+  "expected": {
+    "tool": "add_1099_r",
+    "args": {
+      "payerName": "SUMMIT STATE RETIREMENT TRUST",
+      "grossDistribution": 18500,
+      "taxableAmount": 18500,
+      "federalTaxWithheld": 3700,
+      "distributionCode": "7",
+      "isIRA": true,
+      "stateCode": "LA",
+      "stateTaxWithheld": 740
+    }
+  }
+}

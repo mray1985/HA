@@ -37,3 +37,6 @@ tools/llama-cpp/
 
 # Python bytecode from local-ai/scripts
 __pycache__/
+
+# Model gauntlet renders
+local-ai/gauntlet/out/

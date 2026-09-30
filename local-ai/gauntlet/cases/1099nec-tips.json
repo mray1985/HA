@@ -1,0 +1,41 @@
+{
+  "id": "1099nec-tips",
+  "description": "2026 1099-NEC Copy B (Rev. 12-2026) with nonemployee compensation, the new box 1b cash tips and 1c TTOC, dollar-sign amounts and no withholding. Synthetic data.",
+  "form": "f1099nec.pdf",
+  "formType": "1099-NEC",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "PgHeader[0].CalendarYear[0].f2_1[0]": "2026",
+    "LeftCol[0].f2_2[0]": "BAYOU EVENTS CATERING INC",
+    "LeftCol[0].f2_3[0]": "77 TCHOUPITOULAS ST",
+    "LeftCol[0].f2_5[0]": "NEW ORLEANS",
+    "LeftCol[0].f2_7[0]": "LA",
+    "LeftCol[0].f2_9[0]": "70130",
+    "LeftCol[0].f2_10[0]": "72-5550198",
+    "LeftCol[0].f2_11[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_12[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_13[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_15[0]": "BATON ROUGE",
+    "LeftCol[0].f2_16[0]": "LA",
+    "LeftCol[0].f2_18[0]": "70802",
+    "RightCol[0].f2_20[0]": "$8,750.00",
+    "RightCol[0].Box1b_ReadOrder[0].f2_21[0]": "$1,120.00",
+    "RightCol[0].f2_22[0]": "102"
+  },
+  "expectedBoxes": {
+    "1a": { "money": 8750, "field": "RightCol[0].f2_20[0]" },
+    "1b": { "money": 1120, "field": "RightCol[0].Box1b_ReadOrder[0].f2_21[0]" },
+    "1c": { "text": "102", "field": "RightCol[0].f2_22[0]" }
+  },
+  "blankBoxes": ["1d", "2", "3", "4", "5", "6", "7"],
+  "expected": {
+    "tool": "add_1099_nec",
+    "args": {
+      "payerName": "BAYOU EVENTS CATERING INC",
+      "payerEin": "72-5550198",
+      "amount": 8750
+    },
+    "notYetInToolSchema": { "cashTips": 1120, "ttoc": "102" }
+  }
+}
