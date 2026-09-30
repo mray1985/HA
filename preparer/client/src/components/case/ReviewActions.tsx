@@ -6,7 +6,9 @@
  */
 
 import { useState, type ReactNode } from 'react';
+import { getAllStates } from '@hatax/engine';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
+import { FILING_STATUS_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
 import type { ReviewAction } from '../../services/caseReview';
 import { completeDependent, correctFormField, recordAcquisition, recordChoice, recordStateAnswer, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
@@ -204,12 +206,14 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   filing_status: "Use the client's filing status",
   acquisition_date: 'Enter the date acquired',
   state_answer: 'Answer for the state return',
+  return_field: 'Enter the value',
 };
 
 export function actionLabel(action: ReviewAction): string {
   return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it'
     : action.kind === 'acquisition_date' ? 'Enter the date acquired'
-    : action.kind === 'state_answer' ? (action.current === undefined ? 'Answer' : 'Change the answer') : 'Complete';
+    : action.kind === 'state_answer' ? (action.current === undefined ? 'Answer' : 'Change the answer')
+    : action.kind === 'return_field' ? 'Enter it' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
@@ -253,6 +257,9 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
             : { ok: false, error: 'Enter the date acquired.' };
         case 'state_answer':
           return answer.value === undefined ? { ok: false, error: 'Answer the question.' } : recordStateAnswer(returnId, action.question, answer.value);
+        case 'return_field':
+          // Filled by ReturnFieldsForm, never through a decision.
+          return { ok: false, error: 'Enter the value in its field.' };
       }
     });
     if (result.ok) onDone();
@@ -298,6 +305,76 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       <p className="text-xs text-slate-500">Recorded as a preparer entry and kept in the audit trail.</p>
+      <div className="flex gap-2 justify-end">
+        <button type="button" onClick={onDone} className="text-sm text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
+        <button type="submit" className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1.5">Save</button>
+      </div>
+    </form>
+  );
+}
+
+const STATES = getAllStates().sort((a, b) => a.name.localeCompare(b.name));
+
+/**
+ * Fill return fields the readiness check reports missing — one, or all of a
+ * group's at once (Tab from one to the next, one Save). Each value is checked
+ * first; the case store writes and audits it.
+ */
+export function ReturnFieldsForm({ fields, onDone }: { fields: string[]; onDone: () => void }) {
+  const taxReturn = useCaseStore((s) => s.taxReturn);
+  const updateDeepField = useCaseStore((s) => s.updateDeepField);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const specs = fields.flatMap((field) => {
+    const spec = returnFieldSpec(field, taxReturn);
+    return spec ? [{ field, spec }] : [];
+  });
+
+  const submit = () => {
+    const parsed = specs.map(({ field, spec }) => ({ field, result: parseReturnField(spec.kind, values[field] ?? '') }));
+    const typed = parsed.filter((p) => (values[p.field] ?? '').trim() !== '');
+    const bad = Object.fromEntries(typed.flatMap((p) => (p.result.ok ? [] : [[p.field, p.result.error]])));
+    if (typed.length === 0) {
+      setErrors({ [specs[0]?.field ?? '']: 'Enter a value.' });
+      return;
+    }
+    setErrors(bad);
+    if (Object.keys(bad).length > 0) return;
+    for (const p of typed) if (p.result.ok) updateDeepField(p.field, p.result.value);
+    onDone();
+  };
+
+  return (
+    <form className="mt-2 flex flex-col gap-3 rounded-lg border border-slate-700 bg-surface-900 p-3" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {specs.map(({ field, spec }, i) => (
+          <Field key={field} label={spec.label}>
+            {spec.kind === 'state' ? (
+              <select aria-label={spec.label} autoFocus={i === 0} className={inputClass} value={values[field] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}>
+                <option value="">Choose…</option>
+                {STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
+              </select>
+            ) : spec.kind === 'filing_status' ? (
+              <select aria-label={spec.label} autoFocus={i === 0} className={inputClass} value={values[field] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}>
+                <option value="">Choose…</option>
+                {FILING_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            ) : (
+              <input
+                aria-label={spec.label}
+                autoFocus={i === 0}
+                className={inputClass}
+                inputMode={spec.kind === 'tin' || spec.kind === 'zip' ? 'numeric' : undefined}
+                autoComplete="off"
+                value={values[field] ?? ''}
+                onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}
+              />
+            )}
+            {errors[field] && <span role="alert" className="text-red-300">{errors[field]}</span>}
+          </Field>
+        ))}
+      </div>
+      <p className="text-xs text-slate-500">Saved on the return and kept in the audit trail.{specs.length > 1 ? ' Fields left blank stay open.' : ''}</p>
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onDone} className="text-sm text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
         <button type="submit" className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1.5">Save</button>

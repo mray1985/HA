@@ -23,6 +23,8 @@ export interface ReadinessIssue {
   section: string;      // human-readable section name
   sectionId: string;    // return section id, e.g. 'personal_info'
   message: string;
+  /** The return field to fill, when one field settles it (e.g. 'addressZip', 'dependents.0.ssn'). */
+  field?: string;
 }
 
 export interface ReadinessResult {
@@ -45,6 +47,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'First name is required.',
+      field: 'firstName',
     });
   }
 
@@ -54,6 +57,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'Last name is required.',
+      field: 'lastName',
     });
   }
 
@@ -64,6 +68,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Filing Status',
       sectionId: 'filing_status',
       message: 'Filing status is required.',
+      field: 'filingStatus',
     });
   }
 
@@ -75,6 +80,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
         section: 'Filing Status',
         sectionId: 'filing_status',
         message: 'Spouse first name is required for Married Filing Jointly.',
+      field: 'spouseFirstName',
       });
     }
     if (!taxReturn.spouseLastName?.trim()) {
@@ -83,6 +89,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
         section: 'Filing Status',
         sectionId: 'filing_status',
         message: 'Spouse last name is required for Married Filing Jointly.',
+      field: 'spouseLastName',
       });
     }
   }
@@ -94,6 +101,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'Street address is required.',
+      field: 'addressStreet',
     });
   }
 
@@ -103,6 +111,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'City is required.',
+      field: 'addressCity',
     });
   }
 
@@ -112,6 +121,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'State is required.',
+      field: 'addressState',
     });
   }
 
@@ -121,6 +131,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: 'ZIP code is required.',
+      field: 'addressZip',
     });
   }
 
@@ -133,6 +144,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Personal Info',
       sectionId: 'personal_info',
       message: taxReturn.ssn ? 'Social Security number must be 9 digits.' : 'Social Security number is required.',
+      field: 'ssn',
     });
   }
   if (taxReturn.filingStatus === FilingStatus.MarriedFilingJointly && !isTin(taxReturn.spouseSsn)) {
@@ -141,6 +153,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Filing Status',
       sectionId: 'filing_status',
       message: 'Spouse Social Security number is required for Married Filing Jointly.',
+      field: 'spouseSsn',
     });
   }
   (taxReturn.dependents || []).forEach((dep, idx) => {
@@ -151,6 +164,7 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
       section: 'Dependents',
       sectionId: 'dependents',
       message: `${name}: a 9-digit SSN, ITIN or ATIN is required to claim this dependent.`,
+      field: `dependents.${idx}.ssn`,
     });
   });
 

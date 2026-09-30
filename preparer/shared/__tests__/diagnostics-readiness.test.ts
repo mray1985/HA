@@ -276,4 +276,19 @@ describe('checkExportReadiness', () => {
     expect(broken.blockerCount).toBeGreaterThan(0);
     expect(broken.blockerCount).toBe(broken.blockers.length);
   });
+
+  it('names the one field that settles each personal blocker, for filling it in place', () => {
+    const result = checkExportReadiness(makeTaxReturn({
+      firstName: '', lastName: '', ssn: '', filingStatus: undefined,
+      addressStreet: '', addressCity: '', addressState: '', addressZip: '',
+      dependents: [{ id: 'd', firstName: 'Maya', lastName: 'Doe', relationship: 'daughter', monthsLivedWithYou: 12 } as TaxReturn['dependents'][number]],
+    }));
+    expect(result.blockers.map((b) => b.field)).toEqual([
+      'firstName', 'lastName', 'filingStatus', 'addressStreet', 'addressCity', 'addressState', 'addressZip', 'ssn', 'dependents.0.ssn',
+    ]);
+    const mfj = checkExportReadiness(makeTaxReturn({ filingStatus: FilingStatus.MarriedFilingJointly }));
+    expect(mfj.blockers.map((b) => b.field)).toEqual(['spouseFirstName', 'spouseLastName', 'spouseSsn']);
+    // Blockers no single field settles have none.
+    expect(checkExportReadiness(makeTaxReturn({ w2Income: [] })).blockers[0]?.field).toBeUndefined();
+  });
 });

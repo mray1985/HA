@@ -69,15 +69,19 @@ async function launch(): Promise<void> {
     backgroundColor: '#0f172a',
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
-  // The app is its own origin; any other link opens in the preparer's browser.
+  // The app is its own origin; a web or mail link opens in the preparer's
+  // browser. Anything else (a dropped file's file:// URL) is not opened.
+  const openOutside = (url: string) => {
+    if (/^(https?:|mailto:)/i.test(url)) void shell.openExternal(url);
+  };
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(origin)) void shell.openExternal(url);
+    if (!url.startsWith(origin)) openOutside(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith(origin)) {
       event.preventDefault();
-      void shell.openExternal(url);
+      openOutside(url);
     }
   });
   win.once('ready-to-show', () => win.show());

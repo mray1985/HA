@@ -85,6 +85,7 @@ export function runReturnDiagnostics(taxReturn: TaxReturn, calculation?: Calcula
       source: 'readiness',
       section: issue.sectionId,
       message: issue.message,
+      ...(issue.field ? { field: issue.field } : {}),
     });
   }
 

@@ -28,6 +28,7 @@ import {
   type ReviewResolution,
 } from '../services/caseReview';
 import { loadDocuments } from '../services/documentIngestion';
+import type { IntakeResult } from '../services/caseIntake';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
 import type { DecisionResult } from '../services/preparerDecisions';
 
@@ -76,6 +77,10 @@ interface CaseState {
   missingDocuments: MissingDocument[];
   audit: CaseAuditEvent[];
   saveState: SaveState;
+  /** What the document intake is doing now ("Reading w2.pdf…"); null when idle. */
+  intakeBusy: string | null;
+  /** Files the last intake could not read or apply. */
+  intakeErrors: string[];
 
   /** Form viewer state (Return tab). */
   activeFormId: string;
@@ -86,11 +91,15 @@ interface CaseState {
   requestedTab: CaseTab | null;
   /** Checklist group the Review tab should bring into view. */
   focusedReviewGroup: ReviewGroup | null;
+  /** Document the Documents tab should bring into view. */
+  focusedDocumentId: string | null;
 
   openCase: (id: string) => void;
   closeCase: () => void;
   /** Re-read the case's facts, documents and return after intake wrote them. */
   reloadEvidence: () => void;
+  /** Read dropped files onto the open case (services/caseIntake). */
+  ingest: (files: readonly File[]) => Promise<IntakeResult | null>;
 
   updateField: (field: string, value: unknown) => void;
   /** Set a value at a dot path (e.g. "directDeposit.routingNumber"). */
@@ -113,6 +122,8 @@ interface CaseState {
   requestTab: (tab: CaseTab | null) => void;
   /** Open the Review tab at the checklist group of a return section. */
   showReviewSection: (section: string) => void;
+  /** Open the Documents tab at one document. */
+  showDocument: (documentId: string) => void;
 }
 
 const EMPTY = {
@@ -126,12 +137,15 @@ const EMPTY = {
   missingDocuments: [] as MissingDocument[],
   audit: [] as CaseAuditEvent[],
   saveState: 'idle' as SaveState,
+  intakeBusy: null as string | null,
+  intakeErrors: [] as string[],
   activeFormId: 'f1040',
   activeInstanceIndex: 0,
   pendingFocusLineId: null,
   selectedFormKeys: new Set<string>(),
   requestedTab: null,
   focusedReviewGroup: null as ReviewGroup | null,
+  focusedDocumentId: null as string | null,
 };
 
 export const useCaseStore = create<CaseState>((set, get) => {
@@ -218,6 +232,32 @@ export const useCaseStore = create<CaseState>((set, get) => {
       refresh(getReturn(id), { facts: loadTaxFacts(id), documents: loadDocuments(id), audit: loadAudit(id) });
     },
 
+    ingest: async (files) => {
+      const id = get().returnId;
+      if (!id || files.length === 0) return null;
+      const mine = () => get().returnId === id;
+      set({ intakeBusy: `Waiting to read ${files.length} file${files.length === 1 ? '' : 's'}…`, intakeErrors: [] });
+      try {
+        // Loaded when first used: the readers bring the PDF and OCR libraries.
+        const { enqueueIntake } = await import('../services/caseIntake');
+        const result = await enqueueIntake(id, files, {
+          onProgress: (message) => { if (mine()) set({ intakeBusy: message }); },
+          beforeApply: flushCaseSave,
+          afterDocument: () => { if (mine()) get().reloadEvidence(); },
+        });
+        if (mine()) set({ intakeErrors: result.failures });
+        return result;
+      } catch (err) {
+        if (mine()) set({ intakeErrors: [err instanceof Error ? err.message : 'The files could not be read.'] });
+        return null;
+      } finally {
+        if (mine()) {
+          set({ intakeBusy: null });
+          get().reloadEvidence();
+        }
+      }
+    },
+
     updateField: (field, value) => change(field, value, (tr) => ({ ...tr, [field]: value })),
     applyEdit: (label, next, from, to) => edit(label, next, from, to),
     updateDeepField: (path, value) =>
@@ -264,5 +304,6 @@ export const useCaseStore = create<CaseState>((set, get) => {
     clearFormSelection: () => set({ selectedFormKeys: new Set<string>() }),
     requestTab: (tab) => set({ requestedTab: tab }),
     showReviewSection: (section) => set({ requestedTab: 'review', focusedReviewGroup: groupForSection(section) }),
+    showDocument: (documentId) => set({ requestedTab: 'documents', focusedDocumentId: documentId }),
   };
 });

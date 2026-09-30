@@ -43,6 +43,7 @@ import {
   type TaxFact,
 } from '@hatax/local-ai';
 import { dependentWaitReason, SOURCE_FORM_KEY } from './returnApplier';
+import { returnFieldSpec } from './returnFields';
 
 export type ReviewGroup = 'personal' | 'income' | 'dependents' | 'deductions' | 'credits' | 'payments' | 'state' | 'documents' | 'other';
 
@@ -108,7 +109,9 @@ export type ReviewAction =
   /** The date a depreciation asset (or the vehicle) was acquired, which sets its special depreciation (§168(k)). */
   | { kind: 'acquisition_date'; assetId: string | 'vehicle' }
   /** A fact a state rule needs (the engine's question), kept on the state return; `current` is the answer given. */
-  | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number | string };
+  | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number | string }
+  /** A return field the readiness check reports missing (name, SSN, address, filing status), filled in place. */
+  | { kind: 'return_field'; field: string };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -160,7 +163,7 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
         message: `${doc.fileName} was not read: ${doc.rejectReason ?? 'unsupported file'}.` });
     } else if (doc.status === 'registered') {
       items.push({ id: `document:unread:${doc.documentId}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
-        message: `${doc.fileName} has not been read yet.` });
+        message: `${doc.fileName} has not been read yet. Drop the file on the case again to read it.` });
     }
     (doc.appliedAs ?? []).forEach((outcome, index) => {
       if (outcome !== 'not_applied') return;
@@ -396,6 +399,7 @@ export function buildCaseReview(input: {
       ? { action: { kind: 'acquisition_date' as const, assetId: d.id.slice(`unsupported:${BONUS_RULE}:`.length) } }
       : {}),
     ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
+    ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
   }));
   const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {

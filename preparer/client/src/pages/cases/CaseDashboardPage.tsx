@@ -8,52 +8,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Plus, Search, Trash2 } from 'lucide-react';
-import { calculateForm1040, FilingStatus, SUPPORTED_TAX_YEARS, type TaxReturn } from '@hatax/engine';
-import { createReturn, deleteReturn, exportAllData, listReturns } from '../../api/client';
-import { loadReviewRecord } from '../../services/caseAudit';
-import { buildCaseReview, type CaseStatus } from '../../services/caseReview';
-import { loadDocuments } from '../../services/documentIngestion';
-import { loadTaxFacts } from '../../services/preparerTaxFacts';
+import { SUPPORTED_TAX_YEARS } from '@hatax/engine';
+import { createReturn, deleteReturn, exportAllData } from '../../api/client';
+import type { CaseStatus } from '../../services/caseReview';
+import { caseQueue, STATUS_ORDER, type CaseRow } from '../../services/caseQueue';
 import { useAuthStore } from '../../store/authStore';
 import { STATUS_META, StatusChip, refundOrOwed } from '../../components/case/caseBadges';
-
-interface CaseRow {
-  id: string;
-  name: string;
-  taxYear: number;
-  status: CaseStatus;
-  open: number;
-  documents: number;
-  result: ReturnType<typeof refundOrOwed>;
-  updatedAt: string;
-}
-
-const STATUS_ORDER: CaseStatus[] = ['needs_attention', 'needs_review', 'ready', 'waiting_for_documents', 'approved'];
-
-function summarize(tr: TaxReturn): CaseRow {
-  const calculation = (() => {
-    try {
-      return calculateForm1040({ ...tr, filingStatus: tr.filingStatus || FilingStatus.Single });
-    } catch {
-      return null;
-    }
-  })();
-  const documents = loadDocuments(tr.id);
-  const review = buildCaseReview({ taxReturn: tr, calculation, facts: loadTaxFacts(tr.id), documents, record: loadReviewRecord(tr.id) });
-  const names = [[tr.firstName, tr.lastName], [tr.spouseFirstName, tr.spouseLastName]]
-    .map((p) => p.filter(Boolean).join(' '))
-    .filter(Boolean);
-  return {
-    id: tr.id,
-    name: names.join(' & ') || 'New client',
-    taxYear: tr.taxYear,
-    status: review.status,
-    open: review.open.length,
-    documents: documents.length,
-    result: refundOrOwed(calculation?.form1040),
-    updatedAt: tr.updatedAt,
-  };
-}
 
 export default function CaseDashboardPage() {
   const navigate = useNavigate();
@@ -64,7 +24,7 @@ export default function CaseDashboardPage() {
   const [newYear, setNewYear] = useState<number>(SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!);
   const [downloadPassword, setDownloadPassword] = useState('');
 
-  const load = useCallback(() => setRows(listReturns().map(summarize)), []);
+  const load = useCallback(() => setRows(caseQueue()), []);
   useEffect(load, [load]);
 
   const counts = useMemo(() => {
@@ -75,8 +35,7 @@ export default function CaseDashboardPage() {
 
   const shown = rows
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
-    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.id.includes(search))
-    .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || b.updatedAt.localeCompare(a.updatedAt));
+    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.id.includes(search));
 
   const newCase = () => {
     const created = createReturn(newYear);
@@ -192,7 +151,9 @@ export default function CaseDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
-                {shown.map((r) => (
+                {shown.map((r) => {
+                  const result = refundOrOwed(r.refundAmount === undefined ? undefined : { refundAmount: r.refundAmount, amountOwed: r.amountOwed ?? 0 });
+                  return (
                   <tr key={r.id} className="hover:bg-surface-900/50">
                     <td className="px-5 py-3">
                       <Link to={`/preparer/case/${r.id}`} className="text-white font-medium hover:text-HATaxService-orange-400">{r.name}</Link>
@@ -201,7 +162,7 @@ export default function CaseDashboardPage() {
                     <td className="px-5 py-3"><StatusChip status={r.status} /></td>
                     <td className="px-5 py-3 text-slate-300">{r.open || '—'}</td>
                     <td className="px-5 py-3 text-slate-300 hidden md:table-cell">{r.documents}</td>
-                    <td className={`px-5 py-3 hidden md:table-cell text-sm ${r.result.className}`}>{r.result.text}</td>
+                    <td className={`px-5 py-3 hidden md:table-cell text-sm ${result.className}`}>{result.text}</td>
                     <td className="px-5 py-3 text-slate-400 text-sm hidden lg:table-cell">{r.updatedAt ? format(new Date(r.updatedAt), 'MMM d, yyyy') : '—'}</td>
                     <td className="px-5 py-3 text-right">
                       <button onClick={() => remove(r)} className="p-1.5 text-slate-500 hover:text-red-400" title="Delete case" aria-label={`Delete case for ${r.name}`}>
@@ -209,7 +170,8 @@ export default function CaseDashboardPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

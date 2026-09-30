@@ -5,18 +5,12 @@
  * Bank statements and other structured imports live alongside.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
-import { missingDocumentTitle, selectDocumentExtractKind, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
-import { applyExtractionToDocument, applyModelReadingsToDocument, registerDroppedDocument, type ApplyExtractionResult } from '../../services/documentIngestion';
-import { fetchModelStatus, type LocalRuntimeStatus, type ModelRunRecord } from '../../services/localModels';
-import { readWithLocalModels, type ModelReadItem, type ModelReadResult } from '../../services/modelIngestion';
-import { extractFromImage, extractFromPDF, extractFromPDFWithOCR } from '../../services/pdfImporter';
-import type { PDFExtractResult } from '../../services/pdfExtractHelpers';
-import { applyExtraction } from '../../services/returnApplier';
-import { appendAudit, appendModelRuns } from '../../services/caseAudit';
-import { runReturnChecks } from '../../services/recordTools';
-import { flushCaseSave, useCaseStore } from '../../store/caseStore';
+import { missingDocumentTitle, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
+import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
+import { INTAKE_ACCEPT } from '../../services/caseIntake';
+import { useCaseStore } from '../../store/caseStore';
 import ExpenseScannerToolView from '../tools/ExpenseScannerToolView';
 import CSVImportPanel from '../import/CSVImportPanel';
 import TXFImportPanel from '../import/TXFImportPanel';
@@ -45,22 +39,16 @@ const STATUS_LABEL: Record<IngestedDocument['status'], string> = {
   rejected: 'Rejected',
 };
 
-/** Read one file on this machine: text layer for digital PDFs, OCR for scans and photos. */
-async function readFile(file: File): Promise<PDFExtractResult> {
-  if (selectDocumentExtractKind({ mimeType: file.type, fileName: file.name }) === 'image') return extractFromImage(file);
-  const digital = await extractFromPDF(file);
-  const kind = selectDocumentExtractKind({
-    mimeType: file.type,
-    fileName: file.name,
-    digital: { ocrAvailable: digital.ocrAvailable, errors: digital.errors },
-  });
-  return kind === 'scanned_pdf' ? extractFromPDFWithOCR(file) : digital;
-}
-
-function DocumentCard({ doc, facts }: { doc: IngestedDocument; facts: TaxFact[] }) {
-  const [open, setOpen] = useState(false);
+function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: TaxFact[]; focused: boolean }) {
+  const [open, setOpen] = useState(focused);
+  const ref = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    if (!focused) return;
+    setOpen(true);
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focused]);
   return (
-    <li className="px-4 py-3">
+    <li ref={ref} className={`px-4 py-3 ${focused ? 'ring-2 ring-inset ring-HATaxService-orange-500/70 bg-surface-900/40' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-white truncate">{doc.fileName}</p>
@@ -149,17 +137,17 @@ type Section = 'forms' | 'bank' | 'imports';
 type ImportPanel = 'csv' | 'txf' | 'fdx' | 'competitor' | null;
 
 export default function DocumentsPanel() {
-  const returnId = useCaseStore((s) => s.returnId);
   const taxReturn = useCaseStore((s) => s.taxReturn);
   const calculation = useCaseStore((s) => s.calculation);
   const documents = useCaseStore((s) => s.documents);
   const missingDocuments = useCaseStore((s) => s.missingDocuments);
   const facts = useCaseStore((s) => s.facts);
-  const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
+  const ingest = useCaseStore((s) => s.ingest);
+  const busy = useCaseStore((s) => s.intakeBusy);
+  const errors = useCaseStore((s) => s.intakeErrors);
+  const focusedDocumentId = useCaseStore((s) => s.focusedDocumentId);
   const [section, setSection] = useState<Section>('forms');
   const [importPanel, setImportPanel] = useState<ImportPanel>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [errors, setErrors] = useState<string[]>([]);
   const [runtime, setRuntime] = useState<LocalRuntimeStatus | null | undefined>(undefined);
 
   useEffect(() => {
@@ -174,80 +162,9 @@ export default function DocumentsPanel() {
     return map;
   }, [facts]);
 
-  const onFiles = async (list: FileList | null) => {
-    if (!returnId || !taxReturn || !list || list.length === 0) return;
-    const failures: string[] = [];
-
-    // 1. Register each file: hashed, screened, and a file already on the case is not read twice.
-    const items: ModelReadItem[] = [];
-    for (const file of Array.from(list)) {
-      setBusy(`Checking ${file.name}…`);
-      try {
-        const registered = await registerDroppedDocument({ returnId, file });
-        if (registered.rejected || registered.duplicate) {
-          appendAudit(returnId, { kind: 'document', documentId: registered.document.documentId, fileName: file.name, outcome: registered.rejected ? 'rejected' : 'duplicate' });
-          continue;
-        }
-        items.push({ document: registered.document, file });
-      } catch (err) {
-        failures.push(`${file.name}: ${err instanceof Error ? err.message : 'could not be read'}`);
-      }
-    }
-
-    // 2. The local models read the batch when the runtime is ready; the text layer and OCR otherwise.
-    const status = await fetchModelStatus();
-    setRuntime(status);
-    const runs: ModelRunRecord[] = [];
-    let results: ModelReadResult[];
-    if (status?.available) {
-      try {
-        results = await readWithLocalModels(items, setBusy, runs);
-      } catch (err) {
-        const reason = `the local models failed (${err instanceof Error ? err.message : String(err)})`;
-        results = items.map((item) => ({ item, fallback: reason }));
-      }
-      appendModelRuns(returnId, runs);
-    } else {
-      const reason = status ? `local AI unavailable: ${status.reason ?? 'not ready'}` : '';
-      results = items.map((item) => ({ item, fallback: reason }));
-    }
-
-    // 3. Each document to the return.
-    for (const result of results) {
-      const { file, document } = result.item;
-      try {
-        let applied: ApplyExtractionResult;
-        let how: string;
-        if ('readings' in result) {
-          // An edit made while the batch was read is saved before the applier reads the return.
-          flushCaseSave();
-          applied = applyModelReadingsToDocument({ returnId, taxYear: taxReturn.taxYear, document, readings: result.readings });
-          how = `read by the local models in ${result.seconds}s`;
-        } else {
-          setBusy(`Reading ${file.name}…`);
-          const extracted = await readFile(file);
-          flushCaseSave();
-          applied = applyExtractionToDocument({ returnId, taxYear: taxReturn.taxYear, document, extracted });
-          how = result.fallback ? `read from the text layer — ${result.fallback}` : 'read from the text layer';
-        }
-        if (applied.provenanceError) failures.push(`${file.name}: ${applied.provenanceError}`);
-        const outcomes = applyExtraction(returnId, applied);
-        appendAudit(returnId, {
-          kind: 'document',
-          documentId: applied.document.documentId,
-          fileName: file.name,
-          outcome: `${applied.unclassified ? 'not identified' : outcomes.join(', ') || 'nothing applied'} (${how})`,
-        });
-        reloadEvidence();
-      } catch (err) {
-        failures.push(`${file.name}: ${err instanceof Error ? err.message : 'could not be read'}`);
-      }
-    }
-    // §47: after the documents are applied, the return is recalculated and its diagnostics run.
-    runReturnChecks(returnId);
-    setBusy(null);
-    setErrors(failures);
-    reloadEvidence();
+  const onFiles = (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    void ingest(Array.from(list)).then(() => { void fetchModelStatus().then(setRuntime); });
   };
 
   const tabs: Array<{ id: Section; label: string; icon: typeof FileText }> = [
@@ -274,19 +191,18 @@ export default function DocumentsPanel() {
         <>
           <label className="block border border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-HATaxService-orange-500">
             <Upload className="w-6 h-6 mx-auto text-slate-400 mb-2" />
-            <span className="text-white font-medium">{busy ?? 'Drop or choose the client’s PDFs and photos'}</span>
+            <span className="text-white font-medium" role="status">{busy ?? 'Drop or choose the client’s PDFs and photos'}</span>
             <RuntimeLine status={runtime} />
             <p className="text-xs text-slate-400 mt-2">
-              Read on this computer. Each file is hashed and kept with its source; a form that cannot be identified, or a value that cannot be read, is never entered as income or as zero.
+              Files can be dropped anywhere on the case. Read on this computer. Each file is hashed and kept with its source; a form that cannot be identified, or a value that cannot be read, is never entered as income or as zero.
             </p>
             <input
               type="file"
-              accept="application/pdf,image/*"
+              accept={INTAKE_ACCEPT}
               multiple
               className="hidden"
-              disabled={busy !== null}
               onChange={(e) => {
-                void onFiles(e.target.files);
+                onFiles(e.target.files);
                 e.target.value = '';
               }}
             />
@@ -301,7 +217,7 @@ export default function DocumentsPanel() {
             <p className="text-sm text-slate-500">No documents yet.</p>
           ) : (
             <ul className="rounded-xl border border-slate-700 bg-surface-800 divide-y divide-slate-700/70">
-              {documents.map((doc) => <DocumentCard key={doc.documentId} doc={doc} facts={factsByDocument.get(doc.documentId) ?? []} />)}
+              {documents.map((doc) => <DocumentCard key={doc.documentId} doc={doc} facts={factsByDocument.get(doc.documentId) ?? []} focused={doc.documentId === focusedDocumentId} />)}
             </ul>
           )}
         </>

@@ -3,9 +3,10 @@
  * the documents, the return's forms, the explanation, scenarios and approval.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Loader2, Upload } from 'lucide-react';
 import { useCaseStore, type CaseTab } from '../../store/caseStore';
 import { StatusChip, refundOrOwed } from '../../components/case/caseBadges';
 import ReviewPanel from '../../components/case/ReviewPanel';
@@ -18,6 +19,9 @@ import ScenarioLabToolView from '../../components/scenarioLab/ScenarioLabToolVie
 import SaveIndicator from '../../components/common/SaveIndicator';
 import ErrorBoundary from '../../components/common/ErrorBoundary';
 import { listReturns } from '../../api/client';
+import { isIntakeFile } from '../../services/caseIntake';
+
+const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
 
 const TABS: Array<{ id: CaseTab; label: string }> = [
   { id: 'review', label: 'Review' },
@@ -39,6 +43,10 @@ export default function CasePage() {
   const saveState = useCaseStore((s) => s.saveState);
   const requestedTab = useCaseStore((s) => s.requestedTab);
   const requestTab = useCaseStore((s) => s.requestTab);
+  const ingest = useCaseStore((s) => s.ingest);
+  const intakeBusy = useCaseStore((s) => s.intakeBusy);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   const exists = Boolean(id && listReturns().some((r) => r.id === id));
   const active: CaseTab = TABS.some((t) => t.id === tab) ? (tab as CaseTab) : 'review';
 
@@ -63,8 +71,37 @@ export default function CasePage() {
   const name = [taxReturn.firstName, taxReturn.lastName].filter(Boolean).join(' ') || 'New client';
   const result = refundOrOwed(calculation?.form1040);
 
+  // A client's documents can be dropped on any tab of the case.
+  const onDrop = (e: DragEvent) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    const readable = files.filter(isIntakeFile);
+    const other = files.length - readable.length;
+    if (other > 0) toast.info(`${other} file${other === 1 ? ' is' : 's are'} not a PDF or photo — import CSV, TXF and FDX files from Documents → Other imports.`);
+    if (readable.length === 0) return;
+    void ingest(readable).then((r) => {
+      if (!r) return;
+      const parts = [`${r.read} read`, ...(r.skipped ? [`${r.skipped} already on the case`] : []), ...(r.failures.length ? [`${r.failures.length} could not be read`] : [])];
+      (r.failures.length ? toast.warning : toast.success)(`Documents: ${parts.join(', ')}`);
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-surface-900 flex flex-col">
+    <div
+      className="min-h-screen bg-surface-900 flex flex-col"
+      onDragEnter={(e) => { if (hasFiles(e)) { dragDepth.current++; setDragging(true); } }}
+      onDragLeave={(e) => { if (hasFiles(e) && --dragDepth.current <= 0) { dragDepth.current = 0; setDragging(false); } }}
+      onDragOver={(e) => { if (hasFiles(e)) e.preventDefault(); }}
+      onDrop={onDrop}
+    >
+      {dragging && (
+        <div className="fixed inset-0 z-50 bg-surface-900/80 border-4 border-dashed border-HATaxService-orange-500 flex items-center justify-center pointer-events-none">
+          <p className="flex items-center gap-3 text-xl text-white font-medium"><Upload className="w-7 h-7" /> Drop to add to {name}'s case</p>
+        </div>
+      )}
       <header className="bg-surface-800 border-b border-slate-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="h-16 flex items-center justify-between gap-4">
@@ -77,6 +114,11 @@ export default function CasePage() {
               <StatusChip status={review.status} />
             </div>
             <div className="flex items-center gap-4">
+              {intakeBusy && active !== 'documents' && (
+                <button type="button" onClick={() => requestTab('documents')} className="hidden md:inline-flex items-center gap-1.5 text-xs text-sky-300 max-w-xs truncate" title={intakeBusy}>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> {intakeBusy}
+                </button>
+              )}
               <SaveIndicator state={saveState} />
               <span className={`text-sm font-medium ${result.className}`}>{result.text}</span>
             </div>

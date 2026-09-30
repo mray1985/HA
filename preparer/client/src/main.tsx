@@ -13,6 +13,10 @@ if (import.meta.env.VITE_SYNCFUSION_LICENSE_KEY) {
   registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
 }
 
+// A file dropped outside a drop target would open it in place of the app.
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
