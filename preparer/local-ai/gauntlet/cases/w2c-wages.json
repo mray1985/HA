@@ -1,6 +1,6 @@
 {
   "id": "w2c-wages",
-  "description": "W-2c Copy B (Rev. 1-2026) correcting box 1, 2 and 3 of a 2025 W-2. Synthetic data.",
+  "description": "W-2c Copy B (Rev. 1-2026) correcting box 1, 2 and 3 of the 2025 W-2 in w2-basic-single (same employer and EIN). Synthetic data.",
   "form": "fw2c.pdf",
   "formType": "W-2C",
   "pageIndex": 3,
@@ -17,8 +17,8 @@
     "Box1_Correct_ReadOrder[0].f2_12[0]": "54,000.00",
     "Box2_Prev_ReadOrder[0].f2_13[0]": "5,873.40",
     "f2_14[0]": "6,120.00",
-    "Box3_Prev_ReadOrder[0].f2_15[0]": "52,431.18",
-    "Box3_Correct_ReadOrder[0].f2_16[0]": "54,000.00"
+    "Box3_Prev_ReadOrder[0].f2_15[0]": "54,931.18",
+    "Box3_Correct_ReadOrder[0].f2_16[0]": "56,500.00"
   },
   "expectedBoxes": {
     "1": {
@@ -47,10 +47,10 @@
       "money": 6120
     },
     "3.prev": {
-      "money": 52431.18
+      "money": 54931.18
     },
     "3.correct": {
-      "money": 54000
+      "money": 56500
     }
   },
   "blankBoxes": [
@@ -74,8 +74,8 @@
       "correctWages": 54000,
       "previousFederalTaxWithheld": 5873.4,
       "correctFederalTaxWithheld": 6120,
-      "previousSocialSecurityWages": 52431.18,
-      "correctSocialSecurityWages": 54000
+      "previousSocialSecurityWages": 54931.18,
+      "correctSocialSecurityWages": 56500
     }
   }
 }

@@ -53,8 +53,10 @@ interface GauntletCase {
  * Whether the value a reading would apply is right: by the case's expectation
  * for the key, or for its printed box when the box is blank, holds one key, or
  * this is its first money key. Undefined when the case does not say.
+ * 'unreadable' when the product cannot parse the amount read (e.g. a fax lost
+ * its decimal point): nothing is entered and the preparer is asked for it.
  */
-function readingIsRight(c: GauntletCase, formType: ClassifiableFormType, r: FieldReading): boolean | undefined {
+function readingIsRight(c: GauntletCase, formType: ClassifiableFormType, r: FieldReading): boolean | 'unreadable' | undefined {
   const schema = getFormExtractionSchema(formType)!;
   const b = schema.boxes.find((x) => x.key === r.key);
   if (!b) return undefined;
@@ -66,7 +68,11 @@ function readingIsRight(c: GauntletCase, formType: ClassifiableFormType, r: Fiel
   const spec = c.expectedKeys?.[r.key] ?? byBox;
   if (!spec) return undefined;
   if (text === undefined) return false;
-  if (spec.money !== undefined) return parseMoneyToken(text.replace(/\s+/g, '')) === spec.money;
+  if (spec.money !== undefined) {
+    // Parsed as the tool call parses it, not with spaces squeezed out: "14 21" is not 1421.
+    const amount = parseMoneyToken(text);
+    return amount === undefined ? 'unreadable' : amount === spec.money;
+  }
   if (spec.text !== undefined) return text.trim().toUpperCase() === spec.text.toUpperCase();
   if (spec.firstLine !== undefined) return text.split(/\r?\n/)[0]!.trim().toUpperCase() === spec.firstLine.toUpperCase();
   if (spec.contains !== undefined) return text.toUpperCase().includes(spec.contains.toUpperCase());
@@ -205,7 +211,7 @@ async function main() {
     },
   };
   let totals = { argsOk: 0, argsTotal: 0, modelOnlyArgsOk: 0, invented: 0, classified: 0, cases: 0, ms: 0 };
-  const readingTotals: Record<string, number> = { confirmed: 0, confirmedByModel: 0, unconfirmed: 0, conflict: 0, missed: 0, recovered: 0, confirmedWrong: 0 };
+  const readingTotals: Record<string, number> = { confirmed: 0, confirmedByModel: 0, unconfirmed: 0, conflict: 0, missed: 0, recovered: 0, confirmedWrong: 0, confirmedUnreadable: 0 };
   try {
     for (const c of cases) {
       const png = join(OUT_DIR, scan ? `${c.id}-${scan}.png` : `${c.id}${suffix}.png`);
@@ -231,10 +237,13 @@ async function main() {
       const e = reading.runs.some((r) => r.stage === 'extract') ? { ms: reading.runs.find((r) => r.stage === 'extract')!.ms } : null;
       const secondMs = secondRead?.run.ms ?? 0;
       const readingChecks = formType ? readings.map((r) => ({ ...r, right: readingIsRight(c, formType, r) })) : [];
-      const confirmedWrong = readingChecks.filter((r) => (r.status === 'confirmed' || r.status === 'recovered') && r.right === false);
+      const agreed = readingChecks.filter((r) => r.status === 'confirmed' || r.status === 'recovered');
+      const confirmedWrong = agreed.filter((r) => r.right === false);
+      const confirmedUnreadable = agreed.filter((r) => r.right === 'unreadable');
       for (const r of readings) readingTotals[r.status] = (readingTotals[r.status] ?? 0) + 1;
       readingTotals.confirmedByModel! += readings.filter((r) => r.status === 'confirmed' && r.confirmedBy === 'model').length;
       readingTotals.confirmedWrong! += confirmedWrong.length;
+      readingTotals.confirmedUnreadable! += confirmedUnreadable.length;
 
       // 5. Deterministic mapping → tool arguments (with and without page evidence).
       const toArgs = (vals: Record<string, string>) => {
@@ -281,7 +290,7 @@ async function main() {
         located: locatedCount, locatable: locatableCount, checkboxes: evidence?.checkboxes ?? {}, box12Codes: evidence?.box12Codes ?? {},
         boxesOk: boxChecks.filter((x) => x.ok).length, boxesTotal: boxChecks.length, boxChecks,
         invented, reviewBoxes: mapped?.reviewBoxes ?? [],
-        secondMs, readings: readingChecks, confirmedWrong, missed: evidence?.missed ?? [],
+        secondMs, readings: readingChecks, confirmedWrong, confirmedUnreadable, missed: evidence?.missed ?? [],
         modelValues: modelOnlyValues, runs: reading.runs,
       };
       (report.cases as unknown[]).push(entry);
@@ -292,7 +301,7 @@ async function main() {
       };
       const tally = (st: string) => readings.filter((r) => r.status === st).length;
       const byModel = readings.filter((r) => r.status === 'confirmed' && r.confirmedBy === 'model').length;
-      console.log(`${c.id}: ${(ms / 1000).toFixed(0)}s (classify ${(t.ms / 1000).toFixed(0)}s + extract ${((e?.ms ?? 0) / 1000).toFixed(0)}s + second ${(secondMs / 1000).toFixed(0)}s) | readings: confirmed ${tally('confirmed')} (${byModel} by second model), recovered ${tally('recovered')}, unconfirmed ${tally('unconfirmed')}, conflict ${tally('conflict')}, missed ${tally('missed')}, CONFIRMED WRONG ${confirmedWrong.length} | class ${formType ?? 'none'} ${entry.classificationOk ? 'OK' : 'WRONG'} | tool args ${entry.argsOk}/${entry.argsTotal} (model only ${modelOnlyArgsOk}) | located ${locatedCount}/${locatableCount} | boxes ${entry.boxesOk}/${entry.boxesTotal} | invented ${invented.length} | review ${entry.reviewBoxes.length}`);
+      console.log(`${c.id}: ${(ms / 1000).toFixed(0)}s (classify ${(t.ms / 1000).toFixed(0)}s + extract ${((e?.ms ?? 0) / 1000).toFixed(0)}s + second ${(secondMs / 1000).toFixed(0)}s) | readings: confirmed ${tally('confirmed')} (${byModel} by second model), recovered ${tally('recovered')}, unconfirmed ${tally('unconfirmed')}, conflict ${tally('conflict')}, missed ${tally('missed')}, unreadable ${confirmedUnreadable.length}, CONFIRMED WRONG ${confirmedWrong.length} | class ${formType ?? 'none'} ${entry.classificationOk ? 'OK' : 'WRONG'} | tool args ${entry.argsOk}/${entry.argsTotal} (model only ${modelOnlyArgsOk}) | located ${locatedCount}/${locatableCount} | boxes ${entry.boxesOk}/${entry.boxesTotal} | invented ${invented.length} | review ${entry.reviewBoxes.length}`);
       for (const x of argChecks) if (!x.ok) console.log(`   ARG ${x.arg}: want ${JSON.stringify(x.want)} got ${JSON.stringify(x.got)}`);
       for (const k of unexpectedArgs) console.log(`   EXTRA ARG ${k}: ${JSON.stringify(args[k])}`);
       for (const x of invented) console.log(`   INVENTED box ${x.box}: ${JSON.stringify(x.got)}`);
@@ -306,6 +315,7 @@ async function main() {
         console.log(`   ${r.status.toUpperCase()} ${r.key}: primary ${JSON.stringify(r.primary)} second ${JSON.stringify(r.second)}${r.page ? ` page ${JSON.stringify(r.page)}` : ''}${r.right === undefined ? '' : r.right ? ' (right)' : ' (wrong)'}`);
       }
       for (const r of confirmedWrong) console.log(`   CONFIRMED WRONG ${r.key}: ${JSON.stringify(r.primary ?? r.second)}`);
+      for (const r of confirmedUnreadable) console.log(`   UNREADABLE ${r.key}: ${JSON.stringify(r.primary ?? r.second)} (left for the preparer)`);
     }
   } finally {
     child.kill();
