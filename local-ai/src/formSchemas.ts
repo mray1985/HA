@@ -14,7 +14,7 @@
  */
 
 import type { ClassifiableFormType } from './documentClassifier.js';
-import type { CheckboxSpec } from './pageEvidence.js';
+import type { CheckboxRowSpec, CheckboxSpec } from './pageEvidence.js';
 import type { DocumentToolName } from './taxTools.js';
 
 export type BoxValueKind =
@@ -72,6 +72,23 @@ function box(
   return { key, box: printed ?? key.split('.')[0]!, label, kind, use };
 }
 
+/**
+ * W-2 box 13's three squares by table cell, for scans where OCR loses their
+ * small labels: the cell of "13", below box 11, or above box 14a.
+ */
+function w2Box13Row(index: number): CheckboxRowSpec {
+  return {
+    anchors: [
+      { phrase: '13', cellOffset: 0 },
+      { phrase: '11 Nonqualified', cellOffset: 1 },
+      { phrase: '11', cellOffset: 1 },
+      { phrase: '14a Other', cellOffset: -1 },
+    ],
+    count: 3,
+    index,
+  };
+}
+
 function checkbox(
   key: string,
   label: string,
@@ -127,9 +144,9 @@ const W2_SCHEMA: FormExtractionSchema = {
     box('12c.amount', 'Amount', 'money', 'tool'),
     box('12d.code', 'Code', 'code', 'tool'),
     box('12d.amount', 'Amount', 'money', 'tool'),
-    checkbox('13.statutory', 'Statutory employee', 'tool', { labelPhrase: 'Statutory', direction: 'below' }),
-    checkbox('13.retirement', 'Retirement plan', 'tool', { labelPhrase: 'Retirement', direction: 'below' }),
-    checkbox('13.sickPay', 'Third-party sick pay', 'tool', { labelPhrase: 'Third-party', direction: 'below' }),
+    checkbox('13.statutory', 'Statutory employee', 'tool', { labelPhrase: 'Statutory', direction: 'below', row: w2Box13Row(0) }),
+    checkbox('13.retirement', 'Retirement plan', 'tool', { labelPhrase: 'Retirement', direction: 'below', row: w2Box13Row(1) }),
+    checkbox('13.sickPay', 'Third-party sick pay', 'tool', { labelPhrase: 'Third-party', direction: 'below', row: w2Box13Row(2) }),
     box('14a', 'Other', 'text', 'review'),
     box('14b', 'Treasury Tipped Occupation Code(s)', 'code', 'review'),
     ...stateRows(2, [

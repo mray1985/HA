@@ -65,8 +65,10 @@ export function compareSourceAuthority(
 
 /** An independent second reading of the same field (work order §33). */
 export interface TaxFactSecondReading {
-  /** Reader that produced it: the PDF text layer or an OCR engine. */
-  source: 'pdf-text' | 'ocr';
+  /** Reader that produced it: the PDF text layer, an OCR engine, or a second document model. */
+  source: 'pdf-text' | 'ocr' | 'model';
+  /** The second model's name, when source is "model". */
+  reader?: string;
   /** That reader's text for the located token(s). */
   text: string;
   /** True when both readings give the same value. */

@@ -12,5 +12,6 @@ export * from './toolCaller.js';
 export * from './formSchemas.js';
 export * from './pageEvidence.js';
 export * from './formEvidence.js';
+export * from './secondReading.js';
 export * from './toolDefinitions.js';
 export * from './groundedToolCall.js';

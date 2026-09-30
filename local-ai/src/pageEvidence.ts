@@ -137,7 +137,14 @@ export function findPhrase(words: readonly PageWord[], phrase: string): PixelBox
     }
     if (ok) hits.push(union(toks.slice(i, i + wanted.length).map((t) => t.box)));
   }
-  return hits;
+  // OCR can return one printed word twice as overlapping boxes; that is one occurrence.
+  const merged: PixelBox[] = [];
+  for (const h of hits) {
+    const i = merged.findIndex((m) => boxGap(m, h) === 0);
+    if (i >= 0) merged[i] = union([merged[i]!, h]);
+    else merged.push(h);
+  }
+  return merged;
 }
 
 // ─── Value location ──────────────────────────────────────────
@@ -253,6 +260,25 @@ export interface CheckboxSpec {
   labelPhrase: string;
   /** Where the square sits relative to the label on the form layout. */
   direction: CheckboxDirection;
+  /** Fallback when OCR cannot read the label: locate the squares by their table cell. */
+  row?: CheckboxRowSpec;
+}
+
+/**
+ * A row of squares that fills one table cell (W-2 box 13). Small checkbox
+ * labels are often lost on scans while the larger box numbers survive, so the
+ * cell is found from a printed box number and the form's ruling lines.
+ */
+export interface CheckboxRowSpec {
+  /**
+   * Printed text tried in order. cellOffset 0 is the anchor's own cell, 1 the
+   * cell directly below it, -1 the cell directly above it.
+   */
+  anchors: ReadonlyArray<{ phrase: string; cellOffset: -1 | 0 | 1 }>;
+  /** Squares printed in the cell. Any other count found is "unknown". */
+  count: number;
+  /** This checkbox's position in the row, 0 = leftmost. */
+  index: number;
 }
 
 export interface CheckboxReading {
@@ -265,14 +291,105 @@ export interface CheckboxReading {
 }
 
 const CHECK_MARK_TOKENS = new Set(['x', '✓', '✔', '☑', '☒', '✗', '✘']);
-const INK = 140;
+/** Gray levels between the ink and paper means below which a region holds no ink. */
+const MIN_INK_CONTRAST = 30;
 
-function isInk(r: PageRaster, x: number, y: number): boolean {
-  return r.gray[y * r.width + x]! < INK;
+/**
+ * Ink threshold for a region by Otsu's method. Scans, faxes and faded copies
+ * each get a threshold that fits their own contrast (measured: a faded copy
+ * prints outlines near gray 190 on paper near 235). A region without real
+ * contrast gets a threshold nothing reaches, so paper grain never reads as ink.
+ */
+function regionThreshold(r: PageRaster, region: PixelBox): number {
+  const hist = new Array<number>(256).fill(0);
+  let n = 0;
+  for (let y = region[1]; y <= region[3]; y++) {
+    for (let x = region[0]; x <= region[2]; x++) {
+      hist[r.gray[y * r.width + x]!]!++;
+      n++;
+    }
+  }
+  if (n === 0) return 140;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i]!;
+  let sumB = 0;
+  let wB = 0;
+  const between = new Float64Array(256);
+  const separation = new Float64Array(256);
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t]!;
+    if (wB === 0) continue;
+    const wF = n - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t]!;
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    between[t] = wB * wF * (mB - mF) * (mB - mF);
+    separation[t] = mF - mB;
+  }
+  const best = Math.max(...between);
+  if (best === 0) return 60;
+  // Near-binary pages (faxes) have a flat maximum across the whole gap between
+  // ink and paper; its first value sits against the ink and drops the gray
+  // edge pixels of thin outlines, so take the middle of the flat top.
+  let first = -1;
+  let last = -1;
+  for (let t = 0; t < 256; t++) {
+    if (between[t]! < best * 0.99) continue;
+    if (first < 0) first = t;
+    last = t;
+  }
+  // No ink/paper contrast (blank paper, grain): nothing in the region is ink.
+  if (separation[first]! < MIN_INK_CONTRAST) return 60;
+  return Math.max(60, Math.min(230, Math.round((first + last) / 2)));
 }
 
-function searchRegion(label: PixelBox, direction: CheckboxDirection, r: PageRaster): PixelBox {
-  const h = label[3] - label[1];
+function isInk(r: PageRaster, x: number, y: number, threshold: number): boolean {
+  return r.gray[y * r.width + x]! <= threshold;
+}
+
+/**
+ * A label's font size (em) and inked extent, measured from its glyphs: the
+ * tallest letter (a capital or an ascender) is about 0.73 em. Word boxes are a
+ * poor measure — text-layer boxes span the em, OCR boxes span the ink and
+ * swell on noisy pages (measured: "12a" boxed 37 px tall on a faded copy whose
+ * glyphs are 15 px; "requirement" boxed down onto the FATCA square below it).
+ *
+ * Faded glyphs break into fragments and shrink that measure, so it is held
+ * within bounds set by the label's width: printed text runs about 0.52 em per
+ * character (measured: a faded "determined" measured 11 px tall and let a
+ * fragment of the "t" in "amount" pass as a checked square).
+ */
+function labelInk(r: PageRaster, label: PixelBox, chars: number): { em: number; ink: PixelBox } {
+  const box: PixelBox = [
+    Math.max(0, Math.floor(label[0])), Math.max(0, Math.floor(label[1])),
+    Math.min(r.width - 1, Math.ceil(label[2])), Math.min(r.height - 1, Math.ceil(label[3])),
+  ];
+  const boxHeight = box[3] - box[1] + 1;
+  const glyphs = inkComponents(r, box, regionThreshold(r, box), Infinity).filter((c) => {
+    const w = c[2] - c[0] + 1;
+    const h = c[3] - c[1] + 1;
+    // Ruling lines crossing the box and bars clipped from shapes beside it are not letters.
+    return !(w < 0.15 * h && h >= 0.9 * boxHeight) && w <= 2.5 * h;
+  });
+  const tallest = Math.max(0, ...glyphs.map((c) => c[3] - c[1] + 1));
+  const letters = glyphs.filter((c) => c[3] - c[1] + 1 >= 0.5 * tallest);
+  const widthEm = (label[2] - label[0]) / (Math.max(1, chars) * 0.52);
+  const em = letters.length > 0 ? Math.min(1.3 * widthEm, Math.max(0.85 * widthEm, tallest / 0.73)) : widthEm;
+  const ink = letters.length > 0 ? union(letters) : null;
+  // Too little ink for a word: use the word box, cut to one em below its top
+  // (swollen OCR boxes grow mostly downward).
+  if (!ink || ink[3] - ink[1] < 0.4 * em) return { em, ink: [label[0], label[1], label[2], Math.min(label[3], label[1] + em)] };
+  return { em, ink };
+}
+
+/**
+ * Where to look for the square, in label ems. Measured on the 2026 IRS forms:
+ * squares sit up to 9.6 em right of the label's end and 1.8 em below its
+ * baseline ("right"), and up to 3.3 em below the label (W-2 box 13).
+ */
+function searchRegion(label: PixelBox, direction: CheckboxDirection, r: PageRaster, em: number): PixelBox {
+  const h = em;
   const w = label[2] - label[0];
   const clamp = (b: [number, number, number, number]): PixelBox => [
     Math.max(0, Math.floor(b[0])), Math.max(0, Math.floor(b[1])),
@@ -282,30 +399,29 @@ function searchRegion(label: PixelBox, direction: CheckboxDirection, r: PageRast
     case 'below': return clamp([label[0] - h, label[3], label[2] + h, label[3] + 4 * h]);
     case 'above': return clamp([label[0] - h, label[1] - 4 * h, label[2] + h, label[1]]);
     // Squares often sit at the far right of the label's cell.
-    case 'right': return clamp([label[2], label[1] - h, label[2] + Math.max(12 * h, w), label[3] + 2 * h]);
+    case 'right': return clamp([label[2], label[1] - h, label[2] + Math.max(12 * h, w), label[3] + 2.2 * h]);
     case 'left': return clamp([label[0] - 6 * h, label[1] - h, label[0], label[3] + h]);
   }
 }
 
 /**
- * Find checkbox squares in a region: connected ink components whose bounding
- * box is roughly square, about one to three text heights on a side, with a
- * mostly-inked outline.
+ * Bounding boxes of 8-connected ink components in a region (specks and
+ * oversized shapes dropped). Ink runs longer than maxSide are ruling lines and
+ * are left out first: on blurred pages a square touches the rule beside it and
+ * would otherwise vanish into one oversized shape (measured: faded CORRECTED).
  */
-function findSquares(r: PageRaster, region: PixelBox, textHeight: number): PixelBox[] {
+function inkComponents(r: PageRaster, region: PixelBox, threshold: number, maxSide: number): PixelBox[] {
   const [x0, y0, x1, y1] = region;
   const w = x1 - x0 + 1;
   const h = y1 - y0 + 1;
   if (w <= 0 || h <= 0) return [];
   const seen = new Uint8Array(w * h);
-  const squares: PixelBox[] = [];
-  const minSide = Math.max(4, textHeight * 0.6);
-  const maxSide = textHeight * 3;
+  if (Number.isFinite(maxSide)) markRuns(r, region, threshold, maxSide, seen);
+  const out: PixelBox[] = [];
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const idx = (y - y0) * w + (x - x0);
-      if (seen[idx] || !isInk(r, x, y)) continue;
-      // Flood fill (8-connected) to the component's bounding box.
+      if (seen[idx] || !isInk(r, x, y, threshold)) continue;
       let bx0 = x, by0 = y, bx1 = x, by1 = y;
       const stack = [x, y];
       seen[idx] = 1;
@@ -320,7 +436,7 @@ function findSquares(r: PageRaster, region: PixelBox, textHeight: number): Pixel
             const ny = cy + dy;
             if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
             const nidx = (ny - y0) * w + (nx - x0);
-            if (seen[nidx] || !isInk(r, nx, ny)) continue;
+            if (seen[nidx] || !isInk(r, nx, ny, threshold)) continue;
             seen[nidx] = 1;
             stack.push(nx, ny);
           }
@@ -328,32 +444,313 @@ function findSquares(r: PageRaster, region: PixelBox, textHeight: number): Pixel
       }
       const sw = bx1 - bx0 + 1;
       const sh = by1 - by0 + 1;
+      if (Math.max(sw, sh) < 3 || sw > maxSide || sh > maxSide) continue;
+      out.push([bx0, by0, bx1, by1]);
+    }
+  }
+  return out;
+}
+
+/** Mark horizontal and vertical ink runs longer than maxRun in a region's `seen` map. */
+function markRuns(r: PageRaster, [x0, y0, x1, y1]: PixelBox, threshold: number, maxRun: number, seen: Uint8Array): void {
+  const w = x1 - x0 + 1;
+  for (let y = y0; y <= y1; y++) {
+    let start = -1;
+    for (let x = x0; x <= x1 + 1; x++) {
+      const ink = x <= x1 && isInk(r, x, y, threshold);
+      if (ink && start < 0) start = x;
+      if (!ink && start >= 0) {
+        if (x - start > maxRun) for (let i = start; i < x; i++) seen[(y - y0) * w + (i - x0)] = 1;
+        start = -1;
+      }
+    }
+  }
+  for (let x = x0; x <= x1; x++) {
+    let start = -1;
+    for (let y = y0; y <= y1 + 1; y++) {
+      const ink = y <= y1 && isInk(r, x, y, threshold);
+      if (ink && start < 0) start = y;
+      if (!ink && start >= 0) {
+        if (y - start > maxRun) for (let j = start; j < y; j++) seen[(j - y0) * w + (x - x0)] = 1;
+        start = -1;
+      }
+    }
+  }
+}
+
+/**
+ * Groups of components lying within `gap` pixels of each other, as one box.
+ * A faxed or scanned outline breaks into fragments that belong together.
+ */
+function mergedFragments(components: readonly PixelBox[], gap: number, maxSide: number): PixelBox[] {
+  const parent = components.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
+  for (let i = 0; i < components.length; i++) {
+    for (let j = i + 1; j < components.length; j++) {
+      if (boxGap(components[i]!, components[j]!) <= gap) parent[find(i)] = find(j);
+    }
+  }
+  const groups = new Map<number, PixelBox[]>();
+  components.forEach((c, i) => groups.set(find(i), [...(groups.get(find(i)) ?? []), c]));
+  return [...groups.values()]
+    .filter((g) => g.length > 1)
+    .map(union)
+    .filter((b) => b[2] - b[0] < maxSide && b[3] - b[1] < maxSide);
+}
+
+/**
+ * Pairs of pieces that share both side edges (stacked) or both top and bottom
+ * edges (side by side) within 2 px, less than maxGap apart: a square whose two
+ * sides dropped out over the same stretch. Measured: a faxed 1099-R box 7c lost
+ * 7 px of both side edges and split into a top and a bottom piece.
+ */
+function alignedPairs(components: readonly PixelBox[], maxGap: number): PixelBox[] {
+  const out: PixelBox[] = [];
+  for (let i = 0; i < components.length; i++) {
+    for (let j = i + 1; j < components.length; j++) {
+      const a = components[i]!;
+      const b = components[j]!;
+      const stacked = Math.abs(a[0] - b[0]) <= 2 && Math.abs(a[2] - b[2]) <= 2
+        && Math.max(a[1], b[1]) - Math.min(a[3], b[3]) <= maxGap;
+      const sideBySide = Math.abs(a[1] - b[1]) <= 2 && Math.abs(a[3] - b[3]) <= 2
+        && Math.max(a[0], b[0]) - Math.min(a[2], b[2]) <= maxGap;
+      if (stacked || sideBySide) out.push(union([a, b]));
+    }
+  }
+  return out;
+}
+
+/**
+ * A drawn square: every edge mostly inked and ink at all four corners.
+ * Letters touch their bounding box on two or three sides (E, H, M fail an
+ * edge) or have rounded corners (D, O, B fail a corner). An edge may wander
+ * up to 2 px inward on larger squares — residual skew and fax jaggies shift
+ * it along its length (measured: a faxed 1099-R box 7c edge drifted 2 px).
+ */
+function hasSquareOutline(r: PageRaster, [bx0, by0, bx1, by1]: PixelBox, threshold: number): boolean {
+  const w = bx1 - bx0 + 1;
+  const h = by1 - by0 + 1;
+  const tol = Math.min(w, h) >= 16 ? 2 : 1;
+  const inkInward = (x: number, y: number, dx: number, dy: number) => {
+    for (let k = 0; k <= tol; k++) if (isInk(r, x + dx * k, y + dy * k, threshold)) return true;
+    return false;
+  };
+  const coverage = (n: number, at: (i: number) => boolean) => {
+    let ink = 0;
+    for (let i = 0; i < n; i++) if (at(i)) ink++;
+    return ink / n;
+  };
+  const corner = (x: number, y: number, dx: number, dy: number) => {
+    for (let j = 0; j <= tol; j++) for (let i = 0; i <= tol; i++) if (isInk(r, x + dx * i, y + dy * j, threshold)) return true;
+    return false;
+  };
+  const edges = Math.min(
+    coverage(w, (i) => inkInward(bx0 + i, by0, 0, 1)),
+    coverage(w, (i) => inkInward(bx0 + i, by1, 0, -1)),
+    coverage(h, (j) => inkInward(bx0, by0 + j, 1, 0)),
+    coverage(h, (j) => inkInward(bx1, by0 + j, -1, 0)),
+  );
+  return edges >= SQUARE_EDGE_INK
+    && corner(bx0, by0, 1, 1) && corner(bx1, by0, -1, 1) && corner(bx0, by1, 1, -1) && corner(bx1, by1, -1, -1);
+}
+
+/** Share of each edge that must be inked for a shape to count as a square. */
+const SQUARE_EDGE_INK = 0.5;
+
+/**
+ * Find checkbox squares in a region: roughly square shapes with all four
+ * edges drawn, 0.8 to 2.5 label ems on a side. IRS squares measure 0.93 to 2
+ * em; a letter is at most about 0.75 em tall. Measured: without the size
+ * floor the letter "a" below "March" read as a checked 1098-T box 7 on a scan.
+ */
+function findSquares(r: PageRaster, region: PixelBox, em: number, threshold: number): PixelBox[] {
+  const minSide = Math.max(4, em * 0.8);
+  const maxSide = em * 2.5;
+  const squares: PixelBox[] = [];
+  // A second, stricter pass separates a square from blurred text beside it
+  // (measured: faded W-2 box 13 squares fused with their labels 3 px above).
+  for (const t of threshold - 20 >= 60 ? [threshold, threshold - 20] : [threshold]) {
+    const components = inkComponents(r, region, t, maxSide * 1.1);
+    // Whole components first; pieces of broken outlines only where no square was found.
+    for (const b of [...components, ...mergedFragments(components, 2, maxSide), ...alignedPairs(components, 0.5 * em)]) {
+      const sw = b[2] - b[0] + 1;
+      const sh = b[3] - b[1] + 1;
       if (sw < minSide || sh < minSide || sw > maxSide || sh > maxSide) continue;
       if (sw / sh < 0.75 || sw / sh > 1.33) continue;
-      // Outline check: most of each edge is inked.
-      let edgeInk = 0;
-      let edgeTotal = 0;
-      for (let i = bx0; i <= bx1; i++) { edgeTotal += 2; if (isInk(r, i, by0)) edgeInk++; if (isInk(r, i, by1)) edgeInk++; }
-      for (let j = by0; j <= by1; j++) { edgeTotal += 2; if (isInk(r, bx0, j)) edgeInk++; if (isInk(r, bx1, j)) edgeInk++; }
-      if (edgeInk / edgeTotal < 0.7) continue;
-      squares.push([bx0, by0, bx1, by1]);
+      if (squares.some((q) => boxGap(q, b) === 0)) continue;
+      if (!hasSquareOutline(r, b, t)) continue;
+      squares.push(b);
     }
   }
   return squares;
 }
 
-function interiorInkRatio(r: PageRaster, sq: PixelBox): number {
-  const insetX = Math.max(2, Math.round((sq[2] - sq[0]) * 0.18));
-  const insetY = Math.max(2, Math.round((sq[3] - sq[1]) * 0.18));
+/**
+ * Ink share in the central half of the square. A slightly rotated border
+ * crosses the outer quarter of the bounding box, so only the center counts —
+ * measured: an 18% inset read an empty skewed square as checked.
+ */
+function interiorInkRatio(r: PageRaster, sq: PixelBox, threshold: number): number {
+  const insetX = Math.max(2, Math.round((sq[2] - sq[0]) * 0.25));
+  const insetY = Math.max(2, Math.round((sq[3] - sq[1]) * 0.25));
   let ink = 0;
   let total = 0;
   for (let y = sq[1] + insetY; y <= sq[3] - insetY; y++) {
     for (let x = sq[0] + insetX; x <= sq[2] - insetX; x++) {
       total++;
-      if (isInk(r, x, y)) ink++;
+      if (isInk(r, x, y, threshold)) ink++;
     }
   }
   return total > 0 ? ink / total : 0;
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)]!;
+}
+
+/**
+ * Gray level that counts as a mark inside a square: halfway between the
+ * square's own outline and the paper around it. A mark is drawn as dark as
+ * the outline; paper grain stays near the paper level. Judging the interior
+ * with the outline-finding threshold let grain on a faded copy read as a mark.
+ */
+function markThreshold(r: PageRaster, [x0, y0, x1, y1]: PixelBox, threshold: number): number {
+  const gray = (x: number, y: number) => r.gray[y * r.width + x]!;
+  const outline: number[] = [];
+  for (let x = x0; x <= x1; x++) {
+    for (const y of [y0, y0 + 1, y1 - 1, y1]) if (gray(x, y) <= threshold) outline.push(gray(x, y));
+  }
+  for (let y = y0; y <= y1; y++) {
+    for (const x of [x0, x0 + 1, x1 - 1, x1]) if (gray(x, y) <= threshold) outline.push(gray(x, y));
+  }
+  const paper: number[] = [];
+  const pad = Math.max(3, Math.round((x1 - x0) * 0.25));
+  for (let y = Math.max(0, y0 - pad); y <= Math.min(r.height - 1, y1 + pad); y++) {
+    for (let x = Math.max(0, x0 - pad); x <= Math.min(r.width - 1, x1 + pad); x++) {
+      const outside = x < x0 - 1 || x > x1 + 1 || y < y0 - 1 || y > y1 + 1;
+      if (outside && gray(x, y) > threshold) paper.push(gray(x, y));
+    }
+  }
+  if (outline.length === 0 || paper.length === 0) return threshold;
+  return (median(outline) + median(paper)) / 2;
+}
+
+// ─── Table cells (ruling lines) ──────────────────────────────
+
+/** A ruling line inks nearly every pixel along its length. */
+const RULE_INK = 0.9;
+
+/** Share of a line segment that is inked, allowing 1 px of wobble across the line. */
+function lineInk(r: PageRaster, threshold: number, horizontal: boolean, at: number, from: number, to: number): number {
+  let ink = 0;
+  let total = 0;
+  for (let p = Math.max(0, from); p <= Math.min(to, (horizontal ? r.width : r.height) - 1); p++) {
+    total++;
+    for (let d = -1; d <= 1; d++) {
+      const x = horizontal ? p : at + d;
+      const y = horizontal ? at + d : p;
+      if (x < 0 || y < 0 || x >= r.width || y >= r.height) continue;
+      if (isInk(r, x, y, threshold)) { ink++; break; }
+    }
+  }
+  return total > 0 ? ink / total : 0;
+}
+
+/** First ruling line from `start` in direction `step` (+1 / -1), within `limit` pixels. */
+function findRule(
+  r: PageRaster, threshold: number, horizontal: boolean,
+  start: number, step: 1 | -1, limit: number, from: number, to: number,
+): number | null {
+  const size = horizontal ? r.height : r.width;
+  for (let i = 0, at = Math.round(start); i < limit; i++, at += step) {
+    if (at < 1 || at >= size - 1) return null;
+    if (lineInk(r, threshold, horizontal, at, from, to) >= RULE_INK) return at;
+  }
+  return null;
+}
+
+/** Step past a (possibly several pixels thick) horizontal ruling line. */
+function pastRule(r: PageRaster, threshold: number, at: number, step: 1 | -1, from: number, to: number): number {
+  let y = at;
+  while (y > 0 && y < r.height - 1 && lineInk(r, threshold, true, y, from, to) >= RULE_INK) y += step;
+  return y;
+}
+
+/**
+ * The table cell holding a printed label, bounded by ruling lines, optionally
+ * stepped to the cell directly below or above. Horizontal rules are probed
+ * just right of the label's left edge so a neighbouring column's rules are not
+ * taken for this column's. Null when any bounding rule is missing.
+ */
+function tableCell(r: PageRaster, threshold: number, label: PixelBox, cellOffset: -1 | 0 | 1): PixelBox | null {
+  const h = Math.max(4, label[3] - label[1]);
+  const from = Math.round(label[0]);
+  const to = Math.round(label[0] + 6 * h);
+  const midY = (label[1] + label[3]) / 2;
+  let top = findRule(r, threshold, true, midY, -1, 20 * h, from, to);
+  let bottom = findRule(r, threshold, true, midY, 1, 20 * h, from, to);
+  if (top === null || bottom === null) return null;
+  if (cellOffset === 1) {
+    top = bottom;
+    bottom = findRule(r, threshold, true, pastRule(r, threshold, top, 1, from, to), 1, 20 * h, from, to);
+  } else if (cellOffset === -1) {
+    bottom = top;
+    top = findRule(r, threshold, true, pastRule(r, threshold, bottom, -1, from, to), -1, 20 * h, from, to);
+  }
+  if (top === null || bottom === null || bottom - top < 2 * h) return null;
+  // Vertical rules must span the cell's full height between its horizontal rules.
+  const left = findRule(r, threshold, false, label[0], -1, 4 * h, top + 3, bottom - 3);
+  const right = findRule(r, threshold, false, to, 1, 80 * h, top + 3, bottom - 3);
+  if (left === null || right === null) return null;
+  return [left, top, right, bottom];
+}
+
+/**
+ * Read one square of a checkbox row from its table cell. The cell must hold
+ * exactly `count` squares of one size on one line; anything else is unknown.
+ * Null when no anchor led to a cell.
+ */
+function readCheckboxRow(
+  raster: PageRaster,
+  words: readonly PageWord[],
+  row: CheckboxRowSpec,
+  near: PixelBox | null | undefined,
+): CheckboxReading | null {
+  for (const anchor of row.anchors) {
+    const hits = findPhrase(words, anchor.phrase);
+    if (hits.length === 0 || (hits.length > 1 && !near)) continue;
+    const label = hits.length === 1 ? hits[0]! : [...hits].sort((a, b) => boxGap(a, near!) - boxGap(b, near!))[0]!;
+    const h = label[3] - label[1];
+    const around: PixelBox = [
+      Math.max(0, Math.floor(label[0] - 4 * h)), Math.max(0, Math.floor(label[1] - 20 * h)),
+      Math.min(raster.width - 1, Math.ceil(label[0] + 40 * h)), Math.min(raster.height - 1, Math.ceil(label[3] + 20 * h)),
+    ];
+    const cell = tableCell(raster, regionThreshold(raster, around), label, anchor.cellOffset);
+    if (!cell) continue;
+    // Squares can sit 3 px from the cell's rule at 200 dpi; the rules themselves
+    // are masked as long ink runs, so only the rule's own pixel is inset.
+    const inner: PixelBox = [cell[0] + 1, cell[1] + 1, cell[2] - 1, cell[3] - 1];
+    const threshold = regionThreshold(raster, inner);
+    const squares = findSquares(raster, inner, labelInk(raster, label, anchor.phrase.length).em, threshold).sort((a, b) => a[0] - b[0]);
+    const where = anchor.cellOffset === 0 ? `the cell of "${anchor.phrase}"`
+      : `the cell ${anchor.cellOffset === 1 ? 'below' : 'above'} "${anchor.phrase}"`;
+    if (squares.length !== row.count) {
+      return { state: 'unknown', reason: `${squares.length} squares in ${where}, expected ${row.count}` };
+    }
+    const sides = squares.map((q) => Math.max(q[2] - q[0], q[3] - q[1]));
+    const middles = squares.map((q) => (q[1] + q[3]) / 2);
+    if (Math.max(...sides) > 1.3 * Math.min(...sides) || Math.max(...middles) - Math.min(...middles) > 0.5 * Math.min(...sides)) {
+      return { state: 'unknown', reason: `squares in ${where} are not one row` };
+    }
+    const square = squares[row.index]!;
+    const ratio = interiorInkRatio(raster, square, markThreshold(raster, square, threshold));
+    const which = `square ${row.index + 1} of ${row.count} in ${where}`;
+    if (ratio >= CHECKED_INK) return { state: 'checked', reason: `mark inside ${which}`, square, inkRatio: ratio };
+    if (ratio <= EMPTY_INK) return { state: 'unchecked', reason: `${which} is empty`, square, inkRatio: ratio };
+    return { state: 'unknown', reason: `${which} is faint (ink ${ratio.toFixed(3)})`, square, inkRatio: ratio };
+  }
+  return null;
 }
 
 /** Interior ink above this share is a mark; below EMPTY is an empty square. */
@@ -379,11 +776,14 @@ export function readCheckbox(
   near?: PixelBox | null,
 ): CheckboxReading {
   const labels = findPhrase(words, spec.labelPhrase);
-  if (labels.length === 0) return { state: 'unknown', reason: `label "${spec.labelPhrase}" not found on the page` };
+  if (labels.length === 0) {
+    const fromRow = spec.row ? readCheckboxRow(raster, words, spec.row, near) : null;
+    return fromRow ?? { state: 'unknown', reason: `label "${spec.labelPhrase}" not found on the page` };
+  }
   if (labels.length > 1 && !near) return { state: 'unknown', reason: `label "${spec.labelPhrase}" appears ${labels.length} times` };
   const label = labels.length === 1 ? labels[0]! : [...labels].sort((a, b) => boxGap(a, near!) - boxGap(b, near!))[0]!;
-  const textHeight = label[3] - label[1];
-  const region = searchRegion(label, spec.direction, raster);
+  const { em, ink } = labelInk(raster, label, spec.labelPhrase.length);
+  const region = searchRegion(ink, spec.direction, raster, em);
 
   const glyph = words.find((w) => {
     if (!CHECK_MARK_TOKENS.has(normalizeToken(w.text)) && !CHECK_MARK_TOKENS.has(w.text.trim())) return false;
@@ -392,11 +792,12 @@ export function readCheckbox(
   });
   if (glyph) return { state: 'checked', reason: `printed mark "${glyph.text}" next to "${spec.labelPhrase}"`, square: glyph.box };
 
-  const squares = findSquares(raster, region, textHeight);
+  const threshold = regionThreshold(raster, region);
+  const squares = findSquares(raster, region, em, threshold);
   if (squares.length === 0) return { state: 'unknown', reason: `no checkbox square found ${spec.direction} "${spec.labelPhrase}"` };
   // Nearest square to the label when the region holds more than one.
   const square = [...squares].sort((a, b) => anchorDistance(label, a) - anchorDistance(label, b))[0]!;
-  const ratio = interiorInkRatio(raster, square);
+  const ratio = interiorInkRatio(raster, square, markThreshold(raster, square, threshold));
   if (ratio >= CHECKED_INK) return { state: 'checked', reason: `mark inside the "${spec.labelPhrase}" square`, square, inkRatio: ratio };
   if (ratio <= EMPTY_INK) return { state: 'unchecked', reason: `"${spec.labelPhrase}" square is empty`, square, inkRatio: ratio };
   return { state: 'unknown', reason: `"${spec.labelPhrase}" square is faint (ink ${ratio.toFixed(3)})`, square, inkRatio: ratio };
@@ -448,11 +849,102 @@ export function readBox12Entry(
  * Only official codes count; anything else leaves the code unknown.
  */
 export function readBox12Code(amount: PixelBox, words: readonly PageWord[]): string | null {
+  return box12CodeAt(amount, words)?.code ?? null;
+}
+
+/**
+ * The official box 12 code nearest to the left of an amount on its line, with
+ * its position. The nearest one: W-2s print the word "Code" vertically at the
+ * left of every slot, and its "C" is itself an official code.
+ */
+export function box12CodeAt(amount: PixelBox, words: readonly PageWord[]): { code: string; box: PixelBox } | null {
   const height = amount[3] - amount[1];
   const found = tokens(words)
     .filter((t) => sameLine(t.box, amount) && t.box[2] <= amount[0] + 1 && amount[0] - t.box[2] < 12 * height)
     .map((t) => ({ code: t.text.trim().toUpperCase(), box: t.box }))
     .filter((t) => BOX12_CODE_SET.has(t.code))
     .sort((a, b) => b.box[2] - a.box[2]);
-  return found[0]?.code ?? null;
+  return found[0] ?? null;
+}
+
+// ─── Multi-line blocks ───────────────────────────────────────
+
+/**
+ * Line breaks for a block (name and address) that a model returned on one
+ * line, read from the page: each next word must continue its printed line
+ * (same line, just right of the previous word) or start the next line (just
+ * below, aligned with the block's left edge). Words are matched by position,
+ * not reading order — OCR joins text from neighbouring columns into one line.
+ * Null unless the page shows the whole value, over more than one line.
+ * Measured: a model returned "SUMMIT INDEX FUNDS PO BOX 2200 VALLEY FORGE PA
+ * 19482" on one line, so the payer name took in the whole address.
+ */
+export function restoreLineBreaks(value: string, words: readonly PageWord[]): string | null {
+  if (/\n/.test(value)) return null;
+  const wanted = value.trim().split(/\s+/);
+  if (wanted.length < 2) return null;
+  const toks = tokens(words);
+  const matching = (w: string) => toks.filter((t) => wordMatches(t.text, w));
+  for (const first of matching(wanted[0]!)) {
+    const lines: string[][] = [[wanted[0]!]];
+    let prev = first;
+    let lineStart = first;
+    let ok = true;
+    for (const w of wanted.slice(1)) {
+      const h = prev.box[3] - prev.box[1];
+      const across = matching(w)
+        .filter((t) => sameLine(prev.box, t.box) && t.box[0] >= prev.box[2] - 1 && t.box[0] - prev.box[2] < 3 * h)
+        .sort((a, b) => a.box[0] - b.box[0])[0];
+      const down = across ? undefined : matching(w)
+        .filter((t) => t.box[1] > prev.box[1] + 0.5 * h && t.box[1] - prev.box[3] < 1.5 * h && Math.abs(t.box[0] - lineStart.box[0]) < 2 * h)
+        .sort((a, b) => a.box[1] - b.box[1])[0];
+      if (across) {
+        lines[lines.length - 1]!.push(w);
+        prev = across;
+      } else if (down) {
+        lines.push([w]);
+        prev = down;
+        lineStart = down;
+      } else {
+        ok = false;
+        break;
+      }
+    }
+    if (ok && lines.length > 1) return lines.map((l) => l.join(' ')).join('\n');
+  }
+  return null;
+}
+
+// ─── OCR word boxes ──────────────────────────────────────────
+
+/** The subset of a tesseract.js `recognize(..., { blocks: true })` result used here. */
+export interface TesseractBlocks {
+  blocks?: Array<{
+    paragraphs: Array<{
+      lines: Array<{
+        words: Array<{ text: string; confidence: number; bbox: { x0: number; y0: number; x1: number; y1: number } }>;
+      }>;
+    }>;
+  }> | null;
+}
+
+/**
+ * Convert tesseract.js word boxes into page words (raster pixels). Empty words
+ * are dropped; the engine's confidence is kept so a low-confidence second
+ * reading can be weighed accordingly.
+ */
+export function wordsFromTesseract(data: TesseractBlocks): PageWord[] {
+  const out: PageWord[] = [];
+  for (const block of data.blocks ?? []) {
+    for (const paragraph of block.paragraphs) {
+      for (const line of paragraph.lines) {
+        for (const w of line.words) {
+          const text = w.text.trim();
+          if (!text) continue;
+          out.push({ text, source: 'ocr', confidence: w.confidence, box: [w.bbox.x0, w.bbox.y0, w.bbox.x1, w.bbox.y1] });
+        }
+      }
+    }
+  }
+  return out;
 }
