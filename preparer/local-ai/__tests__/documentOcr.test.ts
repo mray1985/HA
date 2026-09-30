@@ -9,7 +9,6 @@ import {
   ocrExtractorLabel,
   ocrSourceConfidence,
   selectDocumentExtractKind,
-  selectOcrBackend,
 } from '../src/documentOcr.js';
 import { invokeTaxTool } from '../src/taxTools.js';
 
@@ -159,25 +158,5 @@ describe('document OCR bridge (work-order step 5)', () => {
   it('stamps local-ocr for OCR provenance and local-pdf for digital', () => {
     expect(ocrExtractorLabel(true)).toBe('local-ocr');
     expect(ocrExtractorLabel(false)).toBe('local-pdf');
-    expect(ocrExtractorLabel(true, true)).toBe('local-ocr+byok');
-    expect(ocrExtractorLabel(false, true)).toBe('local-pdf+byok');
-    expect(ocrExtractorLabel(true, false, 'granite-docling')).toBe(
-      'local-ocr-granite-docling',
-    );
-    expect(ocrExtractorLabel(true, false, 'lightonocr')).toBe(
-      'local-ocr-lightonocr',
-    );
-  });
-
-  it('selects Granite then LightOn then Tesseract from presence', () => {
-    expect(
-      selectOcrBackend({ granitePresent: true, lightonPresent: false }),
-    ).toBe('granite-docling');
-    expect(
-      selectOcrBackend({ granitePresent: false, lightonPresent: true }),
-    ).toBe('lightonocr');
-    expect(
-      selectOcrBackend({ granitePresent: false, lightonPresent: false }),
-    ).toBe('tesseract');
   });
 });

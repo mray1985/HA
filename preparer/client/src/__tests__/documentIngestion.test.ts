@@ -1274,7 +1274,6 @@ describe('documentIngestion client pipeline', () => {
       warnings: [],
       errors: [],
       textBlockCount: 4,
-      aiEnhanced: true,
       ocrUsed: true,
       ocrAvailable: true,
       trace: {
@@ -1345,7 +1344,6 @@ describe('documentIngestion client pipeline', () => {
       warnings: [],
       errors: [],
       textBlockCount: 4,
-      aiEnhanced: true,
       ocrUsed: true,
       ocrAvailable: true,
       trace: {

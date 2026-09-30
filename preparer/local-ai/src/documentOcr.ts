@@ -1,15 +1,14 @@
 /**
  * OCR bridge (work-order step 5 / HA-AI-014).
  *
- * Spec OCR models (Q4_K_M GGUF via llama-cpp-python — see ggufOcr.ts):
- *   Tier 1: ibm-granite/granite-docling-258M
- *   Tier 2: lightonai/LightOnOCR-2-1B
- * Tesseract remains only when both model files are absent (or the GGUF
- * runtime fails). Callers run preferred OCR then pass signals here before
- * classification and tax tools. CI must not download weights.
+ * Scans and photos are read with Tesseract, bundled with the app. (The work
+ * order's Granite Docling and LightOnOCR models were tested and rejected —
+ * Granite loops on a W-2 and drops the money column; see gauntlet/README.md.
+ * Page images reach the approved models as whole-page reads with page
+ * evidence, not as an OCR backend.) Callers pass OCR signals here before
+ * classification and tax tools.
  *
- * This module stays browser-safe (no node:fs / spawn). Node resolve + invoke
- * live in ggufOcr.ts (import directly from Node/tests, like lfmToolCaller).
+ * This module stays browser-safe (no node:fs / spawn).
  *
  * Invariants:
  * - OCR confidence is preserved and never upgraded through classification.
@@ -34,25 +33,12 @@ const CONFIDENCE_RANK: Record<ClassificationConfidence, number> = {
 /** Which existing client extract path should run for a dropped file. */
 export type DocumentExtractKind = 'image' | 'scanned_pdf' | 'digital_pdf';
 
-/** OCR backend cascade: Granite Docling → LightOnOCR → Tesseract. */
-export type OcrBackend = 'granite-docling' | 'lightonocr' | 'tesseract';
+/** OCR engine that produced a page's text. */
+export type OcrBackend = 'tesseract';
 
 /**
- * Pure engine selection from local Q4_K_M presence flags.
- * Granite Docling first, then LightOnOCR, else Tesseract.
- */
-export function selectOcrBackend(presence: {
-  granitePresent: boolean;
-  lightonPresent: boolean;
-}): OcrBackend {
-  if (presence.granitePresent) return 'granite-docling';
-  if (presence.lightonPresent) return 'lightonocr';
-  return 'tesseract';
-}
-
-/**
- * Signals produced by PDF / image extractors (Granite Docling / LightOnOCR /
- * Tesseract, or digital text layer). Shared code stays free of DOM / File APIs.
+ * Signals produced by PDF / image extractors (Tesseract, or the digital text
+ * layer). Shared code stays free of DOM / File APIs.
  */
 export interface OcrExtractionSignals {
   /** Raw OCR or extract text (preferred classification haystack). */
@@ -182,27 +168,7 @@ export function selectDocumentExtractKind(input: {
   return 'digital_pdf';
 }
 
-/** Provenance stamp for a concrete OCR engine. */
-export function ocrModelExtractorLabel(engine: OcrBackend): string {
-  if (engine === 'granite-docling') return 'local-ocr-granite-docling';
-  if (engine === 'lightonocr') return 'local-ocr-lightonocr';
-  return 'local-ocr';
-}
-
-/** Extractor stamp for provenance when OCR was used. */
-export function ocrExtractorLabel(
-  ocrUsed: boolean,
-  aiEnhanced?: boolean,
-  engine?: OcrBackend | null,
-): string {
-  if (aiEnhanced) {
-    if (!ocrUsed) return 'local-pdf+byok';
-    if (engine && engine !== 'tesseract') {
-      return `${ocrModelExtractorLabel(engine)}+byok`;
-    }
-    return 'local-ocr+byok';
-  }
-  if (!ocrUsed) return 'local-pdf';
-  if (engine && engine !== 'tesseract') return ocrModelExtractorLabel(engine);
-  return 'local-ocr';
+/** Extractor stamp for provenance: OCR text or a digital PDF's text layer. */
+export function ocrExtractorLabel(ocrUsed: boolean): string {
+  return ocrUsed ? 'local-ocr' : 'local-pdf';
 }

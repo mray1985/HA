@@ -1,14 +1,15 @@
 /**
  * Document classifier (work-order step 4 / HA-AI-013).
  *
- * Spec model: hsarfraz/donut-irs-tax-docs-classifier (native transformers /
- * Donut vision — see donutClassifier.ts). Q4_K_M does not exist for this
- * architecture; do not invent a GGUF. Keyword markers below are the FALLBACK
- * when Donut weights are absent or the vision runtime cannot run.
+ * Identifies a form from the markers printed on it (form number, title,
+ * box labels). The reader model (modelManifest.ts) also reports the printed
+ * form number under a grammar limited to these form types; either way a type
+ * is only a proposal — tax tools and validation still decide what is written.
+ * (The work order's Donut classifier was tested and rejected: it labels only
+ * W-2 and 1040 forms — see gauntlet/README.md.)
  *
  * UNKNOWN / unclassified must never become a form type or a zero amount.
- * Every classified result cites which marker matched (or the Donut label).
- * The model proposes a type; tax tools / validation still decide writes.
+ * Every classified result cites which marker matched.
  */
 
 /** Form types the classifier can assert from markers. */
@@ -65,7 +66,6 @@ export type ClassifiedIncomeType =
 export type ClassificationConfidence = 'high' | 'medium' | 'low';
 
 export type ClassificationSource =
-  | 'donut_model'
   | 'text_markers'
   | 'importer_markers'
   | 'none';

@@ -302,11 +302,7 @@ export function applyExtractionToDocument(input: {
     null;
   const extractor =
     pieces.find((p) => p.facts[0]?.extractor)?.facts[0]?.extractor ??
-    ocrExtractorLabel(
-      anyOcr || input.extracted.ocrUsed === true,
-      input.extracted.aiEnhanced === true,
-      ocrEngine,
-    );
+    ocrExtractorLabel(anyOcr || input.extracted.ocrUsed === true);
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
   const classificationRecords = classifications.map(classificationRecord);

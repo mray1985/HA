@@ -41,11 +41,7 @@ export function appendTaxFacts(returnId: string, facts: TaxFact[]): TaxFact[] {
 }
 
 function extractorLabel(extracted: PDFExtractResult): string {
-  return ocrExtractorLabel(
-    extracted.ocrUsed === true,
-    extracted.aiEnhanced === true,
-    extracted.ocrEngine ?? null,
-  );
+  return ocrExtractorLabel(extracted.ocrUsed === true);
 }
 
 /**

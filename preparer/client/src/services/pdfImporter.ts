@@ -6,9 +6,7 @@
  *   that traditional text extraction misses
  * - Structured text extraction — bounding boxes for proximity matching
  *
- * OCR cascade for scanned/image PDFs (work-order models):
- *   Granite Docling Q4_K_M → LightOnOCR Q4_K_M → Tesseract.js fallback
- * (see ocrService / modelOcrBridge / shared ggufOcr).
+ * Scanned PDFs and images are read with Tesseract.js (ocrService).
  * Uses pdf-lib for PDF generation (unchanged).
  *
  * All processing runs client-side. Data never leaves the browser.
@@ -484,7 +482,7 @@ export async function extractFromPDF(file: File): Promise<PDFExtractResult> {
 /**
  * Extract data from a scanned/image-based PDF using OCR.
  * Renders pages to canvas at 300 DPI, then runs preferred OCR
- * (Granite Docling → LightOnOCR → Tesseract).
+ * (Tesseract).
  */
 export async function extractFromPDFWithOCR(
   file: File,

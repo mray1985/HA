@@ -1,16 +1,7 @@
 /**
- * OCR Service — local OCR for scanned PDFs and images.
+ * OCR Service — local OCR for scanned PDFs and images, with Tesseract.js.
  *
- * Cascade (work-order OCR models):
- *   1. ibm-granite/granite-docling-258M Q4_K_M (llama-cpp-python) when present
- *   2. lightonai/LightOnOCR-2-1B Q4_K_M when Granite is absent / fails
- *   3. Tesseract.js only when both model files are absent (or model runner fails)
- *
- * Model OCR is hosted via modelOcrBridge (Node/Electron/tests register a runner
- * that loads the Q4_K_M GGUFs). The browser web build cannot see models/, so
- * presence is absent and Tesseract runs — same as "GGUF missing".
- *
- * Lazy-loads the Tesseract.js WASM worker on first Tesseract use (~7 MB).
+ * Lazy-loads the Tesseract.js WASM worker on first use (~7 MB).
  * Converts word-level output to TextBlock format with line grouping so the
  * existing extraction pipeline is reused.
  *
@@ -21,27 +12,17 @@
 
 import type { TextBlock } from './pdfExtractHelpers';
 import { normalizeOCRText } from './ocrTextMatching';
-import { tryPreferredModelOcr } from './modelOcrBridge';
 import type { OcrBackend } from '@hatax/local-ai';
 
 export type { OcrBackend };
-export {
-  preferredClientOcrBackend,
-  registerModelOcrRunner,
-  setOcrModelPresenceForTests,
-  textToOcrLineBlocks,
-  tryPreferredModelOcr,
-} from './modelOcrBridge';
 
 // ─── Types ─────────────────────────────────────────
 
 export type OCRStage = 'loading' | 'recognizing' | 'complete';
 
-/** Last OCR engine that produced blocks (for provenance). */
-let lastOcrEngine: OcrBackend = 'tesseract';
-
+/** OCR engine that produced the last blocks (for provenance). */
 export function getLastOcrEngine(): OcrBackend {
-  return lastOcrEngine;
+  return 'tesseract';
 }
 
 /** Tesseract word bounding box (subset of Tesseract.js Word type) */
@@ -294,9 +275,6 @@ function toRecognizableImage(
 /**
  * Run OCR on a single image. Returns line-grouped TextBlocks.
  *
- * Prefers Granite Docling / LightOnOCR Q4_K_M when a model runner is registered
- * and GGUFs are present; otherwise Tesseract.js.
- *
  * @param scaleFactor - Divides pixel coordinates by this value to normalize
  *   to PDF-point space. For photos: imageWidth / 612. Default 1 (no scaling).
  */
@@ -306,17 +284,6 @@ export async function recognizeImage(
   scaleFactor = 1,
 ): Promise<TextBlock[]> {
   onProgress?.('loading', 5);
-  const model = await tryPreferredModelOcr({
-    images: [image],
-    scaleFactor,
-  });
-  if (model) {
-    lastOcrEngine = model.engine;
-    onProgress?.('complete', 100);
-    return model.blocks;
-  }
-
-  lastOcrEngine = 'tesseract';
   const worker = await getWorker(onProgress);
   onProgress?.('recognizing', 15);
 
@@ -341,8 +308,6 @@ export async function recognizeImage(
  * Run OCR on multiple images (multi-page). Returns line-grouped TextBlocks
  * with correct page numbering (1-indexed).
  *
- * Prefers Granite Docling / LightOnOCR Q4_K_M when available; Tesseract otherwise.
- *
  * @param scaleFactor - Divides pixel coordinates by this value to normalize
  *   to PDF-point space. For 300 DPI renders: 300/72 ≈ 4.17. Default 1.
  */
@@ -352,16 +317,6 @@ export async function recognizeImages(
   scaleFactor = 1,
 ): Promise<TextBlock[]> {
   onProgress?.('loading', 5);
-  const model = await tryPreferredModelOcr({ images, scaleFactor });
-  if (model) {
-    lastOcrEngine = model.engine;
-    // Re-stamp page numbers for multi-page model output when runner returned
-    // a single concatenated text block list.
-    onProgress?.('complete', 100);
-    return model.blocks;
-  }
-
-  lastOcrEngine = 'tesseract';
   const worker = await getWorker(onProgress);
 
   const allWordBlocks: TextBlock[] = [];

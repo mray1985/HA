@@ -2,9 +2,8 @@
  * Document ingestion records and pure helpers (work-order step 3 / HA-AI doc ingestion).
  * A dropped file gets a stable hash-based document ID and provenance metadata.
  * Extracted fields become TaxFacts through the tax-tool API (HA-AI-011).
- * Form type is asserted by Donut (when weights exist) or keyword markers (fallback)
- * before income tools run. Scans prefer Granite Docling / LightOnOCR Q4_K_M, then
- * Tesseract (documentOcr / ggufOcr).
+ * The form type is asserted from printed markers before any income tool runs.
+ * Scans and photos are read with Tesseract (documentOcr).
  */
 
 import type { TaxFact } from './taxFact.js';

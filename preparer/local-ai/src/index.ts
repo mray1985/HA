@@ -1,6 +1,6 @@
 // Browser-safe AI intake for the preparer app (work-order steps 1–9).
-// Node-only model runners (llama.cpp / transformers spawn + local weights)
-// live in `@hatax/local-ai/node` — never import that entry from a Vite bundle.
+// Node-only model file checks live in `@hatax/local-ai/node` — never import
+// that entry from a Vite bundle.
 export * from './taxFact.js';
 export * from './taxTools.js';
 export * from './documentIngestion.js';
@@ -15,3 +15,4 @@ export * from './formEvidence.js';
 export * from './secondReading.js';
 export * from './toolDefinitions.js';
 export * from './groundedToolCall.js';
+export * from './modelManifest.js';

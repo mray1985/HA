@@ -1,13 +1,11 @@
 /**
  * Tool caller (development-order step 9 / work-order §5).
  *
- * Spec path: local tool-calling model `LiquidAI/LFM2-1.2B-Tool` as GGUF
- * Q4_K_M via llama-cpp-python (see `lfmToolCaller.ts`). The model proposes
- * schema-validated calls; this module + `invokeTaxTool` / validation still
- * decide what is written.
- *
- * Deterministic mapping below is FALLBACK ONLY when the LFM Q4_K_M GGUF is
- * absent or the llama.cpp runtime fails to load — never the preferred path.
+ * Turns a classified form's structured fields into a schema-validated tax
+ * tool call; `invokeTaxTool` and validation decide what is written. A model
+ * may propose calls only through `groundedToolCall.ts`, where every argument
+ * is a grammar constant taken from the extracted facts. (The work order's
+ * LiquidAI LFM2-1.2B-Tool was tested and rejected — see gauntlet/README.md.)
  *
  * Responsibilities:
  * - Accept model (or fallback) proposals for `add_w2`, `add_1099_*`,
@@ -273,10 +271,7 @@ export function executeDeterministicToolCall(
   };
 }
 
-/**
- * Shared deterministic FALLBACK caller (used when LFM weights are absent or
- * transformers fails). Spec path is `lfmToolCaller` / `proposeToolCallWithLfm`.
- */
+/** The deterministic caller: extracted fields → validated tool call. */
 export const deterministicToolCaller: ToolCaller = {
   execute: executeDeterministicToolCall,
 };
