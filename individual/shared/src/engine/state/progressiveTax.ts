@@ -17,6 +17,7 @@ import {
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { TraceBuilder } from '../traceBuilder.js';
+import { isAge65OrOlder } from '../form1040Sections.js';
 import { applyBrackets, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
@@ -45,6 +46,12 @@ export interface ProgressiveTaxStateConfig {
    * Brackets are never taken from the federal bracket table.
    */
   standardDeductionConformsToFederal?: boolean;
+  /**
+   * The state's own additional standard deduction per box checked (65 or
+   * older, blind; the spouse's too on a joint return): `unmarried` for a single
+   * or head-of-household filer, `married` otherwise.
+   */
+  additionalStandardDeduction?: { married: number; unmarried: number };
 
   /**
    * Personal exemption per person (taxpayer + spouse if MFJ).
@@ -220,9 +227,20 @@ export function createProgressiveTaxCalculator(config: ProgressiveTaxStateConfig
       );
 
       // ── Step 4: Deductions ───────────────────────
-      const stateDeduction = config.standardDeductionConformsToFederal
+      const basicDeduction = config.standardDeductionConformsToFederal
         ? federalBasicStandardDeduction(filingStatus, taxYear)
         : (config.standardDeduction[filingKey] || 0);
+      let additionalDeduction = 0;
+      if (config.additionalStandardDeduction) {
+        const joint = filingStatus === FilingStatus.MarriedFilingJointly;
+        const boxes = [
+          isAge65OrOlder(taxReturn.dateOfBirth, taxYear), Boolean(taxReturn.isLegallyBlind),
+          joint && isAge65OrOlder(taxReturn.spouseDateOfBirth, taxYear), joint && Boolean(taxReturn.spouseIsLegallyBlind),
+        ].filter(Boolean).length;
+        const unmarried = filingStatus === FilingStatus.Single || filingStatus === FilingStatus.HeadOfHousehold || !filingStatus;
+        additionalDeduction = boxes * (unmarried ? config.additionalStandardDeduction.unmarried : config.additionalStandardDeduction.married);
+      }
+      const stateDeduction = basicDeduction + additionalDeduction;
 
       // ── Step 5: Exemptions ───────────────────────
       const personalExemption = getPersonalExemption(config, filingKey, numPersons);

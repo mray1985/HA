@@ -279,10 +279,50 @@ export function createFlatTaxCalculator(stateCode: string, taxYear: number = 202
       // ── Step 7: Credits ──────────────────────────
       let stateCredits = 0;
 
-      // UT taxpayer credit: 6% of (federal std deduction + federal personal exemptions)
-      // The credit phases out at higher incomes, but for initial implementation
-      // we apply it without phase-out.
-      if (stateCode === 'UT' && ftConfig.taxpayerCreditRate) {
+      // UT taxpayer tax credit (TC-40 lines 11–20) and qualified exempt taxpayer (line 21).
+      const utah = stateCode === 'UT' ? ftConfig.utahTaxpayerCredit : undefined;
+      if (utah) {
+        const year = taxReturn.taxYear || 2025;
+        // Line 2d: dependents claimed for a federal credit, a child born this year counted twice.
+        const bornThisYear = (taxReturn.dependents || []).filter((d) => d.dateOfBirth?.startsWith(String(year))).length;
+        const exemptionsLine11 = (numDependents + bornThisYear) * utah.personalExemption;
+        const federalDeductionLine12 = f.deductionAmount;
+        const itemized = taxReturn.itemizedDeductions;
+        const incomeTaxItemized = f.deductionUsed === 'itemized' && itemized && itemized.saltMethod !== 'sales_tax';
+        const line14 = !incomeTaxItemized ? 0
+          : utah.itemizedStateIncomeTax.kind === 'line5a'
+            ? Math.min(itemized.stateLocalIncomeTax || 0, utah.itemizedStateIncomeTax.cap)
+            : Math.max(0, (federalResult.scheduleA?.saltDeduction || 0) - (itemized.realEstateTax || 0) - (itemized.personalPropertyTax || 0));
+        const line15 = Math.max(0, exemptionsLine11 + federalDeductionLine12 - line14);
+        const initialCredit = Math.round(line15 * utah.rate * 100) / 100;
+        const base = utah.phaseOutBase[filingKey as keyof typeof utah.phaseOutBase] ?? utah.phaseOutBase.single;
+        const phaseOut = Math.round(Math.max(0, taxableIncome - base) * utah.phaseOutRate * 100) / 100;
+        const utCredit = Math.max(0, Math.round((initialCredit - phaseOut) * 100) / 100);
+        tb.trace('state.ut.taxpayerCredit', 'Utah Taxpayer Tax Credit', utCredit, {
+          formula: `(${line15.toLocaleString()} × ${(utah.rate * 100).toFixed(0)}%) − (${Math.max(0, taxableIncome - base).toLocaleString()} × ${(utah.phaseOutRate * 100).toFixed(1)}%)`,
+          inputs: [
+            { lineId: 'state.ut.line11', label: 'Utah personal exemptions', value: exemptionsLine11 },
+            { lineId: 'state.ut.line12', label: 'Federal standard or itemized deduction', value: federalDeductionLine12 },
+            ...(line14 > 0 ? [{ lineId: 'state.ut.line14', label: 'State income tax itemized', value: line14 }] : []),
+            { lineId: 'state.ut.line17', label: 'Base phase-out amount', value: base },
+          ],
+        });
+        stateCredits += utCredit;
+
+        // Line 21: federal AGI no more than the federal standard deduction (as allowed, without the
+        // age/blindness additions) plus the enhanced senior deduction owes no Utah income tax.
+        const basic = getFederalStandardDeduction(filingStatus, year);
+        const allowed = taxReturn.canBeClaimedAsDependent ? Math.min(basic, f.standardDeduction) : basic;
+        const exemptLimit = allowed + (federalResult.schedule1A?.seniorDeduction || 0);
+        if (f.agi <= exemptLimit && grossTax > stateCredits) {
+          tb.trace('state.ut.exempt', 'Utah Qualified Exempt Taxpayer', grossTax - stateCredits, {
+            formula: `Federal AGI ${f.agi.toLocaleString()} ≤ ${exemptLimit.toLocaleString()}`,
+            inputs: [{ lineId: 'form1040.line11', label: 'Federal AGI', value: f.agi }],
+          });
+          stateCredits = grossTax;
+        }
+      } else if (stateCode === 'UT' && ftConfig.taxpayerCreditRate) {
+        // A year without Utah's TC-40 amounts checked in (no phase-out).
         const federalStdDed = getFederalStandardDeduction(filingStatus, taxReturn.taxYear || 2025);
         const utCredit = Math.round(ftConfig.taxpayerCreditRate * federalStdDed * 100) / 100;
         stateCredits += utCredit;

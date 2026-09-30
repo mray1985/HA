@@ -369,13 +369,13 @@ describe('State Tax — Flat-Tax States', () => {
     expect(results[0].stateExemptions).toBeGreaterThan(0);
   });
 
-  it('UT applies taxpayer credit (reduces effective rate)', () => {
-    const tr = makeW2Return(100000, 'UT', 0);
-    const federal = calculateForm1040(tr);
-    const results = calculateStateTaxes(tr, federal);
-    // UT credits = 6% of federal standard deduction
-    expect(results[0].stateCredits).toBeGreaterThan(0);
-    expect(results[0].effectiveStateRate).toBeLessThan(0.045); // Less than 4.5% due to credit
+  it('UT applies the taxpayer credit below the phase-out, and not above it', () => {
+    const low = makeW2Return(30000, 'UT', 0);
+    const lowResult = calculateStateTaxes(low, calculateForm1040(low))[0]!;
+    expect(lowResult.stateCredits).toBe(791.77); // $945 − ($30,000 − $18,213) × 1.3%
+    expect(lowResult.effectiveStateRate).toBeLessThan(0.045);
+    const high = makeW2Return(100000, 'UT', 0);
+    expect(calculateStateTaxes(high, calculateForm1040(high))[0]!.stateCredits).toBe(0); // fully phased out
   });
 });
 

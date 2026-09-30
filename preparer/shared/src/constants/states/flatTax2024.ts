@@ -91,14 +91,23 @@ export const FLAT_TAX_CONSTANTS_2024: Record<string, FlatTaxStateConfig> = {
     notes: 'KY standard deduction $3,180 regardless of filing status. Flat 4.5% rate (TY2024).',
   },
 
+  // 2024 TC-40 instructions (files.tax.utah.gov/tax/forms/2024/tc-40inst.pdf):
+  // line 10 is 4.55% (not 4.65%, the 2023 rate); $2,046 exemption; line 14 is
+  // Schedule A line 5a up to $10,000.
   UT: {
     stateCode: 'UT',
-    rate: 0.0465,
+    rate: 0.0455,
     standardDeduction: { single: 0, married_joint: 0, married_separate: 0, head_of_household: 0 },
     personalExemption: 0,
     dependentExemption: 0,
-    taxpayerCreditRate: 0.06,
-    notes: 'UT flat 4.65% with taxpayer credit = 6% of (federal std deduction + personal exemptions) (TY2024).',
+    utahTaxpayerCredit: {
+      personalExemption: 2046,
+      rate: 0.06,
+      phaseOutBase: { single: 17652, married_joint: 35304, married_separate: 17652, head_of_household: 26478 },
+      phaseOutRate: 0.013,
+      itemizedStateIncomeTax: { kind: 'line5a', cap: 10000 },
+    },
+    notes: 'UT 4.55% flat (TY2024); taxpayer tax credit with phase-out (TC-40 lines 11–20).',
   },
 
   GA: {

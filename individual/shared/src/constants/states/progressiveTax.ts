@@ -856,12 +856,17 @@ export const DC_CONFIG: ProgressiveTaxStateConfig = {
     { min: 500000, max: 1000000, rate: 0.0975 },
     { min: 1000000, max: Infinity, rate: 0.1075 },
   ]),
+  // DC's own amounts for 2025, not the federal ones (2025 D-40ES booklet,
+  // otr.cfo.dc.gov): $15,000 single, separate or dependent; $22,500 head of
+  // household; $30,000 joint or qualifying widow(er); plus $1,600 per box for
+  // 65 or older or blind ($2,000 if unmarried and not a surviving spouse).
   standardDeduction: {
-    single: 14600,
-    married_joint: 29200,
-    married_separate: 14600,
-    head_of_household: 21900,
+    single: 15000,
+    married_joint: 30000,
+    married_separate: 15000,
+    head_of_household: 22500,
   },
+  additionalStandardDeduction: { married: 1600, unmarried: 2000 },
   standardDeductionConformsToFederal: false,
   personalExemption: 0,
   dependentExemption: 0,

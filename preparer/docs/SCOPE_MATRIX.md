@@ -85,7 +85,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Capital loss deduction | ✅ | Schedule D | $3,000 limit ($1,500 MFS); ST/LT carryforward tracked |
 | Investment interest expense | ✅ | Form 4952 | Limited to net investment income; QD/LTCG election; carryforward |
 | NOL carryforward | ✅ | | Prior-year carryforward deducted at 80% of taxable income before QBI. A current-year NOL is computed and reported, and is not deducted on the same return |
-| Depreciation (multi-asset) | ✅ | Form 4562 | Section 179 ($1.25M), bonus (100%), MACRS GDS (3/5/7/10/15/20-yr); half-year and mid-quarter conventions; §179 double-dip prevention; prior-year convention tracking |
+| Depreciation (multi-asset) | ✅ | Form 4562 | Section 179 ($2.5M for 2025, phased out from $4M), bonus (100%), MACRS GDS (3/5/7/10/15/20-yr); half-year and mid-quarter conventions; §179 double-dip prevention; prior-year convention tracking |
 | FEIE housing exclusion | ✅ | Form 2555 | $130K exclusion + housing; stacking rule (Section 911(f)) |
 | Moving expenses (military) | ✅ | Form 3903 | Active-duty military only |
 | Self-employed health insurance (Form 7206) | ✅ | Form 7206 | Full 3-part calculation: premium aggregation (medical/dental/vision + LTC age-based limits + Medicare), monthly proration, net profit limitation per IRC §162(l)(2)(A); PTC/APTC interaction; MFJ per-person LTC splitting |

@@ -394,12 +394,52 @@ describe('Flat-Tax Rate Corrections (TY2025)', () => {
     expect(result.stateIncomeTax).toBeCloseTo(99000 * 0.03, -1);
   });
 
-  it('UT — rate corrected to 4.5% (was 4.65%)', () => {
+  // Hand-computed from the 2025 TC-40 instructions, lines 9–20.
+  it('UT — 4.5%, and the taxpayer credit is phased out at $100K single', () => {
     const result = calcState(100000, 'UT');
-    // UT: 4.5% on all income, then subtract 6% of federal std deduction credit
-    // $100K × 4.5% = $4,500 - credit
-    expect(result.stateIncomeTax).toBeCloseTo(100000 * 0.045, -1);
-    expect(result.stateCredits).toBeGreaterThan(0); // UT taxpayer credit
+    // Line 16: 6% × $15,750 = $945. Line 19: ($100,000 − $18,213) × 1.3% = $1,063.23. Line 20: $0.
+    expect(result.stateIncomeTax).toBe(4500);
+    expect(result.stateCredits).toBe(0);
+  });
+
+  it('UT — the credit phases out by 1.3% of income over the base', () => {
+    const result = calcState(30000, 'UT');
+    // $945 − ($30,000 − $18,213) × 1.3% ($153.23) = $791.77; tax $1,350 − $791.77.
+    expect(result.stateCredits).toBe(791.77);
+    expect(result.stateTaxAfterCredits ?? result.stateIncomeTax - result.stateCredits).toBeCloseTo(558.23, 2);
+  });
+
+  it('UT — $2,111 per qualifying dependent, a child born this year counted twice', () => {
+    const tr = makeW2Return(60000, 'UT', 0, FilingStatus.MarriedFilingJointly, 2);
+    tr.dependents![1]!.dateOfBirth = '2025-03-03';
+    const result = calculateStateTaxes(tr, calculateForm1040(tr))[0]!;
+    // Line 15: 3 × $2,111 + $31,500 = $37,833 → $2,269.98; less ($60,000 − $36,426) × 1.3% = $306.46.
+    expect(result.stateCredits).toBe(1963.52);
+  });
+
+  it('UT — a qualified exempt taxpayer owes no Utah tax even where the credit falls short', () => {
+    const tr = makeW2Return(15000, 'UT');
+    tr.deductionMethod = 'itemized';
+    tr.itemizedDeductions = {
+      medicalExpenses: 0, stateLocalIncomeTax: 12000, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 10000,
+      mortgageInsurancePremiums: 0, charitableCash: 0, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0,
+    };
+    const federal = calculateForm1040(tr);
+    expect(federal.form1040.deductionUsed).toBe('itemized');
+    const result = calculateStateTaxes(tr, federal)[0]!;
+    // Line 14 takes the $12,000 of state income tax back out: 6% × $10,000 = $600 < $675 of tax.
+    // Line 21: federal AGI $15,000 ≤ $15,750, so no Utah tax.
+    expect(result.stateIncomeTax).toBe(675);
+    expect(result.stateCredits).toBe(675);
+  });
+
+  it('UT 2024 — 4.55% (not 4.65%) and its own base amounts', () => {
+    const tr = makeW2Return(30000, 'UT');
+    tr.taxYear = 2024;
+    const result = calculateStateTaxes(tr, calculateForm1040(tr))[0]!;
+    // 4.55% × $30,000 = $1,365. Credit: 6% × $14,600 = $876 − ($30,000 − $17,652) × 1.3% ($160.52) = $715.48.
+    expect(result.stateIncomeTax).toBe(1365);
+    expect(result.stateCredits).toBe(715.48);
   });
 });
 
@@ -753,10 +793,25 @@ describe('Federal standard-deduction conformity', () => {
     expect(ME_CONFIG.standardDeduction.single).toBe(14600);
     expect(ME_CONFIG.standardDeduction.married_joint).toBe(29200);
     expect(ME_CONFIG.standardDeduction.head_of_household).toBe(21900);
-    expect(DC_CONFIG.standardDeduction.single).toBe(14600);
     expect(ME_CONFIG.standardDeduction.single).not.toBe(federal2025[FilingStatus.Single]);
     expect(calcState(75000, 'ME').stateDeduction).toBe(14600);
-    expect(calcState(75000, 'DC').stateDeduction).toBe(14600);
+  });
+
+  // DC's own 2025 amounts (2025 D-40ES booklet), not the federal ones.
+  it('DC — $15,000 / $30,000 / $22,500, plus $1,600 or $2,000 per age or blindness box', () => {
+    expect(DC_CONFIG.standardDeduction).toEqual({ single: 15000, married_joint: 30000, married_separate: 15000, head_of_household: 22500 });
+    expect(calcState(75000, 'DC').stateDeduction).toBe(15000);
+    expect(calcState(75000, 'DC', FilingStatus.MarriedFilingJointly).stateDeduction).toBe(30000);
+    expect(calcState(75000, 'DC', FilingStatus.HeadOfHousehold, undefined, 1).stateDeduction).toBe(22500);
+
+    const senior = makeW2Return(75000, 'DC');
+    senior.dateOfBirth = '1955-01-01';
+    expect(calculateStateTaxes(senior, calculateForm1040(senior))[0]!.stateDeduction).toBe(17000);
+    const couple = makeW2Return(75000, 'DC', 0, FilingStatus.MarriedFilingJointly);
+    couple.dateOfBirth = '1955-01-01';
+    couple.spouseDateOfBirth = '1956-01-01';
+    couple.isLegallyBlind = true;
+    expect(calculateStateTaxes(couple, calculateForm1040(couple))[0]!.stateDeduction).toBe(30000 + 3 * 1600);
   });
 
   it('AZ and IA match the federal basic standard deduction for each year they claim conformity', () => {

@@ -20,8 +20,8 @@ functions:
         description: "Deduction for medical expenses exceeding 7.5% of AGI"
         weight: binding
       - type: IRC
-        section: "11042 (TCJA)"
-        description: "SALT deduction cap of $10,000 ($5,000 for MFS) effective 2018-2025"
+        section: "164(b)(6)"
+        description: "SALT deduction cap: $10,000 ($5,000 MFS) for 2018-2024 (TCJA §11042); for 2025, $40,000 ($20,000 MFS), reduced by 30% of MAGI over $500,000 ($250,000 MFS) but not below $10,000 ($5,000 MFS), as amended by P.L. 119-21"
         weight: binding
       - type: form
         reference: "Schedule A (Form 1040)"

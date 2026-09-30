@@ -22,6 +22,23 @@
 
 // ─── Per-State Flat Tax Configuration ───────────────────────────
 
+/** Utah's taxpayer tax credit, from that year's TC-40 instructions. */
+export interface UtahTaxpayerCredit {
+  /** Line 11: Utah personal exemption per qualifying dependent (line 2d). */
+  personalExemption: number;
+  /** Line 16: initial credit rate on line 15 (exemptions + federal deduction − line 14). */
+  rate: number;
+  /** Line 17: base phase-out amount by filing status (qualifying surviving spouse as married filing jointly). */
+  phaseOutBase: Record<'single' | 'married_joint' | 'married_separate' | 'head_of_household', number>;
+  /** Line 19: phase-out rate on Utah taxable income (line 9) above the base. */
+  phaseOutRate: number;
+  /**
+   * Line 14, state income tax in federal itemized deductions: Schedule A
+   * line 5a up to a cap (TY2024), or line 5e less lines 5b and 5c (TY2025).
+   */
+  itemizedStateIncomeTax: { kind: 'line5a'; cap: number } | { kind: 'line5e_less_5b_5c' };
+}
+
 export interface FlatTaxStateConfig {
   stateCode: string;
   rate: number;
@@ -35,8 +52,13 @@ export interface FlatTaxStateConfig {
   usesFederalTaxableIncome?: boolean;
   /** If true, skip Social Security subtraction (state taxes SS or uses different base). */
   skipSocialSecuritySubtraction?: boolean;
-  /** UT-specific: taxpayer credit rate applied to (federal std deduction + personal exemptions). */
+  /**
+   * UT, a year whose TC-40 amounts are not checked in yet: taxpayer credit rate
+   * with no phase-out. Such a year is not supported for Utah (see utahTaxpayerCredit).
+   */
   taxpayerCreditRate?: number;
+  /** UT: the taxpayer tax credit (TC-40 lines 11–20) and the qualified exempt taxpayer test (line 21). */
+  utahTaxpayerCredit?: UtahTaxpayerCredit;
   /** MA-specific: short-term capital gains rate (8.5% effective TY2023). */
   shortTermCapitalGainsRate?: number;
   /** MA-specific: long-term capital gains rate (5%). */
@@ -196,9 +218,10 @@ export const FLAT_TAX_CONSTANTS: Record<string, FlatTaxStateConfig> = {
   },
 
   // ── Utah ──────────────────────────────────────────────────────
-  // Flat 4.65% on all income, but offers a taxpayer credit equal to 6% of
-  // (federal standard deduction + personal exemptions), effectively lowering
-  // the rate for lower/middle-income filers.
+  // 2025 TC-40 instructions (tax.utah.gov/forms/current/tc-40inst.pdf):
+  // line 10 is 4.5% of Utah taxable income; the taxpayer tax credit is 6% of
+  // (Utah exemptions + federal deduction − state income tax itemized), less
+  // 1.3% of Utah taxable income above a base by filing status.
   UT: {
     stateCode: 'UT',
     rate: 0.045,
@@ -210,8 +233,14 @@ export const FLAT_TAX_CONSTANTS: Record<string, FlatTaxStateConfig> = {
     },
     personalExemption: 0,
     dependentExemption: 0,
-    taxpayerCreditRate: 0.06,
-    notes: 'UT taxpayer credit = 6% of (federal standard deduction + federal personal exemptions). This credit phases out at higher incomes.',
+    utahTaxpayerCredit: {
+      personalExemption: 2111,
+      rate: 0.06,
+      phaseOutBase: { single: 18213, married_joint: 36426, married_separate: 18213, head_of_household: 27320 },
+      phaseOutRate: 0.013,
+      itemizedStateIncomeTax: { kind: 'line5e_less_5b_5c' },
+    },
+    notes: 'UT 4.5% flat; taxpayer tax credit with phase-out (TC-40 lines 11–20); exempt when federal AGI ≤ federal standard deduction + senior deduction (line 21).',
   },
 
   // ── Georgia ──────────────────────────────────────────────────────
