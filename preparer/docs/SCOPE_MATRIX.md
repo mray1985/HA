@@ -8,7 +8,7 @@
 
 ## Summary
 
-HATax ships with **90+ implemented tax features** across **80 engine modules** (66 federal + 14 state), validated by **5,071 tests** spanning **99 test files** (`npm test`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
+HATax ships with **90+ implemented tax features** across **84 engine modules** (66 federal + 18 state), validated by **5,307 engine tests** spanning **112 test files** (`npm test` in `shared`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 
@@ -18,13 +18,13 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 |---|---|
 | Implemented features | 90+ |
 | Engine modules (federal) | 66 |
-| Engine modules (state) | 14 (covering all 50 states + DC) |
+| Engine modules (state) | 18 (covering all 50 states + DC; `wa.ts`, `in.ts`, `ia.ts`, `pa.ts` added for TY2025 stop-ship rules) |
 | Constants files | 103 |
 | IRS PDF templates | 41 |
 | State PDF templates | 43 |
 | Wizard step components | 105 |
-| Test files | 99 (`npm test`) |
-| Total tests | 5,071 (`npm test`) |
+| Test files | 112 (`npm test` in `shared`) |
+| Total tests | 5,307 (`npm test` in `shared`) |
 | Filing statuses | 5 (Single, MFJ, MFS, HoH, QSS) |
 | Federal tax years | 2024, 2025, 2026 |
 
