@@ -7,6 +7,7 @@ import {
   HeartPulse, Wallet, PenLine, ArrowLeft, Globe, Ticket, Wheat, CalendarClock,
 } from 'lucide-react';
 import { ReactNode, useCallback, useMemo } from 'react';
+import { calculateForm6252, type InstallmentSaleInfo } from '@hatax/engine';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import IncomeChartSwitcher from '../charts/IncomeChartSwitcher';
 import { HELP_CONTENT } from '../../data/helpContent';
@@ -126,12 +127,10 @@ const INCOME_ROWS: IncomeSummaryRow[] = [
     key: 'installment_sale', stepId: 'installment_sale', label: 'Installment Sales',
     icon: <CalendarClock className="w-4 h-4" />,
     getCount: (tr) => tr.installmentSales?.length || 0,
-    getTotal: (tr) => (tr.installmentSales || []).reduce((s: number, sale: any) => {
-      const contractPrice = Math.max(0, sale.sellingPrice - (sale.mortgagesAssumedByBuyer || 0));
-      const adjustedBasis = Math.max(0, sale.costOrBasis - (sale.depreciationAllowed || 0));
-      const grossProfit = Math.max(0, sale.sellingPrice - adjustedBasis - (sale.sellingExpenses || 0));
-      const ratio = contractPrice > 0 ? grossProfit / contractPrice : 0;
-      return s + Math.round(sale.paymentsReceivedThisYear * Math.min(1, ratio));
+    // Form 6252 line 24 plus the year-of-sale recapture.
+    getTotal: (tr) => (tr.installmentSales || []).reduce((s: number, sale: InstallmentSaleInfo) => {
+      const r = calculateForm6252(sale, tr.taxYear);
+      return s + r.installmentSaleIncome + r.recaptureThisYear;
     }, 0),
   },
   {

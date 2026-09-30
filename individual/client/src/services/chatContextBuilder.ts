@@ -18,7 +18,7 @@
 
 import type { TaxReturn, CalculationResult, CalculationTrace } from '@hatax/engine';
 import type { ChatContext } from '@hatax/engine';
-import { describeCondition } from '@hatax/engine';
+import { calculateForm6252, describeCondition } from '@hatax/engine';
 import type { WizardStep } from '../store/taxReturnStore';
 import { getSuggestions, TaxSuggestion } from './suggestionService';
 import { getActiveWarnings } from './warningService';
@@ -913,7 +913,8 @@ const STEP_FIELD_EXTRACTORS: Record<string, (tr: TaxReturn, calc?: CalculationRe
     if (!tr.installmentSales?.length) return 'No installment sales entered.';
     const lines = [`${tr.installmentSales.length} installment sale(s):`];
     for (const sale of tr.installmentSales) {
-      lines.push(`- Selling price: ${fmt(sale.sellingPrice || 0)}, Basis: ${fmt(sale.costOrBasis || 0)}, Payments this year: ${fmt(sale.paymentsReceivedThisYear || 0)}`);
+      const r = calculateForm6252(sale, tr.taxYear);
+      lines.push(`- ${sale.description || 'Sale'}: selling price ${fmt(sale.sellingPrice || 0)}, basis ${fmt(sale.costOrBasis || 0)}, payments this year ${fmt(sale.paymentsReceivedThisYear || 0)}; income this year ${fmt(r.installmentSaleIncome)} (${r.disposition.replace(/_/g, ' ')})${r.recaptureThisYear > 0 ? `, recapture ${fmt(r.recaptureThisYear)}` : ''}`);
     }
     return lines.join('\n');
   },

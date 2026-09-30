@@ -194,7 +194,7 @@ export function assessWashingtonCapitalGains(taxReturn: TaxReturn, federal: Calc
   const k1LongTerm = federal.k1Routing?.longTermCapitalGain || 0;
   const has1231 = (taxReturn.form4797Properties?.length ?? 0) > 0 || (federal.k1Routing?.netSection1231Gain || 0) !== 0;
   const section1231 = has1231 ? Math.max(0, federal.section1231LongTermGain || 0) : 0;
-  const installment = round2((taxReturn.installmentSales ?? []).reduce((s, sale) => s + calculateForm6252(sale).installmentSaleIncome, 0));
+  const installment = round2((taxReturn.installmentSales ?? []).reduce((s, sale) => s + calculateForm6252(sale, year).installmentSaleIncome, 0));
   const otherUpper = round2(Math.max(0, k1LongTerm) + section1231 + Math.max(0, installment));
   const otherLower = round2(Math.min(0, k1LongTerm));
   let otherGain = 0;

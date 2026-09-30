@@ -10,6 +10,7 @@
  */
 
 import type { CalculationResult, StateQuestion, TaxReturn, UnsupportedPattern } from '../types/index.js';
+import { calculateForm6252 } from './form6252.js';
 import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
 import { getStateName } from './state/index.js';
@@ -79,6 +80,22 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
         ? `The vehicle was acquired before January 20, 2025: its special depreciation (40%) and first-year limit are not built.`
         : `The vehicle's special depreciation cannot be figured: enter the date it was acquired (a vehicle acquired before January 20, 2025 gets 40%, not 100%).`,
     });
+  }
+
+  // Form 6252: an installment sale whose facts do not settle where its gain goes.
+  const installment = (taxReturn.installmentSales ?? []).map((sale) => ({ sale, result: calculateForm6252(sale, year) }));
+  for (const { sale, result } of installment) {
+    if (result.problems.length === 0) continue;
+    out.push({
+      ruleId: 'FED.FORM6252', jurisdiction: 'US', section: 'federal', itemId: sale.id,
+      message: `Installment sale${sale.description ? ` (${sale.description})` : ''}: ${result.problems.join(' ')}`,
+    });
+  }
+  // IRC §453A: interest on the deferred tax once obligations from sales over $150,000
+  // outstanding at the end of the year are more than $5,000,000.
+  const outstanding = installment.filter(({ sale }) => sale.sellingPrice > 150000).reduce((s, { result }) => s + result.outstandingAtYearEnd, 0);
+  if (outstanding > 5000000) {
+    add('FED.453A', 'US', 'federal', `Installment sales: $${outstanding.toLocaleString('en-US')} is still owed on sales over $150,000, more than $5,000,000, so interest is due on the deferred tax (IRC §453A). HATax does not figure it.`);
   }
 
   // TAX-002: Pennsylvania's eight income classes (state/pa.ts) — what the return does not settle.

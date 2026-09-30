@@ -771,7 +771,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Does not handle like-kind exchange (IRC 1031) deferral
 - Does not handle involuntary conversion (IRC 1033) deferral
 - Depreciation history must be provided as input per property
-- Does not handle installment sales under IRC 453
+- Installment sales reach Form 4797 from Form 6252 (engine/form6252.ts): line 26 on line 4 or 10, the year-of-sale recapture on line 13
 - Does not handle related-party sale rules under IRC 1239
 
 ---

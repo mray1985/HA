@@ -55,7 +55,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Overtime income | ✅ | | Relevant for OBBBA Schedule 1-A provisions |
 | Farm income | ✅ | Schedule F | 23 expense categories; SE tax integration; cash method |
 | Original issue discount | ✅ | 1099-OID | OID + other periodic interest; acquisition premium offset; early withdrawal penalty flows to Schedule 1 |
-| Installment sale income | ✅ | Form 6252 | Gross profit ratio computation; depreciation recapture ordering; multi-year payment tracking |
+| Installment sale income | ✅ | Form 6252 | 2025 lines 5-26: gross profit with the line 12 recapture, contract price with debt over basis, line 19 to 4 places; line 26 to Schedule D (capital asset, short or long term) or Form 4797 line 4 (section 1231) / line 10; section 1245 recapture in full in the year of sale; unrecaptured section 1250 gain first (Schedule D instructions, worksheet line 4). A related party, a main home, pre-1987 real property and §453A interest stop the return (FED.FORM6252, FED.453A) |
 | Farm rental income (passive) | ✅ | Form 4835 | Passive farm rental for non-materially-participating landowners; flows through Schedule E |
 
 ---

@@ -559,6 +559,9 @@ describe('Form 6252 Installment Sale — E2E', () => {
         id: '1',
         description: 'Land sale',
         dateOfSale: '2025-06-15',
+        dateAcquired: '2015-06-15',
+        propertyKind: 'capital_asset',
+        relatedParty: false,
         sellingPrice: 100000,
         costOrBasis: 60000,
         sellingExpenses: 5000,
@@ -584,8 +587,8 @@ describe('Form 6252 Installment Sale — E2E', () => {
       filingStatus: FilingStatus.Single,
       w2Income: [{ id: '1', employerName: 'Acme', wages: 50000, federalTaxWithheld: 8000 }],
       installmentSales: [
-        { id: '1', description: 'Property A', dateOfSale: '2025-01-01', sellingPrice: 50000, costOrBasis: 30000, paymentsReceivedThisYear: 10000 },
-        { id: '2', description: 'Property B', dateOfSale: '2025-03-01', sellingPrice: 80000, costOrBasis: 40000, paymentsReceivedThisYear: 16000 },
+        { id: '1', description: 'Property A', dateOfSale: '2025-01-01', dateAcquired: '2019-01-01', propertyKind: 'capital_asset', relatedParty: false, sellingPrice: 50000, costOrBasis: 30000, paymentsReceivedThisYear: 10000 },
+        { id: '2', description: 'Property B', dateOfSale: '2025-03-01', dateAcquired: '2019-03-01', propertyKind: 'capital_asset', relatedParty: false, sellingPrice: 80000, costOrBasis: 40000, paymentsReceivedThisYear: 16000 },
       ],
     }));
 

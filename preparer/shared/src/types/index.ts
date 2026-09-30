@@ -914,23 +914,54 @@ export interface CasualtyLossResult {
 // Authority: IRC §453 — Installment method
 export interface InstallmentSaleInfo {
   id: string;
-  description: string;                // Property description
-  dateOfSale: string;                 // Date of sale
-  sellingPrice: number;               // Selling price
-  mortgagesAssumedByBuyer?: number;   // Buyer-assumed mortgages
-  costOrBasis: number;                // Cost or adjusted basis
-  depreciationAllowed?: number;       // Depreciation allowed/allowable
-  sellingExpenses?: number;           // Commissions, legal fees, etc.
-  paymentsReceivedThisYear: number;   // Payments received in current tax year
+  description: string;                // Line 1: property description
+  dateOfSale: string;                 // Line 2b: date sold
+  /** Line 2a: date acquired (holding period). */
+  dateAcquired?: string;
+  /**
+   * What was sold, which decides the recapture and where line 26 goes:
+   * a capital asset (Schedule D), depreciable personal property used in a
+   * trade or business (section 1245), or depreciable real property used in a
+   * trade or business, rentals included (section 1250).
+   */
+  propertyKind?: 'capital_asset' | 'business_personal' | 'business_real';
+  /** Line 3: sold to a related party. */
+  relatedParty?: boolean;
+  /** Line 15: the property was the seller's main home. */
+  mainHome?: boolean;
+  sellingPrice: number;               // Line 5: selling price, including mortgages and other debts
+  mortgagesAssumedByBuyer?: number;   // Line 6: debts the buyer assumed or took the property subject to
+  costOrBasis: number;                // Line 8: cost or other basis
+  depreciationAllowed?: number;       // Line 9: depreciation allowed or allowable
+  sellingExpenses?: number;           // Line 11: commissions and other expenses of sale
+  paymentsReceivedThisYear: number;   // Line 21: payments received this year, without interest
+  /** Line 23: payments received in prior years, without interest (0 in the year of sale). */
+  paymentsReceivedPriorYears?: number;
 }
 
 export interface InstallmentSaleResult {
-  contractPrice: number;              // Selling price - buyer-assumed mortgages
-  grossProfit: number;                // Selling price - basis - expenses
-  grossProfitRatio: number;           // Gross profit / contract price (percentage)
-  ordinaryIncomeRecapture: number;    // Depreciation recapture (§1250/§1245) — reported in full in year of sale
-  installmentSaleIncome: number;      // Payments × gross profit ratio
-  totalReportableIncome: number;      // installmentSaleIncome (capital gain portion)
+  contractPrice: number;              // Line 18
+  grossProfit: number;                // Line 16
+  grossProfitRatio: number;           // Line 19: gross profit percentage, as a decimal to 4 places
+  /** Line 12: ordinary income recapture (Form 4797, Part III), fully taxable in the year of sale. */
+  ordinaryIncomeRecapture: number;
+  installmentSaleIncome: number;      // Line 24
+  totalReportableIncome: number;      // Line 26
+  /** This is the year of sale (recapture and line 20 count this year). */
+  yearOfSale: boolean;
+  /** Line 12 recognized this year: the recapture in the year of sale, otherwise 0. */
+  recaptureThisYear: number;
+  /**
+   * Where line 26 goes: Schedule D short- or long-term, Form 4797 line 4
+   * (section 1231) or line 10 (ordinary); 'unknown' when the facts are missing.
+   */
+  disposition: 'short_term_capital' | 'long_term_capital' | 'section1231' | 'ordinary' | 'unknown';
+  /** The part of line 26 that is unrecaptured section 1250 gain (Schedule D instructions, worksheet line 4). */
+  unrecaptured1250ThisYear: number;
+  /** Contract price not yet received at the end of the year (line 18 less lines 22 and 23). */
+  outstandingAtYearEnd: number;
+  /** Why this sale cannot be figured to the rules; empty when it can. */
+  problems: string[];
 }
 
 // Nonbusiness Bad Debt — IRC §166(d)
@@ -2609,6 +2640,8 @@ export interface CalculationResult {
   premiumTaxCredit?: PremiumTaxCreditResult;
   schedule1A?: Schedule1AResult;
   homeSale?: HomeSaleResult;
+  /** Form 6252, one per installment sale. */
+  form6252?: InstallmentSaleResult[];
   form982?: Form982Result;
   investmentInterest?: InvestmentInterestResult;
   form8283?: Form8283Result;

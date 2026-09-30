@@ -33,7 +33,7 @@ import {
   DeceasedSpouseValidationResult,
   CreditsResult, Form1040Result, Form7206Result, ArcherMSAResult,
   Solo401kResult, SEPIRAResult, HSAContributionInfo,
-  ScholarshipCreditResult, Form8801Result,
+  ScholarshipCreditResult, Form8801Result, InstallmentSaleResult,
 } from '../types/index.js';
 import { getStandardDeduction, getTaxConstants } from '../constants/taxConstants.js';
 import { calculateScheduleC } from './scheduleC.js';
@@ -200,6 +200,8 @@ export interface Form1040Context {
   form4797Section1231GainOrLoss: number;
   form4797Unrecaptured1250: number;
   form4797LTCGContribution: number;
+  /** Form 6252, one per installment sale. */
+  form6252Results: InstallmentSaleResult[];
   section1231LookbackOrdinary: number;
   currentYearNOL: number;
   scheduleDNetGain: number;
@@ -390,6 +392,7 @@ export function createForm1040Context(
     form4797Section1231GainOrLoss: 0,
     form4797Unrecaptured1250: 0,
     form4797LTCGContribution: 0,
+    form6252Results: [],
     section1231LookbackOrdinary: 0,
     currentYearNOL: 0,
     scheduleDNetGain: 0,
@@ -543,14 +546,6 @@ export function calculateIncomeSection(ctx: Form1040Context): void {
   );
   ctx.otherIncome = safeNum(taxReturn.otherIncome);
 
-  // Form 6252 — Installment sale income (flows to Schedule 1 other income)
-  const installmentSaleIncome = (taxReturn.installmentSales || []).reduce((sum, sale) => {
-    const result = calculateForm6252(sale);
-    return sum + result.installmentSaleIncome;
-  }, 0);
-  if (installmentSaleIncome > 0) {
-    ctx.otherIncome = round2(ctx.otherIncome + installmentSaleIncome);
-  }
 
   // 1099-R (retirement distributions)
   ctx.totalRetirementIncome = (taxReturn.income1099R || []).reduce((sum, r) => {
@@ -981,6 +976,21 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
 
   const allScheduleDTransactions = [...(taxReturn.income1099B || []), ...digitalAssetTransactions, ...badDebtTransactions];
 
+  // Form 6252 installment sales. Line 26 goes to Schedule D (a capital asset,
+  // lines 4 and 11) or Form 4797 (line 4, section 1231; line 10, ordinary); the
+  // year-of-sale recapture (line 12) to Form 4797 line 13. A sale whose facts
+  // are missing stays in other income, as ordinary, and engine/unsupported.ts
+  // reports it.
+  ctx.form6252Results = (taxReturn.installmentSales || []).map((sale) => calculateForm6252(sale, _taxYear));
+  const installmentBy = (d: InstallmentSaleResult['disposition']) =>
+    round2(ctx.form6252Results.filter((r) => r.disposition === d).reduce((s, r) => s + r.totalReportableIncome, 0));
+  const installmentShortTerm = installmentBy('short_term_capital');
+  const installmentLongTerm = installmentBy('long_term_capital');
+  const installmentSection1231 = installmentBy('section1231');
+  const installmentOrdinary = round2(installmentBy('ordinary') + ctx.form6252Results.reduce((s, r) => s + r.recaptureThisYear, 0));
+  const installmentUnrecaptured1250 = round2(ctx.form6252Results.reduce((s, r) => s + r.unrecaptured1250ThisYear, 0));
+  ctx.otherIncome = round2(ctx.otherIncome + installmentBy('unknown'));
+
   // Schedule D. A prior-year capital-loss carryforward is a Schedule D loss
   // even when this year has no 1099-B, so it can offset section 1231 gain
   // and still produce the §1211(b) deduction.
@@ -989,7 +999,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   const hasCapitalLossCarryforward = Math.abs(safeNum(taxReturn.capitalLossCarryforward))
     + Math.abs(safeNum(taxReturn.capitalLossCarryforwardST))
     + Math.abs(safeNum(taxReturn.capitalLossCarryforwardLT)) > 0;
-  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward)
+  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward || installmentShortTerm > 0 || installmentLongTerm > 0)
     ? calculateScheduleD(
         allScheduleDTransactions,
         safeNum(taxReturn.capitalLossCarryforward),
@@ -998,6 +1008,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
         taxReturn.capitalLossCarryforwardLT,
         ctx.totalCapitalGainDistributions,
         _taxYear,
+        { shortTerm: installmentShortTerm, longTerm: installmentLongTerm },
       )
     : undefined;
 
@@ -1016,7 +1027,11 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   // IRC §1231(c): a net gain is ordinary to the extent of unrecaptured section
   // 1231 losses from the five preceding tax years.
   const k1Section1231 = ctx.k1Routing?.netSection1231Gain || 0;
-  const combinedSection1231 = round2(k1Section1231 + (ctx.form4797Section1231GainOrLoss || 0));
+  // Form 4797 line 4: installment gain on trade or business property held more than 1 year.
+  // Line 10 (held 1 year or less) and the year-of-sale recapture (line 13) are ordinary.
+  ctx.form4797OrdinaryIncome = round2(ctx.form4797OrdinaryIncome + installmentOrdinary);
+  ctx.form4797Unrecaptured1250 = round2(ctx.form4797Unrecaptured1250 + installmentUnrecaptured1250);
+  const combinedSection1231 = round2(k1Section1231 + (ctx.form4797Section1231GainOrLoss || 0) + installmentSection1231);
   const lookback = applySection1231Lookback(combinedSection1231, taxReturn.section1231Lookback, _taxYear);
   ctx.section1231LookbackOrdinary = lookback.ordinaryFromGain;
   ctx.form4797LTCGContribution = lookback.longTermGain;
@@ -2691,6 +2706,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     premiumTaxCredit: ctx.ptcResult,
     schedule1A: ctx.schedule1AResult,
     homeSale: ctx.homeSaleResult,
+    ...(ctx.form6252Results.length > 0 ? { form6252: ctx.form6252Results } : {}),
     form982: ctx.form982Result,
     investmentInterest: ctx.investmentInterestResult,
     form8283: ctx.scheduleA?.form8283,
