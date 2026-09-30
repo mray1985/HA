@@ -101,6 +101,14 @@ export interface FactValidationIssue {
    * Observed value (or "unknown"). Never a replacement / invented fix.
    */
   observed?: TaxFactValue | 'unknown';
+  /**
+   * The whole form must be held for review: applying some of its fields would
+   * leave a required amount missing (read by the engine as zero), or the form
+   * contradicts itself or duplicates another. Dropping one field is not enough.
+   */
+  holdsForm?: boolean;
+  /** Form this issue belongs to: `${sourceDocumentId}#${formIndex}`. */
+  formKey?: string;
 }
 
 export interface FactValidationResult {
@@ -111,6 +119,8 @@ export interface FactValidationResult {
    */
   ready: boolean;
   issues: FactValidationIssue[];
+  /** Forms (`${sourceDocumentId}#${formIndex}`) that must not be applied until reviewed. */
+  heldForms: string[];
 }
 
 /**
@@ -158,6 +168,26 @@ function byDocAndField(facts: TaxFact[]): Map<string, Map<string, TaxFact>> {
     fields.set(fact.sourceField, fact);
   }
   return docs;
+}
+
+/** One map per form (document + position in a multi-form file), keyed by field. */
+function byFormAndField(facts: TaxFact[]): Map<string, Map<string, TaxFact>> {
+  const forms = new Map<string, Map<string, TaxFact>>();
+  for (const fact of facts) {
+    const key = formKeyOf(fact);
+    let fields = forms.get(key);
+    if (!fields) {
+      fields = new Map();
+      forms.set(key, fields);
+    }
+    fields.set(fact.sourceField, fact);
+  }
+  return forms;
+}
+
+/** `${sourceDocumentId}#${formIndex}` — identifies one form inside one file. */
+export function formKeyOf(fact: Pick<TaxFact, 'sourceDocumentId' | 'sourceFormIndex'>): string {
+  return `${fact.sourceDocumentId}#${fact.sourceFormIndex ?? 0}`;
 }
 
 function isW2Document(fields: Map<string, TaxFact>): boolean {
@@ -426,7 +456,7 @@ export function validateImportedFacts(
   const issues: FactValidationIssue[] = [];
   validateScalarAmounts(facts, issues);
 
-  const byDoc = byDocAndField(facts);
+  const byDoc = byFormAndField(facts);
   for (const fields of byDoc.values()) {
     if (!isW2Document(fields)) continue;
     const year =
@@ -436,8 +466,11 @@ export function validateImportedFacts(
     validateW2Relationships(fields, year, issues);
   }
 
+  validateForms(facts, issues);
+
   const ready = !issues.some((i) => i.severity === 'error');
-  return { ready, issues };
+  const heldForms = [...new Set(issues.filter((i) => i.holdsForm && i.formKey).map((i) => i.formKey!))];
+  return { ready, issues, heldForms };
 }
 
 /** True when an error-level issue targets this exact fact (not another document's field). */
@@ -488,4 +521,220 @@ export function omitInvalidToolFields(
     out[key] = value;
   }
   return out;
+}
+
+// ─── Form-level checks (work order §15, §16, §34, §59) ──────────
+
+/** Fact-type prefix → form, as written by the tax tools. */
+const FORM_BY_PREFIX: ReadonlyArray<[string, string]> = [
+  ['W2_', 'W-2'],
+  ['1099INT_', '1099-INT'],
+  ['1099DIV_', '1099-DIV'],
+  ['1099NEC_', '1099-NEC'],
+  ['1099R_', '1099-R'],
+  ['SSA1099_', 'SSA-1099'],
+  ['1098T_', '1098-T'],
+  ['1098_', '1098'],
+];
+
+function formOf(fields: Map<string, TaxFact>): string | null {
+  const factType = [...fields.values()][0]?.factType ?? '';
+  return FORM_BY_PREFIX.find(([prefix]) => factType.startsWith(prefix))?.[1] ?? null;
+}
+
+/**
+ * Amounts the engine requires for each form. The engine reads a missing
+ * required amount as zero, so a form whose required amount is unknown or
+ * absent is held — never applied with the box silently zeroed.
+ */
+export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  'W-2': ['wages', 'federalTaxWithheld'],
+  '1099-INT': ['amount'],
+  '1099-DIV': ['ordinaryDividends', 'qualifiedDividends'],
+  '1099-NEC': ['amount'],
+  '1099-R': ['grossDistribution', 'taxableAmount'],
+  'SSA-1099': ['netBenefits'],
+  '1098': ['mortgageInterest'],
+  '1098-T': ['tuitionPaid'],
+};
+
+/** 1099-R box 7 distribution codes (Instructions for Forms 1099-R and 5498). */
+export const DISTRIBUTION_CODES = new Set([
+  '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'W', 'Y',
+]);
+
+/** Date the TCJA $750,000 acquisition-debt limit starts (IRC §163(h)(3)(F)). */
+const TCJA_MORTGAGE_DATE = '2017-12-16';
+const TCJA_MORTGAGE_LIMIT = 750_000;
+
+function amount(fields: Map<string, TaxFact>, field: string): number | undefined {
+  return numericOrMissing(fields.get(field));
+}
+
+function formIssue(
+  fields: Map<string, TaxFact>,
+  formKey: string,
+  partial: Omit<FactValidationIssue, 'severity' | 'formKey' | 'sourceDocumentId'> & { severity?: FactValidationSeverity },
+): FactValidationIssue {
+  const sourceDocumentId = [...fields.values()][0]?.sourceDocumentId;
+  return { severity: 'error', ...partial, formKey, sourceDocumentId };
+}
+
+/** "03/14/2021" or "2021-03-14" → "2021-03-14"; anything else → null. */
+function isoDate(text: string | undefined): string | null {
+  if (!text) return null;
+  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
+  if (us) return `${us[3]}-${us[1]!.padStart(2, '0')}-${us[2]!.padStart(2, '0')}`;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text.trim());
+  return iso ? text.trim() : null;
+}
+
+function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
+  const forms = byFormAndField(facts);
+  for (const [formKey, fields] of forms) {
+    const form = formOf(fields);
+    if (!form) continue;
+
+    // Required amounts: unknown or absent holds the whole form.
+    for (const field of REQUIRED_FORM_FIELDS[form] ?? []) {
+      const fact = fields.get(field);
+      if (fact?.status === 'extracted') continue;
+      issues.push(formIssue(fields, formKey, {
+        code: 'REQUIRED_AMOUNT_UNKNOWN',
+        message: `${form} ${field} is ${fact ? 'unreadable' : 'not on the form'}. The form is held: the engine would read it as zero.`,
+        factId: fact?.factId,
+        sourceField: field,
+        observed: 'unknown',
+        holdsForm: true,
+      }));
+    }
+
+    const hold = (code: string, message: string, field: string, observed: number | undefined) =>
+      issues.push(formIssue(fields, formKey, {
+        code, message, sourceField: field, factId: fields.get(field)?.factId, observed, holdsForm: true,
+      }));
+    const warn = (code: string, message: string, field: string, observed?: TaxFactValue) =>
+      issues.push(formIssue(fields, formKey, {
+        code, message, sourceField: field, factId: fields.get(field)?.factId, observed, severity: 'warning',
+      }));
+
+    switch (form) {
+      case 'W-2': {
+        const wages = amount(fields, 'wages');
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (wages !== undefined && withheld !== undefined && withheld > wages) {
+          warn('WITHHOLDING_EXCEEDS_WAGES', `W-2 box 2 withholding (${withheld}) exceeds box 1 wages (${wages}).`, 'federalTaxWithheld', withheld);
+        }
+        break;
+      }
+      case '1099-INT':
+      case '1099-NEC': {
+        const amt = amount(fields, 'amount');
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (amt !== undefined && withheld !== undefined && withheld > amt) {
+          warn('WITHHOLDING_EXCEEDS_INCOME', `${form} withholding (${withheld}) exceeds the income amount (${amt}).`, 'federalTaxWithheld', withheld);
+        }
+        break;
+      }
+      case '1099-DIV': {
+        const ordinary = amount(fields, 'ordinaryDividends');
+        const qualified = amount(fields, 'qualifiedDividends');
+        if (ordinary !== undefined && qualified !== undefined && qualified > ordinary) {
+          hold('DIV_QUALIFIED_EXCEEDS_ORDINARY', `1099-DIV box 1b (${qualified}) exceeds box 1a (${ordinary}); one of them was misread. Form held.`, 'qualifiedDividends', qualified);
+        }
+        break;
+      }
+      case '1099-R': {
+        const gross = amount(fields, 'grossDistribution');
+        const taxable = amount(fields, 'taxableAmount');
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (gross !== undefined && taxable !== undefined && taxable > gross) {
+          hold('R_TAXABLE_EXCEEDS_GROSS', `1099-R box 2a (${taxable}) exceeds box 1 (${gross}). Form held.`, 'taxableAmount', taxable);
+        }
+        if (gross !== undefined && withheld !== undefined && withheld > gross) {
+          hold('R_WITHHOLDING_EXCEEDS_GROSS', `1099-R box 4 (${withheld}) exceeds box 1 (${gross}). Form held.`, 'federalTaxWithheld', withheld);
+        }
+        const code = fields.get('distributionCode');
+        if (code?.status === 'extracted' && typeof code.value === 'string') {
+          const codes = code.value.toUpperCase().replace(/[^0-9A-Z]/g, '').split('');
+          const bad = codes.filter((c) => !DISTRIBUTION_CODES.has(c));
+          if (codes.length === 0 || codes.length > 2 || bad.length > 0) {
+            hold('R_INVALID_DISTRIBUTION_CODE', `1099-R box 7 "${code.value}" is not a valid distribution code. Form held.`, 'distributionCode', undefined);
+          }
+        }
+        break;
+      }
+      case 'SSA-1099': {
+        const paid = amount(fields, 'benefitsPaid');
+        const repaid = amount(fields, 'benefitsRepaid');
+        const net = amount(fields, 'netBenefits');
+        if (paid !== undefined && repaid !== undefined && net !== undefined && Math.abs(paid - repaid - net) > 0.005) {
+          hold('SSA_NET_MISMATCH', `SSA-1099 box 5 (${net}) is not box 3 (${paid}) minus box 4 (${repaid}); one was misread. Form held.`, 'netBenefits', net);
+        }
+        break;
+      }
+      case '1098': {
+        const refund = amount(fields, 'refundOfOverpaidInterest');
+        if (refund !== undefined && refund > 0) {
+          warn('MORTGAGE_REFUND_REVIEW', `1098 box 4 refund of overpaid interest (${refund}) may be income if the interest was deducted in a prior year.`, 'refundOfOverpaidInterest', refund);
+        }
+        const balance = amount(fields, 'outstandingPrincipal');
+        const origination = isoDate(typeof fields.get('originationDate')?.value === 'string' ? (fields.get('originationDate')!.value as string) : undefined);
+        if (balance !== undefined && balance > TCJA_MORTGAGE_LIMIT && origination && origination < TCJA_MORTGAGE_DATE) {
+          warn('MORTGAGE_GRANDFATHERED_DEBT', `1098 loan originated ${origination} with ${balance} outstanding: pre-TCJA debt may use the $1,000,000 limit, but the engine applies $750,000.`, 'outstandingPrincipal', balance);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  detectDuplicateForms(forms, issues);
+}
+
+/** Identity used to spot the same form imported twice from different files. */
+const DUPLICATE_KEYS: Readonly<Record<string, readonly string[]>> = {
+  'W-2': ['employerEin', 'wages', 'federalTaxWithheld'],
+  '1099-INT': ['payerName', 'amount'],
+  '1099-DIV': ['payerName', 'ordinaryDividends'],
+  '1099-NEC': ['payerEin', 'amount'],
+  '1099-R': ['payerName', 'grossDistribution', 'distributionCode'],
+  'SSA-1099': ['netBenefits', 'beneficiaryName'],
+  '1098': ['lenderTin', 'mortgageInterest'],
+  '1098-T': ['institutionEin', 'tuitionPaid', 'studentName'],
+};
+
+/**
+ * The same form imported from two files (a PDF and a phone photo of it) has
+ * different content hashes but identical identifying values. The later copy is
+ * held so it is never counted twice; the preparer confirms which to keep.
+ */
+function detectDuplicateForms(forms: Map<string, Map<string, TaxFact>>, issues: FactValidationIssue[]): void {
+  const seen = new Map<string, string>();
+  for (const [formKey, fields] of forms) {
+    const form = formOf(fields);
+    const keys = form ? DUPLICATE_KEYS[form] : undefined;
+    if (!form || !keys) continue;
+    const parts: string[] = [];
+    let complete = true;
+    for (const k of keys) {
+      const fact = fields.get(k);
+      if (fact?.status !== 'extracted') { complete = false; break; }
+      parts.push(JSON.stringify(fact.value));
+    }
+    if (!complete) continue;
+    const identity = `${form}|${parts.join('|')}`;
+    const first = seen.get(identity);
+    if (!first) {
+      seen.set(identity, formKey);
+      continue;
+    }
+    issues.push(formIssue(fields, formKey, {
+      code: 'DUPLICATE_FORM',
+      severity: 'warning',
+      message: `This ${form} matches ${first} (${keys.join(', ')}). Held so it is not counted twice.`,
+      holdsForm: true,
+    }));
+  }
 }

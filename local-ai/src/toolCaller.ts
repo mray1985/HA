@@ -27,6 +27,7 @@ import {
 } from './factValidation.js';
 import type { TaxFact } from './taxFact.js';
 import {
+  TAX_TOOL_NAMES,
   invokeTaxTool,
   toolNameForIncomeType,
   type TaxToolCallContext,
@@ -36,14 +37,7 @@ import {
 } from './taxTools.js';
 
 /** Tools this caller may invoke. Tax calculation is intentionally absent. */
-export const TOOL_CALLER_ALLOWED_TOOLS = [
-  'add_w2',
-  'add_1099_int',
-  'add_1099_div',
-  'add_1099_nec',
-  'add_1099_r',
-  'set_filing_status_candidate',
-] as const satisfies readonly TaxToolName[];
+export const TOOL_CALLER_ALLOWED_TOOLS = TAX_TOOL_NAMES;
 
 export type ToolCallerAllowedTool = (typeof TOOL_CALLER_ALLOWED_TOOLS)[number];
 
@@ -54,8 +48,6 @@ const BLOCKED_TOOL_NAMES = new Set([
   'run_diagnostics',
   'add_dependent',
   'add_schedule_c_income',
-  'add_education_expense',
-  'add_mortgage_interest',
   'add_estimated_payment',
   'set_state_residency',
   'set_filing_status',
@@ -131,6 +123,7 @@ function schemaFailureValidation(message: string): FactValidationResult {
         message,
       },
     ],
+    heldForms: [],
   };
 }
 
@@ -221,7 +214,7 @@ export function executeDeterministicToolCall(
       tool,
       result,
       facts: result.facts,
-      validation: input.validation ?? { ready: true, issues: [] },
+      validation: input.validation ?? { ready: true, issues: [], heldForms: [] },
       appliedArgs: { ...proposal.args },
       skippedFields: [],
     };

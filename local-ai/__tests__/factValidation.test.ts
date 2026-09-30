@@ -313,6 +313,7 @@ describe('fact validation (development-order step 8)', () => {
   it('keeps relationship warnings from blocking ready when there are no structural errors', () => {
     const facts = w2Facts({
       wages: 80_000,
+      federalTaxWithheld: 9_000,
       socialSecurityWages: 40_000,
       medicareWages: 40_000,
       socialSecurityTax: 2480,

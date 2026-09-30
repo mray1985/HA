@@ -27,7 +27,7 @@ import type { PDFExtractResult } from './pdfExtractHelpers';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
 
-const EMPTY_VALIDATION: FactValidationResult = { ready: true, issues: [] };
+const EMPTY_VALIDATION: FactValidationResult = { ready: true, issues: [], heldForms: [] };
 
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -263,9 +263,10 @@ export function applyExtractionToDocument(input: {
     }
 
     // Prefer classifier income type when the extractor left it null.
+    // W-2C never reaches here (classificationAllowsIncomeWrite refuses it).
     const extractedForTools: PDFExtractResult = {
       ...piece,
-      formType: piece.formType ?? classification.formType,
+      formType: piece.formType ?? (classification.formType === 'W-2C' ? null : classification.formType),
       incomeType: piece.incomeType ?? classification.incomeType,
     };
 
