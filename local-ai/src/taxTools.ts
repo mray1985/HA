@@ -190,13 +190,13 @@ const FILING_STATUS_CANDIDATES = [
   'qualifying_surviving_spouse',
 ] as const;
 
-const SetFilingStatusCandidateSchema = z
+export const SetFilingStatusCandidateSchema = z
   .object({
     status: z.enum(FILING_STATUS_CANDIDATES),
   })
   .strict();
 
-const TOOL_FIELD_SCHEMAS: Record<TaxToolIncomeName, z.ZodObject<z.ZodRawShape>> = {
+export const TOOL_FIELD_SCHEMAS: Record<TaxToolIncomeName, z.ZodObject<z.ZodRawShape>> = {
   add_w2: AddW2FieldsSchema,
   add_1099_int: Add1099IntFieldsSchema,
   add_1099_div: Add1099DivFieldsSchema,
