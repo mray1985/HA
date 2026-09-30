@@ -33,6 +33,7 @@ function describe(event: CaseAuditEvent): string {
     case 'reopened': return 'Reopened a review item';
     case 'approval': return 'Approved the case';
     case 'document': return `Document ${event.fileName}: ${event.outcome}`;
+    case 'tool': return `${event.tool}${event.source ? ` (${event.source})` : ''}: ${event.accepted ? '' : 'rejected — '}${event.detail}`;
   }
 }
 

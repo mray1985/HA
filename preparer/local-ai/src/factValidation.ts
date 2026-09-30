@@ -15,6 +15,7 @@
 
 import { getForm4137 } from '@hatax/engine';
 import type { TaxFact, TaxFactValue } from './taxFact.js';
+import { US_STATE_CODES as STATE_CODE_LIST } from './taxTools.js';
 
 /** Rounding tolerance for FICA percentage checks (cents). */
 const FICA_TOLERANCE = 1;
@@ -23,12 +24,7 @@ const FICA_TOLERANCE = 1;
 const ADDITIONAL_MEDICARE_RATE = 0.009;
 const ADDITIONAL_MEDICARE_THRESHOLD = 200_000;
 
-const US_STATE_CODES = new Set([
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
-  'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
-  'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT',
-  'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
-]);
+const US_STATE_CODES: ReadonlySet<string> = new Set(STATE_CODE_LIST);
 
 /**
  * Source fields that structurally cannot be negative on imported income docs.
@@ -535,6 +531,8 @@ const FORM_BY_PREFIX: ReadonlyArray<[string, string]> = [
   ['SSA1099_', 'SSA-1099'],
   ['1098T_', '1098-T'],
   ['1098_', '1098'],
+  ['SCHC_RECEIPTS_', 'Business receipts'],
+  ['ESTPAY_', 'Estimated payment'],
 ];
 
 function formOf(fields: Map<string, TaxFact>): string | null {
@@ -556,7 +554,15 @@ export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> =
   'SSA-1099': ['netBenefits'],
   '1098': ['mortgageInterest'],
   '1098-T': ['tuitionPaid'],
+  'Business receipts': ['amount'],
+  'Estimated payment': ['amount', 'jurisdiction'],
 };
+
+/** Records from record tools (any evidence), as opposed to one tax form. */
+const RECORD_KINDS: ReadonlySet<string> = new Set(['Business receipts', 'Estimated payment']);
+
+/** Required fields that are not amounts: missing, the record cannot be placed at all. */
+const REQUIRED_NON_AMOUNT_FIELDS: ReadonlySet<string> = new Set(['jurisdiction']);
 
 /** 1099-R box 7 distribution codes (Instructions for Forms 1099-R and 5498). */
 export const DISTRIBUTION_CODES = new Set([
@@ -600,9 +606,12 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
     for (const field of REQUIRED_FORM_FIELDS[form] ?? []) {
       const fact = fields.get(field);
       if (fact?.status === 'extracted') continue;
+      const consequence = REQUIRED_NON_AMOUNT_FIELDS.has(field)
+        ? 'It is held until that is known.'
+        : 'The form is held: the engine would read it as zero.';
       issues.push(formIssue(fields, formKey, {
         code: 'REQUIRED_AMOUNT_UNKNOWN',
-        message: `${form} ${field} is ${fact ? 'unreadable' : 'not on the form'}. The form is held: the engine would read it as zero.`,
+        message: `${form} ${field} is ${fact ? 'unreadable' : RECORD_KINDS.has(form) ? 'not in the evidence' : 'not on the form'}. ${consequence}`,
         factId: fact?.factId,
         sourceField: field,
         observed: 'unknown',
@@ -690,7 +699,35 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
         break;
     }
   }
+  detectReceiptsRepeating1099(forms, issues);
   detectDuplicateForms(forms, issues);
+}
+
+/**
+ * Business receipts are the income no 1099 reports. Receipts equal to a
+ * 1099-NEC's amount were most likely counted from that 1099 again.
+ */
+function detectReceiptsRepeating1099(forms: Map<string, Map<string, TaxFact>>, issues: FactValidationIssue[]): void {
+  const necAmounts = new Map<number, string>();
+  for (const [formKey, fields] of forms) {
+    if (formOf(fields) !== '1099-NEC') continue;
+    const amt = amount(fields, 'amount');
+    if (amt !== undefined && amt > 0) necAmounts.set(amt, formKey);
+  }
+  for (const [formKey, fields] of forms) {
+    if (formOf(fields) !== 'Business receipts') continue;
+    const amt = amount(fields, 'amount');
+    const nec = amt !== undefined ? necAmounts.get(amt) : undefined;
+    if (!nec) continue;
+    issues.push(formIssue(fields, formKey, {
+      code: 'RECEIPTS_MATCH_1099',
+      severity: 'warning',
+      message: `Business receipts of ${amt} equal the 1099-NEC ${nec}. Receipts must exclude amounts a 1099 reports; confirm this is not the same income.`,
+      sourceField: 'amount',
+      factId: fields.get('amount')?.factId,
+      observed: amt,
+    }));
+  }
 }
 
 /** Identity used to spot the same form imported twice from different files. */
@@ -703,6 +740,8 @@ const DUPLICATE_KEYS: Readonly<Record<string, readonly string[]>> = {
   'SSA-1099': ['netBenefits', 'beneficiaryName'],
   '1098': ['lenderTin', 'mortgageInterest'],
   '1098-T': ['institutionEin', 'tuitionPaid', 'studentName'],
+  'Business receipts': ['description', 'amount'],
+  'Estimated payment': ['jurisdiction', 'amount', 'datePaid'],
 };
 
 /**

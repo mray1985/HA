@@ -7,7 +7,11 @@
  * - document evidence: a form that validation holds is BLOCKING (its values are
  *   not in the return until it is resolved); other evidence issues, documents
  *   that could not be read, and education forms waiting for the credit choice
- *   are REVIEW.
+ *   are REVIEW;
+ * - recorded evidence (dependents, estimated payments, state residency): what
+ *   the evidence names but the return cannot hold yet — a dependent missing
+ *   the months at home, a payment with no date, conflicting residency — is
+ *   REVIEW, recomputed from the facts on every run.
  *
  * A preparer clears ERROR and BLOCKING items only by changing the return or the
  * documents — the item disappears on the next run. WARNING and REVIEW items can
@@ -20,8 +24,16 @@
 
 import type { CalculationResult, Diagnostic, DiagnosticCategory, TaxReturn } from '@hatax/engine';
 import { DIAGNOSTIC_CATEGORIES, runReturnDiagnostics } from '@hatax/engine';
-import { formKeyOf, validateImportedFacts, type IngestedDocument, type TaxFact } from '@hatax/local-ai';
-import { SOURCE_FORM_KEY } from './returnApplier';
+import {
+  formKeyOf,
+  resolveDependents,
+  resolveEstimatedPayments,
+  resolveStateResidency,
+  validateImportedFacts,
+  type IngestedDocument,
+  type TaxFact,
+} from '@hatax/local-ai';
+import { dependentWaitReason, SOURCE_FORM_KEY } from './returnApplier';
 
 export type ReviewGroup = 'personal' | 'income' | 'dependents' | 'deductions' | 'credits' | 'payments' | 'state' | 'documents' | 'other';
 
@@ -178,6 +190,54 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
   return items;
 }
 
+/** Evidence recorded by the record tools that the return does not hold yet. */
+function recordItems(facts: TaxFact[], taxReturn: TaxReturn): ReviewItem[] {
+  const items: ReviewItem[] = [];
+  const labelOf = (formKey: string) => facts.find((f) => formKeyOf(f) === formKey)?.sourceFileName ?? formKey;
+  const documentOf = (formKey: string) => formKey.split('#')[0];
+  const typeLabel = (t: string) => t.replace('_', '-');
+
+  for (const person of resolveDependents(facts, taxReturn.taxYear)) {
+    if (person.ready) continue;
+    const key = person.formKeys[0]!;
+    items.push({ id: `record:dependent:${key}`, category: 'REVIEW', group: 'dependents', source: 'document', documentId: documentOf(key),
+      message: `${dependentWaitReason(person)} (${person.formKeys.map(labelOf).join(', ')})` });
+  }
+
+  const payments = resolveEstimatedPayments(facts, taxReturn.taxYear);
+  for (const w of payments.waiting) {
+    items.push({ id: `record:estimated-payment:${w.formKey}`, category: 'REVIEW', group: 'payments', source: 'document', documentId: documentOf(w.formKey),
+      message: `${w.jurisdiction === 'federal' ? 'Federal' : w.jurisdiction ?? 'An'} estimated payment (${labelOf(w.formKey)}) is not counted: ${w.reason}` });
+  }
+  for (const e of payments.excluded) {
+    items.push({ id: `record:estimated-payment:${e.formKey}`, category: 'INFORMATIONAL', group: 'payments', source: 'document', documentId: documentOf(e.formKey),
+      message: `Estimated payment (${labelOf(e.formKey)}) is left out: ${e.reason}` });
+  }
+  const configs = taxReturn.stateReturns ?? [];
+  for (const stateCode of Object.keys(payments.states)) {
+    if (configs.some((c) => c.stateCode === stateCode)) continue;
+    items.push({ id: `record:state-payments:${stateCode}`, category: 'REVIEW', group: 'state', source: 'document',
+      message: `${stateCode} estimated payments are recorded, but the case has no ${stateCode} state return. Record ${stateCode} residency or add the state.` });
+  }
+
+  for (const r of resolveStateResidency(facts)) {
+    const key = r.formKeys[0]!;
+    if (!r.ready) {
+      const why = [...r.problems, ...r.conflicts.map((c) => `Sources disagree on the ${c.field} (${c.values.map((v) => String(v.value)).join(' vs ')}).`)];
+      items.push({ id: `record:residency:${r.stateCode}`, category: 'REVIEW', group: 'state', source: 'document', documentId: documentOf(key),
+        message: `${r.stateCode} residency is not set: ${why.join(' ')}` });
+      continue;
+    }
+    const config = configs.find((c) => c.stateCode === r.stateCode);
+    const byHand = config && typeof (config as unknown as Record<string, unknown>)[SOURCE_FORM_KEY] !== 'string';
+    if (byHand && (config.residencyType !== r.residencyType || (r.residencyType === 'part_year' && config.daysLivedInState !== r.daysLivedInState))) {
+      items.push({ id: `record:residency:${r.stateCode}`, category: 'REVIEW', group: 'state', source: 'document', documentId: documentOf(key),
+        message: `The return has ${r.stateCode} as ${typeLabel(config.residencyType)} (entered by hand), but ${r.formKeys.map(labelOf).join(', ')} says ${typeLabel(r.residencyType!)}.` });
+    }
+  }
+  return items;
+}
+
 export function buildCaseReview(input: {
   taxReturn: TaxReturn;
   calculation?: CalculationResult | null;
@@ -195,7 +255,7 @@ export function buildCaseReview(input: {
     ...(d.field ? { field: d.field } : {}),
     ...(d.itemLabel ? { itemLabel: d.itemLabel } : {}),
   }));
-  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...engineItems]
+  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...recordItems(input.facts, input.taxReturn), ...engineItems]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

@@ -23,9 +23,10 @@ import {
 } from 'lucide-react';
 import FileDropZone from './FileDropZone';
 import CurrencyInput from '../common/CurrencyInput';
-import { useCaseStore } from '../../store/caseStore';
+import { flushCaseSave, useCaseStore } from '../../store/caseStore';
+import { recordPriorYearDependents } from '../../services/recordTools';
 import { FilingStatus } from '@hatax/engine';
-import type { TaxReturn, PriorYearSummary, Dependent } from '@hatax/engine';
+import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
 import {
   parseCompetitorReturn,
   type CompetitorExtractResult,
@@ -94,6 +95,8 @@ function fmt$(v: number): string {
 
 export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelProps) {
   const updateField = useCaseStore(s => s.updateField);
+  const returnId = useCaseStore(s => s.returnId);
+  const reloadEvidence = useCaseStore(s => s.reloadEvidence);
   const taxReturn = useCaseStore(s => s.taxReturn);
 
   // State machine
@@ -203,19 +206,13 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           }
         }
 
-        // Dependents
-        if (result.dependents.length > 0) {
-          const deps: Dependent[] = result.dependents.map((d, i) => ({
-            id: `imported-dep-${i}`,
-            firstName: d.firstName,
-            lastName: d.lastName,
-            ssnLastFour: d.ssnLastFour,
-            relationship: d.relationship || '',
-            monthsLivedWithYou: 12,
-          }));
-          // Merge with existing dependents (don't overwrite)
-          const existing = taxReturn?.dependents || [];
-          updateField('dependents', [...existing, ...deps]);
+        // Dependents go through add_dependent: the prior-year return names them
+        // but not the months each lived at home this year, so each waits in the
+        // case review for that answer instead of being assumed to qualify.
+        if (result.dependents.length > 0 && returnId) {
+          flushCaseSave();
+          recordPriorYearDependents(returnId, result.dependents, result.detectedTaxYear);
+          reloadEvidence();
         }
       } else {
         // Prior-year mode: write as PriorYearSummary
@@ -259,7 +256,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
       setError(err instanceof Error ? err.message : 'Import failed.');
       setState('review');
     }
-  }, [result, importMode, editablePersonal, fieldOverrides, editableFinancials, updateField, taxReturn]);
+  }, [result, importMode, editablePersonal, fieldOverrides, editableFinancials, updateField, returnId, reloadEvidence]);
 
   // ── Reset handler ──
   const handleReset = () => {

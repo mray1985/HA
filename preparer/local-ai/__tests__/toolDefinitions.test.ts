@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { TAX_TOOL_NAMES, TOOL_FIELD_SCHEMAS } from '../src/taxTools.js';
+import { RETURN_TOOL_NAMES } from '../src/returnTools.js';
+import { fieldSchemaFor, TAX_TOOL_NAMES } from '../src/taxTools.js';
 import { taxToolDefinitions, zodToJsonSchema } from '../src/toolDefinitions.js';
 
 describe('taxToolDefinitions', () => {
   const defs = taxToolDefinitions();
 
-  it('defines every tax tool exactly once', () => {
-    expect(defs.map((d) => d.name)).toEqual([...TAX_TOOL_NAMES]);
+  it('defines every tax tool and both return tools exactly once', () => {
+    expect(defs.map((d) => d.name)).toEqual([...TAX_TOOL_NAMES, ...RETURN_TOOL_NAMES]);
   });
 
   it('exposes exactly the field names the validator accepts', () => {
     for (const d of defs) {
-      if (d.name === 'set_filing_status_candidate') continue;
+      if (d.name === 'set_filing_status_candidate' || d.name === 'calculate_return' || d.name === 'run_diagnostics') continue;
       const props = Object.keys((d.parameters as { properties: object }).properties);
-      expect(props).toEqual(Object.keys(TOOL_FIELD_SCHEMAS[d.name].shape));
+      expect(props).toEqual(Object.keys(fieldSchemaFor(d.name).shape));
       expect(d.parameters).toMatchObject({ type: 'object', additionalProperties: false });
     }
   });
@@ -32,6 +33,23 @@ describe('taxToolDefinitions', () => {
         additionalProperties: false,
       },
     });
+  });
+
+  it('gives a model the same limits the validator enforces', () => {
+    const props = (name: string) => (defs.find((d) => d.name === name)!.parameters as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(props('add_dependent').monthsLivedWithYou).toEqual({ type: 'integer', minimum: 0, maximum: 12 });
+    expect(props('add_dependent').dateOfBirth).toEqual({ type: 'string', pattern: String.raw`^\d{4}-\d{2}-\d{2}$` });
+    expect(props('add_dependent').relationship).toMatchObject({ type: 'string', enum: expect.arrayContaining(['Daughter', 'None (not related)']) });
+    expect(props('add_estimated_payment').jurisdiction).toMatchObject({ enum: expect.arrayContaining(['federal', 'CA']) });
+    expect(props('add_estimated_payment').installment).toEqual({ type: 'integer', minimum: 1, maximum: 4 });
+    expect(props('add_schedule_c_income').amount).toEqual({ type: 'number', minimum: 0 });
+    expect(props('set_state_residency').residencyType).toEqual({ type: 'string', enum: ['resident', 'part_year', 'nonresident'] });
+  });
+
+  it('gives the return tools no arguments', () => {
+    for (const name of RETURN_TOOL_NAMES) {
+      expect(defs.find((d) => d.name === name)!.parameters).toEqual({ type: 'object', properties: {}, additionalProperties: false });
+    }
   });
 
   it('constrains the filing-status candidate to the five statuses', () => {

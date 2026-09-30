@@ -13,7 +13,8 @@ import { extractFromImage, extractFromPDF, extractFromPDFWithOCR } from '../../s
 import type { PDFExtractResult } from '../../services/pdfExtractHelpers';
 import { applyExtraction } from '../../services/returnApplier';
 import { appendAudit } from '../../services/caseAudit';
-import { useCaseStore } from '../../store/caseStore';
+import { runReturnChecks } from '../../services/recordTools';
+import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 import ExpenseScannerToolView from '../tools/ExpenseScannerToolView';
 import CSVImportPanel from '../import/CSVImportPanel';
 import TXFImportPanel from '../import/TXFImportPanel';
@@ -25,7 +26,9 @@ const OUTCOME_LABEL: Record<DocumentPieceOutcome, { text: string; className: str
   income_item: { text: 'Entered on the return', className: 'text-emerald-300' },
   aggregate: { text: "Included in the return's total", className: 'text-emerald-300' },
   aggregate_waiting: { text: 'Waiting — a related form is held', className: 'text-amber-300' },
-  held: { text: 'Held for review', className: 'text-amber-300' },
+  dependent: { text: 'Added as a dependent', className: 'text-emerald-300' },
+  dependent_waiting: { text: 'Dependent — details needed', className: 'text-amber-300' },
+  held:{ text: 'Held for review', className: 'text-amber-300' },
   recorded: { text: 'Recorded — needs your decision', className: 'text-sky-300' },
   not_applied: { text: 'Read — enter it on the return', className: 'text-sky-300' },
 };
@@ -127,6 +130,8 @@ export default function DocumentsPanel() {
           continue;
         }
         const extracted = await readFile(file);
+        // An edit made while the file was read is saved before the applier reads the return.
+        flushCaseSave();
         const applied = applyExtractionToDocument({ returnId, taxYear: taxReturn.taxYear, document: registered.document, extracted });
         if (applied.provenanceError) failures.push(`${file.name}: ${applied.provenanceError}`);
         const outcomes = applyExtraction(returnId, applied);
@@ -136,10 +141,13 @@ export default function DocumentsPanel() {
           fileName: file.name,
           outcome: applied.unclassified ? 'not identified' : outcomes.join(', ') || 'nothing applied',
         });
+        reloadEvidence();
       } catch (err) {
         failures.push(`${file.name}: ${err instanceof Error ? err.message : 'could not be read'}`);
       }
     }
+    // §47: after the documents are applied, the return is recalculated and its diagnostics run.
+    runReturnChecks(returnId);
     setBusy(null);
     setErrors(failures);
     reloadEvidence();

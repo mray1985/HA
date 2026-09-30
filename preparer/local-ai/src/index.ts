@@ -3,6 +3,8 @@
 // that entry from a Vite bundle.
 export * from './taxFact.js';
 export * from './taxTools.js';
+export * from './returnTools.js';
+export * from './recordResolution.js';
 export * from './documentIngestion.js';
 export * from './documentClassifier.js';
 export * from './documentOcr.js';

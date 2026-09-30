@@ -1,5 +1,6 @@
 /**
- * Tool definitions for tool-calling models (work order §5).
+ * Tool definitions for tool-calling models (work order §5): every fact tool
+ * and both return tools.
  *
  * The JSON Schemas shown to a model are generated from the same zod schemas
  * that validate every call (taxTools.ts), so a model can never be told a field
@@ -8,17 +9,18 @@
  */
 
 import { z } from 'zod';
+import { RETURN_TOOL_NAMES, ReturnToolArgsSchema, type ReturnToolName } from './returnTools.js';
 import {
+  fieldSchemaFor,
   SetFilingStatusCandidateSchema,
   TAX_TOOL_NAMES,
-  TOOL_FIELD_SCHEMAS,
   type TaxToolName,
 } from './taxTools.js';
 
 export type JsonSchema = Record<string, unknown>;
 
 export interface ToolDefinition {
-  name: TaxToolName;
+  name: TaxToolName | ReturnToolName;
   description: string;
   parameters: JsonSchema;
 }
@@ -35,12 +37,24 @@ export function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchema {
     case 'ZodOptional':
       return zodToJsonSchema(def.innerType as z.ZodTypeAny);
     case 'ZodString': {
-      const checks = (def.checks as Array<{ kind: string; value?: number }>) ?? [];
+      const checks = (def.checks as Array<{ kind: string; value?: number; regex?: RegExp }>) ?? [];
       const min = checks.find((c) => c.kind === 'min');
-      return min ? { type: 'string', minLength: min.value } : { type: 'string' };
+      const regex = checks.find((c) => c.kind === 'regex');
+      return {
+        type: 'string',
+        ...(min ? { minLength: min.value } : {}),
+        ...(regex?.regex ? { pattern: regex.regex.source } : {}),
+      };
     }
-    case 'ZodNumber':
-      return { type: 'number' };
+    case 'ZodNumber': {
+      const checks = (def.checks as Array<{ kind: string; value?: number; inclusive?: boolean }>) ?? [];
+      const out: JsonSchema = { type: checks.some((c) => c.kind === 'int') ? 'integer' : 'number' };
+      for (const c of checks) {
+        if (c.kind === 'min') out[c.inclusive === false ? 'exclusiveMinimum' : 'minimum'] = c.value;
+        if (c.kind === 'max') out[c.inclusive === false ? 'exclusiveMaximum' : 'maximum'] = c.value;
+      }
+      return out;
+    }
     case 'ZodBoolean':
       return { type: 'boolean' };
     case 'ZodEnum':
@@ -77,7 +91,7 @@ function isOptional(schema: z.ZodTypeAny): boolean {
 const NO_GUESSING =
   'Pass only values present in the evidence, copied exactly. Omit any field the evidence does not contain — never pass 0 or an empty value for a missing field.';
 
-const DESCRIPTIONS: Record<TaxToolName, string> = {
+const DESCRIPTIONS: Record<TaxToolName | ReturnToolName, string> = {
   add_w2: `Add one Form W-2 to the return. ${NO_GUESSING}`,
   add_1099_int: `Add one Form 1099-INT (interest income). ${NO_GUESSING}`,
   add_1099_div: `Add one Form 1099-DIV (dividends and distributions). ${NO_GUESSING}`,
@@ -88,17 +102,29 @@ const DESCRIPTIONS: Record<TaxToolName, string> = {
   add_education_expense: `Add one Form 1098-T (tuition statement). This records the statement; which education credit applies is decided separately. ${NO_GUESSING}`,
   set_filing_status_candidate:
     'Record a filing-status candidate stated in the evidence. This does not set the final filing status; the tax engine and preparer decide that.',
+  add_dependent: `Record one dependent named in the evidence (a prior-year return, the client's answers, an intake sheet). Call once per person. Whether they qualify is decided by the engine and the preparer. ${NO_GUESSING}`,
+  add_schedule_c_income: `Record business gross receipts that no Form 1099-NEC or 1099-K reports (cash, checks, direct deposits), from the business's income records. Never include amounts a 1099 already reports. ${NO_GUESSING}`,
+  add_estimated_payment: `Record one estimated tax payment (federal Form 1040-ES or a state's), or the prior year's overpayment applied to this year. Call once per payment. ${NO_GUESSING}`,
+  set_state_residency: `Record the taxpayer's residency in one state for the tax year, as the evidence states it. ${NO_GUESSING}`,
+  calculate_return: 'Calculate the return with the tax engine and report its totals. Takes no arguments and changes nothing.',
+  run_diagnostics: "Run the return's diagnostics and the evidence checks, and report what needs attention. Takes no arguments and changes nothing.",
 };
 
 export function taxToolDefinitions(): ToolDefinition[] {
-  return TAX_TOOL_NAMES.map((name) => ({
+  const factTools: ToolDefinition[] = TAX_TOOL_NAMES.map((name) => ({
     name,
     description: DESCRIPTIONS[name],
     parameters:
       name === 'set_filing_status_candidate'
         ? zodToJsonSchema(SetFilingStatusCandidateSchema)
-        : zodToJsonSchema(TOOL_FIELD_SCHEMAS[name]),
+        : zodToJsonSchema(fieldSchemaFor(name)),
   }));
+  const returnTools: ToolDefinition[] = RETURN_TOOL_NAMES.map((name) => ({
+    name,
+    description: DESCRIPTIONS[name],
+    parameters: zodToJsonSchema(ReturnToolArgsSchema),
+  }));
+  return [...factTools, ...returnTools];
 }
 
 /** OpenAI-style `tools` array (llama-server /v1/chat/completions). */

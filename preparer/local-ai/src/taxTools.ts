@@ -1,9 +1,12 @@
 /**
- * Schema-validated tax-engine tools for automation.
+ * Schema-validated tax-engine tools for automation (work order §5, HA-AI-011).
  * Models call these instead of writing Form 1040 line fields.
- * Successful calls return TaxFacts, the validated fields, and how the result
- * applies to the return (an income item, a total recomputed from every
- * document, a preparer choice, or a candidate fact). They do not calculate tax.
+ *
+ * Fact tools (`invokeTaxTool`) return TaxFacts, the validated fields, and how
+ * the result applies to the return (an income item, a total recomputed from
+ * every source, a dependent, a preparer choice, or a candidate fact). They do
+ * not calculate tax. Return tools (`returnTools.ts`) calculate the return and
+ * run its diagnostics; they never change it.
  */
 
 import { z } from 'zod';
@@ -14,11 +17,13 @@ import {
   type FieldRawTextSource,
   type FieldSourceLocationSource,
   type TaxFact,
+  type TaxFactSourceKind,
 } from './taxFact.js';
 
-// ─── Tool names (work order HA-AI-011) ───────────────────────
+// ─── Tool names ──────────────────────────────────────────────
 
-export const TAX_TOOL_NAMES = [
+/** Tools that take one tax form's boxes. */
+export const FORM_TOOL_NAMES = [
   'add_w2',
   'add_1099_int',
   'add_1099_div',
@@ -27,39 +32,65 @@ export const TAX_TOOL_NAMES = [
   'add_ssa_1099',
   'add_mortgage_interest',
   'add_education_expense',
-  'set_filing_status_candidate',
 ] as const;
+
+/**
+ * Tools that record a fact about the case from any evidence: a prior-year
+ * return, a client's answer, a payment confirmation, business income records.
+ */
+export const RECORD_TOOL_NAMES = [
+  'add_dependent',
+  'add_schedule_c_income',
+  'add_estimated_payment',
+  'set_state_residency',
+] as const;
+
+/** Every tool that produces TaxFacts. */
+export const TAX_TOOL_NAMES = [...FORM_TOOL_NAMES, 'set_filing_status_candidate', ...RECORD_TOOL_NAMES] as const;
 
 export type TaxToolName = (typeof TAX_TOOL_NAMES)[number];
 
-/** Tools that take a source document's fields (every tool except the filing-status candidate). */
-export type DocumentToolName = Exclude<TaxToolName, 'set_filing_status_candidate'>;
+/** Tools that take one tax form's boxes. */
+export type DocumentToolName = (typeof FORM_TOOL_NAMES)[number];
 
-/** Tools whose result is one engine income item per document (addIncomeItem). */
-export type TaxToolIncomeName = 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r';
+export type RecordToolName = (typeof RECORD_TOOL_NAMES)[number];
+
+/** Tools whose result is one engine item per source (addIncomeItem). */
+export type TaxToolIncomeName = 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r' | 'add_schedule_c_income';
 
 export function isDocumentTool(name: string): name is DocumentToolName {
-  return name !== 'set_filing_status_candidate' && (TAX_TOOL_NAMES as readonly string[]).includes(name);
+  return (FORM_TOOL_NAMES as readonly string[]).includes(name);
 }
+
+export function isRecordTool(name: string): name is RecordToolName {
+  return (RECORD_TOOL_NAMES as readonly string[]).includes(name);
+}
+
+/** Totals the engine keeps once per return, recomputed from every source's facts. */
+export type AggregateTarget = 'socialSecurityBenefits' | 'mortgageInterest' | 'estimatedPayments' | 'stateResidency';
 
 /**
  * How a successful call applies to the return.
- * - income_item: one engine item per document (addIncomeItem).
- * - aggregate: the engine holds one total for the return (Social Security
- *   benefits; Schedule A mortgage interest), so the value is recomputed from
- *   every document's facts — re-importing a form can never double-count it.
+ * - income_item: one engine item per source (addIncomeItem).
+ * - aggregate: the engine holds one value for the return (Social Security
+ *   benefits; mortgage interest; estimated payments by quarter and state;
+ *   each state's residency), so it is recomputed from every source's facts —
+ *   recording the same evidence again can never double-count it.
+ * - dependent: one engine dependent per person, merged across every source
+ *   that names them (a prior-year return, the client's answers).
  * - needs_preparer_choice: the engine needs a decision the document cannot
  *   make (education: American Opportunity vs Lifetime Learning credit).
  * - candidate_fact: recorded as a fact only; never sets the return.
  */
 export type TaxToolApplication =
   | { kind: 'income_item'; itemType: TaxToolIncomeType }
-  | { kind: 'aggregate'; target: 'socialSecurityBenefits' | 'mortgageInterest' }
+  | { kind: 'aggregate'; target: AggregateTarget }
+  | { kind: 'dependent' }
   | { kind: 'needs_preparer_choice'; target: 'educationCredit'; choice: 'creditType' }
   | { kind: 'candidate_fact' };
 
 /** Income-item API keys used by addIncomeItem / intentExecutor. */
-export type TaxToolIncomeType = 'w2' | '1099int' | '1099div' | '1099nec' | '1099r';
+export type TaxToolIncomeType = 'w2' | '1099int' | '1099div' | '1099nec' | '1099r' | 'business-receipts';
 
 export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
@@ -67,9 +98,11 @@ export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> 
   add_1099_div: '1099div',
   add_1099_nec: '1099nec',
   add_1099_r: '1099r',
+  add_schedule_c_income: 'business-receipts',
 };
 
-const INCOME_TYPE_TO_TOOL: Record<string, TaxToolIncomeName> = {
+/** Classified document income type → the form tool that reads it. */
+const INCOME_TYPE_TO_TOOL: Record<string, FormIncomeToolName> = {
   w2: 'add_w2',
   '1099int': 'add_1099_int',
   '1099div': 'add_1099_div',
@@ -77,7 +110,9 @@ const INCOME_TYPE_TO_TOOL: Record<string, TaxToolIncomeName> = {
   '1099r': 'add_1099_r',
 };
 
-export function toolNameForIncomeType(incomeType: string | null | undefined): TaxToolIncomeName | null {
+type FormIncomeToolName = Exclude<TaxToolIncomeName, 'add_schedule_c_income'>;
+
+export function toolNameForIncomeType(incomeType: string | null | undefined): FormIncomeToolName | null {
   if (!incomeType) return null;
   return INCOME_TYPE_TO_TOOL[incomeType] ?? null;
 }
@@ -271,6 +306,111 @@ export const SetFilingStatusCandidateSchema = z
   })
   .strict();
 
+// ─── Record tools ────────────────────────────────────────────
+
+export const US_STATE_CODES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
+  'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
+  'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT',
+  'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+] as const;
+
+/** Relationship to the taxpayer, as the return records it (the engine and its diagnostics read these). */
+export const DEPENDENT_RELATIONSHIPS = [
+  'Son', 'Daughter', 'Stepson', 'Stepdaughter', 'Foster Child',
+  'Brother', 'Sister', 'Half Brother', 'Half Sister', 'Stepbrother', 'Stepsister',
+  'Parent', 'Mother', 'Father', 'Stepmother', 'Stepfather',
+  'Grandchild', 'Grandparent',
+  'Niece', 'Nephew', 'Aunt', 'Uncle',
+  'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Brother-in-Law', 'Sister-in-Law',
+  'None (not related)',
+] as const;
+
+export type DependentRelationship = (typeof DEPENDENT_RELATIONSHIPS)[number];
+
+/** A relationship as printed ("DAUGHTER", "step son") → the return's term; undefined when it is none of them. */
+export function canonicalRelationship(text: string | undefined): DependentRelationship | undefined {
+  if (!text) return undefined;
+  const key = text.toLowerCase().replace(/[^a-z]/g, '');
+  return DEPENDENT_RELATIONSHIPS.find((r) => r.toLowerCase().replace(/[^a-z]/g, '') === key);
+}
+
+export const RESIDENCY_TYPES = ['resident', 'part_year', 'nonresident'] as const;
+
+export const ESTIMATED_PAYMENT_JURISDICTIONS = ['federal', ...US_STATE_CODES] as const;
+
+/** A calendar date, YYYY-MM-DD, that exists. */
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((s) => {
+    const d = new Date(`${s}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  }, 'not a calendar date');
+
+const optionalDate = z.preprocess(asMissing, isoDate.optional());
+const optionalNonNegative = z.preprocess(asMissing, z.number().finite().nonnegative().optional());
+
+/** Form 1040 dependent: one person, from any evidence that names them. */
+const AddDependentFieldsSchema = z
+  .object({
+    firstName: optionalString,
+    lastName: optionalString,
+    /** Full SSN, ITIN or ATIN (9 digits; dashes allowed). */
+    ssn: z.preprocess(asMissing, z.string().regex(/^\d{3}-?\d{2}-?\d{4}$/).optional()),
+    /** Only the last four digits, when that is all the evidence shows (a prior-year return copy). */
+    ssnLastFour: z.preprocess(asMissing, z.string().regex(/^\d{4}$/).optional()),
+    relationship: z.preprocess(asMissing, z.enum(DEPENDENT_RELATIONSHIPS).optional()),
+    dateOfBirth: optionalDate,
+    /** Months the person lived in the taxpayer's home during the tax year. */
+    monthsLivedWithYou: z.preprocess(asMissing, z.number().int().min(0).max(12).optional()),
+    isStudent: optionalBoolean,
+    isDisabled: optionalBoolean,
+  })
+  .strict();
+
+/** Schedule C line 1 receipts that no 1099-NEC or 1099-K reports. */
+const AddScheduleCIncomeFieldsSchema = z
+  .object({
+    businessName: optionalString,
+    /** What the receipts are, as the income records name them. */
+    description: optionalString,
+    amount: optionalNonNegative,
+  })
+  .strict();
+
+/** One estimated tax payment (Form 1040-ES or a state's), or a prior-year overpayment applied. */
+const AddEstimatedPaymentFieldsSchema = z
+  .object({
+    jurisdiction: z.preprocess(asMissing, z.enum(ESTIMATED_PAYMENT_JURISDICTIONS).optional()),
+    amount: optionalNonNegative,
+    datePaid: optionalDate,
+    /** Installment number printed on the voucher or confirmation (1–4). */
+    installment: z.preprocess(asMissing, z.number().int().min(1).max(4).optional()),
+    /** Tax year the payment is for, as the confirmation states it. */
+    taxYear: z.preprocess(asMissing, z.number().int().min(2000).max(2100).optional()),
+    /** The prior year's overpayment applied to this year's estimated tax. */
+    priorYearOverpaymentApplied: optionalBoolean,
+    confirmationNumber: optionalString,
+  })
+  .strict();
+
+/** The taxpayer's residency in one state for the tax year. */
+const SetStateResidencyFieldsSchema = z
+  .object({
+    stateCode: z.preprocess(asMissing, z.enum(US_STATE_CODES).optional()),
+    residencyType: z.preprocess(asMissing, z.enum(RESIDENCY_TYPES).optional()),
+    daysLivedInState: z.preprocess(asMissing, z.number().int().min(1).max(366).optional()),
+  })
+  .strict();
+
+export const RECORD_FIELD_SCHEMAS: Record<RecordToolName, z.ZodObject<z.ZodRawShape>> = {
+  add_dependent: AddDependentFieldsSchema,
+  add_schedule_c_income: AddScheduleCIncomeFieldsSchema,
+  add_estimated_payment: AddEstimatedPaymentFieldsSchema,
+  set_state_residency: SetStateResidencyFieldsSchema,
+};
+
 export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawShape>> = {
   add_w2: AddW2FieldsSchema,
   add_1099_int: Add1099IntFieldsSchema,
@@ -292,14 +432,23 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_mortgage_interest: { kind: 'aggregate', target: 'mortgageInterest' },
   add_education_expense: { kind: 'needs_preparer_choice', target: 'educationCredit', choice: 'creditType' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
+  add_dependent: { kind: 'dependent' },
+  add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
+  add_estimated_payment: { kind: 'aggregate', target: 'estimatedPayments' },
+  set_state_residency: { kind: 'aggregate', target: 'stateResidency' },
 };
+
+/** The field schema of a fact tool that takes fields (every tool but the filing-status candidate). */
+export function fieldSchemaFor(tool: DocumentToolName | RecordToolName): z.ZodObject<z.ZodRawShape> {
+  return isRecordTool(tool) ? RECORD_FIELD_SCHEMAS[tool] : TOOL_FIELD_SCHEMAS[tool];
+}
 
 /** Keep only schema-known keys (for OCR bridges). Direct tool calls still reject unknowns. */
 export function pickToolFieldArgs(
-  tool: DocumentToolName,
+  tool: DocumentToolName | RecordToolName,
   args: Record<string, unknown>,
 ): Record<string, unknown> {
-  const shape = TOOL_FIELD_SCHEMAS[tool].shape as Record<string, unknown>;
+  const shape = fieldSchemaFor(tool).shape as Record<string, unknown>;
   const picked: Record<string, unknown> = {};
   for (const key of Object.keys(shape)) {
     if (Object.prototype.hasOwnProperty.call(args, key)) {
@@ -319,16 +468,32 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_mortgage_interest: '1098',
   add_education_expense: '1098T',
   set_filing_status_candidate: 'FILING_STATUS',
+  add_dependent: 'DEPENDENT',
+  add_schedule_c_income: 'SCHC_RECEIPTS',
+  add_estimated_payment: 'ESTPAY',
+  set_state_residency: 'STATE_RESIDENCY',
 };
+
+/** Fact-type prefix of every fact a tool writes (`<prefix>_<field>`). */
+export function factPrefixOf(tool: TaxToolName): string {
+  return `${FACT_TYPE_PREFIX[tool]}_`;
+}
 
 // ─── Call context / results ──────────────────────────────────
 
 export interface TaxToolCallContext {
   returnId: string;
   taxYear: number;
+  /** The evidence: an uploaded document, or a recorded answer / import with its own id. */
   sourceDocumentId: string;
-  /** 0-based position of the form within a file holding several (two W-2s in one PDF). */
+  /**
+   * 0-based position of the form within a file holding several (two W-2s in
+   * one PDF), or of the entry within its source (the second dependent listed
+   * on a prior-year return).
+   */
   sourceFormIndex?: number;
+  /** §60 source kind. Absent means an original tax document. */
+  sourceKind?: TaxFactSourceKind;
   sourceFileName: string;
   extractor: string;
   /** Per-field score. A missing field stays null. */
@@ -412,6 +577,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       fileName: context.sourceFileName,
       extractor: context.extractor,
       formIndex: context.sourceFormIndex,
+      sourceKind: context.sourceKind,
       fields,
       factTypeFor: () => 'FILING_STATUS_CANDIDATE',
       confidence: context.confidence,
@@ -428,7 +594,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     };
   }
 
-  const schema = TOOL_FIELD_SCHEMAS[tool];
+  const schema = fieldSchemaFor(tool);
   const parsed = schema.safeParse(args);
   if (!parsed.success) {
     return { ok: false, tool, error: formatZodError(parsed.error) };
@@ -456,6 +622,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     fileName: context.sourceFileName,
     extractor: context.extractor,
     formIndex: context.sourceFormIndex,
+    sourceKind: context.sourceKind,
     fields: factFields,
     factTypeFor: (field) => `${prefix}_${field}`,
     confidence: context.confidence,
@@ -505,4 +672,21 @@ export function setFilingStatusCandidate(
   context: TaxToolCallContext,
 ): TaxToolResult {
   return invokeTaxTool({ tool: 'set_filing_status_candidate', args, context });
+}
+
+export function addDependent(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
+  return invokeTaxTool({ tool: 'add_dependent', args, context });
+}
+
+export function addScheduleCIncome(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
+  return invokeTaxTool({ tool: 'add_schedule_c_income', args, context });
+}
+
+export function addEstimatedPayment(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
+  return invokeTaxTool({ tool: 'add_estimated_payment', args, context });
+}
+
+/** Records the taxpayer's residency in one state; the applier sets that state's return from every source. */
+export function setStateResidency(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
+  return invokeTaxTool({ tool: 'set_state_residency', args, context });
 }

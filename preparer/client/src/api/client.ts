@@ -432,6 +432,7 @@ export const ARRAY_FIELD_MAP: Record<string, keyof TaxReturn> = {
   w2: 'w2Income',
   '1099nec': 'income1099NEC',
   '1099k': 'income1099K',
+  'business-receipts': 'businessReceipts',
   '1099int': 'income1099INT',
   '1099div': 'income1099DIV',
   '1099r': 'income1099R',
