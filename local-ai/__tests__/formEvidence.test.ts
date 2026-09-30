@@ -70,9 +70,32 @@ describe('applyPageEvidence', () => {
     expect(mapBoxesToTool(W2, result.values).reviewBoxes.map((b) => b.key)).toContain('13.statutory');
   });
 
+  it('keeps an amount printed in two boxes (3 and 5) for both — not a phantom', () => {
+    expect(result.phantoms).toEqual([]);
+    expect(result.located['3']?.box).not.toEqual(result.located['5']?.box);
+  });
+
   it('never locates a value that is not on the page', () => {
     const r = applyPageEvidence(W2, { '1': '67482.17' }, { words, raster: page });
     expect(r.located['1']).toBeNull();
     expect(r.region).toBeNull();
+  });
+});
+
+describe('phantom copies', () => {
+  it('removes a value a model copied into a second box when the page prints it once', () => {
+    const words = [
+      { text: '15', box: [10, 10, 20, 20] as const, source: 'pdf-text' as const },
+      { text: 'State', box: [22, 10, 50, 20] as const, source: 'pdf-text' as const },
+      { text: 'LA/1234567', box: [10, 25, 90, 35] as const, source: 'pdf-text' as const },
+      { text: '52431.18', box: [200, 25, 260, 35] as const, source: 'pdf-text' as const },
+    ];
+    const r = applyPageEvidence(getFormExtractionSchema('1099-R')!, { '1': '52431.18', '15.1': 'LA/1234567', '15.2': 'LA/1234567' }, {
+      words,
+      raster: { width: 300, height: 100, gray: new Uint8Array(300 * 100).fill(255) },
+    });
+    expect(r.phantoms).toEqual(['15.2']);
+    expect(r.values['15.1']).toBe('LA/1234567');
+    expect(r.values).not.toHaveProperty('15.2');
   });
 });

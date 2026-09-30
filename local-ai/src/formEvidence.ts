@@ -52,6 +52,11 @@ export interface FormEvidenceResult {
    * unconfirmed by a second reader.
    */
   box12FromPage: Record<string, { code: string; amount: string }>;
+  /**
+   * Box keys whose transcribed value is printed only once on the page but was
+   * also claimed by an earlier box — removed as phantom copies.
+   */
+  phantoms: string[];
   /** Region of the form instance that was read, when any value was located. */
   region: PixelBox | null;
 }
@@ -122,6 +127,24 @@ export function applyPageEvidence(
   }
   for (const key of candidates.keys()) if (!(key in located)) located[key] = null;
 
+  // One printed token backs one box. When several boxes claim a value that is
+  // printed only once, the first box in form order keeps it; the others are
+  // phantom copies (measured: a model copied a state cell into both state rows).
+  const phantoms: string[] = [];
+  const claimed = new Map<string, string>();
+  for (const b of schema.boxes) {
+    const at = located[b.key];
+    if (!at || (candidates.get(b.key)?.length ?? 0) !== 1) continue;
+    const token = at.box.map((n) => Math.round(n)).join(',');
+    if (!claimed.has(token)) {
+      claimed.set(token, b.key);
+      continue;
+    }
+    phantoms.push(b.key);
+    delete values[b.key];
+    located[b.key] = null;
+  }
+
   // 3. Checkboxes: deterministic reading replaces model text.
   const checkboxes: Record<string, CheckboxReading> = {};
   for (const b of schema.boxes) {
@@ -160,7 +183,7 @@ export function applyPageEvidence(
     }
   }
 
-  return { values, located, checkboxes, box12Codes, box12FromPage, region };
+  return { values, located, checkboxes, box12Codes, box12FromPage, phantoms, region };
 }
 
 /** Values sit below or right of their label; penalize candidates above/left. */
