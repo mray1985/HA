@@ -50,6 +50,14 @@ export interface DocumentClassificationRecord {
  * Provenance record for one dropped file on a return.
  * File bytes are not stored here — contentHash is the durable identity.
  */
+/**
+ * How one form in a document reached the return: an income item, a total
+ * recomputed across documents (or waiting for a held form), held for review,
+ * recorded as facts only (a preparer choice is needed), or not applied
+ * automatically (entered by hand).
+ */
+export type DocumentPieceOutcome = 'income_item' | 'aggregate' | 'aggregate_waiting' | 'held' | 'recorded' | 'not_applied';
+
 export interface IngestedDocument {
   documentId: string;
   returnId: string;
@@ -73,6 +81,8 @@ export interface IngestedDocument {
    * Each classified piece keeps its own matched markers and reason.
    */
   classifications?: DocumentClassificationRecord[];
+  /** Outcome per form in the file, in extraction order, once applied to the return. */
+  appliedAs?: DocumentPieceOutcome[];
 }
 
 export interface DocumentFileMeta {

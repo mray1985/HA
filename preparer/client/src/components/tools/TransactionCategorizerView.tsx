@@ -1,7 +1,7 @@
 /**
- * Transaction Categorizer View — AI-powered transaction classification dashboard.
+ * Transaction Categorizer View — transaction categorization dashboard.
  *
- * Shown inside the ExpenseScannerToolView when AI categorization results are available.
+ * Shown inside the ExpenseScannerToolView when categorization results are available.
  * Provides:
  *   - Summary cards per category (total amount, transaction count)
  *   - Expandable category groups with individual transactions

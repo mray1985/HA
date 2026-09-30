@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, ChevronDown, ChevronUp, Copy } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { parseFDX, FDXParseResult } from '../../services/fdxParser';
 import { MAX_FDX_SIZE } from '../../services/importHelpers';
@@ -45,7 +45,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function FDXImportPanel({ onBack }: FDXImportPanelProps) {
-  const { taxReturn, returnId, updateField } = useTaxReturnStore();
+  const { taxReturn, returnId, updateField } = useCaseStore();
   const [state, setState] = useState<FDXState>('upload');
   const [result, setResult] = useState<FDXParseResult | null>(null);
   const [importedCounts, setImportedCounts] = useState<Record<string, number>>({});

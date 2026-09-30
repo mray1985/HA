@@ -18,7 +18,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { calculateForm1040 } from '@hatax/engine';
-import { generateScenarios } from '../../e2e/scenario-fuzzer/generators';
+import { generateScenarios } from './scenarioFixtures/generators';
 
 const FUZZER_COUNT = parseInt(process.env.FUZZER_COUNT || '50', 10);
 const FUZZER_SEED = parseInt(process.env.FUZZER_SEED || '1', 10);

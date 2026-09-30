@@ -19,8 +19,10 @@ import {
   buildCaseReview,
   reopenItem,
   resolveItem,
+  groupForSection,
   type CaseReview,
   type CaseReviewRecord,
+  type ReviewGroup,
   type ReviewItem,
   type ReviewResolution,
 } from '../services/caseReview';
@@ -49,7 +51,7 @@ function readPath(obj: unknown, path: string): unknown {
 
 function calculate(taxReturn: TaxReturn): CalculationResult | null {
   try {
-    return calculateForm1040({ ...taxReturn, filingStatus: taxReturn.filingStatus || FilingStatus.Single });
+    return calculateForm1040({ ...taxReturn, filingStatus: taxReturn.filingStatus || FilingStatus.Single }, { enabled: true });
   } catch (err) {
     console.error('Calculation failed:', err);
     return null;
@@ -74,6 +76,8 @@ interface CaseState {
   selectedFormKeys: Set<string>;
   /** A tab another part of the case asked to show (e.g. "open this field"). */
   requestedTab: CaseTab | null;
+  /** Checklist group the Review tab should bring into view. */
+  focusedReviewGroup: ReviewGroup | null;
 
   openCase: (id: string) => void;
   closeCase: () => void;
@@ -81,8 +85,10 @@ interface CaseState {
   reloadEvidence: () => void;
 
   updateField: (field: string, value: unknown) => void;
-  /** Set a value at a dot path (e.g. "w2Income.0.wages"). */
+  /** Set a value at a dot path (e.g. "directDeposit.routingNumber"). */
   updateDeepField: (path: string, value: unknown) => void;
+  /** Replace the return with an edited copy (e.g. a Scenario Lab value applied), audited under `label`. */
+  applyEdit: (label: string, next: TaxReturn, from: unknown, to: unknown) => void;
 
   resolve: (item: ReviewItem, decision: ReviewResolution['decision'], note: string) => void;
   reopen: (itemId: string) => void;
@@ -95,6 +101,8 @@ interface CaseState {
   selectAllForms: (keys: string[]) => void;
   clearFormSelection: () => void;
   requestTab: (tab: CaseTab | null) => void;
+  /** Open the Review tab at the checklist group of a return section. */
+  showReviewSection: (section: string) => void;
 }
 
 const EMPTY = {
@@ -112,6 +120,7 @@ const EMPTY = {
   pendingFocusLineId: null,
   selectedFormKeys: new Set<string>(),
   requestedTab: null,
+  focusedReviewGroup: null as ReviewGroup | null,
 };
 
 export const useCaseStore = create<CaseState>((set, get) => {
@@ -153,6 +162,13 @@ export const useCaseStore = create<CaseState>((set, get) => {
     scheduleSave();
   };
 
+  const edit = (label: string, next: TaxReturn, from: unknown, to: unknown) => {
+    if (!get().taxReturn) return;
+    record({ kind: 'correction', field: label, from, to });
+    refresh({ ...next, updatedAt: new Date().toISOString() });
+    scheduleSave();
+  };
+
   const saveRecord = (next: CaseReviewRecord) => {
     const { returnId, taxReturn } = get();
     if (!returnId || !taxReturn) return;
@@ -191,6 +207,7 @@ export const useCaseStore = create<CaseState>((set, get) => {
     },
 
     updateField: (field, value) => change(field, value, (tr) => ({ ...tr, [field]: value })),
+    applyEdit: (label, next, from, to) => edit(label, next, from, to),
     updateDeepField: (path, value) =>
       change(path, value, (tr) => setDeepPath(tr as unknown as Record<string, unknown>, path, value) as unknown as TaxReturn),
 
@@ -224,5 +241,6 @@ export const useCaseStore = create<CaseState>((set, get) => {
     selectAllForms: (keys) => set({ selectedFormKeys: new Set(keys) }),
     clearFormSelection: () => set({ selectedFormKeys: new Set<string>() }),
     requestTab: (tab) => set({ requestedTab: tab }),
+    showReviewSection: (section) => set({ requestedTab: 'review', focusedReviewGroup: groupForSection(section) }),
   };
 });

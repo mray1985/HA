@@ -9,8 +9,7 @@
 import { FlaskConical, Columns2, SlidersHorizontal, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 import { FilingStatus } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
-import ToolViewWrapper from '../tools/ToolViewWrapper';
+import { useCaseStore } from '../../store/caseStore';
 import ScenarioTabBar from './ScenarioTabBar';
 import ScenarioEditor from './ScenarioEditor';
 import ScenarioResultPanel from './ScenarioResultPanel';
@@ -150,7 +149,7 @@ function BaselineInfo({ baseResult }: { baseResult: import('@hatax/engine').Calc
 // ---------------------------------------------------------------------------
 
 export default function ScenarioLabToolView() {
-  const { taxReturn } = useTaxReturnStore();
+  const { taxReturn } = useCaseStore();
   if (!taxReturn) return null;
   return <ScenarioLabInner taxReturn={taxReturn} />;
 }
@@ -162,7 +161,7 @@ function ScenarioLabInner({ taxReturn }: { taxReturn: import('@hatax/engine').Ta
   const activeDelta = state.activeScenarioId ? deltas.get(state.activeScenarioId) : null;
 
   return (
-    <ToolViewWrapper>
+    <div>
       {/* Content */}
       {state.scenarios.length === 0 ? (
         <EmptyState onAdd={() => dispatch({ type: 'ADD_SCENARIO' })} />
@@ -272,7 +271,7 @@ function ScenarioLabInner({ taxReturn }: { taxReturn: import('@hatax/engine').Ta
           ) : null}
         </>
       )}
-    </ToolViewWrapper>
+    </div>
   );
 }
 

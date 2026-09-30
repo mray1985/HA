@@ -17,7 +17,7 @@ import type { Form1040Result, CalculationResult } from '@hatax/engine';
 import { buildSankeyData, type SankeyNode, type SankeyLink } from './sankeyDataTransform';
 import { colorForCategory } from './sankeyColors';
 import { useSankeyDimensions } from './useSankeyDimensions';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 
 interface TaxSankeyDiagramProps {
   form1040: Form1040Result;
@@ -34,7 +34,7 @@ function fmtDollars(n: number): string {
 }
 
 export default function TaxSankeyDiagram({ form1040, calculation }: TaxSankeyDiagramProps) {
-  const goToStep = useTaxReturnStore((s) => s.goToStep);
+  const showSection = useCaseStore((s) => s.showReviewSection);
   const gradientId = useId();
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
@@ -85,8 +85,8 @@ export default function TaxSankeyDiagram({ form1040, calculation }: TaxSankeyDia
 
   const handleNodeClick = useCallback((node: LayoutNode) => {
     const extra = node as any as NodeExtra;
-    if (extra.stepId) goToStep(extra.stepId);
-  }, [goToStep]);
+    if (extra.stepId) showSection(extra.stepId);
+  }, [showSection]);
 
   const handleLinkHover = useCallback((e: React.MouseEvent, link: LayoutLink, entering: boolean) => {
     if (!entering) {

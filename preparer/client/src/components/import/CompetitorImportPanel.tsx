@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import FileDropZone from './FileDropZone';
 import CurrencyInput from '../common/CurrencyInput';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { FilingStatus } from '@hatax/engine';
 import type { TaxReturn, PriorYearSummary, Dependent } from '@hatax/engine';
 import {
@@ -93,8 +93,8 @@ function fmt$(v: number): string {
 // ─── Component ─────────────────────────────────────
 
 export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelProps) {
-  const updateField = useTaxReturnStore(s => s.updateField);
-  const taxReturn = useTaxReturnStore(s => s.taxReturn);
+  const updateField = useCaseStore(s => s.updateField);
+  const taxReturn = useCaseStore(s => s.taxReturn);
 
   // State machine
   const [state, setState] = useState<PanelState>('upload');

@@ -18,13 +18,28 @@
  * matching discovery question (which makes the engine ignore that section)
  * becomes "yes".
  *
+ * Forms read by HATax's deterministic extractors that have no tax tool yet
+ * (1099-G, 1099-MISC, 1099-B, …) are applied the same way when their type is a
+ * return item; anything else is left for the preparer to enter.
+ *
  * Call after the result's facts are saved (preparerTaxFacts.appendTaxFacts):
  * holds and totals are computed from the saved facts.
  */
 
 import type { TaxReturn } from '@hatax/engine';
-import { amountFromFact, formKeyOf, validateImportedFacts, type TaxFact, type TaxToolSuccess } from '@hatax/local-ai';
+import {
+  amountFromFact,
+  formKeyOf,
+  TOOL_APPLICATION,
+  toolNameForIncomeType,
+  validateImportedFacts,
+  type DocumentPieceOutcome,
+  type TaxFact,
+  type TaxToolApplication,
+  type TaxToolSuccess,
+} from '@hatax/local-ai';
 import { ARRAY_FIELD_MAP, getReturn, updateReturn, upsertItemized, upsertSSA1099 } from '../api/client';
+import { upsertDocument, type ApplyExtractionResult } from './documentIngestion';
 import { INCOME_DISCOVERY_KEYS } from './pdfExtractHelpers';
 import { loadTaxFacts } from './preparerTaxFacts';
 
@@ -40,7 +55,8 @@ export type ApplyOutcome =
   | { kind: 'held'; reason: string }
   | { kind: 'recorded' };
 
-export type ApplicableResult = Pick<TaxToolSuccess, 'tool' | 'application' | 'fields'>;
+/** What the applier needs from a tool result: where it goes and its validated fields. */
+export type ApplicableResult = Pick<TaxToolSuccess, 'application' | 'fields'>;
 
 const AGGREGATE_DISCOVERY: Record<AggregateTarget, string> = {
   socialSecurityBenefits: INCOME_DISCOVERY_KEYS.ssa1099!,
@@ -69,6 +85,41 @@ export function applyToolResult(
     case 'candidate_fact':
       return { kind: 'recorded' };
   }
+}
+
+/** Where one extracted form goes: its tool's application, or a return item when HATax reads the type deterministically. */
+function applicationFor(incomeType: string | null): TaxToolApplication | null {
+  const tool = toolNameForIncomeType(incomeType);
+  if (tool) return TOOL_APPLICATION[tool];
+  if (incomeType && ARRAY_FIELD_MAP[incomeType]) return { kind: 'income_item', itemType: incomeType } as TaxToolApplication;
+  return null;
+}
+
+function outcomeOf(outcome: ApplyOutcome): DocumentPieceOutcome {
+  switch (outcome.kind) {
+    case 'income_item': return 'income_item';
+    case 'aggregate': return outcome.applied ? 'aggregate' : 'aggregate_waiting';
+    case 'held': return 'held';
+    case 'recorded': return 'recorded';
+  }
+}
+
+/**
+ * Apply every form of an extracted document to the return, and record on the
+ * document how each form got there.
+ */
+export function applyExtraction(returnId: string, extraction: ApplyExtractionResult): DocumentPieceOutcome[] {
+  if (extraction.unclassified || extraction.provenanceError) return [];
+  const outcomes = extraction.pieces.map((piece, formIndex): DocumentPieceOutcome => {
+    if (piece.toolError || !piece.incomeType) return 'not_applied';
+    const application = applicationFor(piece.incomeType);
+    if (!application) return 'not_applied';
+    if (application.kind === 'income_item' && Object.keys(piece.toolFields).length === 0) return 'not_applied';
+    return outcomeOf(applyToolResult(returnId, { application, fields: piece.toolFields },
+      { documentId: extraction.document.documentId, formIndex }));
+  });
+  upsertDocument(returnId, { ...extraction.document, appliedAs: outcomes });
+  return outcomes;
 }
 
 function heldForms(returnId: string): Set<string> {

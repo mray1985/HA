@@ -25,7 +25,6 @@ import {
   isEncryptionSetup,
   lock,
 } from '../services/crypto';
-import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersistence';
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
 import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
 import { clearRecordCache, hasPendingRecordWrites, loadRecords } from '../services/caseRecords';
@@ -192,13 +191,14 @@ export function writeReturn(tr: TaxReturn) {
 
 // ─── Public API (same signatures as the old server client) ───
 
-export function createReturn(): TaxReturn {
+/** Create an empty return. The tax year cannot change afterwards (updateReturn refuses it). */
+export function createReturn(taxYear = 2025): TaxReturn {
   const now = new Date().toISOString();
   const id = generateId();
   const tr: TaxReturn = {
     id,
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    taxYear: 2025,
+    taxYear,
     status: 'in_progress',
     currentStep: 0,
     currentSection: 'my_info',
@@ -355,7 +355,6 @@ export function deleteReturn(id: string): { success: boolean } {
   writeVersions.set(id, (writeVersions.get(id) || 0) + 1);
   localStorage.removeItem(returnKey(id));
   returnCache.delete(id);
-  deleteChatHistory(id);
   deleteDocuments(id);
   deleteTaxFacts(id);
   deleteCaseReview(id);
@@ -386,7 +385,6 @@ export async function wipeAllData(): Promise<void> {
   localStorage.removeItem('hatax:ai-key-enc');
   localStorage.removeItem('hatax:ai-key-migrate');
   localStorage.removeItem('hatax:expense-scanner-enc');
-  deleteAllChatHistory();
   deleteAllDocuments();
   deleteAllTaxFacts();
   deleteAllCaseReviews();

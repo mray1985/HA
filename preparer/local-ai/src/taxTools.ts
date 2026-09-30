@@ -327,6 +327,8 @@ export interface TaxToolCallContext {
   returnId: string;
   taxYear: number;
   sourceDocumentId: string;
+  /** 0-based position of the form within a file holding several (two W-2s in one PDF). */
+  sourceFormIndex?: number;
   sourceFileName: string;
   extractor: string;
   /** Per-field score. A missing field stays null. */
@@ -409,6 +411,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       documentId: context.sourceDocumentId,
       fileName: context.sourceFileName,
       extractor: context.extractor,
+      formIndex: context.sourceFormIndex,
       fields,
       factTypeFor: () => 'FILING_STATUS_CANDIDATE',
       confidence: context.confidence,
@@ -452,6 +455,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     documentId: context.sourceDocumentId,
     fileName: context.sourceFileName,
     extractor: context.extractor,
+    formIndex: context.sourceFormIndex,
     fields: factFields,
     factTypeFor: (field) => `${prefix}_${field}`,
     confidence: context.confidence,

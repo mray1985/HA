@@ -38,13 +38,13 @@ export default defineConfig({
         'icons/favicon-32.png',
       ],
       manifest: {
-        name: 'HATax — Free Tax Preparation',
-        short_name: 'HATax',
-        description: 'Free, private tax preparation that runs entirely in your browser.',
+        name: 'HA Tax Preparer',
+        short_name: 'HA Preparer',
+        description: "Automated tax preparation that runs on the preparer's own machine.",
         theme_color: '#0F172A',
         background_color: '#0F172A',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/preparer',
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -73,10 +73,6 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
-      input: {
-        main: 'index.html',
-        preparer: 'preparer.html',
-      },
       output: {
         manualChunks: {
           syncfusion: [

@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { registerLicense } from '@syncfusion/ej2-base';
 import '@fontsource-variable/inter';
-import App from './App';
+import PreparerApp from './PreparerApp';
 import './styles/globals.css';
 
 // Syncfusion Essential JS 2 — Community License (free for <$1M revenue / <5 devs)
@@ -16,7 +16,7 @@ if (import.meta.env.VITE_SYNCFUSION_LICENSE_KEY) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <PreparerApp />
       <Toaster
         position="top-right"
         theme="dark"

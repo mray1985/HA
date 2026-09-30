@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, FileSpreadsheet, BarChart3, Copy } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { parseCSV, ColumnMapping, CSVParseResult } from '../../services/csvParser';
 import { MAX_CSV_SIZE } from '../../services/importHelpers';
@@ -16,7 +16,7 @@ interface CSVImportPanelProps {
 }
 
 export default function CSVImportPanel({ onBack }: CSVImportPanelProps) {
-  const { taxReturn, returnId, updateField } = useTaxReturnStore();
+  const { taxReturn, returnId, updateField } = useCaseStore();
   const [state, setState] = useState<CSVState>('select');
   const [targetType, setTargetType] = useState<'1099b' | '1099da'>('1099b');
   const [brokerName, setBrokerName] = useState('');

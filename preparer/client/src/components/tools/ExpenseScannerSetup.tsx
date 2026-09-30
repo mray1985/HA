@@ -1,14 +1,14 @@
 /**
  * ExpenseScannerSetup — pre-categorization context screen.
  *
- * Shows what the AI knows about the user's tax situation, lets them
+ * Shows what the return says about the client's tax situation, lets them
  * select which expense categories to scan for, and provides quick-select
  * bundles for users with sparse return data.
  */
 
 import { useState, useMemo, useEffect } from 'react';
 import { Sparkles, Info } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { buildReturnContext } from '../../services/deductionFinderContext';
 import type { ReturnContext } from '../../services/deductionFinderTypes';
 import type { TransactionCategory } from '../../services/transactionCategorizerTypes';
@@ -102,7 +102,7 @@ function computeAutoEnabled(context: ReturnContext): Set<TransactionCategory> {
 // ─── Main Component ────────────────────────────────
 
 export default function ExpenseScannerSetup({ transactionCount, onStartScan }: Props) {
-  const { taxReturn, calculation } = useTaxReturnStore();
+  const { taxReturn, calculation } = useCaseStore();
 
   const context = useMemo<ReturnContext>(
     () => taxReturn ? buildReturnContext(taxReturn, calculation) : {} as ReturnContext,

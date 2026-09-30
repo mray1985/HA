@@ -263,6 +263,7 @@ export function applyExtractionToDocument(input: {
       documentId: input.document.documentId,
       fileName: input.document.fileName,
       extracted: extractedForTools,
+      formIndex: index,
     });
     return {
       facts: built.facts,

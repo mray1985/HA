@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { PriorYearSummary, TaxReturn } from '@hatax/engine';
 import type { Form1040Result } from '@hatax/engine';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { importPriorYearJSON, importPriorYear1040PDF } from '../../services/priorYearImporter';
 import { buildTemplateItems, type TemplateImportManifest } from '../../services/priorYearTemplateBuilder';
 import PriorYearTemplatePanel from '../import/PriorYearTemplatePanel';
@@ -70,7 +70,7 @@ function MetricRow({ label, prior, current, format = 'dollar' }: {
 // ─── Main component ────────────────────────────────
 
 export default function YoYComparisonCard({ priorYear, current }: YoYComparisonCardProps) {
-  const { updateField } = useTaxReturnStore();
+  const { updateField } = useCaseStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -117,7 +117,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
 
       // Auto-populate carryforward fields if they're empty
       const { carryforwardSuggestions: cf } = result;
-      const store = useTaxReturnStore.getState();
+      const store = useCaseStore.getState();
       const tr = store.taxReturn;
       if (tr) {
         if (cf.capitalLossCarryforwardST && !tr.capitalLossCarryforwardST) {

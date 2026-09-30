@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, ChevronDown, ChevronUp, Copy, FileCheck } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { parseTXF, TXFParseResult } from '../../services/txfParser';
 import { MAX_TXF_SIZE } from '../../services/importHelpers';
@@ -24,7 +24,7 @@ const IMPORT_TYPE_MAP: Record<string, { apiType: string; field: string; discover
 };
 
 export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
-  const { taxReturn, returnId, updateField } = useTaxReturnStore();
+  const { taxReturn, returnId, updateField } = useCaseStore();
   const [state, setState] = useState<TXFState>('upload');
   const [result, setResult] = useState<TXFParseResult | null>(null);
   const [importedCounts, setImportedCounts] = useState<Record<string, number>>({});

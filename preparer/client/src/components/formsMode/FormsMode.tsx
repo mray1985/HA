@@ -11,7 +11,7 @@ import '../../styles/pdfviewer.css';
 import { useMemo, useEffect, useState } from 'react';
 import PdfFormViewer from './PdfFormViewer';
 import MergedPdfViewer from './MergedPdfViewer';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { ALL_TEMPLATES, generateSelectedFormsPDF } from '../../services/irsFormFiller';
 import { FORM_1040_TEMPLATE } from '@hatax/engine';
 import type { IRSFormTemplate } from '@hatax/engine';
@@ -22,7 +22,7 @@ const TEMPLATE_MAP: Record<string, IRSFormTemplate> = Object.fromEntries(
 );
 
 export default function FormsMode() {
-  const { taxReturn, calculation, activeFormId, activeInstanceIndex, selectedFormKeys } = useTaxReturnStore();
+  const { taxReturn, calculation, activeFormId, activeInstanceIndex, selectedFormKeys } = useCaseStore();
   const [mergedBytes, setMergedBytes] = useState<Uint8Array | null>(null);
   const [mergeState, setMergeState] = useState<'idle' | 'merging' | 'done' | 'error'>('idle');
 
@@ -49,7 +49,7 @@ export default function FormsMode() {
     setMergeState('merging');
 
     // Read fresh selection from store to avoid stale closure
-    const keys = useTaxReturnStore.getState().selectedFormKeys;
+    const keys = useCaseStore.getState().selectedFormKeys;
     const selections = Array.from(keys).map(key => {
       const [formId, idx] = key.split(':');
       return { formId, instanceIndex: Number(idx) };

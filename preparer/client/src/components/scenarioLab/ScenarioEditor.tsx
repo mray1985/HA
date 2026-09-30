@@ -6,7 +6,7 @@ import type { Scenario, ScenarioLabAction, ScenarioVariable, VariableCategory } 
 import { CATEGORY_LABELS } from './types';
 import RangeSlider from './RangeSlider';
 import { formatCurrency, formatPercent } from '../../utils/format';
-import { useTaxReturnStore, flushAutoSave, WIZARD_STEPS } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 
 // ---------------------------------------------------------------------------
 // Variable Control
@@ -34,36 +34,20 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
   }, [dispatch, scenario.id, variable.key]);
 
   const handleApply = useCallback(() => {
-    const store = useTaxReturnStore.getState();
-    const storeTR = store.taxReturn;
-    if (!storeTR) return;
-    const newTR = variable.write(storeTR, currentValue);
-    store.setReturn({ ...newTR, updatedAt: new Date().toISOString() });
-    flushAutoSave();
+    const store = useCaseStore.getState();
+    if (!store.taxReturn) return;
+    store.applyEdit(`Scenario: ${variable.label}`, variable.write(store.taxReturn, currentValue), originalValue, currentValue);
     setApplied(true);
     setTimeout(() => {
       setApplied(false);
       dispatch({ type: 'CLEAR_OVERRIDE', scenarioId: scenario.id, key: variable.key });
     }, 1500);
-  }, [variable, currentValue, dispatch, scenario.id]);
+  }, [variable, currentValue, originalValue, dispatch, scenario.id]);
 
+  /** Values the lab cannot write directly are edited on the return's forms. */
   const handleNavigate = useCallback(() => {
-    if (variable.targetStepId) {
-      const store = useTaxReturnStore.getState();
-      const visible = store.getVisibleSteps();
-      if (visible.some(s => s.id === variable.targetStepId)) {
-        store.goToStep(variable.targetStepId);
-      } else {
-        // Fallback if step is hidden (e.g., discovery flag not set)
-        const stepDef = WIZARD_STEPS.find(s => s.id === variable.targetStepId);
-        if (stepDef) {
-          const fallback = visible.find(s => s.section === stepDef.section && (s.id.includes('overview') || s.id.includes('discovery')))
-                        || visible.find(s => s.section === stepDef.section);
-          if (fallback) store.goToStep(fallback.id);
-        }
-      }
-    }
-  }, [variable.targetStepId]);
+    useCaseStore.getState().requestTab('return');
+  }, []);
 
   const resolveMax = typeof variable.max === 'function' ? variable.max(taxReturn) : (variable.max ?? 100);
 
@@ -95,7 +79,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
                     ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
                     : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                 }`}
-                title="Apply this value to your real return"
+                title="Apply this value to the client's return"
               >
                 <Check className="w-3 h-3" />
                 {applied ? 'Applied!' : 'Apply'}

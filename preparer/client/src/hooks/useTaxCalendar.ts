@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTaxReturnStore } from '../store/taxReturnStore';
+import { useCaseStore } from '../store/caseStore';
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import { calculateTaxCalendar, type TaxCalendar } from '../services/taxCalendarService';
 
@@ -10,8 +10,8 @@ import { calculateTaxCalendar, type TaxCalendar } from '../services/taxCalendarS
  * Memoized — only recomputes when taxReturn or calculation changes.
  */
 export function useTaxCalendar(): TaxCalendar | null {
-  const taxReturn = useTaxReturnStore((s) => s.taxReturn);
-  const storeCalc = useTaxReturnStore((s) => s.calculation);
+  const taxReturn = useCaseStore((s) => s.taxReturn);
+  const storeCalc = useCaseStore((s) => s.calculation);
 
   return useMemo(() => {
     if (!taxReturn) return null;

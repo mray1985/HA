@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
 import type { CalculationTrace } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
@@ -13,7 +13,7 @@ interface ExplainTaxesPanelProps {
 }
 
 export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelProps) {
-  const calculation = useTaxReturnStore((s) => s.calculation);
+  const calculation = useCaseStore((s) => s.calculation);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   // Focus close button when panel opens

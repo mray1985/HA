@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, type AccountRole } from '../../store/authStore';
-import { CheckpointInput } from '../../hooks/useCheckpoint';
 
 const COPY: Record<AccountRole, { title: string; redirect: string; registerPath: string }> = {
   taxpayer: { title: 'HATax', redirect: '/', registerPath: '/register' },
@@ -46,8 +45,7 @@ export default function LoginPage({ audience = 'preparer' }: { audience?: Accoun
               <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                 Email
               </label>
-              <CheckpointInput
-                label="Email"
+              <input
                 id="email"
                 type="email"
                 value={email}
@@ -72,8 +70,7 @@ export default function LoginPage({ audience = 'preparer' }: { audience?: Accoun
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              <CheckpointInput
-                label="Password"
+              <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}

@@ -1,13 +1,10 @@
 /**
- * Smart Expense Scanner — top-level tool view.
+ * Bank & card statements — the case's transaction import.
  *
- * Streamlined flow for BYOK users:
- *   upload → setup → scanning → results
+ *   upload → setup → categorize → results → apply to the return
  *
- * No intermediate pattern scan step — the AI does all the work,
- * with deterministic gates applied as cross-validation.
- *
- * Private mode: shows a message explaining that AI is required.
+ * Transactions are categorized on this machine by the merchant-pattern engine
+ * and the tax-context gates; anything no rule recognizes stays for review.
  */
 
 import { useState, useRef } from 'react';
@@ -16,12 +13,10 @@ import ExpenseScannerSetup from './ExpenseScannerSetup';
 import ApplyToReturnModal from './ApplyToReturnModal';
 import SectionIntro from '../common/SectionIntro';
 import FileDropZone from '../import/FileDropZone';
-import ToolViewWrapper from './ToolViewWrapper';
-import { Sparkles, Loader2, ArrowLeft, ScanSearch, Key, Upload, FileText, X } from 'lucide-react';
+import { Sparkles, Loader2, ArrowLeft, ScanSearch, Upload, FileText, X } from 'lucide-react';
 import { useDeductionFinder } from '../../hooks/useDeductionFinder';
 import { useDeductionFinderStore } from '../../store/deductionFinderStore';
-import { useAISettingsStore } from '../../store/aiSettingsStore';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import type { TransactionCategory } from '../../services/transactionCategorizerTypes';
 import type { ApplyPreview } from '../../services/categorizationApplier';
 
@@ -45,9 +40,7 @@ export default function ExpenseScannerToolView() {
   const setEnabledCategories = useDeductionFinderStore((s) => s.setEnabledCategories);
   const uploadedFiles = useDeductionFinderStore((s) => s.uploadedFiles);
   const isProcessing = useDeductionFinderStore((s) => s.isProcessing);
-  const mode = useAISettingsStore((s) => s.mode);
-  const isPrivate = mode === 'private';
-  const { updateField, updateDeepField, taxReturn } = useTaxReturnStore();
+  const { updateField, updateDeepField, taxReturn } = useCaseStore();
   const [showApplyModal, setShowApplyModal] = useState(false);
 
   // Compute effective phase
@@ -137,43 +130,15 @@ export default function ExpenseScannerToolView() {
   };
 
   return (
-    <ToolViewWrapper>
+    <div>
       <SectionIntro
         icon={<ScanSearch className="w-8 h-8" />}
-        title="Smart Expense Scanner"
-        description={isPrivate
-          ? 'AI-powered transaction categorization requires BYOK mode.'
-          : 'Upload transactions, select what to look for, and let HA Tax service categorize your expenses by tax relevance.'
-        }
+        title="Bank & card statements"
+        description="Upload the client's transaction exports, choose what to look for, and every transaction is categorized by tax relevance on this machine. Anything no rule recognizes is left for your review."
       />
 
-      {/* ─── Private Mode: upgrade CTA ─── */}
-      {isPrivate && (
-        <div className="rounded-lg border border-HATaxService-blue-500/30 bg-HATaxService-blue-500/5 p-5 mt-2">
-          <div className="flex items-start gap-3">
-            <Key className="w-5 h-5 text-HATaxService-blue-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-HATaxService-blue-300 mb-1">Unlock Smart Expense Scanner</p>
-              <p className="text-xs text-slate-400 mb-3">
-                Add your own API key to scan your bank and credit card transactions
-                for tax-relevant expenses. HA Tax service categorizes every transaction by
-                type — business expenses, medical, charitable, home office, and more.
-              </p>
-              <button
-                onClick={() => useAISettingsStore.getState().setMode('byok')}
-                className="text-xs font-medium text-HATaxService-blue-400 hover:text-HATaxService-blue-300
-                           bg-HATaxService-blue-500/10 hover:bg-HATaxService-blue-500/20
-                           border border-HATaxService-blue-500/30 px-3 py-1.5 rounded transition-colors"
-              >
-                Set up BYOK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ─── Phase: Upload ─── */}
-      {effectivePhase === 'upload' && !isPrivate && (
+      {effectivePhase === 'upload' && (
         <div className="mt-2 rounded-xl border border-slate-700 bg-surface-800 p-5">
           {/* Card header */}
           <div className="flex items-center gap-2.5 mb-4">
@@ -244,7 +209,7 @@ export default function ExpenseScannerToolView() {
       )}
 
       {/* ─── Phase: Setup ─── */}
-      {effectivePhase === 'setup' && !isPrivate && (
+      {effectivePhase === 'setup' && (
         <>
           <button
             onClick={() => setScannerPhase('upload')}
@@ -298,7 +263,7 @@ export default function ExpenseScannerToolView() {
         </>
       )}
 
-      {/* AI error — only show on setup/scanning phases, not after navigating away */}
+      {/* Categorization error — only on setup/scanning phases, not after navigating away */}
       {aiError && (effectivePhase === 'setup' || effectivePhase === 'scanning') && (
         <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
           <p className="text-xs text-red-400">{aiError}</p>
@@ -323,6 +288,6 @@ export default function ExpenseScannerToolView() {
           onCancel={() => setShowApplyModal(false)}
         />
       )}
-    </ToolViewWrapper>
+    </div>
   );
 }

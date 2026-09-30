@@ -11,7 +11,7 @@ import {
   ArrowLeft, CheckCircle2, Copy, ChevronDown, ChevronUp,
   Briefcase, AlertTriangle,
 } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { toast } from 'sonner';
 import type {
@@ -49,7 +49,7 @@ export default function PriorYearTemplatePanel({
   onBack,
   onDone,
 }: PriorYearTemplatePanelProps) {
-  const { taxReturn, updateField } = useTaxReturnStore();
+  const { taxReturn, updateField } = useCaseStore();
   const returnId = taxReturn?.id;
 
   // Local selection state (independent from manifest defaults)

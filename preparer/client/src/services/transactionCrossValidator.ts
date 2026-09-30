@@ -122,6 +122,52 @@ function checkGate(category: TransactionCategory, context: ReturnContext, hints?
   return { blocked: false };
 }
 
+/**
+ * Transactions the deduction-finder pattern engine matched (merchant tokens,
+ * evidence and negative tokens, MCC codes, return-context gates), by index.
+ */
+function patternCategories(allTransactions: NormalizedTransaction[], context: ReturnContext): Map<number, InsightCategory> {
+  const matches = new Map<number, InsightCategory>();
+  for (const insight of scanForSignals(allTransactions, context)) {
+    for (const desc of insight.sampleDescriptions) {
+      for (let i = 0; i < allTransactions.length; i++) {
+        if (allTransactions[i].description.toUpperCase().includes(desc.toUpperCase())) {
+          matches.set(i, insight.category);
+        }
+      }
+    }
+  }
+  return matches;
+}
+
+// ─── Rule categorization ───────────────────────────
+
+/**
+ * Categorize transactions by rules alone: the pattern engine's matches, then
+ * the category gates above. A transaction no rule matches stays personal with
+ * low confidence, for the preparer to review. Nothing leaves the machine.
+ */
+export function categorizeByRules(
+  allTransactions: NormalizedTransaction[],
+  context: ReturnContext,
+  contextHints?: Record<string, boolean>,
+): CategorizedTransaction[] {
+  const matches = patternCategories(allTransactions, context);
+  return allTransactions.map((transaction, index) => {
+    const base = { transactionIndex: index, transaction, subCategory: 'general' as const, source: 'pattern' as const, approved: false, businessUsePercent: 100 };
+    const insight = matches.get(index);
+    const category = insight ? INSIGHT_TO_CATEGORY[insight] : undefined;
+    if (!category) {
+      return { ...base, category: 'personal' as TransactionCategory, confidence: 'low' as const, reasoning: 'No rule matched this transaction — review it.' };
+    }
+    const gate = checkGate(category, context, contextHints);
+    if (gate.blocked) {
+      return { ...base, category: 'personal' as TransactionCategory, originalCategory: category, confidence: 'low' as const, reasoning: gate.reason ?? 'Blocked by tax context' };
+    }
+    return { ...base, category, confidence: 'medium' as const, reasoning: gate.reason ?? `Matched the ${insight!.replace(/_/g, ' ')} merchant pattern.` };
+  });
+}
+
 // ─── Cross-Validation ──────────────────────────────
 
 /**
@@ -136,21 +182,7 @@ export function crossValidate(
   context: ReturnContext,
   contextHints?: Record<string, boolean>,
 ): { gateWarnings: Map<number, string> } {
-  // Run the pattern engine to get its categorizations
-  const patternInsights = scanForSignals(allTransactions, context);
-
-  // Build a set of transaction indices that the pattern engine flagged, keyed by category
-  const patternMatches = new Map<number, InsightCategory>();
-  for (const insight of patternInsights) {
-    for (const desc of insight.sampleDescriptions) {
-      // Find all transactions matching this description
-      for (let i = 0; i < allTransactions.length; i++) {
-        if (allTransactions[i].description.toUpperCase().includes(desc.toUpperCase())) {
-          patternMatches.set(i, insight.category);
-        }
-      }
-    }
-  }
+  const patternMatches = patternCategories(allTransactions, context);
 
   const gateWarnings = new Map<number, string>();
 

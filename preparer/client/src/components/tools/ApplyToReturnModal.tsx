@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import { X, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { buildApplyPreview, type ApplyPreview, type FieldUpdate } from '../../services/categorizationApplier';
 import type { CategorizedTransaction } from '../../services/transactionCategorizerTypes';
 
@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function ApplyToReturnModal({ transactions, onConfirm, onCancel }: Props) {
-  const taxReturn = useTaxReturnStore((s) => s.taxReturn);
+  const taxReturn = useCaseStore((s) => s.taxReturn);
 
   const preview = useMemo(() => {
     if (!taxReturn) return null;

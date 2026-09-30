@@ -1,52 +1,14 @@
 /**
- * Forms AI Service — powers AI-assisted features in Forms Mode.
- *
- * Provides:
- * 1. Field explanation context builder (for "explain this field")
- * 2. Form review / audit (for "what's wrong with my form")
- * 3. Form search by natural language (for "find the right form")
- * 4. Field completeness analysis (for smart sidebar badges)
- * 5. Full-return narrative review
+ * Forms service — deterministic helpers for the form viewer:
+ * 1. Form review / audit (what is wrong or missing on a form)
+ * 2. Form search by name or description
+ * 3. Field completeness (sidebar badges)
  */
 
 import type { IRSFormTemplate, TaxReturn, CalculationResult, ClassifiedField } from '@hatax/engine';
 import { classifyFields } from '@hatax/engine';
 import { resolveFieldValue } from './formFieldResolver';
 import { ALL_TEMPLATES } from './irsFormFiller';
-
-// ─── Prompt + Context Pair ────────────────────────
-
-/** Short user message + detailed context for the LLM. */
-export interface AIPrompt {
-  /** Short message shown in chat (must be under 2000 chars). */
-  message: string;
-  /** Detailed data injected into formsReviewContext (no size limit). */
-  context?: string;
-}
-
-// ─── Field Explanation Context ─────────────────────
-
-/**
- * Build a short chat prompt + context to explain a specific form field.
- * Used by the "Ask AI about this field" action in PdfFormViewer.
- */
-export function buildFieldExplainPrompt(
-  template: IRSFormTemplate,
-  cf: ClassifiedField,
-  currentValue: string | undefined,
-): AIPrompt {
-  const formName = template.displayName;
-  const label = cf.mapping.formLabel || cf.mapping.pdfFieldName;
-  const editable = cf.isEditable ? 'user-editable' : 'auto-calculated';
-  const valueNote = currentValue != null && currentValue !== ''
-    ? `The current value is: ${currentValue}.`
-    : 'This field is currently empty.';
-
-  return {
-    message: `Explain the **${label}** field on **${formName}**. What goes here, what IRS rules apply, and common mistakes?`,
-    context: `Field details: ${label} (${editable}) on ${formName}. ${valueNote}`,
-  };
-}
 
 // ─── Form Review / Audit ───────────────────────────
 
@@ -128,50 +90,6 @@ export function reviewForm(
   }
 
   return issues;
-}
-
-/**
- * Build a short chat message + detailed context for a full form review.
- */
-export function buildFormReviewPrompt(
-  template: IRSFormTemplate,
-  taxReturn: TaxReturn,
-  calculation: CalculationResult,
-  instanceIndex: number = 0,
-): AIPrompt {
-  const issues = reviewForm(template, taxReturn, calculation, instanceIndex);
-  const fields = template.fieldsForInstance
-    ? template.fieldsForInstance(instanceIndex, taxReturn, calculation)
-    : template.fields;
-  const classified = classifyFields(fields);
-
-  // Build field summary
-  const fieldLines: string[] = [];
-  for (const cf of classified) {
-    const { displayValue, isChecked } = resolveFieldValue(cf.mapping, taxReturn, calculation);
-    const label = cf.mapping.formLabel || cf.mapping.pdfFieldName;
-    if (cf.mapping.format === 'checkbox') {
-      if (isChecked) fieldLines.push(`  ${label}: Checked`);
-    } else if (displayValue) {
-      fieldLines.push(`  ${label}: ${displayValue}`);
-    }
-  }
-
-  const issueLines = issues.map(i =>
-    `- [${i.severity.toUpperCase()}] ${i.fieldLabel}: ${i.message}`
-  );
-
-  const context =
-    `Form: ${template.displayName}\n` +
-    `Field values:\n${fieldLines.join('\n') || '  (no fields populated)'}\n\n` +
-    (issueLines.length > 0
-      ? `Auto-detected issues:\n${issueLines.join('\n')}`
-      : 'No auto-detected issues.');
-
-  return {
-    message: `Review my **${template.displayName}** for errors, missing fields, and tax optimization opportunities.`,
-    context,
-  };
 }
 
 // ─── Form Search ───────────────────────────────────
@@ -316,63 +234,3 @@ export function getFormCompleteness(
 }
 
 // ─── Full Return Review ────────────────────────────
-
-/**
- * Build a short chat message + detailed context for a comprehensive return review.
- */
-export function buildFullReturnReviewPrompt(
-  taxReturn: TaxReturn,
-  calculation: CalculationResult,
-): AIPrompt {
-  const applicableTemplates = ALL_TEMPLATES.filter(t => t.condition(taxReturn, calculation));
-
-  const formSummaries: string[] = [];
-  const allIssues: string[] = [];
-
-  for (const template of applicableTemplates) {
-    const instanceCount = template.instanceCount?.(taxReturn, calculation) ?? 1;
-    for (let i = 0; i < instanceCount; i++) {
-      const fields = template.fieldsForInstance
-        ? template.fieldsForInstance(i, taxReturn, calculation)
-        : template.fields;
-      const classified = classifyFields(fields);
-
-      const filledFields: string[] = [];
-      for (const cf of classified) {
-        const { displayValue, isChecked } = resolveFieldValue(cf.mapping, taxReturn, calculation);
-        const label = cf.mapping.formLabel || cf.mapping.pdfFieldName;
-        if (cf.mapping.format === 'checkbox') {
-          if (isChecked) filledFields.push(`${label}: Checked`);
-        } else if (displayValue) {
-          filledFields.push(`${label}: ${displayValue}`);
-        }
-      }
-
-      const suffix = instanceCount > 1 ? ` (${i + 1})` : '';
-      if (filledFields.length > 0) {
-        formSummaries.push(
-          `${template.displayName}${suffix} (${filledFields.length} fields):\n` +
-          filledFields.slice(0, 10).map(f => `  ${f}`).join('\n') +
-          (filledFields.length > 10 ? `\n  ... and ${filledFields.length - 10} more fields` : ''),
-        );
-      }
-
-      const issues = reviewForm(template, taxReturn, calculation, i);
-      for (const issue of issues) {
-        allIssues.push(`[${template.displayName}${suffix}] ${issue.fieldLabel}: ${issue.message}`);
-      }
-    }
-  }
-
-  const context =
-    `Applicable forms: ${applicableTemplates.length}\n\n` +
-    `Form Summary:\n${formSummaries.join('\n\n')}\n\n` +
-    (allIssues.length > 0
-      ? `Auto-detected Issues:\n${allIssues.map(i => `- ${i}`).join('\n')}`
-      : 'No auto-detected issues.');
-
-  return {
-    message: `Review my complete 2025 tax return (${applicableTemplates.length} forms). Are the numbers right? Any red flags or optimization opportunities? Is it ready to file?`,
-    context,
-  };
-}

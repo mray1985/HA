@@ -156,6 +156,8 @@ export function factsForExtraction(input: {
   documentId: string;
   fileName: string;
   extracted: PDFExtractResult;
+  /** 0-based position of this form within the file. */
+  formIndex?: number;
 }): {
   facts: TaxFact[];
   toolFields: Record<string, unknown>;
@@ -187,6 +189,7 @@ export function factsForExtraction(input: {
         returnId: input.returnId,
         taxYear: input.taxYear,
         sourceDocumentId: input.documentId,
+        sourceFormIndex: input.formIndex,
         sourceFileName: input.fileName,
         extractor,
         rawText: structured.rawText,
@@ -224,6 +227,7 @@ export function factsForExtraction(input: {
     documentId: input.documentId,
     fileName: input.fileName,
     extractor,
+    formIndex: input.formIndex,
     fields: generic.fields,
     factTypeFor: (field) => `${prefix}_${field}`,
     rawText: generic.rawText,

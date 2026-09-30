@@ -6,20 +6,15 @@
  * WASM worker gets destroyed mid-init, corrupting the global WASM state.
  */
 import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { PdfViewer, Toolbar, Magnification, Navigation, FormFields, FormDesigner, Print, TextSearch } from '@syncfusion/ej2-pdfviewer';
-import type { FormFieldFocusOutEventArgs, FormFieldClickArgs } from '@syncfusion/ej2-pdfviewer';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import type { FormFieldFocusOutEventArgs } from '@syncfusion/ej2-pdfviewer';
+import { useCaseStore } from '../../store/caseStore';
 import type { IRSFormTemplate } from '@hatax/engine';
 import { classifyFields } from '@hatax/engine';
 import type { ClassifiedField } from '@hatax/engine';
 import { populateFormFields, updateComputedFields, enforceReadOnlyDOM, pdfLibToNormalizedKey, normalizeSyncfusionName } from '../../services/formsModeFiller';
 import { ensureDiscoveryFlags } from '../../services/formsModeSync';
 import { resolveSourcePathFromLineId } from '../../services/traceFormLinker';
-import { buildFieldExplainPrompt, buildFormReviewPrompt, getFormCompleteness } from '../../services/formsAIService';
-import { resolveFieldValue } from '../../services/formFieldResolver';
-import { useChatStore } from '../../store/chatStore';
-import { MessageSquare, ClipboardCheck, Wand2, X, ChevronDown, Sparkles } from 'lucide-react';
 
 PdfViewer.Inject(Toolbar, Magnification, Navigation, FormFields, FormDesigner, Print, TextSearch);
 
@@ -120,7 +115,7 @@ interface PdfFormViewerProps {
 export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewerProps) {
   const viewerRef = useRef<PdfViewer | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const { taxReturn, calculation, updateDeepField, updateField } = useTaxReturnStore();
+  const { taxReturn, calculation, updateDeepField, updateField } = useCaseStore();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -171,7 +166,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
         width: '100%',
         documentLoad: () => {
           setStatus('ready');
-          const st = useTaxReturnStore.getState();
+          const st = useCaseStore.getState();
           if (st.taxReturn && st.calculation) {
             try {
               populateFormFields(viewer, template, st.taxReturn, st.calculation, classifiedFields);
@@ -186,7 +181,7 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
           // Focus the pending field if navigated from audit trail
           if (st.pendingFocusLineId) {
             focusFieldByLineId(viewer, st.pendingFocusLineId, classifiedFields);
-            useTaxReturnStore.getState().clearPendingFocus();
+            useCaseStore.getState().clearPendingFocus();
           }
         },
         documentLoadFailed: () => {
@@ -279,162 +274,8 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
     };
   }, [status, classifiedFields]);
 
-  // ─── AI Toolbar State ──────────────────────────────
-  const { openWithPrompt, togglePanel, isOpen: chatOpen } = useChatStore();
-  const [fieldSelectorOpen, setFieldSelectorOpen] = useState(false);
-  const [fieldSearch, setFieldSearch] = useState('');
-  const fieldSelectorRef = useRef<HTMLDivElement | null>(null);
-
-  // ─── Clicked-field tooltip state ──────────────────
-  const [clickedField, setClickedField] = useState<{ cf: ClassifiedField; x: number; y: number } | null>(null);
-  const clickedFieldRef = useRef<HTMLDivElement | null>(null);
-
-  // Bind formFieldClick — show "Explain with AI" tooltip on any field click.
-  // Depends on `status` so this re-runs after the viewer finishes loading
-  // (viewer is created inside requestAnimationFrame, so viewerRef.current is
-  // null on the initial effect run).
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || status !== 'ready') return;
-    viewer.formFieldClick = (args: FormFieldClickArgs) => {
-      const fieldName = args.field?.name;
-      console.log('[FormsMode] formFieldClick fired:', fieldName, args.field);
-      if (!fieldName) return;
-      const normalized = normalizeSyncfusionName(fieldName);
-      const cf = fieldMap.get(normalized);
-      console.log('[FormsMode] lookup:', normalized, '→', cf?.mapping.formLabel ?? 'NOT FOUND');
-      if (!cf || !cf.mapping.formLabel) return;
-
-      // Position tooltip near the clicked field using viewport coordinates (portaled to body)
-      const container = containerRef.current;
-      if (!container) return;
-
-      const fieldEl =
-        container.querySelector(`[id*="${fieldName}"]`) ||
-        container.querySelector(`[name="${fieldName}"]`);
-
-      if (fieldEl) {
-        const rect = fieldEl.getBoundingClientRect();
-        setClickedField({
-          cf,
-          x: Math.min(rect.right + 8, window.innerWidth - 300),
-          y: rect.top,
-        });
-      } else {
-        const containerRect = container.getBoundingClientRect();
-        setClickedField({ cf, x: containerRect.left + 16, y: containerRect.top + 60 });
-      }
-    };
-  }, [fieldMap, status]);
-
-  // Dismiss tooltip on outside click
-  useEffect(() => {
-    if (!clickedField) return;
-    const handler = (e: MouseEvent) => {
-      if (clickedFieldRef.current && !clickedFieldRef.current.contains(e.target as Node)) {
-        setClickedField(null);
-      }
-    };
-    // Delay to avoid the same click that opened it from closing it
-    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50);
-    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
-  }, [clickedField]);
-
-  // Close field selector when clicking outside
-  useEffect(() => {
-    if (!fieldSelectorOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (fieldSelectorRef.current && !fieldSelectorRef.current.contains(e.target as Node)) {
-        setFieldSelectorOpen(false);
-        setFieldSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [fieldSelectorOpen]);
-
-  // All labeled fields for the field selector — exclude PII fields
-  const PII_PATTERNS = /\b(first name|last name|middle initial|address|city|town|state|zip|ssn|social security|identity protection pin|occupation|spouse.*name|phone|email|routing|account number)\b/i;
-  const selectableFields = useMemo(() => {
-    if (!taxReturn || !calculation) return [];
-    return classifiedFields
-      .filter(cf => cf.mapping.formLabel && !PII_PATTERNS.test(cf.mapping.formLabel))
-      .map(cf => {
-        const { displayValue, isChecked } = resolveFieldValue(cf.mapping, taxReturn, calculation);
-        const value = cf.mapping.format === 'checkbox'
-          ? (isChecked ? 'Checked' : '')
-          : (displayValue || '');
-        return {
-          cf,
-          label: cf.mapping.formLabel!,
-          value,
-          isEditable: cf.isEditable,
-        };
-      });
-  }, [classifiedFields, taxReturn, calculation]);
-
-  // Filtered fields based on search
-  const filteredFields = useMemo(() => {
-    if (!fieldSearch) return selectableFields;
-    const q = fieldSearch.toLowerCase();
-    return selectableFields.filter(f => f.label.toLowerCase().includes(q));
-  }, [selectableFields, fieldSearch]);
-
-  // Form completeness for "Fill Form" button visibility
-  const completeness = useMemo(() => {
-    if (!taxReturn || !calculation) return null;
-    return getFormCompleteness(template, taxReturn, calculation, instanceIndex);
-  }, [template, taxReturn, calculation, instanceIndex]);
-
-  const handleAskAboutField = useCallback((cf: ClassifiedField) => {
-    if (!taxReturn || !calculation) return;
-    const { displayValue, isChecked } = resolveFieldValue(cf.mapping, taxReturn, calculation);
-    const valueForPrompt = cf.mapping.format === 'checkbox'
-      ? (isChecked ? 'Checked' : 'Unchecked')
-      : (displayValue || undefined);
-    const { message, context } = buildFieldExplainPrompt(template, cf, valueForPrompt);
-    // Highlight the field on the PDF so the user can see which field was selected
-    const viewer = viewerRef.current;
-    if (viewer) focusFieldOnPdf(viewer, cf);
-    setFieldSelectorOpen(false);
-    setFieldSearch('');
-    openWithPrompt(message, context);
-  }, [template, taxReturn, calculation, openWithPrompt]);
-
-  const handleReviewForm = useCallback(() => {
-    if (!taxReturn || !calculation) return;
-    const { message, context } = buildFormReviewPrompt(template, taxReturn, calculation, instanceIndex);
-    openWithPrompt(message, context);
-  }, [template, taxReturn, calculation, instanceIndex, openWithPrompt]);
-
-  const handleFillForm = useCallback(() => {
-    if (!taxReturn || !calculation || !completeness) return;
-    const editableOnly = selectableFields.filter(f => f.isEditable);
-    const emptyFields = editableOnly
-      .filter(f => !f.value)
-      .map(f => f.label);
-    const filledFields = editableOnly
-      .filter(f => f.value)
-      .map(f => `${f.label}: ${f.value}`);
-
-    const message = `Help me fill out **${template.displayName}** (${completeness.percent}% complete). Walk me through the empty fields.`;
-    const context =
-      `Form: ${template.displayName}\n` +
-      `Completeness: ${completeness.filled}/${completeness.totalEditable} fields (${completeness.percent}%)\n\n` +
-      (filledFields.length > 0
-        ? `Already filled:\n${filledFields.map(f => `  ${f}`).join('\n')}\n\n`
-        : '') +
-      `Empty fields needing values:\n${emptyFields.map(f => `  ${f}`).join('\n')}`;
-    openWithPrompt(message, context);
-  }, [template, taxReturn, calculation, completeness, selectableFields, openWithPrompt]);
-
-  const showFillButton = completeness != null && completeness.percent < 50;
-
-  // Clear field highlight when clicking on the PDF background (not on a form field or the AI toolbar)
+  // Clear field highlight when clicking on the PDF background (not on a form field)
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    // Don't clear if clicking inside the AI toolbar area (z-30 overlay)
-    const target = e.target as HTMLElement;
-    if (target.closest('[class*="z-30"]') || target.closest('[class*="z-40"]')) return;
     if (clearCurrentHighlight) {
       clearCurrentHighlight();
       clearCurrentHighlight = null;
@@ -460,179 +301,6 @@ export default function PdfFormViewer({ template, instanceIndex }: PdfFormViewer
         </div>
       )}
 
-      {/* ─── Clicked-field "Ask HA Tax service" tooltip (portaled to body for z-index) ──── */}
-      {clickedField && createPortal(
-        <div
-          ref={clickedFieldRef}
-          className="fixed z-[10000] animate-in fade-in slide-in-from-left-2 duration-150"
-          style={{ left: clickedField.x, top: clickedField.y }}
-        >
-          <div className="bg-surface-700/95 backdrop-blur-md border border-surface-500 rounded-xl shadow-xl px-3 py-2.5 flex items-center gap-3">
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-medium text-slate-300 truncate max-w-[200px]">
-                {clickedField.cf.mapping.formLabel}
-              </span>
-              {(() => {
-                if (!taxReturn || !calculation) return null;
-                const { displayValue, isChecked } = resolveFieldValue(clickedField.cf.mapping, taxReturn, calculation);
-                const val = clickedField.cf.mapping.format === 'checkbox'
-                  ? (isChecked ? 'Checked' : 'Unchecked')
-                  : displayValue;
-                return val ? (
-                  <span className="text-[10px] text-slate-500 truncate max-w-[200px]">{val}</span>
-                ) : null;
-              })()}
-            </div>
-            <button
-              onClick={() => {
-                handleAskAboutField(clickedField.cf);
-                setClickedField(null);
-              }}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                         border border-transparent hover:border-HATaxService-orange-500/50
-                         bg-surface-600 hover:bg-surface-500
-                         shadow-sm hover:shadow-md hover:shadow-black/20
-                         transition-all duration-200"
-            >
-              <Sparkles size={12} className="text-HATaxService-orange-400 ai-sparkle" />
-              <span>Ask HA Tax service</span>
-            </button>
-          </div>
-        </div>,
-        document.body,
-      )}
-
-      {/* ─── AI Floating Toolbar — styled to match HATaxServiceButton ──── */}
-      {status === 'ready' && taxReturn && calculation && (
-        <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2">
-          {/* Field selector dropdown (renders above the toolbar) */}
-          {fieldSelectorOpen && (
-            <div
-              ref={fieldSelectorRef}
-              className="w-80 max-h-80 bg-surface-700/95 backdrop-blur-md border border-surface-500 rounded-xl shadow-2xl overflow-hidden flex flex-col"
-            >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-surface-500">
-                <span className="text-xs font-medium text-slate-300">Select a field to ask about</span>
-                <button
-                  onClick={() => { setFieldSelectorOpen(false); setFieldSearch(''); }}
-                  className="p-0.5 text-slate-400 hover:text-white transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="px-3 py-2 border-b border-surface-600">
-                <input
-                  type="text"
-                  placeholder="Search fields..."
-                  value={fieldSearch}
-                  onChange={e => setFieldSearch(e.target.value)}
-                  className="w-full bg-surface-800 border border-surface-500 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-HATaxService-blue-400 transition-colors"
-                  autoFocus
-                />
-              </div>
-              <div className="overflow-y-auto flex-1 py-1">
-                {filteredFields.length === 0 ? (
-                  <p className="px-3 py-4 text-xs text-slate-500 text-center">No matching fields</p>
-                ) : (
-                  filteredFields.map((f, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleAskAboutField(f.cf)}
-                      className="w-full text-left px-3 py-2 hover:bg-surface-600 transition-colors group"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm text-slate-200 group-hover:text-white truncate">{f.label}</span>
-                        {!f.isEditable && (
-                          <span className="shrink-0 text-[10px] text-slate-500 bg-surface-800 px-1.5 py-0.5 rounded">auto</span>
-                        )}
-                      </div>
-                      {f.value ? (
-                        <div className="text-xs text-slate-500 truncate mt-0.5">Current: {f.value}</div>
-                      ) : (
-                        <div className="text-xs text-amber-500/70 mt-0.5">Empty</div>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Toolbar pill — expands on hover to show action buttons */}
-          <div className="group/toolbar flex items-center rounded-full
-                          bg-surface-700 border border-slate-600/50
-                          shadow-lg shadow-black/30
-                          hover:shadow-xl hover:shadow-black/40
-                          hover:border-HATaxService-orange-500/40
-                          transition-all duration-200 ease-out">
-            {/* Action buttons — slide out on hover */}
-            <div className="max-w-0 overflow-hidden whitespace-nowrap
-                            opacity-0 group-hover/toolbar:max-w-[500px] group-hover/toolbar:opacity-100
-                            transition-all duration-300 ease-out">
-              <div className="flex items-center gap-1 pl-3">
-                <button
-                  onClick={() => { setFieldSelectorOpen(prev => !prev); setFieldSearch(''); }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold transition-colors ${
-                    fieldSelectorOpen
-                      ? 'bg-HATaxService-blue-500/20 text-HATaxService-blue-300'
-                      : 'text-slate-300 hover:bg-surface-600 hover:text-white'
-                  }`}
-                  title="Ask AI about a specific field"
-                >
-                  <span>Ask HA Tax service</span>
-                  <ChevronDown size={14} className={`transition-transform ${fieldSelectorOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                <div className="w-px h-6 bg-slate-600/50" />
-
-                <button
-                  onClick={handleReviewForm}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold text-slate-300 hover:bg-surface-600 hover:text-white transition-colors"
-                  title="AI review of this form"
-                >
-                  <ClipboardCheck size={16} />
-                  <span>Review</span>
-                </button>
-
-                {showFillButton && (
-                  <>
-                    <div className="w-px h-6 bg-slate-600/50" />
-                    <button
-                      onClick={handleFillForm}
-                      className="flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold text-amber-400 hover:bg-amber-500/15 hover:text-amber-300 transition-colors"
-                      title={`Form is ${completeness!.percent}% complete — ask AI for help filling it`}
-                    >
-                      <Wand2 size={16} />
-                      <span>Fill</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Sparkle icon — toggles chat panel */}
-            <button
-              onClick={togglePanel}
-              className="flex items-center justify-center w-[60px] h-[60px] rounded-full
-                         hover:bg-surface-600 transition-colors"
-              aria-label={chatOpen ? 'Close AI chat' : 'Open AI chat'}
-              title={chatOpen ? 'Close AI chat' : 'Open AI chat'}
-            >
-              <Sparkles className="w-7 h-7 text-HATaxService-orange-400 ai-sparkle" />
-            </button>
-          </div>
-
-          {/* Idle pulse animation */}
-          <style>{`
-            @keyframes aiSparkle {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.6; }
-            }
-            .ai-sparkle { animation: aiSparkle 3s ease-in-out infinite; }
-            .group\\/toolbar:hover .ai-sparkle { animation: none; opacity: 1; }
-          `}</style>
-        </div>
-      )}
     </div>
   );
 }

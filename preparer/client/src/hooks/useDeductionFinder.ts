@@ -10,33 +10,20 @@
  */
 
 import { useMemo, useCallback, useRef, useState } from 'react';
-import { useTaxReturnStore } from '../store/taxReturnStore';
-import { useAISettingsStore } from '../store/aiSettingsStore';
+import { useCaseStore } from '../store/caseStore';
 import { useDeductionFinderStore } from '../store/deductionFinderStore';
 import { parseTransactionCSV, transactionHash, deduplicateTransactions } from '../services/transactionParser';
 import { parsePDFStatement } from '../services/pdfStatementParser';
 import { scanForSignals } from '../services/deductionFinderEngine';
 import { buildReturnContext } from '../services/deductionFinderContext';
-import {
-  classifyMerchantsWithAI,
-  sanitizeMerchant,
-  generateAIInsights,
-  mergeInsights,
-} from '../services/merchantClassifier';
-import type { MerchantClassification } from '../services/merchantClassifier';
 import type {
   DeductionFinderState,
   DeductionInsight,
   NormalizedTransaction,
   UploadedFileInfo,
 } from '../services/deductionFinderTypes';
-import {
-  deduplicateByMerchant,
-  categorizeWithAI,
-  fanOutCategories,
-  buildCategorizationResult,
-} from '../services/transactionCategorizer';
-import { crossValidate } from '../services/transactionCrossValidator';
+import { buildCategorizationResult } from '../services/transactionCategorizer';
+import { categorizeByRules } from '../services/transactionCrossValidator';
 import type { CategorizationResult } from '../services/transactionCategorizerTypes';
 
 export interface UseDeductionFinderResult {
@@ -65,23 +52,15 @@ export interface UseDeductionFinderResult {
   dismissInsight: (id: string) => void;
   /** Whether a file is being processed */
   isProcessing: boolean;
-  /** Trigger AI classification on existing transactions (BYOK only) */
-  enhanceWithAI: () => Promise<void>;
-  /** Whether AI classification is in progress */
-  isClassifying: boolean;
-  /** AI classification progress (e.g., "125 / 500 merchants") */
-  aiProgress: string | null;
-  /** AI classification error message */
+  /** Categorization error message */
   aiError: string | null;
-  /** Whether AI results have been loaded */
-  hasAIResults: boolean;
-  /** Run full AI transaction categorization (BYOK only) */
+  /** Categorize every transaction by rules, on this machine */
   categorizeTransactions: () => Promise<void>;
-  /** Cancel an in-progress AI categorization */
+  /** Stop showing an in-progress categorization */
   cancelCategorization: () => void;
   /** Categorization result (null if not yet run) */
   categorizationResult: CategorizationResult | null;
-  /** Whether AI categorization is in progress */
+  /** Whether categorization is in progress */
   isCategorizing: boolean;
   /** Categorization progress text */
   categorizationProgress: string | null;
@@ -92,9 +71,9 @@ export interface UseDeductionFinderResult {
 }
 
 export function useDeductionFinder(): UseDeductionFinderResult {
-  const taxReturn = useTaxReturnStore((s) => s.taxReturn);
-  const calculation = useTaxReturnStore((s) => s.calculation);
-  const updateField = useTaxReturnStore((s) => s.updateField);
+  const taxReturn = useCaseStore((s) => s.taxReturn);
+  const calculation = useCaseStore((s) => s.calculation);
+  const updateField = useCaseStore((s) => s.updateField);
 
   // Zustand store — survives unmount
   const scanState = useDeductionFinderStore((s) => s.scanState);
@@ -103,13 +82,8 @@ export function useDeductionFinder(): UseDeductionFinderResult {
   const setAllTransactions = useDeductionFinderStore((s) => s.setAllTransactions);
   const uploadedFiles = useDeductionFinderStore((s) => s.uploadedFiles);
   const setUploadedFiles = useDeductionFinderStore((s) => s.setUploadedFiles);
-  const aiClassifications = useDeductionFinderStore((s) => s.aiClassifications);
-  const setAiClassifications = useDeductionFinderStore((s) => s.setAiClassifications);
   const isProcessing = useDeductionFinderStore((s) => s.isProcessing);
   const setIsProcessing = useDeductionFinderStore((s) => s.setIsProcessing);
-  const isClassifying = useDeductionFinderStore((s) => s.isClassifying);
-  const setIsClassifying = useDeductionFinderStore((s) => s.setIsClassifying);
-  const [aiProgress, setAiProgress] = useState<string | null>(null);
   const aiError = useDeductionFinderStore((s) => s.aiError);
   const setAiError = useDeductionFinderStore((s) => s.setAiError);
 
@@ -279,75 +253,6 @@ export function useDeductionFinder(): UseDeductionFinderResult {
     });
   }, [taxReturn?.deductionFinder, updateField]);
 
-  // AI classification
-  const enhanceWithAI = useCallback(async () => {
-    if (!taxReturn || allTransactions.length === 0) return;
-
-    const aiSettings = useAISettingsStore.getState();
-
-    // Mode gate — BYOK only (providing your own key = implicit consent)
-    if (aiSettings.mode === 'private') {
-      setAiError('AI merchant classification requires BYOK mode.');
-      return;
-    }
-
-    // Key check for BYOK
-    if (aiSettings.mode === 'byok' && !aiSettings._decryptedApiKey) {
-      setAiError('Please configure your API key in AI Settings first.');
-      return;
-    }
-
-    setIsClassifying(true);
-    setAiError(null);
-    setAiProgress(null);
-
-    try {
-      // Extract unique merchant names, sanitize
-      const uniqueMerchants = [...new Set(
-        allTransactions.map((t) => sanitizeMerchant(t.description)),
-      )].filter((m) => m.length > 0);
-
-      if (uniqueMerchants.length === 0) {
-        setAiError('No valid merchant names to classify.');
-        return;
-      }
-
-      setAiProgress(`0 / ${uniqueMerchants.length} merchants`);
-
-      const context = buildReturnContext(taxReturn, calculation);
-      const options = {
-        provider: aiSettings.byokProvider,
-        apiKey: aiSettings._decryptedApiKey,
-        model: aiSettings.byokModel,
-      };
-
-      const classifications = await classifyMerchantsWithAI(
-        uniqueMerchants,
-        context,
-        options,
-        (completed, total) => setAiProgress(`${completed} / ${total} merchants`),
-      );
-      console.log(`[deduction-finder] AI returned ${classifications.length} classifications`, classifications.slice(0, 3));
-      setAiClassifications(classifications);
-
-      // Generate AI insights and merge with rule insights
-      const ruleInsights = scanForSignals(allTransactions, context, taxReturn.taxYear);
-      const aiInsights = generateAIInsights(classifications, allTransactions, context);
-      console.log(`[deduction-finder] Rule insights: ${ruleInsights.length}, AI insights: ${aiInsights.length}`);
-      const merged = mergeInsights(ruleInsights, aiInsights);
-
-      const currentScanState = useDeductionFinderStore.getState().scanState;
-      setScanState(currentScanState ? { ...currentScanState, insights: merged } : null);
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'AI classification failed');
-    } finally {
-      setIsClassifying(false);
-      setAiProgress(null);
-    }
-  }, [taxReturn, calculation, allTransactions, setScanState, setAiClassifications, setIsClassifying, setAiError]);
-
-  const hasAIResults = aiClassifications !== null;
-
   // ── New categorizer state ──
   const categorizationResult = useDeductionFinderStore((s) => s.categorizationResult);
   const isCategorizing = useDeductionFinderStore((s) => s.isCategorizing);
@@ -355,84 +260,31 @@ export function useDeductionFinder(): UseDeductionFinderResult {
   const approveCategory = useDeductionFinderStore((s) => s.approveCategory);
   const updateTransaction = useDeductionFinderStore((s) => s.updateCategorizedTransaction);
 
-  // ── Cancel support for categorization ──
-  const categorizationAbortRef = useRef<AbortController | null>(null);
-
   const cancelCategorization = useCallback(() => {
-    if (categorizationAbortRef.current) {
-      categorizationAbortRef.current.abort();
-      categorizationAbortRef.current = null;
-    }
     const store = useDeductionFinderStore.getState();
     store.setIsCategorizing(false);
     store.setCategorizationProgress(null);
   }, []);
 
-  // ── Full AI categorization pipeline ──
+  // ── Categorization by rules (pattern engine + tax-context gates) ──
   const categorizeTransactions = useCallback(async () => {
     if (!taxReturn || allTransactions.length === 0) return;
-
-    const aiSettings = useAISettingsStore.getState();
-
-    if (aiSettings.mode === 'private') {
-      setAiError('AI transaction categorization requires BYOK mode.');
-      return;
-    }
-    if (aiSettings.mode === 'byok' && !aiSettings._decryptedApiKey) {
-      setAiError('Please configure your API key in AI Settings first.');
-      return;
-    }
-
-    // Set up abort controller
-    const abortController = new AbortController();
-    categorizationAbortRef.current = abortController;
-
     const store = useDeductionFinderStore.getState();
     store.setIsCategorizing(true);
     store.setCategorizationProgress(null);
     setAiError(null);
-
     try {
-      // 1. Deduplicate by merchant
-      const merchants = deduplicateByMerchant(allTransactions);
-      store.setCategorizationProgress(`0 / ${merchants.length} merchants`);
-
-      // 2. Build context
       const context = buildReturnContext(taxReturn, calculation);
-
-      // 3. Send to AI
-      const options = {
-        provider: aiSettings.byokProvider,
-        apiKey: aiSettings._decryptedApiKey,
-        model: aiSettings.byokModel,
-      };
-
-      // Get enabled categories and context hints from store
-      const enabledCats = store.enabledCategories as import('../services/transactionCategorizerTypes').TransactionCategory[];
-      const hints = taxReturn?.expenseScanner?.contextHints || {};
-
-      const aiCategories = await categorizeWithAI(
-        merchants,
-        context,
-        options,
-        (done, total) => store.setCategorizationProgress(`${done} / ${total} merchants`),
-        enabledCats.length > 0 ? enabledCats : undefined,
-        Object.keys(hints).length > 0 ? hints : undefined,
+      const hints = taxReturn.expenseScanner?.contextHints || {};
+      const enabled = new Set(store.enabledCategories);
+      const categorized = categorizeByRules(allTransactions, context, hints).map((ct) =>
+        enabled.size > 0 && ct.category !== 'personal' && !enabled.has(ct.category)
+          ? { ...ct, category: 'personal' as const, originalCategory: ct.category, confidence: 'low' as const, reasoning: 'Category not selected for this scan.' }
+          : ct,
       );
-
-      // 4. Fan out to individual transactions
-      const categorized = fanOutCategories(allTransactions, merchants, aiCategories);
-
-      // 5. Cross-validate with pattern engine (pass context hints so gates respect user answers)
-      crossValidate(categorized, allTransactions, context, hints);
-
-      // 6. Build result
-      const result = buildCategorizationResult(categorized);
-      store.setCategorizationResult(result);
-
-      console.log(`[categorizer] Done: ${result.summaries.length} categories, $${result.estimatedDeductibleTotal.toLocaleString()} estimated deductible`);
+      store.setCategorizationResult(buildCategorizationResult(categorized));
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'AI categorization failed');
+      setAiError(err instanceof Error ? err.message : 'Categorization failed');
     } finally {
       store.setIsCategorizing(false);
       store.setCategorizationProgress(null);
@@ -453,11 +305,7 @@ export function useDeductionFinder(): UseDeductionFinderResult {
     addressInsight,
     dismissInsight,
     isProcessing,
-    enhanceWithAI,
-    isClassifying,
-    aiProgress,
     aiError,
-    hasAIResults,
     categorizeTransactions,
     cancelCategorization,
     categorizationResult,

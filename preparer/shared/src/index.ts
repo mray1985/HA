@@ -6,6 +6,7 @@ export {
   getStandardDeduction,
   getTaxBrackets,
   getTaxConstants,
+  SUPPORTED_TAX_YEARS,
 } from './constants/taxConstants.js';
 export * from './engine/utils.js';
 export * from './engine/brackets.js';

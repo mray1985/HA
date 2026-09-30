@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTaxReturnStore } from '../store/taxReturnStore';
+import { useCaseStore } from '../store/caseStore';
 import { assessAuditRisk, AuditRiskAssessment } from '../services/auditRiskService';
 
 /**
@@ -7,8 +7,8 @@ import { assessAuditRisk, AuditRiskAssessment } from '../services/auditRiskServi
  * Memoized — only recomputes when taxReturn or calculation changes.
  */
 export function useAuditRisk(): AuditRiskAssessment | null {
-  const taxReturn = useTaxReturnStore((s) => s.taxReturn);
-  const calculation = useTaxReturnStore((s) => s.calculation);
+  const taxReturn = useCaseStore((s) => s.taxReturn);
+  const calculation = useCaseStore((s) => s.calculation);
 
   return useMemo(() => {
     if (!taxReturn || !calculation) return null;

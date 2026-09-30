@@ -1,22 +1,18 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import PreparerDashboardPage from './pages/preparer/PreparerDashboardPage';
-import PreparerClientPage from './pages/preparer/PreparerClientPage';
-import PreparerWizardPage from './pages/preparer/PreparerWizardPage';
+import CaseDashboardPage from './pages/cases/CaseDashboardPage';
+import CasePage from './pages/cases/CasePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
-import PledgePage from './pages/PledgePage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import OfflineBanner from './components/common/OfflineBanner';
 import LockScreen from './components/common/LockScreen';
 import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './services/crypto';
 import { loadAllReturns, clearReturnCache } from './api/client';
-import { useAISettingsStore } from './store/aiSettingsStore';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
 import { preparerSeatActive, useAuthHydrated, useAuthStore } from './store/authStore';
 import PreparerPaywallPage from './pages/preparer/PreparerPaywallPage';
-import PreparerIntakePage from './pages/preparer/PreparerIntakePage';
 
 type AppState = 'initializing' | 'lock-setup' | 'lock-unlock' | 'unlocked';
 
@@ -37,7 +33,6 @@ export default function PreparerApp() {
       if (appState === 'lock-setup') {
         await setupEncryption(passphrase);
         await loadAllReturns();
-        await useAISettingsStore.getState().loadApiKey();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
         setAppState('unlocked');
@@ -46,7 +41,6 @@ export default function PreparerApp() {
       const ok = await unlock(passphrase);
       if (ok) {
         await loadAllReturns();
-        await useAISettingsStore.getState().loadApiKey();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
         setAppState('unlocked');
@@ -61,7 +55,6 @@ export default function PreparerApp() {
   useEffect(() => {
     if (isUnlocked()) {
       loadAllReturns()
-        .then(() => useAISettingsStore.getState().loadApiKey())
         .then(() => useDeductionFinderStore.getState().loadDecrypted?.())
         .then(() => useAuthStore.getState().loadDecrypted())
         .then(() => setAppState('unlocked'));
@@ -79,7 +72,6 @@ export default function PreparerApp() {
         hiddenTimerRef.current = setTimeout(() => {
           lock();
           clearReturnCache();
-          useAISettingsStore.getState().clearDecryptedKey();
           useDeductionFinderStore.getState().clearDecryptedState?.();
           setAppState('lock-unlock');
         }, 30_000);
@@ -101,7 +93,6 @@ export default function PreparerApp() {
     timerRef.current = setTimeout(() => {
       lock();
       clearReturnCache();
-      useAISettingsStore.getState().clearDecryptedKey();
       useDeductionFinderStore.getState().clearDecryptedState?.();
       setAppState('lock-unlock');
     }, AUTO_LOCK_MS);
@@ -124,7 +115,7 @@ export default function PreparerApp() {
     }
   }, [appState, fetchMe]);
 
-  const publicPaths = ['/pledge', '/terms', '/privacy', '/preparer/login', '/preparer/register'];
+  const publicPaths = ['/terms', '/privacy', '/preparer/login', '/preparer/register'];
   const isPublicPage = publicPaths.includes(location.pathname);
 
   if (isPublicPage) {
@@ -132,7 +123,6 @@ export default function PreparerApp() {
       <Routes>
         <Route path="/preparer/login" element={<LoginPage audience="preparer" />} />
         <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
-        <Route path="/pledge" element={<PledgePage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
@@ -192,45 +182,20 @@ export default function PreparerApp() {
             path="/preparer"
             element={
               <ProtectedRoute>
-                <PreparerDashboardPage />
+                <CaseDashboardPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/preparer/clients"
+            path="/preparer/case/:id/:tab?"
             element={
               <ProtectedRoute>
-                <PreparerDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/preparer/client/:id"
-            element={
-              <ProtectedRoute>
-                <PreparerClientPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/preparer/intake/:id"
-            element={
-              <ProtectedRoute>
-                <PreparerIntakePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/preparer/return/:id/*"
-            element={
-              <ProtectedRoute>
-                <PreparerWizardPage />
+                <CasePage />
               </ProtectedRoute>
             }
           />
           <Route path="/preparer/*" element={<Navigate to="/preparer" replace />} />
           <Route path="/" element={<Navigate to="/preparer" replace />} />
-          <Route path="/pledge" element={<PledgePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="*" element={<Navigate to="/preparer" replace />} />

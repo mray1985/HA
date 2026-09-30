@@ -10,7 +10,7 @@
 
 import { useState, useCallback } from 'react';
 import { X, CheckCircle2, Loader2, AlertTriangle, BarChart3, FileSpreadsheet } from 'lucide-react';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { parseCSV, ColumnMapping, CSVParseResult } from '../../services/csvParser';
 import { MAX_CSV_SIZE } from '../../services/importHelpers';
@@ -32,7 +32,7 @@ interface InlineCSVImportProps {
 }
 
 export default function InlineCSVImport({ targetType, formLabel, onClose, onImported }: InlineCSVImportProps) {
-  const { taxReturn, returnId, updateField } = useTaxReturnStore();
+  const { taxReturn, returnId, updateField } = useCaseStore();
   const [state, setState] = useState<InlineCSVState>('upload');
   const [brokerName, setBrokerName] = useState('');
   const [result, setResult] = useState<CSVParseResult | null>(null);

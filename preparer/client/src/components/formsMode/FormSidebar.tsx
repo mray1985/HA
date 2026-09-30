@@ -9,12 +9,11 @@
  * shows a merged read-only PDF; otherwise the active form is shown interactively.
  */
 import { useMemo, useState, useCallback } from 'react';
-import { FileText, ChevronRight, Download, Printer, Loader2, CheckSquare, Square, Search, X, Sparkles, AlertTriangle, Check } from 'lucide-react';
+import { FileText, ChevronRight, Download, Printer, Loader2, CheckSquare, Square, Search, X, AlertTriangle, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { useChatStore } from '../../store/chatStore';
+import { useCaseStore } from '../../store/caseStore';
 import { ALL_TEMPLATES, fillIRSForm, generateSelectedFormsPDF } from '../../services/irsFormFiller';
-import { searchForms, getFormCompleteness, buildFullReturnReviewPrompt } from '../../services/formsAIService';
+import { searchForms, getFormCompleteness } from '../../services/formsAIService';
 import type { IRSFormTemplate } from '@hatax/engine';
 
 /** Group labels for sidebar organization */
@@ -34,8 +33,7 @@ export default function FormSidebar() {
     taxReturn, calculation,
     activeFormId, activeInstanceIndex, setActiveForm,
     selectedFormKeys, toggleFormSelection, selectAllForms, clearFormSelection,
-  } = useTaxReturnStore();
-  const { openWithPrompt } = useChatStore();
+  } = useCaseStore();
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -409,18 +407,6 @@ export default function FormSidebar() {
         <p className="text-sm text-slate-500 px-2">No forms applicable yet. Fill in some data first.</p>
       )}
 
-      {/* Review Entire Return button */}
-      {taxReturn && calculation && !searchResults && applicableTemplates.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-surface-700">
-          <button
-            onClick={() => { const { message, context } = buildFullReturnReviewPrompt(taxReturn, calculation); openWithPrompt(message, context); }}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-HATaxService-blue-400 bg-HATaxService-blue-600/10 hover:bg-HATaxService-blue-600/20 transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            Review Entire Return
-          </button>
-        </div>
-      )}
     </nav>
   );
 }

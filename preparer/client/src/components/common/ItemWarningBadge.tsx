@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react';
-import type { ValidationWarning } from '../../services/warningService';
+import type { ValidationWarning } from '@hatax/engine';
 
 interface ItemWarningBadgeProps {
   warnings?: ValidationWarning[];

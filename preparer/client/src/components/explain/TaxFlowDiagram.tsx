@@ -17,7 +17,7 @@ import {
   type ITooltipRenderEventArgs, type IPointEventArgs,
 } from '@syncfusion/ej2-react-charts';
 import type { Form1040Result } from '@hatax/engine';
-import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { useCaseStore } from '../../store/caseStore';
 
 interface TaxFlowDiagramProps {
   form1040: Form1040Result;
@@ -75,7 +75,7 @@ function fmtDollars(n: number): string {
 }
 
 export default function TaxFlowDiagram({ form1040: f }: TaxFlowDiagramProps) {
-  const goToStep = useTaxReturnStore((s) => s.goToStep);
+  const showSection = useCaseStore((s) => s.showReviewSection);
   const isRefund = f.refundAmount > 0;
 
   // Build steps in display order (Total Income → Refund/Owed).
@@ -151,7 +151,7 @@ export default function TaxFlowDiagram({ form1040: f }: TaxFlowDiagramProps) {
     const step = steps[args.pointIndex];
     if (!step || step.colorKey === 'reset') return;
     const stepId = STEP_MAP[step.colorKey];
-    if (stepId) goToStep(stepId);
+    if (stepId) showSection(stepId);
   };
 
   // Data labels as whole-dollar currency

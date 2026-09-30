@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { invokeTaxTool, type TaxToolName, type TaxToolSuccess } from '@hatax/local-ai';
+import { invokeTaxTool, type IngestedDocument, type TaxToolName, type TaxToolSuccess } from '@hatax/local-ai';
 import { clearReturnCache, createReturn, getReturn, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
 import { appendTaxFacts } from '../services/preparerTaxFacts';
-import { applyToolResult, SOURCE_FORM_KEY } from '../services/returnApplier';
+import { applyExtraction, applyToolResult, SOURCE_FORM_KEY } from '../services/returnApplier';
+import { loadDocuments, type ApplyExtractionResult } from '../services/documentIngestion';
+import { buildCaseReview } from '../services/caseReview';
+import { loadTaxFacts } from '../services/preparerTaxFacts';
 
 function installMemoryLocalStorage() {
   const store = new Map<string, string>();
@@ -90,5 +93,46 @@ describe('applyToolResult', () => {
     const outcome = readDocument('add_education_expense', { institutionName: 'Bayou State University', tuitionPaid: 8400 }, 'DOC-1098T');
     expect(outcome).toEqual({ kind: 'recorded' });
     expect(getReturn(returnId).educationCredits).toHaveLength(0);
+  });
+});
+
+describe('applyExtraction', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  /** One form of a multi-form file, as document intake produces it. */
+  function piece(incomeType: string, fields: Record<string, unknown>, formIndex: number) {
+    const tool = incomeType === 'w2' ? 'add_w2' : null;
+    const facts = tool
+      ? (invokeTaxTool({ tool, args: fields, context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-PDF', sourceFormIndex: formIndex, sourceFileName: 'employer.pdf', extractor: 'test' } }) as TaxToolSuccess).facts
+      : [];
+    appendTaxFacts(returnId, facts);
+    return { facts, toolFields: fields, incomeType, validation: { ready: true, issues: [], heldForms: [] }, extracted: {} as never, classification: {} as never };
+  }
+
+  it('adds one item per form of a multi-form PDF and records how each form was applied', () => {
+    const document: IngestedDocument = { documentId: 'DOC-PDF', returnId, fileName: 'employer.pdf', mimeType: 'application/pdf', byteLength: 1, contentHash: 'h', ingestedAt: '', status: 'extracted', formTypes: ['W-2', 'W-2', '1098-E'] };
+    const extraction: ApplyExtractionResult = {
+      document,
+      pieces: [
+        piece('w2', { employerName: 'Riverbend Logistics LLC', wages: 52431.18, federalTaxWithheld: 5873.4 }, 0),
+        piece('w2', { employerName: 'Bayou Events Catering Inc', wages: 8100, federalTaxWithheld: 405 }, 1),
+        piece('1098e', { interestPaid: 612.4 }, 2),
+      ],
+      facts: [],
+    };
+    expect(applyExtraction(returnId, extraction)).toEqual(['income_item', 'income_item', 'not_applied']);
+    expect(getReturn(returnId).w2Income.map((w) => w.employerName)).toEqual(['Riverbend Logistics LLC', 'Bayou Events Catering Inc']);
+    expect(new Set(loadTaxFacts(returnId).map((f) => f.sourceFormIndex ?? 0))).toEqual(new Set([0, 1]));
+
+    const saved = loadDocuments(returnId)[0]!;
+    expect(saved.appliedAs).toEqual(['income_item', 'income_item', 'not_applied']);
+    const review = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [saved] });
+    expect(review.items.find((i) => i.id === 'document:not-applied:DOC-PDF#2')?.message).toContain('the 1098-E was read but is not entered automatically');
   });
 });

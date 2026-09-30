@@ -19,7 +19,6 @@ import type {
   NormalizedTransaction,
   UploadedFileInfo,
 } from '../services/deductionFinderTypes';
-import type { MerchantClassification } from '../services/merchantClassifier';
 import type { CategorizationResult, CategorizedTransaction } from '../services/transactionCategorizerTypes';
 import { buildCategorySummaries } from '../services/transactionCategorizer';
 import {
@@ -39,9 +38,7 @@ interface DeductionFinderStoreState {
   scanState: DeductionFinderState | null;
   allTransactions: NormalizedTransaction[];
   uploadedFiles: UploadedFileInfo[];
-  aiClassifications: MerchantClassification[] | null;
   isProcessing: boolean;
-  isClassifying: boolean;
   aiError: string | null;
 
   // ── New categorizer state ──
@@ -57,9 +54,7 @@ interface DeductionFinderStoreState {
   setScanState: (s: DeductionFinderState | null) => void;
   setAllTransactions: (t: NormalizedTransaction[]) => void;
   setUploadedFiles: (f: UploadedFileInfo[]) => void;
-  setAiClassifications: (c: MerchantClassification[] | null) => void;
   setIsProcessing: (v: boolean) => void;
-  setIsClassifying: (v: boolean) => void;
   setAiError: (e: string | null) => void;
 
   // ── New categorizer setters ──
@@ -110,9 +105,7 @@ export const useDeductionFinderStore = create<DeductionFinderStoreState>()(
   scanState: null,
   allTransactions: [],
   uploadedFiles: [],
-  aiClassifications: null,
   isProcessing: false,
-  isClassifying: false,
   aiError: null,
   categorizationResult: null,
   categorizationProgress: null,
@@ -123,9 +116,7 @@ export const useDeductionFinderStore = create<DeductionFinderStoreState>()(
   setScanState: (s) => set({ scanState: s }),
   setAllTransactions: (t) => set({ allTransactions: t }),
   setUploadedFiles: (f) => set({ uploadedFiles: f }),
-  setAiClassifications: (c) => set({ aiClassifications: c }),
   setIsProcessing: (v) => set({ isProcessing: v }),
-  setIsClassifying: (v) => set({ isClassifying: v }),
   setAiError: (e) => set({ aiError: e }),
   setCategorizationResult: (r) => {
     set({ categorizationResult: r });
@@ -244,9 +235,7 @@ export const useDeductionFinderStore = create<DeductionFinderStoreState>()(
       scanState: null,
       allTransactions: [],
       uploadedFiles: [],
-      aiClassifications: null,
       isProcessing: false,
-      isClassifying: false,
       aiError: null,
       categorizationResult: null,
       categorizationProgress: null,

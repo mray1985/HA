@@ -5,7 +5,7 @@ import {
   Sliders, Scissors, ListChecks, Laptop, PersonStanding, GraduationCap,
   PiggyBank, HeartPulse, PencilRuler,
 } from 'lucide-react';
-import { getAgeAtEndOfYear } from '../../utils/dateValidation';
+import { getAgeAtEndOfYear } from '@hatax/engine';
 import type { ScenarioVariable } from './types';
 
 // ---------------------------------------------------------------------------

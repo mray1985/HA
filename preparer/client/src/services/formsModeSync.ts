@@ -1,9 +1,10 @@
 /**
- * Forms Mode — Discovery Flag Synchronization
+ * Forms — Discovery Flag Synchronization
  *
- * When a user edits fields in Forms Mode, ensure the corresponding wizard
- * discovery flags are set so that wizard steps remain visible after switching
- * back to interview mode.
+ * When a preparer edits a form, the matching discovery answers become "yes".
+ * The engine leaves out a section whose discovery answer is "no" (e.g. mortgage
+ * interest, education credits), so an entry made on the form would otherwise
+ * be ignored.
  */
 import type { TaxReturn } from '@hatax/engine';
 

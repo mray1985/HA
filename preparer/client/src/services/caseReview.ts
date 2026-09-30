@@ -123,6 +123,12 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
       items.push({ id: `document:unread:${doc.documentId}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
         message: `${doc.fileName} has not been read yet.` });
     }
+    (doc.appliedAs ?? []).forEach((outcome, index) => {
+      if (outcome !== 'not_applied') return;
+      const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
+      items.push({ id: `document:not-applied:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
+        message: `${doc.fileName}: the ${form} was read but is not entered automatically — enter it on the return.` });
+    });
   }
 
   const validation = validateImportedFacts(facts);
