@@ -93,6 +93,22 @@ the model left blank that GLM-OCR and the page's own text both read (1099-DIV
 box 4, `0.00`). The 1099-DIV Section 199A amount (box 5, no engine field)
 routes to review.
 
+### Work order §16 forms (7 cases, Qwen3.5-0.8B + page evidence + GLM-OCR)
+
+1099-B, 1099-C, 1099-G, 1099-MISC, 1099-OID, 1099-Q and 1099-SA, each filled on
+its irs.gov Copy B with synthetic values, read from the native 150 dpi render.
+
+| Page | Classified | Tool args | Invented | Confirmed wrong | s/page |
+|---|---|---|---|---|---|
+| Native PDF, 150 dpi | 7/7 | **41/41** (model alone 33) | 0 | 0 | 36 |
+
+The 8 arguments the model missed are all checkboxes (1099-B term, collectibles
+and basis-reported squares; 1099-Q transfer and beneficiary squares; 1099-C
+box 5; 1099-SA account), read by the page. Review items are the boxes no engine
+field takes: the 1099-G state refund, its tax year and the box 8 square, and the
+1099-OID FATCA square. A value the model wrote into the empty second 1099-MISC
+state row was dropped because the page does not print it.
+
 ### Checkbox reader alone (`checkboxes.ts`)
 
 53 checkboxes per variant: 21 on the seven Phase 1 forms and 32 on the §16
