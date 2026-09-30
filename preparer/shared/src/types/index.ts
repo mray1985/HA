@@ -466,6 +466,8 @@ export interface VehicleInfo {
   totalMiles?: number;
   commuteMiles?: number;
   dateInService?: string;
+  /** Date acquired (YYYY-MM-DD), for special depreciation in the year placed in service (see DepreciationAsset). */
+  acquisitionDate?: string;
   actualExpenses?: number;            // Legacy single-number (backward compat)
 
   // ── Actual expense categories ──────────────────────────
@@ -567,6 +569,24 @@ export interface DepreciationAsset {
   adsRecoveryYears?: number;
   quarterPlaced?: 1 | 2 | 3 | 4;         // Quarter placed in service (derived from dateInService)
   isSoftware?: boolean;                   // Off-the-shelf software: 36-month SL amortization per IRC §167(f)(1)
+  /**
+   * Date acquired (YYYY-MM-DD), which sets the special depreciation rate for
+   * property placed in service in 2025 or later: acquired after January 19,
+   * 2025, 100%; before, 40% (P.L. 119-21). For property bought under a written
+   * binding contract, the date of the contract; for self-constructed
+   * property, the date construction began (Pub. 946).
+   */
+  acquisitionDate?: string;
+  /** Property with a long production period, or certain aircraft (§168(k)(2)(B), (C)): its own special depreciation rates. */
+  longProductionPeriod?: boolean;
+  /** Election out of special depreciation for this asset's class of property (§168(k)(7)); set it on every asset of the class. */
+  electOutOfBonus?: boolean;
+  /**
+   * Election to take 40% (60% for long production period property) instead of
+   * 100% for property acquired after January 19, 2025, in the first tax year
+   * ending after that date.
+   */
+  electReducedBonus?: boolean;
 }
 
 /** Form 4562 calculation result — Parts I through IV */
@@ -1981,6 +2001,8 @@ export interface UnsupportedPattern {
   jurisdiction: string;
   section: 'state' | 'depreciation' | 'federal';
   message: string;
+  /** The return item it concerns (a depreciation asset's id), when one. */
+  itemId?: string;
 }
 
 export interface StateCalculationResult {

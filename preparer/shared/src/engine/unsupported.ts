@@ -10,6 +10,7 @@
  */
 
 import type { CalculationResult, TaxReturn, UnsupportedPattern } from '../types/index.js';
+import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
 import { getStateName } from './state/index.js';
 import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
@@ -57,6 +58,32 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     if (code === 'DC' && calculation?.form1040.deductionUsed === 'itemized') {
       add('DC.ITEMIZED', code, 'state', `DC itemized deductions are not calculated (HATax applies DC's standard deduction). ${STATE_ONLY}`);
     }
+  }
+
+  // TAX-001: special depreciation whose rate the facts do not settle.
+  for (const asset of taxReturn.depreciationAssets ?? []) {
+    if (asset.disposed) continue;
+    const placed = parseInt((asset.dateInService || '').slice(0, 4), 10);
+    if (!Number.isFinite(placed) || placed > year) continue;
+    const { unsettled } = specialDepreciationRate(asset, placed);
+    if (!unsettled) continue;
+    const name = asset.description?.trim() || 'An asset';
+    out.push({
+      ruleId: 'FED.BONUS_DEPRECIATION.168K', jurisdiction: 'US', section: 'depreciation', itemId: asset.id,
+      message: `${name} (placed in service ${asset.dateInService}): special depreciation cannot be figured — ${unsettled}.${!asset.acquisitionDate ? ' Enter the date it was acquired (for a written binding contract, the date of the contract).' : ''}`,
+    });
+  }
+  const vehicle = taxReturn.vehicle;
+  const vehicleYear = parseInt((vehicle?.dateInService || '').slice(0, 4), 10);
+  const vehicleUse = vehicle?.totalMiles ? (vehicle.businessMiles ?? 0) / vehicle.totalMiles : 0;
+  if (vehicle?.method === 'actual' && vehicleYear === year && year >= 2025 && vehicleUse > 0.5
+      && (!vehicle.acquisitionDate || vehicle.acquisitionDate <= '2025-01-19')) {
+    out.push({
+      ruleId: 'FED.BONUS_DEPRECIATION.168K', jurisdiction: 'US', section: 'depreciation', itemId: 'vehicle',
+      message: vehicle.acquisitionDate
+        ? `The vehicle was acquired before January 20, 2025: its special depreciation (40%) and first-year limit are not built.`
+        : `The vehicle's special depreciation cannot be figured: enter the date it was acquired (a vehicle acquired before January 20, 2025 gets 40%, not 100%).`,
+    });
   }
 
   // TAX-003: Washington's capital gains tax on long-term gains over the standard deduction.

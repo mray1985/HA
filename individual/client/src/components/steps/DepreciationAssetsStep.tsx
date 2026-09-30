@@ -15,7 +15,7 @@ import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import WhatsNewCard from '../common/WhatsNewCard';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { validatePlacedInServiceDate } from '../../utils/dateValidation';
+import { validateAssetAcquisitionDate, validatePlacedInServiceDate } from '../../utils/dateValidation';
 import {
   DepreciationAsset,
   MACRSPropertyClass,
@@ -56,7 +56,7 @@ export default function DepreciationAssetsStep() {
   // Compute Schedule C to get tentativeProfit for Form 4562 preview
   const schedCResult = calculateScheduleC(taxReturn);
   const form4562Result = assets.length > 0
-    ? calculateForm4562(assets, schedCResult.tentativeProfit)
+    ? calculateForm4562(assets, schedCResult.tentativeProfit, taxReturn.taxYear)
     : null;
 
   const startAdd = () => {
@@ -78,6 +78,10 @@ export default function DepreciationAssetsStep() {
       priorDepreciation: asset.priorDepreciation,
       priorSection179: asset.priorSection179,
       disposed: asset.disposed,
+      acquisitionDate: asset.acquisitionDate,
+      longProductionPeriod: asset.longProductionPeriod,
+      electOutOfBonus: asset.electOutOfBonus,
+      electReducedBonus: asset.electReducedBonus,
     });
   };
 
@@ -177,6 +181,40 @@ export default function DepreciationAssetsStep() {
             onChange={(v) => setForm({ ...form, propertyClass: Number(v) as MACRSPropertyClass })}
           />
         </FormField>
+
+        {/* Special depreciation (IRC §168(k)): the rate follows the date acquired (Form 4562 instructions, line 14). */}
+        {(!form.dateInService || form.dateInService >= '2025-01-01') && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField
+              label="Date Acquired"
+              helpText="The date you bought it — for a written binding contract, the date of the contract. Property acquired before January 20, 2025 gets 40% special depreciation, not 100%."
+              warning={validateAssetAcquisitionDate(form.acquisitionDate || '', form.dateInService)}
+            >
+              <input
+                type="date"
+                className="input-field"
+                value={form.acquisitionDate || ''}
+                onChange={(e) => setForm({ ...form, acquisitionDate: e.target.value || undefined })}
+              />
+            </FormField>
+            <div className="flex flex-col gap-2 pt-6 text-sm text-slate-300">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={Boolean(form.longProductionPeriod)} onChange={(e) => setForm({ ...form, longProductionPeriod: e.target.checked || undefined })} />
+                Long production period property or certain aircraft
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={Boolean(form.electOutOfBonus)} onChange={(e) => setForm({ ...form, electOutOfBonus: e.target.checked || undefined })} />
+                Elect out of special depreciation for this class of property
+              </label>
+              {form.dateInService?.startsWith('2025') && (form.acquisitionDate ?? '') > '2025-01-19' && !form.electOutOfBonus && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={Boolean(form.electReducedBonus)} onChange={(e) => setForm({ ...form, electReducedBonus: e.target.checked || undefined })} />
+                  Elect 40% special depreciation instead of 100% (60% for long production period property)
+                </label>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormField label="Business Use %" helpText="Percentage used for business (100% if exclusively business)" tooltip={help?.fields['Business Use %']?.tooltip} irsRef={help?.fields['Business Use %']?.irsRef}>

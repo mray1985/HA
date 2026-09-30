@@ -187,12 +187,12 @@ const SOFTWARE_AMORTIZATION_MONTHS = 36;
  * @returns Current year amortization amount
  */
 function computeSoftwareAmortization(
-  cost: number,
+  amortizableBasis: number,
   dateInService: string,
-  priorDepreciation: number,
+  remainingBasis: number,
   taxYear: number = 2025,
 ): number {
-  const monthlyAmount = round2(cost / SOFTWARE_AMORTIZATION_MONTHS);
+  const monthlyAmount = round2(amortizableBasis / SOFTWARE_AMORTIZATION_MONTHS);
   const startDate = new Date(dateInService + 'T00:00:00');
   if (isNaN(startDate.getTime())) return 0;
 
@@ -222,8 +222,57 @@ function computeSoftwareAmortization(
   const yearAmortization = round2(monthlyAmount * Math.max(0, monthsInYear));
 
   // Don't exceed remaining basis
-  const remaining = round2(Math.max(0, cost - priorDepreciation));
-  return round2(Math.min(yearAmortization, remaining));
+  return round2(Math.min(yearAmortization, Math.max(0, remainingBasis)));
+}
+
+// ── Special Depreciation Rate (IRC §168(k)) ─────────────────
+
+/** P.L. 119-21: property acquired after this date gets 100% special depreciation. */
+const ACQUIRED_AFTER_FOR_100_PERCENT = '2025-01-19';
+
+export interface SpecialDepreciationRate {
+  rate: number;
+  /**
+   * Why the facts do not settle the rate. The rate given then assumes the
+   * asset was acquired after January 19, 2025; the return is not supported
+   * until the facts are entered (engine/unsupported.ts).
+   */
+  unsettled?: string;
+}
+
+/**
+ * The share of an asset's basis (after section 179) taken as special
+ * depreciation in the year it was placed in service, from the Form 4562
+ * instructions for that year: 2023, 80% (100% for long production period
+ * property and certain aircraft); 2024, 60% (80%); 2025, 100% when acquired
+ * after January 19, 2025, else 40% (60%), with an election to take 40% (60%)
+ * instead of 100%; 2026 on, 100% when acquired after January 19, 2025.
+ * Business use of 50% or less, or an election out, gives none.
+ */
+export function specialDepreciationRate(asset: DepreciationAsset, placedYear: number): SpecialDepreciationRate {
+  if (asset.electOutOfBonus || (asset.businessUsePercent ?? 100) <= 50) return { rate: 0 };
+  const lpp = Boolean(asset.longProductionPeriod);
+  const acquired = asset.acquisitionDate;
+  if ((acquired && acquired < '2017-09-28') || placedYear < 2018) {
+    return { rate: 0, unsettled: 'property acquired before September 28, 2017 or placed in service before 2018 follows special depreciation rules that are not built' };
+  }
+  if (placedYear <= 2022) return { rate: 1.0 };
+  if (placedYear === 2023) return { rate: lpp ? 1.0 : 0.8 };
+  if (placedYear === 2024) return { rate: lpp ? 0.8 : 0.6 };
+  const reduced = lpp ? 0.6 : 0.4;
+  if (!acquired) {
+    return { rate: 1.0, unsettled: `the date it was acquired is not entered — property acquired before January 20, 2025 gets ${reduced * 100}% special depreciation, not 100%` };
+  }
+  if (acquired > ACQUIRED_AFTER_FOR_100_PERCENT) {
+    return { rate: placedYear === 2025 && asset.electReducedBonus ? reduced : 1.0 };
+  }
+  if (placedYear === 2025) return { rate: reduced };
+  return { rate: 1.0, unsettled: `it was acquired before January 20, 2025 and placed in service in ${placedYear}; that year's rate for such property is not built` };
+}
+
+function placedInServiceYear(asset: DepreciationAsset, taxYear: number): number {
+  const year = parseInt((asset.dateInService || '').slice(0, 4), 10);
+  return Number.isFinite(year) ? year : taxYear;
 }
 
 // ── Section 179 Computation ─────────────────────────────────
@@ -375,30 +424,31 @@ function computeCurrentYearAsset(
   convention: 'half-year' | 'mid-quarter',
   taxYear: number = 2025,
 ): Form4562AssetDetail {
-  const BONUS_DEPRECIATION_RATE_2025 = getBonusDepreciationRate(taxYear);
+  const specialRate = specialDepreciationRate(asset, taxYear).rate;
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
   // ── IRC §167(f)(1): Software uses 36-month SL amortization ──
-  // No Section 179, no bonus — ratably over 36 months from month placed in service.
-  // Reported on Form 4562 Line 16 ("Other depreciation").
+  // Off-the-shelf software is section 179 property and qualified property for
+  // special depreciation (Form 4562 instructions, line 14); what remains is
+  // amortized ratably over 36 months from the month placed in service
+  // (line 16, "other depreciation").
   if (asset.isSoftware) {
-    const amortization = computeSoftwareAmortization(
-      businessUseBasis,
-      asset.dateInService,
-      0, // No prior depreciation for current-year asset
-      taxYear,
-    );
+    const section179Amount = round2(section179AllowedAllocations.get(asset.id) || 0);
+    const afterSection179 = round2(Math.max(0, businessUseBasis - round2(section179ElectedAllocations.get(asset.id) || 0)));
+    const bonusDepreciation = round2(afterSection179 * specialRate);
+    const amortizable = round2(Math.max(0, afterSection179 - bonusDepreciation));
+    const amortization = computeSoftwareAmortization(amortizable, asset.dateInService, amortizable, taxYear);
     return {
       assetId: asset.id,
       description: asset.description || '',
       cost: asset.cost,
       businessUseBasis,
-      section179Amount: 0,
-      bonusDepreciation: 0,
+      section179Amount,
+      bonusDepreciation,
       macrsDepreciation: amortization, // Reported as "other depreciation" in the total
-      totalDepreciation: amortization,
-      depreciableRemaining: round2(Math.max(0, businessUseBasis - amortization)),
+      totalDepreciation: round2(section179Amount + bonusDepreciation + amortization),
+      depreciableRemaining: round2(Math.max(0, amortizable - amortization)),
       propertyClass: asset.propertyClass,
       yearIndex: 0,
       convention: 'half-year', // Not applicable for software, but field is required
@@ -416,14 +466,12 @@ function computeCurrentYearAsset(
   // Remaining basis after Section 179 (uses elected for basis reduction)
   const afterSection179 = round2(Math.max(0, businessUseBasis - section179BasisReduction));
 
-  // Bonus depreciation: 100% of remaining basis (Part II, Line 14).
-  // Business use of 50% or less is not qualified property (IRC §280F(b), §168(k)(2)(D)).
-  // An election to use ADS under §168(g)(7) does not remove bonus eligibility.
-  // §168(k)(2)(D)(i)(I) disregards that election when testing the ADS exception.
-  const bonusEligible = (asset.businessUsePercent ?? 100) > 50;
-  const bonusDepreciation = bonusEligible
-    ? round2(afterSection179 * BONUS_DEPRECIATION_RATE_2025)
-    : 0;
+  // Special depreciation (Part II, Line 14) at the rate for the year placed in
+  // service and the date acquired. Business use of 50% or less is not
+  // qualified property (IRC §280F(b), §168(k)(2)(D)). An election to use ADS
+  // under §168(g)(7) does not remove eligibility: §168(k)(2)(D)(i)(I)
+  // disregards that election when testing the ADS exception.
+  const bonusDepreciation = round2(afterSection179 * specialRate);
 
   // MACRS on remaining basis after 179 + bonus
   const afterBonus = round2(Math.max(0, afterSection179 - bonusDepreciation));
@@ -470,12 +518,16 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
   const businessUseBasis = round2(asset.cost * basisPct);
 
   // ── IRC §167(f)(1): Software uses 36-month SL amortization ──
+  // Of the basis left after section 179 and the special depreciation taken in
+  // the year placed in service.
   if (asset.isSoftware) {
     const priorDepr = asset.priorDepreciation || 0;
+    const afterPrior179 = round2(Math.max(0, businessUseBasis - (asset.priorSection179 || 0)));
+    const amortizable = round2(afterPrior179 * (1 - specialDepreciationRate(asset, placedInServiceYear(asset, taxYear)).rate));
     const amortization = computeSoftwareAmortization(
-      businessUseBasis,
+      amortizable,
       asset.dateInService,
-      priorDepr,
+      round2(afterPrior179 - priorDepr),
       taxYear,
     );
     return {
@@ -487,7 +539,7 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
       bonusDepreciation: 0,
       macrsDepreciation: amortization,
       totalDepreciation: amortization,
-      depreciableRemaining: round2(Math.max(0, businessUseBasis - priorDepr - amortization)),
+      depreciableRemaining: round2(Math.max(0, businessUseBasis - (asset.priorSection179 || 0) - priorDepr - amortization)),
       propertyClass: asset.propertyClass,
       yearIndex: getYearIndex(asset.dateInService),
       convention: 'half-year', // Not applicable for software
@@ -523,10 +575,12 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
     };
   }
 
-  // MACRS depreciation for this year
-  // Note: We apply the rate to the original depreciable basis (after 179),
-  // NOT the basis minus prior depreciation. MACRS rates are designed to sum to 100%.
-  const macrsDepreciation = round2(basisAfterPrior179 * rates[yearIndex]);
+  // MACRS depreciation for this year: the rate applies to the basis after
+  // section 179 and the special depreciation taken in the year placed in
+  // service (Form 4562 instructions, line 19), not to the basis minus prior
+  // depreciation. MACRS rates are designed to sum to 100%.
+  const macrsBasis = round2(basisAfterPrior179 * (1 - specialDepreciationRate(asset, placedInServiceYear(asset, taxYear)).rate));
+  const macrsDepreciation = round2(macrsBasis * rates[yearIndex]);
 
   // Ensure we don't depreciate below zero (remaining basis check)
   const priorDepr = asset.priorDepreciation || 0;

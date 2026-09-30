@@ -171,7 +171,7 @@ export function calculateScheduleC(taxReturn: TaxReturn): ScheduleCResult {
 
   // ─── Form 4562 depreciation (Line 13) ──────────────────
   const form4562Result = hasDepreciationAssets
-    ? calculateForm4562(taxReturn.depreciationAssets!, tentativeProfit)
+    ? calculateForm4562(taxReturn.depreciationAssets!, tentativeProfit, taxReturn.taxYear || 2025)
     : undefined;
   const depreciationDeduction = form4562Result?.totalDepreciation || 0;
 

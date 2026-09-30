@@ -130,6 +130,38 @@ export function recordClientFormAnswer(returnId: string, formKey: string, tool: 
   return { ok: true, outcome: reapplyForm(returnId, formKey)! };
 }
 
+/** What sets an asset's special depreciation rate (§168(k)), entered by the preparer. */
+export interface AcquisitionFacts {
+  acquisitionDate: string;
+  longProductionPeriod?: boolean;
+  electOutOfBonus?: boolean;
+}
+
+/** The date a depreciation asset (or the vehicle) was acquired, and its special depreciation facts. */
+export function recordAcquisition(returnId: string, assetId: string | 'vehicle', facts: AcquisitionFacts): DecisionResult {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(facts.acquisitionDate)) return { ok: false, error: 'Enter the date acquired.' };
+  const tr = getReturn(returnId);
+  if (assetId === 'vehicle') {
+    if (!tr.vehicle) return { ok: false, error: 'The return has no vehicle.' };
+    updateReturn(returnId, { vehicle: { ...tr.vehicle, acquisitionDate: facts.acquisitionDate } });
+  } else {
+    const assets = tr.depreciationAssets ?? [];
+    const asset = assets.find((a) => a.id === assetId);
+    if (!asset) return { ok: false, error: 'The asset is not on the return.' };
+    if (facts.acquisitionDate > asset.dateInService) return { ok: false, error: 'The date acquired cannot be after the date placed in service.' };
+    updateReturn(returnId, {
+      depreciationAssets: assets.map((a) => (a.id === assetId ? {
+        ...a,
+        acquisitionDate: facts.acquisitionDate,
+        longProductionPeriod: facts.longProductionPeriod || undefined,
+        electOutOfBonus: facts.electOutOfBonus || undefined,
+      } : a)),
+    });
+  }
+  appendAudit(returnId, { kind: 'correction', field: assetId === 'vehicle' ? 'vehicle.acquisitionDate' : `depreciationAssets[${assetId}].acquisitionDate`, from: 'not set', to: facts.acquisitionDate });
+  return { ok: true, outcome: { kind: 'recorded' } };
+}
+
 /** The preparer puts the filing status a client's reply states on the return. */
 export function applyStatedFilingStatus(returnId: string, status: FilingStatus, label: string): DecisionResult {
   const before = getReturn(returnId).filingStatus;

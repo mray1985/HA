@@ -211,7 +211,7 @@ describe('S2 — Form 4562 Depreciation Pipeline', () => {
         id: 'a2',
         description: 'Office Furniture',
         cost: 5000,
-        dateInService: '2024-07-10',
+        dateInService: '2024-07-10', electOutOfBonus: true,
         propertyClass: 7,
         businessUsePercent: 100,
         section179Election: 0,

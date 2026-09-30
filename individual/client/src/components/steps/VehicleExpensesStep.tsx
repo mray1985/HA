@@ -11,7 +11,7 @@ import CalloutCard from '../common/CalloutCard';
 import WhatsNewCard from '../common/WhatsNewCard';
 import { calculateVehicleDetailed, compareVehicleMethods } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
-import { validatePlacedInServiceDate } from '../../utils/dateValidation';
+import { validateAssetAcquisitionDate, validatePlacedInServiceDate } from '../../utils/dateValidation';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 
 export default function VehicleExpensesStep() {
@@ -201,6 +201,14 @@ export default function VehicleExpensesStep() {
                     className="input-field"
                     value={vh.dateInService || ''}
                     onChange={(e) => updateVH('dateInService', e.target.value)}
+                  />
+                </FormField>
+                <FormField label="Date Acquired" helpText="For special depreciation: a vehicle acquired before January 20, 2025 gets 40%, not 100%." optional warning={validateAssetAcquisitionDate(vh.acquisitionDate || '', vh.dateInService)}>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={vh.acquisitionDate || ''}
+                    onChange={(e) => updateVH('acquisitionDate', e.target.value || undefined)}
                   />
                 </FormField>
                 <FormField label="Prior Depreciation" tooltip={f('Prior Depreciation')?.tooltip} irsRef={f('Prior Depreciation')?.irsRef} helpText={f('Prior Depreciation')?.helpText} optional>

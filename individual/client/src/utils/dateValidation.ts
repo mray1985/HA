@@ -250,6 +250,27 @@ export function validateDeathDate(dateStr: string): string | undefined {
 }
 
 /**
+ * Validate the date a depreciable asset (or a vehicle) was acquired.
+ * - Must not be in the future
+ * - Cannot be after the date it was placed in service
+ */
+export function validateAssetAcquisitionDate(dateStr: string, placedInServiceStr?: string): string | undefined {
+  const d = parse(dateStr);
+  if (!d) return undefined;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (d > today) {
+    return 'This date is in the future — please double-check.';
+  }
+  const placed = placedInServiceStr ? parse(placedInServiceStr) : undefined;
+  if (placed && d > placed) {
+    return 'An asset is acquired on or before the date it is placed in service — please double-check.';
+  }
+  return undefined;
+}
+
+/**
  * Validate a "placed in service" or "first used" date.
  * - Must not be in the future
  */

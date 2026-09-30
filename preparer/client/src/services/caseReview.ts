@@ -104,7 +104,9 @@ export type ReviewAction =
   | { kind: 'fix'; tool: DocumentToolName; formKey: string; fields: string[] }
   | { kind: 'dependent'; firstName: string; lastName: string; missing: Array<'relationship' | 'monthsLivedWithYou'> }
   /** A filing status the client's reply states: the preparer puts it on the return. */
-  | { kind: 'filing_status'; status: FilingStatus; label: string };
+  | { kind: 'filing_status'; status: FilingStatus; label: string }
+  /** The date a depreciation asset (or the vehicle) was acquired, which sets its special depreciation (§168(k)). */
+  | { kind: 'acquisition_date'; assetId: string | 'vehicle' };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -349,6 +351,9 @@ function missingDocumentItems(missing: readonly MissingDocument[]): ReviewItem[]
   });
 }
 
+/** The engine's finding for special depreciation it cannot figure without the date acquired. */
+const BONUS_RULE = 'FED.BONUS_DEPRECIATION.168K';
+
 export function buildCaseReview(input: {
   taxReturn: TaxReturn;
   calculation?: CalculationResult | null;
@@ -367,6 +372,9 @@ export function buildCaseReview(input: {
     source: d.source,
     ...(d.field ? { field: d.field } : {}),
     ...(d.itemLabel ? { itemLabel: d.itemLabel } : {}),
+    ...(d.source === 'unsupported' && d.id.startsWith(`unsupported:${BONUS_RULE}:`)
+      ? { action: { kind: 'acquisition_date' as const, assetId: d.id.slice(`unsupported:${BONUS_RULE}:`.length) } }
+      : {}),
   }));
   const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems]
     .map((item) => {

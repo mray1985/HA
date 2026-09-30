@@ -89,7 +89,7 @@ export function runReturnDiagnostics(taxReturn: TaxReturn, calculation?: Calcula
   // What the engine cannot compute to the official rules is never approximated (engine/unsupported.ts).
   for (const u of calculation?.unsupported ?? findUnsupportedPatterns(taxReturn)) {
     out.push({
-      id: `unsupported:${u.ruleId}:${u.jurisdiction}`,
+      id: `unsupported:${u.ruleId}:${u.itemId ?? u.jurisdiction}`,
       category: 'BLOCKING',
       source: 'unsupported',
       section: u.section === 'state' ? `state_${u.jurisdiction.toLowerCase()}` : u.section,

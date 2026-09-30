@@ -8,7 +8,7 @@
 import { useState, type ReactNode } from 'react';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
 import type { ReviewAction } from '../../services/caseReview';
-import { completeDependent, correctFormField, recordChoice, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
+import { completeDependent, correctFormField, recordAcquisition, recordChoice, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
 
 const inputClass = 'bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1.5 w-full';
@@ -199,10 +199,12 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   fix: 'Enter the value',
   dependent: 'Complete the dependent',
   filing_status: "Use the client's filing status",
+  acquisition_date: 'Enter the date acquired',
 };
 
 export function actionLabel(action: ReviewAction): string {
-  return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it' : 'Complete';
+  return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it'
+    : action.kind === 'acquisition_date' ? 'Enter the date acquired' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
@@ -236,6 +238,14 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
           return completeDependent(returnId, { firstName: action.firstName, lastName: action.lastName }, answer);
         case 'filing_status':
           return applyStatedFilingStatus(returnId, action.status, action.label);
+        case 'acquisition_date':
+          return typeof answer.acquisitionDate === 'string'
+            ? recordAcquisition(returnId, action.assetId, {
+              acquisitionDate: answer.acquisitionDate,
+              longProductionPeriod: answer.longProductionPeriod === true,
+              electOutOfBonus: answer.electOutOfBonus === true,
+            })
+            : { ok: false, error: 'Enter the date acquired.' };
       }
     });
     if (result.ok) onDone();
@@ -251,6 +261,20 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       {action.kind === 'choice' && <ChoiceFields tool={action.tool} missing={action.missing} answer={answer} set={set} />}
       {action.kind === 'fix' && <FixFields action={action} answer={answer} set={set} />}
       {action.kind === 'dependent' && <DependentFields action={action} answer={answer} set={set} />}
+      {action.kind === 'acquisition_date' && (
+        <div className="flex flex-col gap-2 text-sm text-slate-300">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">Date acquired (for a written binding contract, the date of the contract)</span>
+            <input type="date" aria-label="Date acquired" className={inputClass} value={(answer.acquisitionDate as string) ?? ''} onChange={(e) => set('acquisitionDate', e.target.value || undefined)} />
+          </label>
+          {action.assetId !== 'vehicle' && (
+            <>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={answer.longProductionPeriod === true} onChange={(e) => set('longProductionPeriod', e.target.checked)} /> Long production period property or certain aircraft</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={answer.electOutOfBonus === true} onChange={(e) => set('electOutOfBonus', e.target.checked)} /> Elected out of special depreciation for this class of property</label>
+            </>
+          )}
+        </div>
+      )}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       <p className="text-xs text-slate-500">Recorded as a preparer entry and kept in the audit trail.</p>

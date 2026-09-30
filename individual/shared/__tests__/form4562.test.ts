@@ -177,7 +177,7 @@ describe('Form 4562 Part II — Bonus Depreciation', () => {
   });
 
   it('bonus only applies to current-year assets, not prior-year', () => {
-    const priorAsset = makeAsset({ dateInService: '2024-03-01', cost: 5000 });
+    const priorAsset = makeAsset({ dateInService: '2024-03-01', electOutOfBonus: true, cost: 5000 });
     const result = calculateForm4562([priorAsset], 50000);
 
     expect(result.bonusDepreciationTotal).toBe(0);
@@ -200,7 +200,7 @@ describe('Form 4562 Part II — Bonus Depreciation', () => {
 describe('Form 4562 Part III — MACRS Depreciation', () => {
   it('prior-year 5-year asset: year 1 rate = 0.32', () => {
     const asset = makeAsset({
-      dateInService: '2024-01-15',
+      dateInService: '2024-01-15', electOutOfBonus: true,
       cost: 10000,
       propertyClass: 5,
       priorDepreciation: 2000, // Year 0 depreciation
@@ -216,7 +216,7 @@ describe('Form 4562 Part III — MACRS Depreciation', () => {
 
   it('prior-year 7-year asset: year 2 rate = 0.1749', () => {
     const asset = makeAsset({
-      dateInService: '2023-06-01',
+      dateInService: '2023-06-01', electOutOfBonus: true,
       cost: 5000,
       propertyClass: 7,
       priorDepreciation: 1939, // Year 0 (0.1429*5000=714.5) + Year 1 (0.2449*5000=1224.5) ≈ 1939
@@ -231,7 +231,7 @@ describe('Form 4562 Part III — MACRS Depreciation', () => {
 
   it('fully depreciated asset: year index beyond rate table → $0', () => {
     const asset = makeAsset({
-      dateInService: '2018-01-01',
+      dateInService: '2018-01-01', electOutOfBonus: true,
       cost: 3000,
       propertyClass: 5,
       priorDepreciation: 3000,
@@ -247,7 +247,7 @@ describe('Form 4562 Part III — MACRS Depreciation', () => {
 
   it('MACRS capped by remaining depreciable basis', () => {
     const asset = makeAsset({
-      dateInService: '2024-01-01',
+      dateInService: '2024-01-01', electOutOfBonus: true,
       cost: 1000,
       propertyClass: 5,
       priorDepreciation: 900, // Only $100 remaining
@@ -261,7 +261,7 @@ describe('Form 4562 Part III — MACRS Depreciation', () => {
 
   it('3-year property class rates applied correctly', () => {
     const asset = makeAsset({
-      dateInService: '2024-06-01',
+      dateInService: '2024-06-01', electOutOfBonus: true,
       cost: 6000,
       propertyClass: 3 as MACRSPropertyClass,
       priorDepreciation: 2000, // Year 0 = 0.3333 * 6000 = 1999.8
@@ -276,7 +276,7 @@ describe('Form 4562 Part III — MACRS Depreciation', () => {
 
   it('prior-year asset with prior Section 179 reduces depreciable basis', () => {
     const asset = makeAsset({
-      dateInService: '2024-01-01',
+      dateInService: '2024-01-01', electOutOfBonus: true,
       cost: 8000,
       propertyClass: 5,
       priorSection179: 3000,     // Claimed $3,000 Section 179 in 2024
@@ -349,7 +349,7 @@ describe('Form 4562 — Mixed scenarios', () => {
       id: 'a2',
       description: 'Standing desk',
       cost: 1500,
-      dateInService: '2024-07-01',
+      dateInService: '2024-07-01', electOutOfBonus: true,
       propertyClass: 7,
       priorDepreciation: 214, // Year 0: 1500 * 0.1429 ≈ 214.35 → rounded
     });
@@ -452,7 +452,7 @@ describe('Form 4562 — Asset detail output', () => {
 
   it('prior-year asset shows correct remaining basis', () => {
     const asset = makeAsset({
-      dateInService: '2023-01-01',
+      dateInService: '2023-01-01', electOutOfBonus: true,
       cost: 10000,
       propertyClass: 7,
       priorDepreciation: 3878, // Year 0 (1429) + Year 1 (2449) = 3878
@@ -621,7 +621,7 @@ describe('Mid-quarter convention — rate application', () => {
   it('prior-year asset with stored mid-quarter convention uses MQ rates', () => {
     // Asset placed in service Q4 2024, stored with mid-quarter convention
     const asset = makeAsset({
-      dateInService: '2024-11-15',
+      dateInService: '2024-11-15', electOutOfBonus: true,
       cost: 10000,
       propertyClass: 5,
       convention: 'mid-quarter',
@@ -639,7 +639,7 @@ describe('Mid-quarter convention — rate application', () => {
 
   it('prior-year asset without convention field defaults to half-year (backward compat)', () => {
     const asset = makeAsset({
-      dateInService: '2024-01-15',
+      dateInService: '2024-01-15', electOutOfBonus: true,
       cost: 10000,
       propertyClass: 5,
       priorDepreciation: 2000,
@@ -690,7 +690,7 @@ describe('Mid-quarter convention — integration', () => {
       makeAsset({
         id: 'prior1',
         cost: 10000,
-        dateInService: '2024-06-15',
+        dateInService: '2024-06-15', electOutOfBonus: true,
         propertyClass: 7,
         priorDepreciation: 1429, // Year 0: 10000 * 0.1429
       }),
@@ -828,7 +828,7 @@ describe('>50% business use eligibility (IRC §179(d)(10) / §280F)', () => {
 describe('Prior-year mid-quarter — quarterPlaced fallback', () => {
   it('derives quarter from dateInService when quarterPlaced is missing', () => {
     const asset = makeAsset({
-      dateInService: '2024-11-15',
+      dateInService: '2024-11-15', electOutOfBonus: true,
       cost: 10000,
       propertyClass: 5,
       convention: 'mid-quarter',
@@ -846,7 +846,7 @@ describe('Prior-year mid-quarter — quarterPlaced fallback', () => {
 
   it('prefers explicit quarterPlaced over dateInService derivation', () => {
     const asset = makeAsset({
-      dateInService: '2024-11-15', // Would derive Q4
+      dateInService: '2024-11-15', electOutOfBonus: true, // Would derive Q4
       cost: 10000,
       propertyClass: 5,
       convention: 'mid-quarter',
