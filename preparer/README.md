@@ -19,6 +19,14 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   reader read, hold the form for the preparer; a value that cannot be read
   stays unknown — never zero. Without the models (a web deployment) documents
   are read from the PDF text layer and with OCR.
+- **Missing documents.** Last year's documents — from last year's case for
+  the same client (same SSN, or name and date of birth), or from an imported
+  prior-year return — are compared with this year's by form and payer (EIN, or
+  the payer's name without legal suffixes: "Chase" is "JPMORGAN CHASE BANK
+  NA"). Each one not received is shown as *possibly* missing ("Possible
+  missing 1099-INT from Chase"), put in the review, and asked about on the
+  Client tab; the client's "no" settles it, and their "yes" waits for the
+  upload.
 - **Client questions and replies.** The Client tab lists only what the
   case's documents do not settle — a dependent's months at home or
   relationship, where the client lived, the qualified expenses a 1099-Q paid,

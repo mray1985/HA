@@ -64,6 +64,7 @@ export default function ClientPanel() {
   const returnId = useCaseStore((s) => s.returnId);
   const taxReturn = useCaseStore((s) => s.taxReturn);
   const facts = useCaseStore((s) => s.facts);
+  const missingDocuments = useCaseStore((s) => s.missingDocuments);
   const audit = useCaseStore((s) => s.audit);
   const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
   const [reply, setReply] = useState('');
@@ -82,8 +83,8 @@ export default function ClientPanel() {
   }, []);
 
   const questions = useMemo(
-    () => (taxReturn ? generateClientQuestions({ facts, taxYear: taxReturn.taxYear, filingStatus: taxReturn.filingStatus ? String(taxReturn.filingStatus) : null }) : []),
-    [facts, taxReturn],
+    () => (taxReturn ? generateClientQuestions({ facts, taxYear: taxReturn.taxYear, filingStatus: taxReturn.filingStatus ? String(taxReturn.filingStatus) : null, missingDocuments }) : []),
+    [facts, taxReturn, missingDocuments],
   );
   const letter = useMemo(() => clientQuestionLetter(questions, facts), [questions, facts]);
   const replies = useMemo(() => audit.filter((e) => e.kind === 'client_reply').reverse(), [audit]);

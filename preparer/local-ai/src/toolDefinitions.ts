@@ -116,6 +116,7 @@ const DESCRIPTIONS: Record<TaxToolName | ReturnToolName, string> = {
   add_schedule_c_income: `Record business gross receipts that no Form 1099-NEC or 1099-K reports (cash, checks, direct deposits), from the business's income records. Never include amounts a 1099 already reports. ${NO_GUESSING}`,
   add_estimated_payment: `Record one estimated tax payment (federal Form 1040-ES or a state's), or the prior year's overpayment applied to this year. Call once per payment. ${NO_GUESSING}`,
   set_state_residency: `Record the taxpayer's residency in one state for the tax year, as the evidence states it. ${NO_GUESSING}`,
+  set_document_expected: `Record whether the client received a tax document they received last year (the payer's form this year), as the client states it. ${NO_GUESSING}`,
   calculate_return: 'Calculate the return with the tax engine and report its totals. Takes no arguments and changes nothing.',
   run_diagnostics: "Run the return's diagnostics and the evidence checks, and report what needs attention. Takes no arguments and changes nothing.",
 };

@@ -12,6 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import './pdfWorkerInit'; // Ensure worker is configured
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
+import { documentsFromReturn } from '@hatax/local-ai';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
   extractTextBlocks,
@@ -182,6 +183,8 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
     iraDistributions: f.iraDistributionsTaxable > 0 ? f.iraDistributionsTaxable : undefined,
     pensionsAnnuities: f.pensionDistributionsTaxable > 0 ? f.pensionDistributionsTaxable : undefined,
     socialSecurityBenefits: f.taxableSocialSecurity > 0 ? f.taxableSocialSecurity : undefined,
+    // Each payer's document, for the missing-document check (work order §23).
+    documents: documentsFromReturn(tr as TaxReturn),
   };
 
   // Extract carryforward suggestions

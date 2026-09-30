@@ -30,6 +30,7 @@ import {
   fieldSchemaFor,
   formKeyOf,
   formToolOfFacts,
+  missingDocumentTitle,
   resolveDependents,
   resolveEstimatedPayments,
   resolveStateResidency,
@@ -38,6 +39,7 @@ import {
   type ChoiceTool,
   type DocumentToolName,
   type IngestedDocument,
+  type MissingDocument,
   type TaxFact,
 } from '@hatax/local-ai';
 import { dependentWaitReason, SOURCE_FORM_KEY } from './returnApplier';
@@ -323,12 +325,38 @@ export function filingStatusOf(candidate: string): FilingStatus | undefined {
   return FILING_STATUS_OF[candidate];
 }
 
+/**
+ * §23: each of last year's documents the case lacks is *possibly* missing. It
+ * is asked about on the Client tab; the client's "no" leaves a note, and their
+ * "yes" waits for the upload.
+ */
+function missingDocumentItems(missing: readonly MissingDocument[]): ReviewItem[] {
+  return missing.map((m): ReviewItem => {
+    const title = missingDocumentTitle(m);
+    const words = m.answer ? ` ("${m.answer.words}", ${m.answer.source})` : '';
+    const from = m.issuer ? ` from ${m.issuer}` : '';
+    return {
+      id: `missing-document:${m.id}`,
+      category: m.status === 'client_says_none' ? 'INFORMATIONAL' : 'REVIEW',
+      group: 'documents',
+      source: 'document',
+      message: m.status === 'possibly_missing'
+        ? `${title}: ${m.lastYear}. Upload it, or ask the client (Client tab).`
+        : m.status === 'client_says_received'
+          ? `The client says they received the ${m.formType}${from}${words}: upload it (${m.lastYear}).`
+          : `The client says there is no ${m.formType}${from} this year${words}; ${m.lastYear}.`,
+    };
+  });
+}
+
 export function buildCaseReview(input: {
   taxReturn: TaxReturn;
   calculation?: CalculationResult | null;
   facts: TaxFact[];
   documents: IngestedDocument[];
   record?: CaseReviewRecord;
+  /** Last year's documents this case does not have (§23), from services/missingDocuments. */
+  missingDocuments?: readonly MissingDocument[];
 }): CaseReview {
   const record = input.record ?? { resolutions: {} };
   const engineItems: ReviewItem[] = runReturnDiagnostics(input.taxReturn, input.calculation).map((d) => ({
@@ -340,7 +368,7 @@ export function buildCaseReview(input: {
     ...(d.field ? { field: d.field } : {}),
     ...(d.itemLabel ? { itemLabel: d.itemLabel } : {}),
   }));
-  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...recordItems(input.facts, input.taxReturn), ...engineItems]
+  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

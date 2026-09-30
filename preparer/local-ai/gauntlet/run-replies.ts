@@ -153,6 +153,29 @@ const HELD_OUT_2: ReplyCase[] = [
   { id: 'foster', reply: 'She is my foster daughter and has lived with us since 2022.', asks: [[relationship('Maya'), 'Foster Child'], [months('Maya'), null]] },
 ];
 
+const chaseInt: ClientQuestion = {
+  id: 'doc:chase', kind: 'yes_no',
+  text: `Did you receive an interest statement (Form 1099-INT) from JPMORGAN CHASE BANK NA for ${YEAR}?`,
+  target: { kind: 'document', formType: '1099-INT', issuer: 'JPMORGAN CHASE BANK NA' },
+};
+const anyDiv: ClientQuestion = {
+  id: 'doc:div', kind: 'yes_no', text: `Did you receive any dividend statement (Form 1099-DIV) for ${YEAR}?`,
+  target: { kind: 'document', formType: '1099-DIV' },
+};
+
+/** Missing-document questions (§23), written with the engine and run once as they are. */
+const HELD_OUT_DOCS: ReplyCase[] = [
+  { id: 'closed', reply: 'No, I closed that Chase account last year.', asks: [[chaseInt, false]] },
+  { id: 'will-send', reply: 'Yes, I got it, will send it this week.', asks: [[chaseInt, true]] },
+  { id: 'not-yet', reply: 'Not yet, it usually comes in February.', asks: [[chaseInt, null]] },
+  { id: 'dont-think', reply: "I don't think so.", asks: [[chaseInt, null]] },
+  { id: 'moved-banks', reply: 'Nope, moved everything to Ally.', asks: [[chaseInt, false]] },
+  { id: 'plain-yes', reply: 'Yes.', asks: [[chaseInt, true]] },
+  { id: 'maybe-small', reply: 'I switched banks in March 2025 so maybe a small one?', asks: [[chaseInt, null]] },
+  { id: 'with-months', reply: 'Maya lived with us all year. No Chase statement this year, the account is closed.', asks: [[months('Maya'), 12], [chaseInt, false]] },
+  { id: 'two-docs', reply: "Chase: yes, attached. I sold all my Fidelity funds in 2024 so there's no dividend form.", asks: [[chaseInt, true], [anyDiv, false]] },
+];
+
 function argOf(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
@@ -173,19 +196,19 @@ async function main(): Promise<void> {
     tuned: { right: 0, wrong: 0, missed: 0, open: 0 },
     heldOut: { right: 0, wrong: 0, missed: 0, open: 0 },
     heldOut2: { right: 0, wrong: 0, missed: 0, open: 0 },
+    documents: { right: 0, wrong: 0, missed: 0, open: 0 },
   };
   const rows: unknown[] = [];
   let ms = 0;
   let calls = 0;
   try {
-    for (const [set, c] of [...CASES.map((c) => ['tuned', c] as const), ...HELD_OUT.map((c) => ['heldOut', c] as const), ...HELD_OUT_2.map((c) => ['heldOut2', c] as const)]) {
+    for (const [set, c] of [...CASES.map((c) => ['tuned', c] as const), ...HELD_OUT.map((c) => ['heldOut', c] as const), ...HELD_OUT_2.map((c) => ['heldOut2', c] as const), ...HELD_OUT_DOCS.map((c) => ['documents', c] as const)]) {
       const tally = tallies[set];
-      const names = c.asks.map(([q]) => q.subjectName).filter((n): n is string => Boolean(n));
       for (const [q, want] of c.asks) {
         const { content, run } = await runtime.read('reader', { prompt: clientAnswerPrompt(q, c.reply), name: 'answer', jsonSchema: clientAnswerSchema(q) as Record<string, unknown> });
         ms += run.ms;
         calls += 1;
-        const outcome = confirmClientAnswer(q, c.reply, content, { otherNames: [...new Set(names)], alone: c.asks.filter(([o]) => o.kind === q.kind).length === 1 });
+        const outcome = confirmClientAnswer(q, c.reply, content, { others: c.asks.map(([o]) => o) });
         const recorded = outcome.status === 'answered' ? outcome.value : null;
         const verdict = recorded !== null
           ? (recorded === want ? 'right' : 'WRONG')

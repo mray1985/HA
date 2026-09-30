@@ -68,3 +68,24 @@ test("a new dependent a client's note states is offered, and added when the prep
   await expect(page.getByLabel('Message to the client')).toContainText('How is Lily Lee related to you?');
   await expect(page.getByLabel('Message to the client')).toContainText('How many months of 2025 did Lily live with you?');
 });
+
+test("the client's answer about a possibly missing document is read, and settles it", async ({ page }) => {
+  await openCaseDashboard(page);
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.getByRole('button', { name: 'Other imports' }).click();
+  // Import last year's return first: no current-year documents are needed for the check.
+  await expect(page.locator('input[type="file"][accept=".json,.pdf"]')).toHaveCount(1, { timeout: 30_000 });
+  await page.locator('input[type="file"][accept=".json,.pdf"]').setInputFiles('e2e/fixtures/prior-year-2024.json');
+  await page.getByRole('button', { name: 'Tax forms' }).click();
+  await expect(page.getByRole('region', { name: 'Possibly missing documents' })).toContainText('Possible missing 1099-INT from JPMORGAN CHASE BANK NA');
+
+  await page.getByRole('link', { name: 'Client' }).click();
+  await page.getByLabel("Client's reply").fill('No, I closed that Chase account last year.');
+  await page.getByRole('button', { name: 'Read reply' }).click();
+  await expect(page.getByLabel('Answers read from the reply')).toContainText('from JPMORGAN CHASE BANK NA for 2025? no', { timeout: 180_000 });
+
+  await page.getByRole('link', { name: 'Documents' }).click();
+  await expect(page.getByRole('region', { name: 'Possibly missing documents' })).toContainText('The client says there is none this year');
+});

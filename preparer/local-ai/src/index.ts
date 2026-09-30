@@ -24,4 +24,5 @@ export * from './groundedToolCall.js';
 export * from './clientQuestions.js';
 export * from './clientAnswers.js';
 export * from './clientNotes.js';
+export * from './missingDocuments.js';
 export * from './modelManifest.js';

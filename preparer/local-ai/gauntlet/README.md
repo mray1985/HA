@@ -268,12 +268,20 @@ Qwen3.5-0.8B Q4_K_M, 0.8 s per question:
 | Tuned on (the reader was built against these) | 41 | 22 | 0 | 3 | 16 |
 | Held out, round 1, first run | 20 | 9 | **1** | 0 | 10 |
 | Held out, round 2 (written after round 1's fix, run once) | 17 | 7 | 0 | 5 | 5 |
+| Missing-document questions (held out, run once) | 11 | 7 | 0 | 1 | 3 |
 
 Round 1's wrong value: "10 months, she was in the hospital for 2" was recorded
 as 10 months. The reader now treats another count beside the months as two
 answers, and leaves any months answer that mentions an absence (school,
 hospital, camp, service) to the preparer, since a temporary absence counts as
 time at home (Pub. 501). Round 1 then gives 9 right, 0 wrong, 11 left open.
+
+Since then the words that answer must also name the question's subject (a
+person, state, payer or form) whenever another open question takes the same
+kind of answer or the reply names another question's subject: "No, I closed
+that Chase account" is not also a "no" about a W-2. This turned round 2's
+"Both kids lived with us all year" from two right answers into two left for
+the preparer (round 2 now: 5 right, 0 wrong, 7 missed, 5 left open).
 
 The model alone is not safe: it answered 12 months for "she didn't live with
 me", "single" for "whatever gets us the bigger refund", "Mother" for "my

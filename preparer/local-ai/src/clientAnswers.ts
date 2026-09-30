@@ -97,7 +97,7 @@ const norm = (s: string) =>
   s.toLowerCase().replace(/[‘’ʼ`]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
 
 /** Uncertain words state nothing: an estimate is not a fact. */
-const HEDGE = /\b(i think|i believe|i guess|maybe|probably|possibly|perhaps|not sure|unsure|don't know|do not know|don't remember|do not remember|can't remember|cannot remember|not certain|about|around|roughly|approximately|approx|estimated?|or so|give or take|ballpark|let me check|need to check|i'll check|will check|find out|to be confirmed)\b|-ish\b/;
+const HEDGE = /\b(i think|i believe|i guess|maybe|probably|possibly|perhaps|not sure|unsure|don't know|do not know|don't think|do not think|don't remember|do not remember|can't remember|cannot remember|not certain|about|around|roughly|approximately|approx|estimated?|or so|give or take|ballpark|let me check|need to check|i'll check|will check|find out|to be confirmed)\b|-ish\b/;
 
 const NEGATION = /(\bnot\b|\bnever\b|\bno\b|n't\b)/;
 
@@ -258,8 +258,17 @@ function readAmount(t: string): number | null {
   return v === null ? null : Number(v);
 }
 
-function readYesNo(t: string): boolean | null {
-  if (/\b(some|part|partly|partially|half|most|portion|except|but|all but|not all|not every)\b|\d/.test(t)) return null;
+/**
+ * A plain yes or no. For how much of something went where, any partial word
+ * or figure states nothing; for whether a document came, "not yet" states
+ * nothing (it may still come) and a year in the words is fine.
+ */
+function readYesNo(t: string, aboutDocument: boolean): boolean | null {
+  if (aboutDocument) {
+    if (/\b(yet|still waiting|waiting (for|on) it|should (get|come)|will (get|come)|might|may)\b/.test(t)) return null;
+  } else if (/\b(some|part|partly|partially|half|most|portion|except|but|all but|not all|not every)\b|\d/.test(t)) {
+    return null;
+  }
   const yes = /\b(yes|yeah|yep|yup|correct|absolutely|definitely|certainly|of course|affirmative)\b/.test(t);
   const no = /\b(no|nope|nah|never|none)\b|n't\b|\bnot\b/.test(t);
   if (yes === no) return null;
@@ -280,7 +289,7 @@ export function readAnswerFromWords(q: ClientQuestion, words: string): ClientAns
     case 'amount': return readAmount(t);
     case 'relationship': return readRelationship(t);
     case 'residency': return q.target.kind === 'residency' ? readResidency(t, q.target.stateCode) : null;
-    case 'yes_no': return readYesNo(t);
+    case 'yes_no': return readYesNo(t, q.target.kind === 'document');
     case 'filing_status': return filingStatusFromClientWords(words);
   }
 }
@@ -353,7 +362,8 @@ export function sentenceAround(reply: string, quote: string): string | null {
   const q = norm(quote).replace(/^["'\s]+|["'\s.,;!?]+$/g, '');
   if (!q) return null;
   const sentences = sentencesOf(text);
-  const at = flat.indexOf(q);
+  // As whole words: a quoted "no" is not the "no" inside "know" or "not".
+  const at = flat.search(new RegExp(`(?<![a-z0-9])${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-z0-9])`));
   if (at >= 0) {
     const first = sentences.find((s) => s.end > at) ?? sentences[sentences.length - 1]!;
     const last = sentences.find((s) => s.end >= at + q.length) ?? sentences[sentences.length - 1]!;
@@ -361,34 +371,46 @@ export function sentenceAround(reply: string, quote: string): string | null {
   }
   const lq = loose(q);
   if (lq.length < 2) return null;
-  const holding = sentences.filter((s) => loose(flat.slice(s.start, s.end)).includes(lq));
+  const holding = sentences.filter((s) => ` ${loose(flat.slice(s.start, s.end))} `.includes(` ${lq} `));
   return holding.length === 1 ? flat.slice(holding[0]!.start, holding[0]!.end).trim() : null;
 }
 
 const show = (v: ClientAnswerValue | null) => (v === null ? 'nothing plain' : typeof v === 'boolean' ? (v ? 'yes' : 'no') : String(v));
 
 export interface ConfirmContext {
-  /** The people the batch's other open questions are about. */
-  otherNames?: readonly string[];
-  /**
-   * No other open question in the batch has this question's kind. Only then
-   * may the words be found without the model's quote: the one sentence of the
-   * reply that states an answer of this kind.
-   */
-  alone?: boolean;
+  /** The batch's other open questions. */
+  others?: readonly ClientQuestion[];
 }
 
-const named = (name: string, text: string) => new RegExp(`\\b${name.toLowerCase().replace(/[^a-z' -]/g, '')}\\b`).test(text);
+/** The words that name a question's subject: a first name, a state, a payer, a form. */
+function subjectWordsOf(q: ClientQuestion): string[] {
+  return (q.subjectWords ?? (q.subjectName ? [q.subjectName] : [])).map((w) => w.toLowerCase()).filter(Boolean);
+}
 
-/** Why these words cannot answer for `q`'s person, or null when they can. */
-function subjectProblem(q: ClientQuestion, reply: string, sentence: string, otherNames: readonly string[]): string | null {
-  if (!q.subjectName) return null;
-  const others = otherNames.filter((n) => norm(n) !== norm(q.subjectName!) && named(n, norm(reply)));
-  if (others.length > 0 && !named(q.subjectName, sentence)) {
-    return `the reply is about ${[q.subjectName, ...others].join(' and ')}, and the words that answer do not name ${q.subjectName}`;
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const names = (words: readonly string[], text: string) => words.some((w) => new RegExp(`(?<![a-z0-9])${esc(w)}(?![a-z0-9])`).test(text));
+const labelOf = (q: ClientQuestion) => q.subjectName ?? subjectWordsOf(q)[0] ?? 'this question';
+
+/**
+ * Why these words cannot answer `q`, or null when they can. Words must name
+ * the question's own subject when the reply also names another open
+ * question's subject, or when another open question takes the same kind of
+ * answer ("No." cannot say which document it is about); and words naming two
+ * subjects answer neither.
+ */
+function subjectProblem(q: ClientQuestion, reply: string, sentence: string, others: readonly ClientQuestion[]): string | null {
+  const own = subjectWordsOf(q);
+  if (own.length === 0) return null;
+  const text = norm(reply);
+  const rivals = others.filter((o) => o.id !== q.id && subjectWordsOf(o).some((w) => !own.includes(w)));
+  const namedInReply = rivals.filter((o) => names(subjectWordsOf(o).filter((w) => !own.includes(w)), text));
+  const sameKind = rivals.filter((o) => o.kind === q.kind);
+  if ((namedInReply.length > 0 || sameKind.length > 0) && !names(own, sentence)) {
+    const about = namedInReply.length > 0 ? `the reply also names ${[...new Set(namedInReply.map(labelOf))].join(' and ')}` : 'another open question takes the same answer';
+    return `${about}, and the words that answer do not name ${labelOf(q)}`;
   }
-  const alsoOthers = others.filter((n) => named(n, sentence));
-  return alsoOthers.length > 0 ? `the words that answer are about ${q.subjectName} and ${alsoOthers.join(' and ')} together` : null;
+  const alsoOthers = rivals.filter((o) => names(subjectWordsOf(o).filter((w) => !own.includes(w)), sentence));
+  return alsoOthers.length > 0 ? `the words that answer are about ${labelOf(q)} and ${[...new Set(alsoOthers.map(labelOf))].join(' and ')} together` : null;
 }
 
 /**
@@ -397,7 +419,9 @@ function subjectProblem(q: ClientQuestion, reply: string, sentence: string, othe
  * are about must name this question's person in the words that answer it.
  */
 export function confirmClientAnswer(q: ClientQuestion, reply: string, modelOutput: unknown, context: ConfirmContext = {}): ClientAnswerOutcome {
-  const otherNames = context.otherNames ?? [];
+  const others = context.others ?? [];
+  // Only when no other open question takes this kind of answer may the words be found without the model's quote.
+  const alone = !others.some((o) => o.id !== q.id && o.kind === q.kind);
   let out = modelOutput;
   if (typeof out === 'string') {
     try {
@@ -413,18 +437,18 @@ export function confirmClientAnswer(q: ClientQuestion, reply: string, modelOutpu
   if (value === undefined || typeof quote !== 'string') return { status: 'unclear', reason: 'the model gave no usable answer' };
 
   let sentence = sentenceAround(reply, quote);
-  if (!sentence && context.alone) {
+  if (!sentence && alone) {
     // The model's quote is not the reply's words ("married_filing_jointly"): the
     // one sentence that states an answer of this kind, if there is exactly one.
     const text = normLines(reply);
     const stating = sentencesOf(text)
       .map((s) => text.slice(s.start, s.end).replace(/\n/g, ' ').trim())
-      .filter((s) => readAnswerFromWords(q, s) !== null && subjectProblem(q, reply, s, otherNames) === null);
+      .filter((s) => readAnswerFromWords(q, s) !== null && subjectProblem(q, reply, s, others) === null);
     if (stating.length === 1) sentence = stating[0]!;
   }
   if (!sentence) return { status: 'unclear', reason: 'the words the model quoted are not in the reply', quote };
 
-  const problem = subjectProblem(q, reply, sentence, otherNames);
+  const problem = subjectProblem(q, reply, sentence, others);
   if (problem) return { status: 'unclear', reason: problem, quote };
 
   const words = readAnswerFromWords(q, sentence);
@@ -438,7 +462,7 @@ export function confirmClientAnswer(q: ClientQuestion, reply: string, modelOutpu
 // ─── Where a confirmed answer goes ───────────────────────────
 
 export type ClientAnswerRecord =
-  | { kind: 'record'; tool: 'add_dependent' | 'set_state_residency'; args: Record<string, unknown>; field: string }
+  | { kind: 'record'; tool: 'add_dependent' | 'set_state_residency' | 'set_document_expected'; args: Record<string, unknown>; field: string }
   | { kind: 'filing_status'; tool: 'set_filing_status_candidate'; args: { status: string }; field: 'status' }
   | { kind: 'form'; tool: ChoiceTool; formKey: string; field: string; value: ClientAnswerValue };
 
@@ -453,5 +477,7 @@ export function clientAnswerRecord(q: ClientQuestion, value: ClientAnswerValue):
       return { kind: 'form', tool: t.tool, formKey: t.formKey, field: t.field, value };
     case 'filing_status':
       return { kind: 'filing_status', tool: 'set_filing_status_candidate', field: 'status', args: { status: String(value) } };
+    case 'document':
+      return { kind: 'record', tool: 'set_document_expected', field: 'received', args: { formType: t.formType, ...(t.issuer ? { issuer: t.issuer } : {}), received: value } };
   }
 }

@@ -11,7 +11,8 @@
 
 import { create } from 'zustand';
 import { calculateForm1040, FilingStatus, setDeepPath, type CalculationResult, type TaxReturn } from '@hatax/engine';
-import type { IngestedDocument, TaxFact } from '@hatax/local-ai';
+import type { IngestedDocument, MissingDocument, TaxFact } from '@hatax/local-ai';
+import { caseMissingDocuments } from '../services/missingDocuments';
 import { getReturn, writeReturn } from '../api/client';
 import { loadAudit, appendAudit, loadReviewRecord, saveReviewRecord, type CaseAuditEvent, type NewAuditEvent } from '../services/caseAudit';
 import {
@@ -71,6 +72,8 @@ interface CaseState {
   documents: IngestedDocument[];
   reviewRecord: CaseReviewRecord;
   review: CaseReview | null;
+  /** Last year's documents the case does not have (§23). */
+  missingDocuments: MissingDocument[];
   audit: CaseAuditEvent[];
   saveState: SaveState;
 
@@ -120,6 +123,7 @@ const EMPTY = {
   documents: [] as IngestedDocument[],
   reviewRecord: { resolutions: {} } as CaseReviewRecord,
   review: null,
+  missingDocuments: [] as MissingDocument[],
   audit: [] as CaseAuditEvent[],
   saveState: 'idle' as SaveState,
   activeFormId: 'f1040',
@@ -135,8 +139,9 @@ export const useCaseStore = create<CaseState>((set, get) => {
   const refresh = (taxReturn: TaxReturn, patch: Partial<CaseState> = {}) => {
     const { facts, documents, reviewRecord } = { ...get(), ...patch };
     const calculation = calculate(taxReturn);
-    const review = buildCaseReview({ taxReturn, calculation, facts, documents, record: reviewRecord });
-    set({ ...patch, taxReturn, calculation, review });
+    const missingDocuments = caseMissingDocuments(taxReturn, facts, documents);
+    const review = buildCaseReview({ taxReturn, calculation, facts, documents, record: reviewRecord, missingDocuments });
+    set({ ...patch, taxReturn, calculation, review, missingDocuments });
   };
 
   const scheduleSave = () => {

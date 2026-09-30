@@ -34,13 +34,19 @@ import { getReturn } from '../api/client';
 import { appendAudit, appendModelRuns } from './caseAudit';
 import { askLocalModel, type ModelRunRecord } from './localModels';
 import { recordClientFormAnswer } from './preparerDecisions';
+import { loadDocuments } from './documentIngestion';
+import { caseMissingDocuments } from './missingDocuments';
 import { loadTaxFacts } from './preparerTaxFacts';
 import { describeOutcome, recordEvidence, runReturnChecks } from './recordTools';
 
 /** The questions the case still has for the client. */
 export function caseQuestions(returnId: string): ClientQuestion[] {
   const tr = getReturn(returnId);
-  return generateClientQuestions({ facts: loadTaxFacts(returnId), taxYear: tr.taxYear, filingStatus: tr.filingStatus ? String(tr.filingStatus) : null });
+  const facts = loadTaxFacts(returnId);
+  return generateClientQuestions({
+    facts, taxYear: tr.taxYear, filingStatus: tr.filingStatus ? String(tr.filingStatus) : null,
+    missingDocuments: caseMissingDocuments(tr, facts, loadDocuments(returnId)),
+  });
 }
 
 /** The message for the client: what has arrived and the open questions. */
@@ -121,7 +127,6 @@ export async function readClientReply(
   const questions = caseQuestions(returnId);
   const replyId = `REPLY-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const label = `Client reply of ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  const names = [...new Set(questions.map((q) => q.subjectName).filter((n): n is string => Boolean(n)))];
   const runs: ModelRunRecord[] = [];
   const answers: ReplyAnswer[] = [];
   const offers: NoteOffer[] = [];
@@ -131,10 +136,7 @@ export async function readClientReply(
     for (const [index, q] of questions.entries()) {
       onProgress?.(`Reading the reply for question ${index + 1} of ${questions.length}…`);
       const { content, run } = await askLocalModel({ prompt: clientAnswerPrompt(q, text), name: 'answer', jsonSchema: clientAnswerSchema(q) as Record<string, unknown> }, runs);
-      const outcome = confirmClientAnswer(q, text, content, {
-        otherNames: names,
-        alone: questions.filter((o) => o.kind === q.kind).length === 1,
-      });
+      const outcome = confirmClientAnswer(q, text, content, { others: questions });
       if (outcome.status !== 'answered') {
         answers.push({ question: q, outcome });
         continue;

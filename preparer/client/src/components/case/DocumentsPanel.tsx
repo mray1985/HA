@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
-import { selectDocumentExtractKind, type DocumentPieceOutcome, type IngestedDocument, type TaxFact } from '@hatax/local-ai';
+import { missingDocumentTitle, selectDocumentExtractKind, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
 import { applyExtractionToDocument, applyModelReadingsToDocument, registerDroppedDocument, type ApplyExtractionResult } from '../../services/documentIngestion';
 import { fetchModelStatus, type LocalRuntimeStatus, type ModelRunRecord } from '../../services/localModels';
 import { readWithLocalModels, type ModelReadItem, type ModelReadResult } from '../../services/modelIngestion';
@@ -118,6 +118,33 @@ function RuntimeLine({ status }: { status: LocalRuntimeStatus | null | undefined
   );
 }
 
+/**
+ * §23: last year's documents this case does not have — possibly missing, never
+ * "missing" — with the client's answer when there is one.
+ */
+function MissingDocumentsCard({ missing }: { missing: MissingDocument[] }) {
+  if (missing.length === 0) return null;
+  const open = missing.filter((m) => m.status !== 'client_says_none').length;
+  return (
+    <section aria-label="Possibly missing documents" className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+      <p className="text-sm font-medium text-amber-200">
+        {open > 0 ? `${open} document${open === 1 ? '' : 's'} from last year not received yet` : 'Last year’s documents are accounted for'}
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {missing.map((m) => (
+          <li key={m.id} className="text-xs">
+            <span className="text-slate-200">{missingDocumentTitle(m)}</span>
+            <span className="text-slate-400"> — {m.lastYear}.</span>
+            {m.status === 'client_says_none' && <span className="block text-slate-400">The client says there is none this year: “{m.answer?.words}”</span>}
+            {m.status === 'client_says_received' && <span className="block text-amber-300">The client says they have it: “{m.answer?.words}” — upload it.</span>}
+          </li>
+        ))}
+      </ul>
+      {open > 0 && <p className="text-xs text-slate-500 mt-2">Each is asked about on the Client tab.</p>}
+    </section>
+  );
+}
+
 type Section = 'forms' | 'bank' | 'imports';
 type ImportPanel = 'csv' | 'txf' | 'fdx' | 'competitor' | null;
 
@@ -126,6 +153,7 @@ export default function DocumentsPanel() {
   const taxReturn = useCaseStore((s) => s.taxReturn);
   const calculation = useCaseStore((s) => s.calculation);
   const documents = useCaseStore((s) => s.documents);
+  const missingDocuments = useCaseStore((s) => s.missingDocuments);
   const facts = useCaseStore((s) => s.facts);
   const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
   const [section, setSection] = useState<Section>('forms');
@@ -268,6 +296,7 @@ export default function DocumentsPanel() {
               {errors.map((e) => <li key={e}>{e}</li>)}
             </ul>
           )}
+          <MissingDocumentsCard missing={missingDocuments} />
           {documents.length === 0 ? (
             <p className="text-sm text-slate-500">No documents yet.</p>
           ) : (

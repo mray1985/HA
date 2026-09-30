@@ -205,10 +205,10 @@ describe("a value is recorded only when the model and the client's words agree (
   const others = ['Maya', 'Leo'];
 
   it('records a confirmed answer with its words', () => {
-    const out = confirmClientAnswer(months('Maya'), reply, { quote: 'Maya lived with us all year', answer: '12' }, { otherNames: others });
+    const out = confirmClientAnswer(months('Maya'), reply, { quote: 'Maya lived with us all year', answer: '12' }, { others: others.map((n) => months(n)) });
     expect(out).toEqual({ status: 'answered', value: 12, quote: 'Maya lived with us all year', sentence: 'maya lived with us all year' });
     // The grammar's JSON arrives as text.
-    expect(confirmClientAnswer(months('Leo'), reply, JSON.stringify({ quote: 'Leo lived with us 5 months', answer: '5' }), { otherNames: others }))
+    expect(confirmClientAnswer(months('Leo'), reply, JSON.stringify({ quote: 'Leo lived with us 5 months', answer: '5' }), { others: others.map((n) => months(n)) }))
       .toMatchObject({ status: 'answered', value: 5 });
   });
 
@@ -223,14 +223,31 @@ describe("a value is recorded only when the model and the client's words agree (
   });
 
   it('keeps nothing when the quoted words are not in the reply', () => {
-    expect(confirmClientAnswer(months(), reply, { quote: 'Maya lived with me the whole year', answer: '12' }, { otherNames: others }))
+    expect(confirmClientAnswer(months(), reply, { quote: 'Maya lived with me the whole year', answer: '12' }, { others: others.map((n) => months(n)) }))
       .toMatchObject({ status: 'unclear', reason: 'the words the model quoted are not in the reply' });
   });
 
   it("does not give one person's answer to another", () => {
-    expect(confirmClientAnswer(months('Leo'), reply, { quote: 'lived with us all year', answer: '12' }, { otherNames: others }))
+    expect(confirmClientAnswer(months('Leo'), reply, { quote: 'lived with us all year', answer: '12' }, { others: others.map((n) => months(n)) }))
       .toMatchObject({ status: 'unclear' });
-    expect(confirmClientAnswer(months('Maya'), 'Maya and Leo lived with us all year.', { quote: 'Maya and Leo lived with us all year', answer: '12' }, { otherNames: others }))
+    expect(confirmClientAnswer(months('Maya'), 'Maya and Leo lived with us all year.', { quote: 'Maya and Leo lived with us all year', answer: '12' }, { others: others.map((n) => months(n)) }))
+      .toMatchObject({ status: 'unclear' });
+  });
+
+  it('does not give a bare answer to one of two questions that take it', () => {
+    const w2: ClientQuestion = { id: 'doc:w2', kind: 'yes_no', text: '', subjectName: 'RIVERBEND LOGISTICS LLC', subjectWords: ['riverbend', 'logistics', 'w-2'], target: { kind: 'document', formType: 'W-2', issuer: 'RIVERBEND LOGISTICS LLC' } };
+    const chase: ClientQuestion = { id: 'doc:chase', kind: 'yes_no', text: '', subjectName: 'JPMORGAN CHASE BANK NA', subjectWords: ['jpmorgan', 'chase', 'interest'], target: { kind: 'document', formType: '1099-INT', issuer: 'JPMORGAN CHASE BANK NA' } };
+    const reply = 'No, I closed that Chase account last year.';
+    expect(confirmClientAnswer(chase, reply, { quote: reply, answer: 'no' }, { others: [w2, chase] })).toMatchObject({ status: 'answered', value: false });
+    expect(confirmClientAnswer(w2, reply, { quote: reply, answer: 'no' }, { others: [w2, chase] }))
+      .toMatchObject({ status: 'unclear', reason: 'the reply also names JPMORGAN CHASE BANK NA, and the words that answer do not name RIVERBEND LOGISTICS LLC' });
+    expect(confirmClientAnswer(w2, 'No.', { quote: 'No', answer: 'no' }, { others: [w2, chase] }))
+      .toMatchObject({ status: 'unclear', reason: 'another open question takes the same answer, and the words that answer do not name RIVERBEND LOGISTICS LLC' });
+  });
+
+  it("does not give one person's answer to another asked something else", () => {
+    const leoRelationship: ClientQuestion = { id: 'rel:leo', kind: 'relationship', text: '', subjectName: 'Leo', target: { kind: 'dependent', field: 'relationship', person: { firstName: 'Leo', lastName: 'Lee' } } };
+    expect(confirmClientAnswer(months('Maya'), 'Leo lived with us all year.', { quote: 'Leo lived with us all year', answer: '12' }, { others: [months('Maya'), leoRelationship] }))
       .toMatchObject({ status: 'unclear' });
   });
 
@@ -288,5 +305,12 @@ describe("a client's answer to a form's question", () => {
     expect(recordClientChoiceAnswer('add_1099_q', 'grossDistribution', 1, context)).toMatchObject({ ok: false });
     expect(recordClientChoiceAnswer('add_1099_q', 'qualifiedExpenses', -5, context)).toMatchObject({ ok: false });
     expect(recordClientChoiceAnswer('add_education_expense', 'felonyDrugConviction', false, context)).toMatchObject({ ok: true });
+  });
+});
+
+describe('quoted words are found as whole words', () => {
+  it('does not find a quoted "no" inside "know"', () => {
+    expect(sentenceAround('I know it is late. Yes, I have it.', 'no')).toBeNull();
+    expect(sentenceAround('I know it is late. No, I do not have it.', 'no')).toBe('no, i do not have it');
   });
 });

@@ -108,3 +108,26 @@ test('the Client tab asks only what the case cannot settle, and says when the lo
   await page.getByLabel("Client's reply").fill('We paid $5,000 in tuition.');
   await expect(page.getByRole('button', { name: 'Read reply' })).toBeDisabled();
 });
+
+test("last year's documents the case lacks are possibly missing, and the client is asked about them", async ({ page }) => {
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/w2-basic-single.pdf');
+  await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 30000 });
+
+  // Last year's HATax return: the same employer's W-2, and a 1099-INT from Chase.
+  await page.getByRole('button', { name: 'Other imports' }).click();
+  await page.locator('input[type="file"][accept=".json,.pdf"]').setInputFiles('e2e/fixtures/prior-year-2024.json');
+  await expect(page.getByText(/2024/).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Tax forms' }).click();
+  const missing = page.getByRole('region', { name: 'Possibly missing documents' });
+  await expect(missing).toContainText('Possible missing 1099-INT from JPMORGAN CHASE BANK NA');
+  await expect(missing).toContainText('the 2024 imported HATax return has one for $123.45');
+  await expect(missing).not.toContainText('W-2');
+
+  await page.getByRole('link', { name: 'Client' }).click();
+  await expect(page.getByLabel('Message to the client')).toContainText('Did you receive an interest statement (Form 1099-INT) from JPMORGAN CHASE BANK NA for 2025?');
+  await page.getByRole('link', { name: /^Review/ }).click();
+  await expect(page.getByText(/Possible missing 1099-INT from JPMORGAN CHASE BANK NA: the 2024 imported HATax return/)).toBeVisible();
+});

@@ -1604,6 +1604,17 @@ export interface PriorYearSummary {
   iraDistributions?: number;      // Line 4b — taxable IRA distributions
   pensionsAnnuities?: number;     // Line 5b — taxable pensions/annuities
   socialSecurityBenefits?: number; // Line 6b — taxable Social Security
+  /** The tax documents the prior-year return shows (a HATax import), for the missing-document check. */
+  documents?: PriorYearDocument[];
+}
+
+/** One tax document a prior-year return shows. */
+export interface PriorYearDocument {
+  formType: string;
+  /** Payer, employer, institution, lender, broker or platform. */
+  issuer?: string;
+  issuerEin?: string;
+  amount?: number;
 }
 
 // Full tax return data

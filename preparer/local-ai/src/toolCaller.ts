@@ -53,6 +53,7 @@ const BLOCKED_TOOL_NAMES = new Set([
   'add_schedule_c_income',
   'add_estimated_payment',
   'set_state_residency',
+  'set_document_expected',
   'set_filing_status',
 ]);
 

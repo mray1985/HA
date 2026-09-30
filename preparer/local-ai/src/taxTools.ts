@@ -54,6 +54,7 @@ export const RECORD_TOOL_NAMES = [
   'add_schedule_c_income',
   'add_estimated_payment',
   'set_state_residency',
+  'set_document_expected',
 ] as const;
 
 /** Every tool that produces TaxFacts. */
@@ -573,6 +574,17 @@ export function canonicalRelationship(text: string | undefined): DependentRelati
 
 export const RESIDENCY_TYPES = ['resident', 'part_year', 'nonresident'] as const;
 
+/**
+ * Tax documents a client receives again year after year (work order §23).
+ * One-time documents (W-2G, 1099-C, 1099-S) are not expected again.
+ */
+export const EXPECTED_DOCUMENT_TYPES = [
+  'W-2', '1099-INT', '1099-DIV', '1099-R', '1099-NEC', '1099-MISC', '1099-G', '1099-K', '1099-B',
+  '1099-OID', '1099-SA', '1099-Q', 'SSA-1099', '1098', '1098-T', '1098-E', '1095-A', 'K-1',
+] as const;
+
+export type ExpectedDocumentType = (typeof EXPECTED_DOCUMENT_TYPES)[number];
+
 export const ESTIMATED_PAYMENT_JURISDICTIONS = ['federal', ...US_STATE_CODES] as const;
 
 /** A calendar date, YYYY-MM-DD, that exists. */
@@ -640,11 +652,23 @@ const SetStateResidencyFieldsSchema = z
   })
   .strict();
 
+/** Whether the client received a document the missing-document engine asked about (§23, §25). */
+const SetDocumentExpectedFieldsSchema = z
+  .object({
+    formType: z.preprocess(asMissing, z.enum(EXPECTED_DOCUMENT_TYPES).optional()),
+    /** The payer, employer or institution, as last year's document names it. */
+    issuer: optionalString,
+    /** Yes: the client has it (it is still to be uploaded). No: the client says there is none this year. */
+    received: optionalBoolean,
+  })
+  .strict();
+
 export const RECORD_FIELD_SCHEMAS: Record<RecordToolName, z.ZodObject<z.ZodRawShape>> = {
   add_dependent: AddDependentFieldsSchema,
   add_schedule_c_income: AddScheduleCIncomeFieldsSchema,
   add_estimated_payment: AddEstimatedPaymentFieldsSchema,
   set_state_residency: SetStateResidencyFieldsSchema,
+  set_document_expected: SetDocumentExpectedFieldsSchema,
 };
 
 export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawShape>> = {
@@ -705,6 +729,7 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
   add_estimated_payment: { kind: 'aggregate', target: 'estimatedPayments' },
   set_state_residency: { kind: 'aggregate', target: 'stateResidency' },
+  set_document_expected: { kind: 'candidate_fact' },
 };
 
 /** The field schema of a fact tool that takes fields (every tool but the filing-status candidate). */
@@ -751,6 +776,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_schedule_c_income: 'SCHC_RECEIPTS',
   add_estimated_payment: 'ESTPAY',
   set_state_residency: 'STATE_RESIDENCY',
+  set_document_expected: 'DOCEXPECT',
 };
 
 /** Fact-type prefix of every fact a tool writes (`<prefix>_<field>`). */
