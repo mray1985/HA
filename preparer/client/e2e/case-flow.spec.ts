@@ -75,3 +75,17 @@ test('a 1099-Q waits for the qualified expenses, and the review list takes the d
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText(/Decided for 1099q-529\.pdf.*qualifiedExpenses=5000/)).toBeVisible();
 });
+
+test('a W-2c read from its text layer corrects the W-2 it names', async ({ page }) => {
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.locator('input[type="file"]').first().setInputFiles(['e2e/fixtures/w2-basic-single.pdf', 'e2e/fixtures/w2c-wages.pdf']);
+  await expect(page.getByText('w2c-wages.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Corrected the W-2')).toBeVisible({ timeout: 30000 });
+
+  // The W-2c raises box 1 from 52,431.18 to 54,000.00 on the W-2 with the same EIN.
+  await page.getByRole('link', { name: 'Approve' }).click();
+  await expect(page.getByText(/w2c-wages\.pdf: correction \(read from the text layer/)).toBeVisible();
+  await expect(page.getByText(/calculate_return: AGI \$54,000\.00/)).toBeVisible();
+});

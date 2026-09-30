@@ -35,6 +35,7 @@ export {
   extract1099BFields,
   extract1099KFields,
   extract1099OIDFields,
+  extractW2CFields,
   extractSSA1099Fields,
   extract1099SAFields,
   extract1099QFields,
@@ -77,6 +78,7 @@ import {
   extract1099BFields,
   extract1099KFields,
   extract1099OIDFields,
+  extractW2CFields,
   extractSSA1099Fields,
   extract1099SAFields,
   extract1099QFields,
@@ -153,6 +155,10 @@ function extractFormData(
     case '1099-K':
       extractedData = extract1099KFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.platformName as string) || '';
+      break;
+    case 'W-2C':
+      extractedData = extractW2CFields(blocks, fieldRawTokens, fieldSourceLocations);
+      payerName = (extractedData.employerName as string) || '';
       break;
     case '1099-OID':
       extractedData = extract1099OIDFields(blocks, fieldRawTokens, fieldSourceLocations);

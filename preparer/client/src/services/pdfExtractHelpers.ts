@@ -1049,7 +1049,7 @@ export function extractW2Fields(
   const fields: Record<string, unknown> = {
     employerName: extractPayerName(
       textBlocks,
-      ["employer's name", 'employer name', 'employer'],
+      ["employer’s name", "employer's name", 'employer name', 'employer'],
       fieldRawTokens,
       'employerName',
       fieldSourceLocations,
@@ -1061,6 +1061,8 @@ export function extractW2Fields(
     medicareWages: box('medicareWages', ['medicare wages', '5 medicare wages', 'box 5']),
     medicareTax: box('medicareTax', ['medicare tax', '6 medicare tax', 'box 6']),
   };
+  const ein = extractEmployerEin(textBlocks, fieldRawTokens, fieldSourceLocations);
+  if (ein) fields.employerEin = ein;
 
   // ── Boxes 15-17 (State section): Positional extraction ──
   //
@@ -1266,6 +1268,151 @@ export function extract1099GFields(
     unemploymentCompensation: box('unemploymentCompensation', ['unemployment compensation', '1 unemployment', 'box 1']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
   };
+}
+
+// ─── W-2c (Rev. January 2026) ─────────────────────────────
+
+/**
+ * The W-2c boxes the return uses. Each is printed twice side by side — as
+ * previously reported, then as corrected — and the state boxes four times
+ * (two state lines, each previously reported / correct).
+ */
+const W2C_BOXES: ReadonlyArray<{ keyword: string; field: string; perRow: 2 | 4 }> = [
+  { keyword: 'wages, tips, other compensation', field: 'Wages', perRow: 2 },
+  { keyword: 'federal income tax withheld', field: 'FederalTaxWithheld', perRow: 2 },
+  { keyword: 'social security wages', field: 'SocialSecurityWages', perRow: 2 },
+  { keyword: 'social security tax withheld', field: 'SocialSecurityTax', perRow: 2 },
+  { keyword: 'medicare wages and tips', field: 'MedicareWages', perRow: 2 },
+  { keyword: 'medicare tax withheld', field: 'MedicareTax', perRow: 2 },
+  { keyword: 'state wages, tips', field: 'StateWages', perRow: 4 },
+  { keyword: 'state income tax', field: 'StateTaxWithheld', perRow: 4 },
+];
+
+const W2C_AMOUNT = /^\$?\s*-?[\d,]*\d(\.\d{1,2})?$/;
+
+/** Label blocks for one printed box, in reading order. */
+function labelOccurrences(textBlocks: TextBlock[], keyword: string): TextBlock[] {
+  const kw = keyword.replace(/\s+/g, '');
+  return textBlocks
+    .filter((b) => !isMergedHeader(b) && b.text.toLowerCase().replace(/\s+/g, '').includes(kw))
+    .sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+}
+
+/** A printed box label: "1 Wages, …", "12a See …", "b Employer …". */
+const BOX_LABEL_RE = /^(\d{1,2}[a-z]?|[a-z])\s+[A-Za-z]/;
+
+/**
+ * The text printed in a label's own cell: below the label, left of the next
+ * label on its line, and above the next box label under it. Never the
+ * neighbouring column or row.
+ */
+function cellBlocks(textBlocks: TextBlock[], label: TextBlock): TextBlock[] {
+  const h = Math.max(label.height, 6);
+  const onPage = textBlocks.filter((b) => b !== label && b.page === label.page);
+  const rightEdge = Math.min(Infinity, ...onPage
+    .filter((b) => Math.abs(b.y - label.y) < h && b.x > label.x + 5 && BOX_LABEL_RE.test(b.text.trim()))
+    .map((b) => b.x));
+  const inColumn = (b: TextBlock) => b.x >= label.x - 12 && b.x < rightEdge - 2;
+  const bottom = Math.min(label.y + h * 4.5, ...onPage
+    .filter((b) => b.y > label.y + h * 0.5 && inColumn(b) && BOX_LABEL_RE.test(b.text.trim()))
+    .map((b) => b.y));
+  return onPage
+    .filter((b) => b.y > label.y + h * 0.5 && b.y < bottom && inColumn(b) && !BOX_LABEL_RE.test(b.text.trim()))
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+}
+
+/**
+ * Box b of a W-2 or W-2c: the employer identification number printed in the
+ * box's own cell. Absent when no nine-digit EIN is there.
+ */
+function extractEmployerEin(
+  textBlocks: TextBlock[],
+  fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
+): string | undefined {
+  const [label] = labelOccurrences(textBlocks, 'employer identification number');
+  const value = label && cellBlocks(textBlocks, label).find((b) => /^\d{2}-?\d{7}$/.test(b.text.trim()));
+  if (!value) return undefined;
+  if (fieldRawTokens) fieldRawTokens.employerEin = value.text.trim();
+  recordFieldLocation(fieldSourceLocations, 'employerEin', value);
+  return value.text.trim();
+}
+
+/**
+ * Form W-2c from its text layer: the employer, the year corrected, and each
+ * corrected box as previously reported / correct information. Only the boxes
+ * printed are read; the SSN/name checkbox (box e) is not text and is left to
+ * the document model.
+ */
+export function extractW2CFields(
+  textBlocks: TextBlock[],
+  fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    employerName: extractPayerName(textBlocks, ["employer’s name", "employer's name", 'employer name'], fieldRawTokens, 'employerName', fieldSourceLocations),
+  };
+
+  const cellText = (keyword: string, pattern: RegExp): TextBlock | undefined => {
+    const [label] = labelOccurrences(textBlocks, keyword);
+    if (!label) return undefined;
+    return cellBlocks(textBlocks, label).find((b) => pattern.test(b.text.trim()));
+  };
+  const ein = extractEmployerEin(textBlocks, fieldRawTokens, fieldSourceLocations);
+  if (ein) out.employerEin = ein;
+  const year = cellText('tax year/form corrected', /^(19|20)\d{2}\b/);
+  if (year) {
+    out.taxYearCorrected = year.text.trim().slice(0, 4);
+    if (fieldRawTokens) fieldRawTokens.taxYearCorrected = year.text.trim();
+    recordFieldLocation(fieldSourceLocations, 'taxYearCorrected', year);
+  }
+
+  for (const box of W2C_BOXES) {
+    const labels = labelOccurrences(textBlocks, box.keyword);
+    // The first printed row of this box: the occurrences sharing the top label's line.
+    const row = labels.filter((l) => labels[0] && l.page === labels[0].page && Math.abs(l.y - labels[0].y) < Math.max(4, labels[0].height)).sort((a, b) => a.x - b.x);
+    if (row.length !== box.perRow) continue; // not the printed layout: nothing is guessed
+    for (const [i, side] of (['previous', 'correct'] as const).entries()) {
+      const label = row[i]!;
+      const cell = cellBlocks(textBlocks, label);
+      const token = cell.find((b) => W2C_AMOUNT.test(b.text.trim()) || isUnreadableAmountToken(b.text.trim()));
+      if (!token) continue;
+      const key = `${side}${box.field}`;
+      const raw = token.text.trim();
+      const cleaned = raw.replace(/[$,\s]/g, '');
+      out[key] = W2C_AMOUNT.test(raw) && PURE_NUMERIC_RE.test(cleaned) ? parseFloat(cleaned) : undefined;
+      if (fieldRawTokens) fieldRawTokens[key] = raw;
+      recordFieldLocation(fieldSourceLocations, key, token);
+    }
+  }
+
+  // Box e (SSN and/or name corrected): a fillable form's checked box is an "X"
+  // at the end of its label. A text layer shows no unchecked square, so an
+  // absent mark leaves the box unknown, never "no".
+  const [boxE] = labelOccurrences(textBlocks, 'corrected ssn and/or name');
+  const mark = boxE && textBlocks.find((b) =>
+    b.page === boxE.page && /^[Xx✓✔]$/.test(b.text.trim()) &&
+    b.x >= boxE.x + boxE.width * 0.75 && b.x <= boxE.x + boxE.width + 12 &&
+    b.y >= boxE.y - 2 && b.y <= boxE.y + Math.max(boxE.height, 6) * 3);
+  if (mark) {
+    out.correctsSsnOrName = true;
+    if (fieldRawTokens) fieldRawTokens.correctsSsnOrName = mark.text.trim();
+    recordFieldLocation(fieldSourceLocations, 'correctsSsnOrName', mark);
+  }
+
+  // State codes of the first state line (box 15).
+  const states = labelOccurrences(textBlocks, '15 state').filter((l) => !/employer/i.test(l.text));
+  const stateRow = states.filter((l) => states[0] && Math.abs(l.y - states[0].y) < Math.max(4, states[0].height)).sort((a, b) => a.x - b.x);
+  if (stateRow.length === 4) {
+    for (const [i, side] of (['previous', 'correct'] as const).entries()) {
+      const code = cellBlocks(textBlocks, stateRow[i]!).find((b) => /^[A-Z]{2}\b/.test(b.text.trim()));
+      if (!code) continue;
+      out[`${side}State`] = code.text.trim().slice(0, 2);
+      if (fieldRawTokens) fieldRawTokens[`${side}State`] = code.text.trim();
+      recordFieldLocation(fieldSourceLocations, `${side}State`, code);
+    }
+  }
+  return out;
 }
 
 export function extract1099OIDFields(
@@ -1668,10 +1815,30 @@ export const INCOME_DISCOVERY_KEYS: Record<string, string> = {
 
 /** Human-readable field labels per form type (for trace entries). */
 const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
-  // No text-layer extraction: a W-2c's paired columns are read by the document model.
-  'W-2C': {},
+  'W-2C': {
+    employerName: 'Employer Name',
+    employerEin: 'Employer EIN (Box b)',
+    taxYearCorrected: 'Tax Year Corrected (Box c)',
+    previousWages: 'Wages Previously Reported (Box 1)',
+    correctWages: 'Wages Correct (Box 1)',
+    previousFederalTaxWithheld: 'Federal Tax Withheld Previously Reported (Box 2)',
+    correctFederalTaxWithheld: 'Federal Tax Withheld Correct (Box 2)',
+    previousSocialSecurityWages: 'Social Security Wages Previously Reported (Box 3)',
+    correctSocialSecurityWages: 'Social Security Wages Correct (Box 3)',
+    previousSocialSecurityTax: 'Social Security Tax Previously Reported (Box 4)',
+    correctSocialSecurityTax: 'Social Security Tax Correct (Box 4)',
+    previousMedicareWages: 'Medicare Wages Previously Reported (Box 5)',
+    correctMedicareWages: 'Medicare Wages Correct (Box 5)',
+    previousMedicareTax: 'Medicare Tax Previously Reported (Box 6)',
+    correctMedicareTax: 'Medicare Tax Correct (Box 6)',
+    previousStateWages: 'State Wages Previously Reported (Box 16)',
+    correctStateWages: 'State Wages Correct (Box 16)',
+    previousStateTaxWithheld: 'State Income Tax Previously Reported (Box 17)',
+    correctStateTaxWithheld: 'State Income Tax Correct (Box 17)',
+  },
   'W-2': {
     employerName: 'Employer Name',
+    employerEin: 'Employer EIN (Box b)',
     wages: 'Wages, Tips (Box 1)',
     federalTaxWithheld: 'Federal Tax Withheld (Box 2)',
     socialSecurityWages: 'Social Security Wages (Box 3)',

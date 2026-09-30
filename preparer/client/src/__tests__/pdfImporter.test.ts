@@ -21,6 +21,7 @@ import {
   extractSSA1099Fields,
   extract1099SAFields,
   extract1099QFields,
+  extractW2CFields,
   generateImportTrace,
   FORM_TYPE_LABELS,
   INCOME_TYPE_STEP_MAP,
@@ -658,6 +659,121 @@ describe('extract1099QFields', () => {
     expect(data.earnings).toBeUndefined();
     expect(data.basisReturn).toBeUndefined();
     expect(data).not.toHaveProperty('distributionType');
+  });
+});
+
+describe('extractW2CFields', () => {
+  // Positions from the text layer of an IRS W-2c Copy B (Rev. 1-2026), top-down.
+  const at = (text: string, x: number, y: number, width = text.length * 3.4, height = 7): TextBlock =>
+    ({ text, x, y, width, height, page: 1 });
+  const header = (): TextBlock[] => [
+    at('a Employer’s name, address, and ZIP code', 41, 74, 137),
+    at('c Tax year/Form corrected', 315, 74, 85),
+    at('d Employee’s correct SSN', 451, 74, 85),
+    at('RIVERBEND LOGISTICS LLC', 39, 88, 108, 8),
+    at('2025', 323, 99, 18, 8),
+    at('/ W-2', 358, 99, 20),
+    at('e Corrected SSN and/or name. (Check this box and complete boxes f and/or', 315, 112, 259, 8),
+    at('g if incorrect on form previously filed.)', 323, 121, 126, 8),
+    at('b Employer identification number (EIN)', 41, 170, 122),
+    at('g Employee’s previously reported name', 315, 170, 131),
+    at('72-1234567', 151, 183, 43, 8),
+  ];
+  const moneyRows = (): TextBlock[] => [
+    at('1 Wages, tips, other compensation', 44, 278, 113),
+    at('1 Wages, tips, other compensation', 180, 278, 113),
+    at('2 Federal income tax withheld', 317, 278, 98),
+    at('2 Federal income tax withheld', 454, 278, 98),
+    at('3 Social security wages', 44, 302, 78),
+    at('3 Social security wages', 180, 302, 78),
+    at('4 Social security tax withheld', 317, 302, 95),
+    at('4 Social security tax withheld', 454, 302, 95),
+    at('5 Medicare wages and tips', 44, 326, 88),
+    at('5 Medicare wages and tips', 180, 326, 88),
+    at('6 Medicare tax withheld', 317, 326, 79),
+    at('6 Medicare tax withheld', 454, 326, 79),
+  ];
+
+  it('reads each box as previously reported / correct from its own column', () => {
+    const raw: Record<string, string> = {};
+    const data = extractW2CFields([
+      ...header(), ...moneyRows(),
+      at('52,431.18', 135, 291, 36, 8), at('54,000.00', 271, 291, 36, 8),
+      at('5,873.40', 413, 291, 31, 8), at('6,120.00', 542, 291, 31, 8),
+      at('52,431.18', 135, 315, 36, 8), at('54,000.00', 271, 315, 36, 8),
+    ], raw);
+    expect(data).toMatchObject({
+      employerName: 'RIVERBEND LOGISTICS LLC',
+      employerEin: '72-1234567',
+      taxYearCorrected: '2025',
+      previousWages: 52431.18, correctWages: 54000,
+      previousFederalTaxWithheld: 5873.4, correctFederalTaxWithheld: 6120,
+      previousSocialSecurityWages: 52431.18, correctSocialSecurityWages: 54000,
+    });
+    expect(raw.correctWages).toBe('54,000.00');
+    // Boxes left blank on the form are not read as zero.
+    for (const key of ['previousSocialSecurityTax', 'correctSocialSecurityTax', 'previousMedicareWages', 'correctMedicareTax', 'correctsSsnOrName']) {
+      expect(data).not.toHaveProperty(key);
+    }
+  });
+
+  it('never takes a value from the neighbouring column or row', () => {
+    // Box 1 correct is blank; box 2's value is printed left-aligned in its cell,
+    // and box 3's value sits below box 1's.
+    const data = extractW2CFields([
+      ...header(), ...moneyRows(),
+      at('52,431.18', 135, 291, 36, 8),
+      at('5,873.40', 320, 291, 31, 8),
+      at('9,999.00', 190, 315, 31, 8),
+    ]);
+    expect(data.previousWages).toBe(52431.18);
+    expect(data).not.toHaveProperty('correctWages');
+    expect(data.previousFederalTaxWithheld).toBe(5873.4);
+    expect(data.correctSocialSecurityWages).toBe(9999);
+  });
+
+  it('reads the first state line of boxes 15 to 17', () => {
+    const state = (y: number, label: string) => [40, 177, 314, 450].map((x) => at(label, x, y, 81));
+    const data = extractW2CFields([
+      ...header(),
+      ...state(530, '15 State'),
+      at('LA', 44, 541, 10, 8), at('LA', 181, 541, 10, 8),
+      ...[51, 188, 325, 461].map((x) => at('Employer’s state ID number', x, 554, 87)),
+      ...state(578, '16 State wages, tips, etc.'),
+      at('52,431.18', 120, 590, 36, 8), at('54,000.00', 257, 590, 36, 8),
+      ...state(602, '17 State income tax'),
+      at('1,512.00', 125, 614, 31, 8), at('1,580.00', 262, 614, 31, 8),
+    ]);
+    expect(data).toMatchObject({
+      previousState: 'LA', correctState: 'LA',
+      previousStateWages: 52431.18, correctStateWages: 54000,
+      previousStateTaxWithheld: 1512, correctStateTaxWithheld: 1580,
+    });
+  });
+
+  it('reads box e only when a mark is in its square', () => {
+    const marked = extractW2CFields([...header(), at('X', 562, 120, 8, 8)]);
+    expect(marked.correctsSsnOrName).toBe(true);
+    // An X elsewhere on the form is not box e.
+    const elsewhere = extractW2CFields([...header(), at('X', 330, 150, 8, 8)]);
+    expect(elsewhere).not.toHaveProperty('correctsSsnOrName');
+  });
+
+  it('reads nothing for a box whose labels are not printed in pairs', () => {
+    const data = extractW2CFields([
+      ...header(),
+      at('1 Wages, tips, other compensation 1 Wages, tips, other compensation', 44, 278, 250),
+      at('52,431.18', 135, 291, 36, 8), at('54,000.00', 271, 291, 36, 8),
+    ]);
+    expect(data).not.toHaveProperty('previousWages');
+    expect(data).not.toHaveProperty('correctWages');
+  });
+
+  it('keeps an unreadable amount as unknown with its raw text', () => {
+    const raw: Record<string, string> = {};
+    const data = extractW2CFields([...header(), ...moneyRows(), at('5?,4I1.18', 135, 291, 36, 8)], raw);
+    expect(data).toHaveProperty('previousWages', undefined);
+    expect(raw.previousWages).toBe('5?,4I1.18');
   });
 });
 
