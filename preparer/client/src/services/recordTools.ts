@@ -38,6 +38,10 @@ export interface RecordSource {
   extractor: string;
   /** The source text by field, when there is one. */
   rawText?: Record<string, string>;
+  /** The model run that read the evidence (§42). */
+  modelRunId?: string;
+  /** Checked against its source: a client's answer the model and the client's own words agree on (§25). */
+  verified?: boolean;
 }
 
 export interface RecordEvidenceResult {
@@ -60,7 +64,7 @@ export function describeOutcome(outcome: ApplyOutcome): string {
 
 export function recordEvidence(
   returnId: string,
-  tool: RecordToolName,
+  tool: RecordToolName | 'set_filing_status_candidate',
   args: Record<string, unknown>,
   source: RecordSource,
 ): RecordEvidenceResult {
@@ -76,6 +80,8 @@ export function recordEvidence(
       sourceKind: source.kind,
       extractor: source.extractor,
       ...(source.rawText ? { rawText: source.rawText } : {}),
+      ...(source.modelRunId ? { modelRunId: source.modelRunId } : {}),
+      ...(source.verified ? { verified: true } : {}),
     },
   });
   if (!result.ok) {

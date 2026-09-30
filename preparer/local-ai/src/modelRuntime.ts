@@ -45,10 +45,10 @@ export interface ModelRuntimeOptions {
   llamaServerArgs?: readonly string[];
 }
 
-/** One grammar-constrained page read. */
+/** One grammar-constrained call: a page read, or a question about text (a client's reply) when no image is given. */
 export interface ReadRequest {
-  /** The page image, PNG, base64 (no data: prefix). */
-  imagePng: string;
+  /** The page image, PNG, base64 (no data: prefix). Absent for a text-only call. */
+  imagePng?: string;
   prompt: string;
   /** Name of the JSON schema (for the grammar). */
   name: string;
@@ -343,7 +343,7 @@ export class ModelRuntime {
     this.idleTimer.unref();
   }
 
-  /** Read a page with a model: loads it if needed, one call at a time. */
+  /** Read a page (or answer about text) with a model: loads it if needed, one call at a time. */
   read(role: ModelRole, request: ReadRequest): Promise<{ content: string; run: ModelRunRecord }> {
     const run = this.queue.then(() => this.readNow(role, request));
     this.queue = run.catch(() => undefined);
@@ -370,10 +370,12 @@ export class ModelRuntime {
           chat_template_kwargs: { enable_thinking: false },
           messages: [{
             role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: `data:image/png;base64,${request.imagePng}` } },
-              { type: 'text', text: request.prompt },
-            ],
+            content: request.imagePng
+              ? [
+                { type: 'image_url', image_url: { url: `data:image/png;base64,${request.imagePng}` } },
+                { type: 'text', text: request.prompt },
+              ]
+              : request.prompt,
           }],
           response_format: { type: 'json_schema', json_schema: { name: request.name, schema: request.jsonSchema } },
         }),

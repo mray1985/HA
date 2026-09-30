@@ -8,7 +8,7 @@
 import { useState, type ReactNode } from 'react';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
 import type { ReviewAction } from '../../services/caseReview';
-import { completeDependent, correctFormField, recordChoice, type DecisionResult } from '../../services/preparerDecisions';
+import { completeDependent, correctFormField, recordChoice, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
 
 const inputClass = 'bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1.5 w-full';
@@ -198,10 +198,11 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   choice: 'Record the decision',
   fix: 'Enter the value',
   dependent: 'Complete the dependent',
+  filing_status: "Use the client's filing status",
 };
 
 export function actionLabel(action: ReviewAction): string {
-  return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : 'Complete';
+  return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
@@ -233,6 +234,8 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
         }
         case 'dependent':
           return completeDependent(returnId, { firstName: action.firstName, lastName: action.lastName }, answer);
+        case 'filing_status':
+          return applyStatedFilingStatus(returnId, action.status, action.label);
       }
     });
     if (result.ok) onDone();
@@ -248,6 +251,7 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       {action.kind === 'choice' && <ChoiceFields tool={action.tool} missing={action.missing} answer={answer} set={set} />}
       {action.kind === 'fix' && <FixFields action={action} answer={answer} set={set} />}
       {action.kind === 'dependent' && <DependentFields action={action} answer={answer} set={set} />}
+      {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       <p className="text-xs text-slate-500">Recorded as a preparer entry and kept in the audit trail.</p>
       <div className="flex gap-2 justify-end">

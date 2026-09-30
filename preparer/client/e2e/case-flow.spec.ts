@@ -89,3 +89,22 @@ test('a W-2c read from its text layer corrects the W-2 it names', async ({ page 
   await expect(page.getByText(/w2c-wages\.pdf: correction \(read from the text layer/)).toBeVisible();
   await expect(page.getByText(/calculate_return: AGI \$54,000\.00/)).toBeVisible();
 });
+
+test('the Client tab asks only what the case cannot settle, and says when the local AI cannot read replies', async ({ page }) => {
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+
+  await page.getByRole('link', { name: 'Client' }).click();
+  const message = page.getByLabel('Message to the client');
+  await expect(message).toContainText('We have your 1099-Q from');
+  await expect(message).toContainText('1. How do you want to file your 2025 return');
+  await expect(message).toContainText('2. How much did you pay in 2025 for qualified education expenses');
+  // Box 6 is the preparer's to settle from the form, never a question for the client.
+  await expect(message).not.toContainText('beneficiary');
+  await expect(page.getByText(/Local AI unavailable/)).toBeVisible();
+  await page.getByLabel("Client's reply").fill('We paid $5,000 in tuition.');
+  await expect(page.getByRole('button', { name: 'Read reply' })).toBeDisabled();
+});

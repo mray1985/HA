@@ -18,7 +18,11 @@ export type CaseAuditEvent =
   /** A tax-engine tool call (work order §40): accepted or rejected by validation, and what it did. */
   | { at: string; kind: 'tool'; tool: string; accepted: boolean; source?: string; detail: string }
   /** A preparer's answer to what a form could not say (§38). */
-  | { at: string; kind: 'decision'; subject: string; detail: string };
+  | { at: string; kind: 'decision'; subject: string; detail: string }
+  /** A client's reply, kept word for word (§25), and how many open questions it answered. */
+  | { at: string; kind: 'client_reply'; replyId: string; text: string; answered: number; left: number }
+  /** One answer read from a client's reply: recorded, or left for the preparer and why. */
+  | { at: string; kind: 'client_answer'; replyId: string; question: string; recorded: boolean; answer?: string; quote?: string; detail: string };
 
 /** An event before it is stamped with its time. */
 export type NewAuditEvent = CaseAuditEvent extends infer E ? (E extends CaseAuditEvent ? Omit<E, 'at'> : never) : never;

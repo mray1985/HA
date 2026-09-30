@@ -1,7 +1,8 @@
 /**
  * E2E with the local models (run with E2E_MODELS=1; needs preparer/models and
  * tools/llama-cpp): a W-2 uploaded in the app is read by Qwen3.5-0.8B through
- * the model runtime, checked by page evidence, and entered on the return.
+ * the model runtime, checked by page evidence, and entered on the return; and
+ * a client's reply is read by the same model and completes a 1099-Q.
  */
 
 import { expect, test } from '@playwright/test';
@@ -24,4 +25,27 @@ test('a W-2 is read by the local models and entered on the return', async ({ pag
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText(/w2-basic-single\.pdf: income_item \(read by the local models in \d+s\)/)).toBeVisible();
   await expect(page.getByText(/calculate_return: AGI \$52,431\.18/)).toBeVisible();
+});
+
+test("a client's reply is read by the local reader and completes a 1099-Q", async ({ page }) => {
+  await openCaseDashboard(page);
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await expect(page.getByText(/Local AI ready/)).toBeVisible({ timeout: 60_000 });
+  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await expect(page.getByText('Recorded — needs your decision')).toBeVisible({ timeout: 240_000 });
+
+  await page.getByRole('link', { name: 'Client' }).click();
+  await expect(page.getByLabel('Message to the client')).toContainText('qualified education expenses');
+  await page.getByLabel("Client's reply").fill('Hi Sarah! For the 529, we paid $12,400 in tuition and fees this year. Thanks!');
+  await page.getByRole('button', { name: 'Read reply' }).click();
+  const answers = page.getByLabel('Answers read from the reply');
+  await expect(answers).toContainText('$12,400.00', { timeout: 120_000 });
+
+  await page.getByRole('link', { name: 'Documents' }).click();
+  await expect(page.getByText('Entered on the return')).toBeVisible();
+  await page.getByRole('link', { name: 'Approve' }).click();
+  await expect(page.getByText(/Client reply read: \d answered/)).toBeVisible();
+  await expect(page.getByText(/Client answered "How much did you pay in 2025 for qualified education expenses.*\$12,400\.00/)).toBeVisible();
 });

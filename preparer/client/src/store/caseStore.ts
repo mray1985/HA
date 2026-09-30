@@ -31,7 +31,7 @@ import { loadTaxFacts } from '../services/preparerTaxFacts';
 import type { DecisionResult } from '../services/preparerDecisions';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
-export type CaseTab = 'review' | 'documents' | 'return' | 'explain' | 'scenarios' | 'approve';
+export type CaseTab = 'review' | 'documents' | 'client' | 'return' | 'explain' | 'scenarios' | 'approve';
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 

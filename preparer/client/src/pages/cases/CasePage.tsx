@@ -10,6 +10,7 @@ import { useCaseStore, type CaseTab } from '../../store/caseStore';
 import { StatusChip, refundOrOwed } from '../../components/case/caseBadges';
 import ReviewPanel from '../../components/case/ReviewPanel';
 import DocumentsPanel from '../../components/case/DocumentsPanel';
+import ClientPanel from '../../components/case/ClientPanel';
 import ExplainPanel from '../../components/case/ExplainPanel';
 import ApprovePanel from '../../components/case/ApprovePanel';
 import ReturnPanel from '../../components/case/ReturnPanel';
@@ -21,6 +22,7 @@ import { listReturns } from '../../api/client';
 const TABS: Array<{ id: CaseTab; label: string }> = [
   { id: 'review', label: 'Review' },
   { id: 'documents', label: 'Documents' },
+  { id: 'client', label: 'Client' },
   { id: 'return', label: 'Return' },
   { id: 'explain', label: 'Explain' },
   { id: 'scenarios', label: 'Scenarios' },
@@ -100,6 +102,7 @@ export default function CasePage() {
         <ErrorBoundary>
           {active === 'review' && <ReviewPanel />}
           {active === 'documents' && <DocumentsPanel />}
+          {active === 'client' && <ClientPanel />}
           {active === 'return' && <ReturnPanel />}
           {active === 'explain' && <ExplainPanel />}
           {active === 'scenarios' && <ScenarioLabToolView />}

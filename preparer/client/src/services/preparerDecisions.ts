@@ -14,6 +14,7 @@ import {
   formKeyOf,
   formToolOfFacts,
   needsChoice,
+  recordClientChoiceAnswer,
   recordFieldCorrection,
   recordPreparerChoice,
   TOOL_APPLICATION,
@@ -22,7 +23,8 @@ import {
   type TaxFact,
   type TaxToolCallContext,
 } from '@hatax/local-ai';
-import { getReturn } from '../api/client';
+import type { FilingStatus } from '@hatax/engine';
+import { getReturn, updateReturn } from '../api/client';
 import { appendAudit } from './caseAudit';
 import { loadDocuments, upsertDocument } from './documentIngestion';
 import { loadTaxFacts, saveTaxFacts } from './preparerTaxFacts';
@@ -96,6 +98,44 @@ export function recordChoice(returnId: string, formKey: string, tool: ChoiceTool
   const outcome = reapplyForm(returnId, formKey)!;
   appendAudit(returnId, { kind: 'decision', subject: `${facts[0]!.sourceFileName} (${formKey})`, detail: describeAnswer(answer) });
   return { ok: true, outcome };
+}
+
+/** Where a client's confirmed answer came from (work order §25). */
+export interface ClientAnswerSource {
+  /** "Client reply of Sep 30, 2026" */
+  label: string;
+  /** The client's words that give the answer. */
+  quote: string;
+  modelRunId?: string;
+  /** What read the reply ("Qwen3.5-0.8B + the client's words"). */
+  extractor: string;
+}
+
+/**
+ * A client's confirmed answer to a fact a form needs (the qualified expenses a
+ * 1099-Q paid): a verified client-response fact of the form, which is then
+ * applied like a preparer decision once the form has everything it needs.
+ */
+export function recordClientFormAnswer(returnId: string, formKey: string, tool: ChoiceTool, field: string, value: unknown, source: ClientAnswerSource): DecisionResult {
+  const facts = formFacts(returnId, formKey);
+  if (facts.length === 0) return { ok: false, error: 'The form is not on this case.' };
+  const recorded = recordClientChoiceAnswer(tool, field, value, {
+    ...contextFor(returnId, formKey, facts),
+    extractor: `${source.extractor} (${source.label})`,
+    rawText: { [field]: source.quote },
+    ...(source.modelRunId ? { modelRunId: source.modelRunId } : {}),
+  });
+  if (!recorded.ok) return recorded;
+  replaceFormFacts(returnId, formKey, recorded.facts);
+  return { ok: true, outcome: reapplyForm(returnId, formKey)! };
+}
+
+/** The preparer puts the filing status a client's reply states on the return. */
+export function applyStatedFilingStatus(returnId: string, status: FilingStatus, label: string): DecisionResult {
+  const before = getReturn(returnId).filingStatus;
+  updateReturn(returnId, { filingStatus: status });
+  appendAudit(returnId, { kind: 'correction', field: 'filingStatus', from: before ?? 'not set', to: `${label} (as the client's reply states)` });
+  return { ok: true, outcome: { kind: 'recorded' } };
 }
 
 /** The preparer's value for a field of a held form (a box the page could not read, or a misread value). */

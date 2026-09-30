@@ -21,4 +21,6 @@ export * from './formEvidence.js';
 export * from './secondReading.js';
 export * from './toolDefinitions.js';
 export * from './groundedToolCall.js';
+export * from './clientQuestions.js';
+export * from './clientAnswers.js';
 export * from './modelManifest.js';

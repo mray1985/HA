@@ -19,6 +19,15 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   reader read, hold the form for the preparer; a value that cannot be read
   stays unknown — never zero. Without the models (a web deployment) documents
   are read from the PDF text layer and with OCR.
+- **Client questions and replies.** The Client tab lists only what the
+  case's documents do not settle — a dependent's months at home or
+  relationship, where the client lived, the qualified expenses a 1099-Q paid,
+  the filing status — as a message to send. The client's reply is read on this
+  machine by Qwen3.5-0.8B, one question at a time under a grammar, and an
+  answer is recorded (as a verified client-response fact) only when the model
+  and a reading of the client's own words agree; everything else stays open
+  with the reason. A stated filing status waits for the preparer. The reply is
+  kept word for word in the audit trail.
 - **Review.** Every deterministic check of the return (the diagnostics engine
   in `shared/src/diagnostics`) and every piece of document evidence that needs
   a person — held forms, unread documents, credit choices — in one checklist.

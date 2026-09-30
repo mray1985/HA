@@ -272,6 +272,8 @@ export function factsFromFields(input: {
   sourceKind?: TaxFactSourceKind;
   extractorVersion?: string;
   modelRunId?: string;
+  /** The values were checked against their source (a confirmed client answer). */
+  verified?: boolean;
   /** Independent second reading by field (§33). */
   secondReading?: Record<string, TaxFactSecondReading | undefined>;
 }): TaxFact[] {
@@ -296,7 +298,7 @@ export function factsFromFields(input: {
       ...(input.extractorVersion ? { extractorVersion: input.extractorVersion } : {}),
       ...(input.modelRunId ? { modelRunId: input.modelRunId } : {}),
       ...(second ? { secondReading: { ...second } } : {}),
-      verified: false,
+      verified: input.verified ?? false,
       ...(location
         ? {
             sourcePage: location.page,

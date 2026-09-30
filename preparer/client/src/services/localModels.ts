@@ -64,6 +64,28 @@ export interface ModelRunRecord {
   error?: string;
 }
 
+/**
+ * Ask the local reader model about text (a client's reply) under a JSON
+ * grammar. The run record is kept even when the call fails.
+ */
+export async function askLocalModel(
+  request: { prompt: string; name: string; jsonSchema: Record<string, unknown> },
+  runs: ModelRunRecord[],
+): Promise<{ content: string; run?: ModelRunRecord }> {
+  const res = await fetch(apiUrl('/api/models/reader/ask'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  const body = (await res.json().catch(() => ({}))) as { content?: string; run?: ModelRunRecord; error?: { message?: string } };
+  if (body.run) runs.push(body.run);
+  if (!res.ok || typeof body.content !== 'string') {
+    throw new Error(body.error?.message ?? `The reader could not answer (HTTP ${res.status}).`);
+  }
+  return { content: body.content, ...(body.run ? { run: body.run } : {}) };
+}
+
 /** A VisionModel over the local runtime; every call's run record is kept. */
 export function localVisionModel(runs: ModelRunRecord[]): VisionModel {
   return {

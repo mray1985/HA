@@ -72,6 +72,18 @@ describe('model routes', () => {
     expect((await fetch(`${base}/api/models/chat/read`, { method: 'POST', headers: auth(), body: JSON.stringify(PAGE) })).status).toBe(404);
   });
 
+  it('answer questions about text with the reader only, and take no image there', async () => {
+    const question = { prompt: 'Answer from the reply', name: 'answer', jsonSchema: { type: 'object' } };
+    expect((await fetch(`${base}/api/models/reader/ask`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(question) })).status).toBe(401);
+    const withImage = await fetch(`${base}/api/models/reader/ask`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...question, imagePng: 'iVBORw0KGgo=' }) });
+    expect(withImage.status).toBe(400);
+    expect(((await withImage.json()) as { error: { message: string } }).error.message).toMatch(/takes no image/);
+    expect((await fetch(`${base}/api/models/second_reader/ask`, { method: 'POST', headers: auth(), body: JSON.stringify(question) })).status).toBe(404);
+    const res = await fetch(`${base}/api/models/reader/ask`, { method: 'POST', headers: auth(), body: JSON.stringify(question) });
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { run: { ok: boolean; modelId: string } }).run).toMatchObject({ ok: false, modelId: 'qwen3.5-0.8b' });
+  });
+
   it('fail a read plainly, with its run record, when the model cannot load', async () => {
     const res = await fetch(`${base}/api/models/reader/read`, { method: 'POST', headers: auth(), body: JSON.stringify(PAGE) });
     expect(res.status).toBe(503);

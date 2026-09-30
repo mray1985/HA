@@ -27,12 +27,15 @@ Ryzen AI 7 350 with 15 GB RAM, using llama.cpp `llama-server` build 11262.
    although the page prints an amount (§33, `secondReading.ts`). Every tool
    value is scored as confirmed (by the page or the second model), recovered,
    unconfirmed, conflict or missed; "confirmed wrong" counts wrong values that
-   would have been applied without review.
+   would have been applied without review, judged as the tool call parses them
+   (a fax that lost a decimal point, "14 21", is unreadable and left for the
+   preparer, not 1421). Such readings are counted as "unreadable".
 7. `checkboxes.ts` scores the deterministic checkbox reader alone on every
    case and page variant; no model is involved.
 8. `run-tools.ts` scores tool-calling models on §56 metrics: tool selection,
    missing / extra / wrong / invalid arguments, hallucinated tools, duplicate
    calls, and unknown facts passed as values.
+9. `run-replies.ts` scores how client replies are read (see Client replies).
 
 ```bash
 node local-ai/gauntlet/render-cases.mjs --dpi 150 --suffix -150dpi
@@ -123,6 +126,30 @@ tool arguments, 0 invented, 0 confirmed wrong, 114 s/page — the second model
 reads the paired columns, so it runs on more boxes. Box c ("2025 / W-2") is
 compared by its year, so the second model's "2025" confirms it rather than
 conflicting.
+
+### §16 forms on scanned, faxed and faded copies
+
+The same seven cases through `run.ts --scan scan|fax|faded`:
+
+| Page | Classified | Tool args | Invented | Confirmed wrong | Unreadable | s/page |
+|---|---|---|---|---|---|---|
+| Office scan | 7/7 | **40/41** (model alone 34) | 0 | 0 | 0 | 66 |
+| Fax | 7/7 | **35/41** (model alone 32) | 0 | 0 | 1 | 102 |
+| Faded copy | 7/7 | **36/41** (model alone 33) | 0 | 0 | 0 | 93 |
+
+The W-2c case (boxes 1–3 corrected; it corrects the W-2 in `w2-basic-single`):
+9/9 tool arguments on the native page, the scan, the fax and the faded copy,
+0 invented, 0 confirmed wrong, 72–125 s/page.
+
+The missed arguments are checkboxes the degraded page no longer shows
+plainly (1099-B basis reported and collectibles, 1099-Q transfer squares,
+1099-SA account type), left unknown for the preparer; the fax's 1099-B
+description lost its period ("40 sh ACME CORP"). The one unreadable value is
+the fax's 1099-OID box 4: both readers read "14 21" for 14.21, which the tool
+call cannot parse, so it is left for the preparer rather than entered as 1,421.
+On the faded copy the two readers disagreed on the 1099-B description ("100
+sh." against the page), which holds the form. Fax and faded timings were taken
+while other builds ran on the same machine.
 
 ### Checkbox reader alone (`checkboxes.ts`)
 
@@ -216,6 +243,43 @@ question to the preparer. Ungrounded, the same model filled
 LiquidAI models (LFM2 / LFM2.5, including the work order's LFM2-1.2B-Tool) are
 licensed under LFM Open License v1.0: commercial use is licensed only for
 entities under USD 10 million annual revenue.
+
+## Client replies (work order §25)
+
+`run-replies.ts` reads realistic client replies to the questions the app asks
+(`src/clientQuestions.ts`: a dependent's months at home and relationship,
+residency, days in a state, a 1099-Q's qualified expenses, a 1099-SA's medical
+use, the filing status) exactly as the app does: `clientAnswerPrompt` and
+`clientAnswerSchema` on the approved reader through `ModelRuntime`, then
+`confirmClientAnswer`. A value is recorded only when the model's answer and a
+deterministic reading of the client's own words (the whole sentence around the
+quoted words) agree. Each question's expected answer is what the words give,
+or none when the client is unsure, estimates, or does not answer.
+
+```bash
+npx tsx local-ai/gauntlet/run-replies.ts
+```
+
+Qwen3.5-0.8B Q4_K_M, 0.8 s per question:
+
+| Replies | Questions | Right | Wrong | Missed | Left open (no answer given) |
+|---|---|---|---|---|---|
+| Tuned on (the reader was built against these) | 41 | 22 | 0 | 3 | 16 |
+| Held out, round 1, first run | 20 | 9 | **1** | 0 | 10 |
+| Held out, round 2 (written after round 1's fix, run once) | 17 | 7 | 0 | 5 | 5 |
+
+Round 1's wrong value: "10 months, she was in the hospital for 2" was recorded
+as 10 months. The reader now treats another count beside the months as two
+answers, and leaves any months answer that mentions an absence (school,
+hospital, camp, service) to the preparer, since a temporary absence counts as
+time at home (Pub. 501). Round 1 then gives 9 right, 0 wrong, 11 left open.
+
+The model alone is not safe: it answered 12 months for "she didn't live with
+me", "single" for "whatever gets us the bigger refund", "Mother" for "my
+daughter" and a month count for "moved in in March" — every one refused
+because the client's words do not say it. The misses are the model declining
+or misreading, a sentence naming two people ("Leo - 11 months, Maya - 12"), and
+words the reader does not take as a yes ("every penny", "About the HSA: yes").
 
 ## Official form blanks
 

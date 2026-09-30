@@ -126,7 +126,29 @@ export function recordFieldCorrection(tool: DocumentToolName, field: string, val
   return { ok: true, facts: preparerFacts(tool, { [field]: parsed.data }, context) };
 }
 
+/**
+ * A client's confirmed answer to one fact a form needs (§25: the qualified
+ * expenses a 1099-Q paid), validated against that answer field's own schema
+ * and kept as a verified client-response fact of the form. The rest of the
+ * form's decision stays with the preparer; a later preparer decision replaces
+ * it.
+ */
+export function recordClientChoiceAnswer(tool: ChoiceTool, field: string, value: unknown, context: TaxToolCallContext): RecordedFacts {
+  const schema = CHOICE_SCHEMAS[tool];
+  const object = (schema instanceof z.ZodEffects ? schema.innerType() : schema) as z.ZodObject<z.ZodRawShape>;
+  const fieldSchema = object.shape[field] as z.ZodTypeAny | undefined;
+  if (!fieldSchema || !CHOICE_FIELDS[tool].includes(field)) return { ok: false, error: `${field} is not a question of this form` };
+  const parsed = fieldSchema.safeParse(value);
+  if (!parsed.success) return { ok: false, error: `${field}: ${formatIssues(parsed.error)}` };
+  if (parsed.data === undefined) return { ok: false, error: `${field}: a value is required` };
+  return { ok: true, facts: formFacts(tool, { [field]: parsed.data }, { ...context, sourceKind: 'client_response', verified: true }) };
+}
+
 function preparerFacts(tool: DocumentToolName, fields: Record<string, unknown>, context: TaxToolCallContext): TaxFact[] {
+  return formFacts(tool, fields, { ...context, sourceKind: 'preparer_correction', verified: true });
+}
+
+function formFacts(tool: DocumentToolName, fields: Record<string, unknown>, context: TaxToolCallContext): TaxFact[] {
   const prefix = factPrefixOf(tool);
   return factsFromFields({
     returnId: context.returnId,
@@ -135,11 +157,13 @@ function preparerFacts(tool: DocumentToolName, fields: Record<string, unknown>, 
     fileName: context.sourceFileName,
     extractor: context.extractor,
     formIndex: context.sourceFormIndex,
-    sourceKind: 'preparer_correction',
+    sourceKind: context.sourceKind,
+    ...(context.modelRunId ? { modelRunId: context.modelRunId } : {}),
+    verified: context.verified,
     fields,
     factTypeFor: (field) => `${prefix}${field}`,
     rawText: context.rawText,
-  }).map((f) => ({ ...f, verified: true }));
+  });
 }
 
 /** The form tool whose facts these are (by fact-type prefix), when one is. */

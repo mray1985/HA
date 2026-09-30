@@ -23,7 +23,7 @@
  */
 
 import type { CalculationResult, Diagnostic, DiagnosticCategory, TaxReturn } from '@hatax/engine';
-import { DIAGNOSTIC_CATEGORIES, runReturnDiagnostics } from '@hatax/engine';
+import { DIAGNOSTIC_CATEGORIES, FilingStatus, runReturnDiagnostics } from '@hatax/engine';
 import {
   buildChoiceItem,
   choiceForms,
@@ -100,7 +100,9 @@ export interface ReviewItem {
 export type ReviewAction =
   | { kind: 'choice'; tool: ChoiceTool; formKey: string; missing: string[] }
   | { kind: 'fix'; tool: DocumentToolName; formKey: string; fields: string[] }
-  | { kind: 'dependent'; firstName: string; lastName: string; missing: Array<'relationship' | 'monthsLivedWithYou'> };
+  | { kind: 'dependent'; firstName: string; lastName: string; missing: Array<'relationship' | 'monthsLivedWithYou'> }
+  /** A filing status the client's reply states: the preparer puts it on the return. */
+  | { kind: 'filing_status'; status: FilingStatus; label: string };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -292,7 +294,33 @@ function recordItems(facts: TaxFact[], taxReturn: TaxReturn): ReviewItem[] {
         message: `The return has ${r.stateCode} as ${typeLabel(config.residencyType)} (entered by hand), but ${r.formKeys.map(labelOf).join(', ')} says ${typeLabel(r.residencyType!)}.` });
     }
   }
+
+  // A filing status the client states (§25) is a candidate: eligibility is the
+  // engine's, and the preparer puts it on the return.
+  const stated = [...facts].reverse().find((f) => f.factType === 'FILING_STATUS_CANDIDATE' && f.status === 'extracted' && typeof f.value === 'string');
+  const candidate = stated ? filingStatusOf(stated.value as string) : undefined;
+  if (stated && candidate !== undefined && taxReturn.filingStatus !== candidate) {
+    const label = (stated.value as string).replace(/_/g, ' ');
+    items.push({
+      id: `record:filing-status:${formKeyOf(stated)}`, category: 'REVIEW', group: 'personal', source: 'document', documentId: stated.sourceDocumentId,
+      message: `${stated.sourceFileName} states the filing status ${label}${stated.rawText ? ` ("${stated.rawText}")` : ''}${taxReturn.filingStatus ? ', which is not the status on the return' : ''}.`,
+      action: { kind: 'filing_status', status: candidate, label },
+    });
+  }
   return items;
+}
+
+const FILING_STATUS_OF: Record<string, FilingStatus> = {
+  single: FilingStatus.Single,
+  married_filing_jointly: FilingStatus.MarriedFilingJointly,
+  married_filing_separately: FilingStatus.MarriedFilingSeparately,
+  head_of_household: FilingStatus.HeadOfHousehold,
+  qualifying_surviving_spouse: FilingStatus.QualifyingSurvivingSpouse,
+};
+
+/** The return's filing status for a stated candidate ("married_filing_jointly"). */
+export function filingStatusOf(candidate: string): FilingStatus | undefined {
+  return FILING_STATUS_OF[candidate];
 }
 
 export function buildCaseReview(input: {

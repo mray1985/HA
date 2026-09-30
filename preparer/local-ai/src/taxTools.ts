@@ -777,6 +777,11 @@ export interface TaxToolCallContext {
   extractorVersion?: string;
   /** The model run that read these values (§42). */
   modelRunId?: string;
+  /**
+   * The values were checked against their source: a client's answer that the
+   * model and a reading of the client's own words agree on (§25, §60).
+   */
+  verified?: boolean;
   /** Independent second reading by field (§33). */
   secondReading?: Record<string, TaxFactSecondReading | undefined>;
   sourceFileName: string;
@@ -865,6 +870,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       sourceKind: context.sourceKind,
       extractorVersion: context.extractorVersion,
       modelRunId: context.modelRunId,
+      verified: context.verified,
       fields,
       factTypeFor: () => 'FILING_STATUS_CANDIDATE',
       confidence: context.confidence,
@@ -912,6 +918,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     sourceKind: context.sourceKind,
     extractorVersion: context.extractorVersion,
     modelRunId: context.modelRunId,
+    verified: context.verified,
     secondReading: context.secondReading,
     fields: factFields,
     factTypeFor: (field) => `${prefix}_${field}`,

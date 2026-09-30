@@ -35,6 +35,8 @@ function describe(event: CaseAuditEvent): string {
     case 'document': return `Document ${event.fileName}: ${event.outcome}`;
     case 'decision': return `Decided for ${event.subject}: ${event.detail}`;
     case 'tool': return `${event.tool}${event.source ? ` (${event.source})` : ''}: ${event.accepted ? '' : 'rejected — '}${event.detail}`;
+    case 'client_reply': return `Client reply read: ${event.answered} answered, ${event.left} left open — "${event.text.length > 160 ? `${event.text.slice(0, 160)}…` : event.text}"`;
+    case 'client_answer': return event.recorded ? `Client answered "${event.question}": ${event.answer} ("${event.quote}")` : `Client reply did not settle "${event.question}": ${event.detail}`;
   }
 }
 
