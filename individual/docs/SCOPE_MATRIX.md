@@ -172,7 +172,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Progressive tax (20) | AR, DC, DE, ID, KS, ME, MN, MO, MS, MT, ND, NE, NM, OK, OR, RI, SC, VA, VT, WV | `createProgressiveTaxCalculator()` factory with escape-hatch hooks |
 | Custom calculators (9) | AL, CA, CT, HI, MD, NJ, NY, OH, WI | Individual files with state-specific logic |
 
-**State features:** Multi-state allocation with part-year proration by days, nonresident source-income-only, credit for taxes paid to other states (two-pass approach), state EITC via `stateEITCRate`, MD county piggyback tax, AL federal tax deduction.
+**State features:** Multi-state allocation with part-year proration by days, nonresident source-income-only, credit for taxes paid to other states (two-pass approach), state EITC via `stateEITCRate`, MD county piggyback tax, AL federal tax deduction, Indiana county tax (Schedule CT-40) and Schedule 3 exemptions for full-year residents (`state/in.ts`; the county, county tax withheld and child facts are asked; spouses in different counties stop at TAX-006).
 
 ---
 

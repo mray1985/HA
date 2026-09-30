@@ -25,7 +25,7 @@ const review = () => {
 };
 const waItems = () => review().items.filter((i) => i.id.startsWith('unsupported:TAX-003:'));
 
-describe('the Washington capital gains tax asks the preparer what the return does not hold (TAX-003)', () => {
+describe('state rules ask the preparer what the return does not hold (TAX-003 Washington, TAX-006 Indiana)', () => {
   beforeEach(() => {
     installMemoryLocalStorage();
     clearReturnCache();
@@ -65,6 +65,25 @@ describe('the Washington capital gains tax asks the preparer what the return doe
     ]);
     // $400,000 + $50,000 = $450,000; − $278,000 = $172,000 × 7% = $12,040.
     expect(calculateForm1040(getReturn(id)).stateResults?.find((s) => s.stateCode === 'WA')).toMatchObject({ totalStateTax: 12040 });
+  });
+
+  it('takes an Indiana county from its choices, and shows the answer by name', () => {
+    updateReturn(id, {
+      addressState: 'IN', stateReturns: [{ stateCode: 'IN', residencyType: 'resident' }], income1099B: [],
+      w2Income: [{ id: 'w', employerName: 'Acme', wages: 60000, federalTaxWithheld: 6000, state: 'IN', stateTaxWithheld: 1700 }],
+    } as never);
+    const county = review().items.find((i) => i.id === 'unsupported:TAX-006:county');
+    expect(county?.action).toMatchObject({ kind: 'state_answer', question: { stateCode: 'IN', key: 'inCounty', kind: 'choice' } });
+    const question = (county!.action as { question: Parameters<typeof recordStateAnswer>[1] }).question;
+    expect(recordStateAnswer(id, question, '99')).toMatchObject({ ok: false });
+    expect(recordStateAnswer(id, question, '49')).toMatchObject({ ok: true });
+    expect(review().items.find((i) => i.id === 'state-answer:IN:inCounty')?.message).toBe('Indiana: Indiana county where you lived on January 1, 2025: 49 Marion.');
+    const withheld = review().items.find((i) => i.id === 'unsupported:TAX-006:county-withheld')!;
+    expect(recordStateAnswer(id, (withheld.action as { question: Parameters<typeof recordStateAnswer>[1] }).question, 1150)).toMatchObject({ ok: true });
+    // $59,000 × .0202 = $1,191.80 county tax.
+    const indiana = calculateForm1040(getReturn(id)).stateResults?.find((s) => s.stateCode === 'IN');
+    expect(indiana).toMatchObject({ localTax: 1191.8 });
+    expect(indiana?.unsupported).toBeUndefined();
   });
 
   it('refuses an answer of the wrong kind, or for a state not on the return', () => {

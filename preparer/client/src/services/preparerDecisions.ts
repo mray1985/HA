@@ -169,6 +169,10 @@ export function recordStateAnswer(returnId: string, question: StateQuestion, val
     if (typeof value !== 'number' || !Number.isFinite(value)) return { ok: false, error: 'Enter the amount.' };
     if (value < 0 && !question.allowNegative) return { ok: false, error: 'The amount cannot be negative.' };
   }
+  if (question.kind === 'count' && (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || (question.max !== undefined && value > question.max))) {
+    return { ok: false, error: `Enter a whole number from 0 to ${question.max ?? 'the number that applies'}.` };
+  }
+  if (question.kind === 'choice' && !(question.options ?? []).some((o) => o.value === value)) return { ok: false, error: 'Choose one.' };
   const configs = getReturn(returnId).stateReturns ?? [];
   const config = configs.find((c) => c.stateCode.toUpperCase() === question.stateCode);
   if (!config) return { ok: false, error: `The return has no ${question.stateCode} state return.` };

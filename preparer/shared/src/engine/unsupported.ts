@@ -14,6 +14,7 @@ import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
 import { getStateName } from './state/index.js';
 import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
+import { assessIndiana } from './state/in.js';
 import { assessWashingtonCapitalGains } from './state/wa.js';
 
 export type { UnsupportedPattern };
@@ -44,9 +45,6 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
       add('STATE.YEAR.NOT_SUPPORTED', code, 'state', `${name} tax for ${year} is not calculated by HATax. ${STATE_ONLY}`);
     }
 
-    if (code === 'IN') {
-      add('TAX-006', code, 'state', `Indiana county income tax (Schedule CT-40 / CT-40PNR) is not calculated yet. ${STATE_ONLY}`);
-    }
     if (code === 'IA' && s.residencyType !== 'nonresident') {
       add('TAX-007', code, 'state', `Iowa school district and EMS surtax is not calculated yet. ${STATE_ONLY}`);
     }
@@ -87,6 +85,9 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
+  // TAX-006: Indiana county tax and exemptions (state/in.ts) — what the return does not settle.
+  out.push(...assessIndiana(taxReturn, calculation?.form1040.agi).findings);
+
   // TAX-003: Washington's capital gains tax (state/wa.ts) — what the return does not settle.
   if (calculation) out.push(...assessWashingtonCapitalGains(taxReturn, calculation).findings);
 
@@ -98,7 +99,10 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
  * answer can be seen and changed. The findings hold only the open ones.
  */
 export function stateQuestions(taxReturn: TaxReturn, calculation?: CalculationResult | null): StateQuestion[] {
-  return calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : [];
+  return [
+    ...assessIndiana(taxReturn, calculation?.form1040.agi).questions,
+    ...(calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : []),
+  ];
 }
 
 /** The findings about one state, for its result. */

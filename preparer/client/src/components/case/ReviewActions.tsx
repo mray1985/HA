@@ -281,9 +281,15 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       )}
       {action.kind === 'state_answer' && (
         <Field label={action.question.prompt}>
-          {action.question.kind === 'yes_no'
-            ? <YesNo label={action.question.prompt} value={answer.value as boolean | undefined} onChange={(v) => set('value', v)} />
-            : <Amount label={action.question.prompt} min={action.question.allowNegative ? undefined : 0} value={answer.value as number | undefined} onChange={(v) => set('value', v)} />}
+          {action.question.kind === 'yes_no' && <YesNo label={action.question.prompt} value={answer.value as boolean | undefined} onChange={(v) => set('value', v)} />}
+          {action.question.kind === 'amount' && <Amount label={action.question.prompt} min={action.question.allowNegative ? undefined : 0} value={answer.value as number | undefined} onChange={(v) => set('value', v)} />}
+          {action.question.kind === 'count' && <Amount label={action.question.prompt} integer min={0} max={action.question.max} value={answer.value as number | undefined} onChange={(v) => set('value', v)} />}
+          {action.question.kind === 'choice' && (
+            <select aria-label={action.question.prompt} className={inputClass} value={(answer.value as string) ?? ''} onChange={(e) => set('value', e.target.value || undefined)}>
+              <option value="">Choose…</option>
+              {(action.question.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
         </Field>
       )}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}

@@ -108,7 +108,7 @@ export type ReviewAction =
   /** The date a depreciation asset (or the vehicle) was acquired, which sets its special depreciation (§168(k)). */
   | { kind: 'acquisition_date'; assetId: string | 'vehicle' }
   /** A fact a state rule needs (the engine's question), kept on the state return; `current` is the answer given. */
-  | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number };
+  | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number | string };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -358,8 +358,11 @@ function answeredStateItems(taxReturn: TaxReturn, calculation: CalculationResult
   const open = new Set(engineItems.flatMap((i) => (i.action?.kind === 'state_answer' ? [`${i.action.question.stateCode}:${i.action.question.key}`] : [])));
   return stateQuestions(taxReturn, calculation).filter((q) => !open.has(`${q.stateCode}:${q.key}`)).flatMap((q): ReviewItem[] => {
     const value = (taxReturn.stateReturns ?? []).find((c) => c.stateCode.toUpperCase() === q.stateCode)?.stateSpecificData?.[q.key];
-    if (typeof value !== 'boolean' && typeof value !== 'number') return [];
-    const shown = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('en-US')}`;
+    if (typeof value !== 'boolean' && typeof value !== 'number' && typeof value !== 'string') return [];
+    const shown = typeof value === 'boolean' ? (value ? 'Yes' : 'No')
+      : typeof value === 'string' ? (q.options?.find((o) => o.value === value)?.label ?? value)
+      : q.kind === 'count' ? String(value)
+      : `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('en-US')}`;
     return [{
       id: `state-answer:${q.stateCode}:${q.key}`, category: 'INFORMATIONAL', group: groupForSection(`state_${q.stateCode.toLowerCase()}`), source: 'unsupported',
       message: `${getStateName(q.stateCode)}: ${q.prompt}${q.prompt.endsWith('?') ? '' : ':'} ${shown}.`,

@@ -303,6 +303,7 @@ describe('what the engine cannot compute blocks export (fail closed)', () => {
 
   it('finds the state checks that need no calculation without one', () => {
     const tr = makeTaxReturn({ stateReturns: [{ stateCode: 'IN', residencyType: 'resident' }] } as Partial<TaxReturn>);
-    expect(checkExportReadiness(tr).blockers.map((b) => b.message)).toContainEqual(expect.stringContaining('Indiana county income tax'));
+    // Indiana's county tax needs the county lived in on January 1 (a question on the state details step).
+    expect(checkExportReadiness(tr).blockers).toContainEqual(expect.objectContaining({ stepId: 'state_details', message: expect.stringContaining('Indiana county tax (Schedule CT-40)') }));
   });
 });

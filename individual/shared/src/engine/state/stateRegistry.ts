@@ -23,6 +23,7 @@ import { calculateMaryland } from './md.js';
 import { calculateAlabama } from './al.js';
 import { calculateHawaii } from './hi.js';
 import { createNHCalculator } from './nh.js';
+import { withIndianaCountyTax } from './in.js';
 
 // Factories
 import { createFlatTaxCalculator } from './flatTax.js';
@@ -113,7 +114,8 @@ const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator 
   MA: (taxYear: number) => createFlatTaxCalculator('MA', taxYear),
   NC: (taxYear: number) => createFlatTaxCalculator('NC', taxYear),
   MI: (taxYear: number) => createFlatTaxCalculator('MI', taxYear),
-  IN: (taxYear: number) => createFlatTaxCalculator('IN', taxYear),
+  // Indiana: flat 3% plus the county tax on Schedule CT-40 (in.ts).
+  IN: (taxYear: number) => withIndianaCountyTax(createFlatTaxCalculator('IN', taxYear)),
   CO: (taxYear: number) => createFlatTaxCalculator('CO', taxYear),
   KY: (taxYear: number) => createFlatTaxCalculator('KY', taxYear),
   UT: (taxYear: number) => createFlatTaxCalculator('UT', taxYear),

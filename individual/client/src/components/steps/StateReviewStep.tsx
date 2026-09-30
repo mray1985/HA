@@ -125,7 +125,7 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
 
         <Row label={capitalGains ? 'Capital gains tax' : 'State income tax'} value={sr.stateIncomeTax} trace={findTrace('state.incomeTax')} />
         {sr.stateCredits > 0 && <Row label="State credits" value={-sr.stateCredits} green />}
-        {sr.localTax > 0 && <Row label="Local tax" value={sr.localTax} />}
+        {sr.localTax > 0 && <Row label={sr.stateCode === 'IN' ? 'County tax' : 'Local tax'} value={sr.localTax} trace={findTrace('state.localTax')} />}
         <Row label="Total state tax" value={sr.totalStateTax} bold trace={findTrace('state.totalTax')} />
 
         {sr.stateWithholding > 0 && (

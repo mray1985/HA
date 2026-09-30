@@ -2015,10 +2015,17 @@ export interface StateQuestion {
   stateCode: string;
   key: string;
   prompt: string;
-  /** 'yes_no' is kept as a boolean; 'amount' as a number of dollars. */
-  kind: 'yes_no' | 'amount';
+  /**
+   * 'yes_no' is kept as a boolean; 'amount' as a number of dollars; 'count' as
+   * a whole number from 0 to `max`; 'choice' as one of the options' values.
+   */
+  kind: 'yes_no' | 'amount' | 'count' | 'choice';
   /** An amount that may be a loss (negative). */
   allowNegative?: boolean;
+  /** The most a count can be. */
+  max?: number;
+  /** The values a choice can take. */
+  options?: ReadonlyArray<{ value: string; label: string }>;
 }
 
 export interface StateCalculationResult {

@@ -407,19 +407,35 @@ function StateQuestions({
         return (
           <div key={q.key} className="space-y-1.5">
             {open && <p className="text-xs text-amber-300">{open.message}</p>}
-            {q.kind === 'yes_no' ? (
+            {q.kind === 'yes_no' && (
               <ToggleQuestion label={q.prompt} value={typeof value === 'boolean' ? value : undefined} onChange={(v) => onAnswer(q.key, v)} />
-            ) : (
+            )}
+            {(q.kind === 'amount' || q.kind === 'count') && (
               <div>
                 <label className="text-sm text-slate-300 block mb-1">{q.prompt}</label>
                 <input
                   type="number"
                   className="input-field w-48"
-                  placeholder="$0"
+                  placeholder={q.kind === 'amount' ? '$0' : '0'}
+                  step={q.kind === 'count' ? 1 : undefined}
                   min={q.allowNegative ? undefined : 0}
+                  max={q.kind === 'count' ? q.max : undefined}
                   value={typeof value === 'number' ? value : ''}
                   onChange={(e) => onAnswer(q.key, e.target.value === '' ? undefined : Number(e.target.value))}
                 />
+              </div>
+            )}
+            {q.kind === 'choice' && (
+              <div>
+                <label className="text-sm text-slate-300 block mb-1">{q.prompt}</label>
+                <select
+                  className="input-field"
+                  value={typeof value === 'string' ? value : ''}
+                  onChange={(e) => onAnswer(q.key, e.target.value || undefined)}
+                >
+                  <option value="">Select…</option>
+                  {(q.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
               </div>
             )}
           </div>

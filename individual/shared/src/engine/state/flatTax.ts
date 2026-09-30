@@ -25,6 +25,7 @@ import { FLAT_TAX_CONSTANTS_2026, MA_PERSONAL_EXEMPTION_2026 } from '../../const
 import { getStandardDeduction } from '../../constants/taxConstants.js';
 import { STATE_FORM_REFS } from '../../constants/states/stateFormRefs.js';
 import { TraceBuilder } from '../traceBuilder.js';
+import { indianaExemptions } from './in.js';
 import { getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
@@ -178,8 +179,11 @@ export function createFlatTaxCalculator(stateCode: string, taxYear: number = 202
           }
         }
         exemptions = agedExemptions;
+      } else if (stateCode === 'IN' && stateConfig.residencyType === 'resident') {
+        // IN full-year resident: Schedule 3 (in.ts).
+        exemptions = indianaExemptions(taxReturn, f.agi).total;
       } else if (stateCode === 'IN') {
-        // IN: $1,000 per person (taxpayer + spouse) + $1,500 per dependent
+        // IN part-year or nonresident (stops at TAX-008): $1,000 per person + $1,500 per dependent.
         exemptions = (numPersons * ftConfig.personalExemption) + (numDependents * ftConfig.dependentExemption);
       } else {
         // General case: personalExemption per person + dependentExemption per dependent

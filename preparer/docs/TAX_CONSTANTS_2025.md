@@ -780,8 +780,8 @@ These states impose no individual income tax (or tax only interest/dividends):
 |------|------|
 | Rate | 3% |
 | Standard deduction | $0 (none) |
-| Personal exemption | $1,000 per person |
-| Dependent exemption | $1,500 |
+| Exemptions (Schedule 3, full-year resident) | $2,000 married filing jointly, otherwise $1,000; $1,000 per dependent; $1,500 more per dependent child under 19 or full-time student under 24 ($3,000 the first year); $1,000 each for 65 or older and blind; $500 each for 65 or older with federal AGI under $40,000 ($20,000 MFS); $3,000 per adopted child |
+| County tax (Schedule CT-40) | IT-40 line 7 × the rate of the county lived in on January 1 (2025 chart, R24 / 9-25; 2024 chart, R23 / 9-24), in `constants/states/in.ts` |
 
 ### Colorado
 **Authority:** C.R.S. §39-22-104
