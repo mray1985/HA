@@ -22,8 +22,8 @@
  * the return withdraws it.
  */
 
-import type { CalculationResult, Diagnostic, DiagnosticCategory, TaxReturn } from '@hatax/engine';
-import { DIAGNOSTIC_CATEGORIES, FilingStatus, runReturnDiagnostics } from '@hatax/engine';
+import type { CalculationResult, Diagnostic, DiagnosticCategory, StateQuestion, TaxReturn } from '@hatax/engine';
+import { DIAGNOSTIC_CATEGORIES, FilingStatus, getStateName, runReturnDiagnostics, stateQuestions } from '@hatax/engine';
 import {
   buildChoiceItem,
   choiceForms,
@@ -106,7 +106,9 @@ export type ReviewAction =
   /** A filing status the client's reply states: the preparer puts it on the return. */
   | { kind: 'filing_status'; status: FilingStatus; label: string }
   /** The date a depreciation asset (or the vehicle) was acquired, which sets its special depreciation (§168(k)). */
-  | { kind: 'acquisition_date'; assetId: string | 'vehicle' };
+  | { kind: 'acquisition_date'; assetId: string | 'vehicle' }
+  /** A fact a state rule needs (the engine's question), kept on the state return; `current` is the answer given. */
+  | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -351,6 +353,21 @@ function missingDocumentItems(missing: readonly MissingDocument[]): ReviewItem[]
   });
 }
 
+/** State questions already answered: shown with the answer, which the preparer can change. */
+function answeredStateItems(taxReturn: TaxReturn, calculation: CalculationResult | null | undefined, engineItems: readonly ReviewItem[]): ReviewItem[] {
+  const open = new Set(engineItems.flatMap((i) => (i.action?.kind === 'state_answer' ? [`${i.action.question.stateCode}:${i.action.question.key}`] : [])));
+  return stateQuestions(taxReturn, calculation).filter((q) => !open.has(`${q.stateCode}:${q.key}`)).flatMap((q): ReviewItem[] => {
+    const value = (taxReturn.stateReturns ?? []).find((c) => c.stateCode.toUpperCase() === q.stateCode)?.stateSpecificData?.[q.key];
+    if (typeof value !== 'boolean' && typeof value !== 'number') return [];
+    const shown = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('en-US')}`;
+    return [{
+      id: `state-answer:${q.stateCode}:${q.key}`, category: 'INFORMATIONAL', group: groupForSection(`state_${q.stateCode.toLowerCase()}`), source: 'unsupported',
+      message: `${getStateName(q.stateCode)}: ${q.prompt}${q.prompt.endsWith('?') ? '' : ':'} ${shown}.`,
+      action: { kind: 'state_answer', question: q, current: value },
+    }];
+  });
+}
+
 /** The engine's finding for special depreciation it cannot figure without the date acquired. */
 const BONUS_RULE = 'FED.BONUS_DEPRECIATION.168K';
 
@@ -375,8 +392,9 @@ export function buildCaseReview(input: {
     ...(d.source === 'unsupported' && d.id.startsWith(`unsupported:${BONUS_RULE}:`)
       ? { action: { kind: 'acquisition_date' as const, assetId: d.id.slice(`unsupported:${BONUS_RULE}:`.length) } }
       : {}),
+    ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
   }));
-  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems]
+  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

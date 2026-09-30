@@ -167,7 +167,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 
 | Category | States | Implementation |
 |---|---|---|
-| No income tax (9) | AK, FL, NV, NH, SD, TN, TX, WA, WY | Zero result in `stateRegistry.ts` |
+| No income tax (9) | AK, FL, NV, NH, SD, TN, TX, WA, WY | Zero result in `stateRegistry.ts`, except Washington's capital gains tax (RCW 82.87) in `state/wa.ts`: 7% of long-term gains over the standard deduction ($278,000 for 2025, $270,000 for 2024), plus 2.9% over $1,000,000 from 2025. What the return does not settle is asked (collectibles, the loss carryover, K-1/4797/installment gains, Washington donations, a separate return) or blocks (TAX-003) |
 | Flat tax (13) | AZ, CO, GA, IA, IL, IN, KY, LA, MA, MI, NC, PA, UT | `createFlatTaxCalculator()` factory |
 | Progressive tax (20) | AR, DC, DE, ID, KS, ME, MN, MO, MS, MT, ND, NE, NM, OK, OR, RI, SC, VA, VT, WV | `createProgressiveTaxCalculator()` factory with escape-hatch hooks |
 | Custom calculators (9) | AL, CA, CT, HI, MD, NJ, NY, OH, WI | Individual files with state-specific logic |

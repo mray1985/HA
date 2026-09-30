@@ -9,11 +9,12 @@
  * the engine implements that rule from its official source.
  */
 
-import type { CalculationResult, TaxReturn, UnsupportedPattern } from '../types/index.js';
+import type { CalculationResult, StateQuestion, TaxReturn, UnsupportedPattern } from '../types/index.js';
 import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
 import { getStateName } from './state/index.js';
 import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
+import { assessWashingtonCapitalGains } from './state/wa.js';
 
 export type { UnsupportedPattern };
 
@@ -86,14 +87,18 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
-  // TAX-003: Washington's capital gains tax on long-term gains over the standard deduction.
-  const washington = states.some((s) => s.stateCode.toUpperCase() === 'WA' && s.residencyType !== 'nonresident') || taxReturn.addressState?.toUpperCase() === 'WA';
-  const longTerm = calculation?.scheduleD?.netLongTerm ?? 0;
-  if (washington && longTerm > 278000) {
-    add('TAX-003', 'WA', 'state', `Washington capital gains tax on long-term gains is not calculated yet. ${STATE_ONLY}`);
-  }
+  // TAX-003: Washington's capital gains tax (state/wa.ts) — what the return does not settle.
+  if (calculation) out.push(...assessWashingtonCapitalGains(taxReturn, calculation).findings);
 
   return out;
+}
+
+/**
+ * Every question a state rule on this return asks, answered or not, so an
+ * answer can be seen and changed. The findings hold only the open ones.
+ */
+export function stateQuestions(taxReturn: TaxReturn, calculation?: CalculationResult | null): StateQuestion[] {
+  return calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : [];
 }
 
 /** The findings about one state, for its result. */

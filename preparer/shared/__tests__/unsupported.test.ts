@@ -64,7 +64,7 @@ describe('what the engine cannot compute is reported, not approximated', () => {
     expect(noTable.stateResults?.[0]?.unsupported).toEqual(['Minnesota tax for 2024 is not calculated by HATax. Prepare this return outside HATax, or remove the state, until it is supported.']);
   });
 
-  it('stops Washington residents with long-term gains over $278,000 (TAX-003)', () => {
+  it('asks, or stops, Washington residents whose long-term gains may be over $278,000 (TAX-003; see wa-capital-gains.test.ts)', () => {
     const gains = (amount: number) => [{ id: 'b', description: 'Stock', proceeds: amount + 10000, costBasis: 10000, isLongTerm: true, basisReportedToIRS: true }];
     expect(rules(makeTaxReturn({ addressState: 'WA', income1099B: gains(100000) } as Partial<TaxReturn>))).toEqual([]);
     expect(rules(makeTaxReturn({ addressState: 'WA', income1099B: gains(300000) } as Partial<TaxReturn>))).toEqual(['TAX-003:WA']);

@@ -2003,6 +2003,22 @@ export interface UnsupportedPattern {
   message: string;
   /** The return item it concerns (a depreciation asset's id), when one. */
   itemId?: string;
+  /** The fact that settles it, when an answer can: asked of the preparer or the taxpayer. */
+  question?: StateQuestion;
+}
+
+/**
+ * A fact a state rule needs that the return does not hold. The answer is kept
+ * in the state return's `stateSpecificData[key]`.
+ */
+export interface StateQuestion {
+  stateCode: string;
+  key: string;
+  prompt: string;
+  /** 'yes_no' is kept as a boolean; 'amount' as a number of dollars. */
+  kind: 'yes_no' | 'amount';
+  /** An amount that may be a loss (negative). */
+  allowNegative?: boolean;
 }
 
 export interface StateCalculationResult {

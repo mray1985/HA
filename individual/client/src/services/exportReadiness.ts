@@ -43,7 +43,9 @@ export function checkExportReadiness(taxReturn: TaxReturn, calculation?: Calcula
     blockers.push({
       severity: 'blocker',
       section: u.section === 'state' ? 'State Taxes' : u.section === 'depreciation' ? 'Depreciation' : 'Federal',
-      stepId: u.section === 'state' ? 'state_details' : u.section === 'depreciation' ? 'depreciation_assets' : 'review_form_1040',
+      // A Washington address with no Washington state return: the state is added on the overview step.
+      stepId: u.section === 'state' ? (u.itemId === 'state-return' ? 'state_overview' : 'state_details')
+        : u.section === 'depreciation' ? 'depreciation_assets' : 'review_form_1040',
       message: u.message,
     });
   }

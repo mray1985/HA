@@ -55,13 +55,7 @@ export function calculateScheduleD(
     //
     // IRS Form 8949 column (h) = proceeds − costBasis + washSaleAdj
     // Equivalently: proceeds − (costBasis − washSaleAdj)
-    const proceeds = safeNum(t.proceeds);
-    const costBasis = safeNum(t.costBasis);
-    const washSaleAdj = safeNum(t.washSaleLossDisallowed);
-    const adjustedBasis = washSaleAdj > 0
-      ? round2(costBasis - washSaleAdj)
-      : round2(costBasis);
-    const gainOrLoss = round2(proceeds - adjustedBasis);
+    const gainOrLoss = transactionGainOrLoss(t);
 
     if (t.isLongTerm) {
       if (gainOrLoss >= 0) {
@@ -88,10 +82,7 @@ export function calculateScheduleD(
   }
 
   // Apply carryforward — preserve character (ST/LT)
-  // If explicit ST/LT values provided, use them; otherwise fall back to legacy single value as ST
-  const hasSplitCarryforward = carryforwardST !== undefined || carryforwardLT !== undefined;
-  const cfST = hasSplitCarryforward ? Math.abs(carryforwardST || 0) : Math.abs(carryforward || 0);
-  const cfLT = hasSplitCarryforward ? Math.abs(carryforwardLT || 0) : 0;
+  const { shortTerm: cfST, longTerm: cfLT } = carryforwardByCharacter(carryforward, carryforwardST, carryforwardLT);
 
   if (cfST > 0) {
     shortTermLoss += cfST;
@@ -152,6 +143,33 @@ export function calculateScheduleD(
     capitalLossCarryforwardST: limited.capitalLossCarryforwardST,
     capitalLossCarryforwardLT: limited.capitalLossCarryforwardLT,
   };
+}
+
+/**
+ * The prior-year capital loss carryover by character. Explicit ST/LT values are
+ * used when either is given; otherwise the legacy single value is short-term.
+ */
+export function carryforwardByCharacter(
+  carryforward: number | undefined,
+  carryforwardST?: number,
+  carryforwardLT?: number,
+): { shortTerm: number; longTerm: number } {
+  const hasSplitCarryforward = carryforwardST !== undefined || carryforwardLT !== undefined;
+  return {
+    shortTerm: hasSplitCarryforward ? Math.abs(carryforwardST || 0) : Math.abs(carryforward || 0),
+    longTerm: hasSplitCarryforward ? Math.abs(carryforwardLT || 0) : 0,
+  };
+}
+
+/**
+ * Gain or loss on one Form 8949 line: proceeds less the cost basis, with the
+ * wash sale loss disallowed (box 1g) added back.
+ */
+export function transactionGainOrLoss(t: Pick<Income1099B, 'proceeds' | 'costBasis' | 'washSaleLossDisallowed'>): number {
+  const washSaleAdj = safeNum(t.washSaleLossDisallowed);
+  const costBasis = safeNum(t.costBasis);
+  const adjustedBasis = washSaleAdj > 0 ? round2(costBasis - washSaleAdj) : round2(costBasis);
+  return round2(safeNum(t.proceeds) - adjustedBasis);
 }
 
 /**

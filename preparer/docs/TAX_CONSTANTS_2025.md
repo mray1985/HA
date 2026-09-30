@@ -708,7 +708,7 @@ These states impose no individual income tax (or tax only interest/dividends):
 | South Dakota | SD | No income tax |
 | Tennessee | TN | Hall Tax repealed as of 2021 |
 | Texas | TX | No income tax |
-| Washington | WA | No income tax (7% cap gains tax on >$270k is separate) |
+| Washington | WA | No income tax. Capital gains tax (RCW 82.87): 7% of long-term gains over the $278,000 standard deduction, plus 2.9% over $1,000,000 |
 | Wyoming | WY | No income tax |
 
 ---

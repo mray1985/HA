@@ -73,6 +73,8 @@ export default function ApprovePanel() {
       for (const state of calculation.stateResults) {
         const bytes = await generateStateFormPDF(taxReturn, calculation, state);
         if (bytes) saveBlob(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }), `${name}-${taxReturn.taxYear}-${state.stateCode}.pdf`);
+        // RCW 82.87.110(1)(b): the Washington capital gains return is filed electronically.
+        else if (state.stateCode === 'WA') toast.info('The Washington capital gains return is filed electronically on My DOR (dor.wa.gov); it has no paper form');
         else toast.info(`No ${state.stateName} form template is available yet`);
       }
     } catch {

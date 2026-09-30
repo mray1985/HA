@@ -53,7 +53,7 @@ export const NO_INCOME_TAX_STATES = [
   'SD', // South Dakota
   'TN', // Tennessee (Hall tax fully repealed 2021)
   'TX', // Texas
-  'WA', // Washington (no income tax; capital gains excise tax is separate)
+  'WA', // Washington (no income tax; its capital gains tax is figured in wa.ts)
   'WY', // Wyoming
 ];
 

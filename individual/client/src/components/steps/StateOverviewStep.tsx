@@ -357,7 +357,8 @@ export default function StateOverviewStep() {
         <div className="mt-4">
           <CalloutCard variant="tip" title="No state income tax?">
             If you live in Alaska, Florida, Nevada, New Hampshire, South Dakota, Tennessee, Texas, Washington, or Wyoming,
-            you don't need to file a state income tax return. You can skip this section.
+            you don't need to file a state income tax return. You can skip this section — unless you live in Washington
+            and sold stocks or other long-term assets for a gain: add Washington so we can figure its capital gains tax.
           </CalloutCard>
         </div>
       )}

@@ -71,6 +71,8 @@ export * from './constants/amt2025.js';
 // State tax engine
 export * from './engine/state/index.js';
 export * from './engine/state/stateRegistry.js';
+export * from './engine/state/wa.js';
+export * from './constants/states/wa.js';
 
 // Chat types (AI assistant)
 export * from './types/chat.js';

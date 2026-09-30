@@ -8,7 +8,7 @@
 import { useState, type ReactNode } from 'react';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
 import type { ReviewAction } from '../../services/caseReview';
-import { completeDependent, correctFormField, recordAcquisition, recordChoice, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
+import { completeDependent, correctFormField, recordAcquisition, recordChoice, recordStateAnswer, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
 
 const inputClass = 'bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1.5 w-full';
@@ -200,16 +200,18 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   dependent: 'Complete the dependent',
   filing_status: "Use the client's filing status",
   acquisition_date: 'Enter the date acquired',
+  state_answer: 'Answer for the state return',
 };
 
 export function actionLabel(action: ReviewAction): string {
   return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it'
-    : action.kind === 'acquisition_date' ? 'Enter the date acquired' : 'Complete';
+    : action.kind === 'acquisition_date' ? 'Enter the date acquired'
+    : action.kind === 'state_answer' ? (action.current === undefined ? 'Answer' : 'Change the answer') : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
   const act = useCaseStore((s) => s.act);
-  const [answer, setAnswer] = useState<Answer>({});
+  const [answer, setAnswer] = useState<Answer>(action.kind === 'state_answer' && action.current !== undefined ? { value: action.current } : {});
   const [error, setError] = useState<string | null>(null);
   const set = (field: string, value: unknown) => setAnswer((a) => ({ ...a, [field]: value }));
 
@@ -246,6 +248,8 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
               electOutOfBonus: answer.electOutOfBonus === true,
             })
             : { ok: false, error: 'Enter the date acquired.' };
+        case 'state_answer':
+          return answer.value === undefined ? { ok: false, error: 'Answer the question.' } : recordStateAnswer(returnId, action.question, answer.value);
       }
     });
     if (result.ok) onDone();
@@ -274,6 +278,13 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
             </>
           )}
         </div>
+      )}
+      {action.kind === 'state_answer' && (
+        <Field label={action.question.prompt}>
+          {action.question.kind === 'yes_no'
+            ? <YesNo label={action.question.prompt} value={answer.value as boolean | undefined} onChange={(v) => set('value', v)} />
+            : <Amount label={action.question.prompt} min={action.question.allowNegative ? undefined : 0} value={answer.value as number | undefined} onChange={(v) => set('value', v)} />}
+        </Field>
       )}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}

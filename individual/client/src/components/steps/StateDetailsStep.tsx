@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
 import { updateReturn } from '../../api/client';
 import {
-  calculateForm1040, getStateName, isStateSupported, NO_INCOME_TAX_STATES,
-  StateReturnConfig,
+  calculateForm1040, getStateName, isStateSupported, NO_INCOME_TAX_STATES, stateQuestions,
+  StateQuestion, StateReturnConfig, UnsupportedPattern,
 } from '@hatax/engine';
 import StepNavigation from '../layout/StepNavigation';
 import SectionIntro from '../common/SectionIntro';
@@ -40,9 +40,14 @@ export default function StateDetailsStep() {
 
   const noIncomeTaxStates = NO_INCOME_TAX_STATES;
 
-  // Filter to states that need details (have income tax and are supported)
+  // What the engine asks, answered or not, and what it cannot settle yet, by state.
+  const questions = calcResult ? stateQuestions(taxReturn, calcResult) : [];
+  const openFindings = (calcResult?.unsupported ?? []).filter((u) => u.section === 'state');
+
+  // Filter to states that need details: income-tax states that are supported,
+  // and Washington, whose capital gains tax is figured here.
   const statesNeedingDetails = stateReturns.filter(
-    (sr) => !noIncomeTaxStates.includes(sr.stateCode) && isStateSupported(sr.stateCode),
+    (sr) => (!noIncomeTaxStates.includes(sr.stateCode) && isStateSupported(sr.stateCode)) || sr.stateCode === 'WA',
   );
 
   const statesUnsupported = stateReturns.filter(
@@ -50,7 +55,7 @@ export default function StateDetailsStep() {
   );
 
   const statesWithQuestions = statesNeedingDetails.filter(
-    (sr) => ['NY', 'NJ', 'MD', 'AL', 'CA'].includes(sr.stateCode),
+    (sr) => ['NY', 'NJ', 'MD', 'AL', 'CA'].includes(sr.stateCode) || questions.some((q) => q.stateCode === sr.stateCode),
   );
 
   return (
@@ -95,14 +100,24 @@ export default function StateDetailsStep() {
             {sr.stateCode === 'AL' && renderALDetails(sr, updateStateData)}
             {sr.stateCode === 'CA' && renderCADetails(sr, updateStateData)}
 
+            {/* Questions a state rule asks, and what it cannot settle yet */}
+            <StateQuestions
+              config={sr}
+              questions={questions.filter((q) => q.stateCode === sr.stateCode)}
+              findings={openFindings.filter((u) => u.jurisdiction === sr.stateCode)}
+              onAnswer={(key, value) => updateStateData(sr.stateCode, key, value)}
+            />
+
             {/* Preview estimate */}
             {stateResult && (
               <div className="mt-4 pt-4 border-t border-slate-700">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">Estimated state tax</span>
-                  <span className="text-white font-medium">${stateResult.totalStateTax.toLocaleString()}</span>
+                  <span className="text-slate-400">{sr.stateCode === 'WA' ? 'Estimated capital gains tax' : 'Estimated state tax'}</span>
+                  {stateResult.unsupported?.length
+                    ? <span className="text-amber-300 font-medium">Not calculated</span>
+                    : <span className="text-white font-medium">${stateResult.totalStateTax.toLocaleString()}</span>}
                 </div>
-                {stateResult.stateWithholding > 0 && (
+                {stateResult.stateWithholding > 0 && !stateResult.unsupported?.length && (
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-slate-400">
                       {stateResult.stateRefundOrOwed >= 0 ? 'Estimated refund' : 'Estimated owed'}
@@ -359,6 +374,60 @@ function renderCADetails(
 }
 
 // ─── Shared Components ────────────────────────────────────
+
+/**
+ * The engine's questions for a state (StateQuestion), each kept in the state
+ * return's stateSpecificData, and the findings it cannot settle yet.
+ */
+function StateQuestions({
+  config,
+  questions,
+  findings,
+  onAnswer,
+}: {
+  config: StateReturnConfig;
+  questions: StateQuestion[];
+  findings: UnsupportedPattern[];
+  onAnswer: (key: string, value: unknown) => void;
+}) {
+  if (questions.length === 0 && findings.length === 0) return null;
+  const data = config.stateSpecificData || {};
+  const unanswerable = findings.filter((f) => !f.question);
+  return (
+    <div className="space-y-4 mt-3">
+      {unanswerable.map((f) => (
+        <div key={f.itemId ?? f.ruleId} className="flex items-start gap-2 text-sm text-amber-300">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{f.message}</span>
+        </div>
+      ))}
+      {questions.map((q) => {
+        const open = findings.find((f) => f.question?.key === q.key);
+        const value = data[q.key];
+        return (
+          <div key={q.key} className="space-y-1.5">
+            {open && <p className="text-xs text-amber-300">{open.message}</p>}
+            {q.kind === 'yes_no' ? (
+              <ToggleQuestion label={q.prompt} value={typeof value === 'boolean' ? value : undefined} onChange={(v) => onAnswer(q.key, v)} />
+            ) : (
+              <div>
+                <label className="text-sm text-slate-300 block mb-1">{q.prompt}</label>
+                <input
+                  type="number"
+                  className="input-field w-48"
+                  placeholder="$0"
+                  min={q.allowNegative ? undefined : 0}
+                  value={typeof value === 'number' ? value : ''}
+                  onChange={(e) => onAnswer(q.key, e.target.value === '' ? undefined : Number(e.target.value))}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ToggleQuestion({
   label,

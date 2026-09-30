@@ -17,7 +17,7 @@
  * the preparer's document pipeline and are added by the case layer.
  */
 
-import type { CalculationResult, TaxReturn } from '../types/index.js';
+import type { CalculationResult, StateQuestion, TaxReturn } from '../types/index.js';
 import { findUnsupportedPatterns } from '../engine/unsupported.js';
 import { buildDocumentInventory } from './documentInventory.js';
 import { checkExportReadiness } from './readiness.js';
@@ -51,6 +51,8 @@ export interface Diagnostic {
   itemLabel?: string;
   /** Estimated benefit in dollars (suggestions), when calculable. */
   estimatedBenefit?: number;
+  /** The fact that settles an unsupported finding, when an answer can. */
+  question?: StateQuestion;
 }
 
 function slug(text: string): string {
@@ -94,6 +96,7 @@ export function runReturnDiagnostics(taxReturn: TaxReturn, calculation?: Calcula
       source: 'unsupported',
       section: u.section === 'state' ? `state_${u.jurisdiction.toLowerCase()}` : u.section,
       message: u.message,
+      ...(u.question ? { question: u.question } : {}),
     });
   }
 

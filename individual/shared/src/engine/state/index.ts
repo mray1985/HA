@@ -16,6 +16,7 @@ import {
 } from '../../types/index.js';
 import { getStateCalculator, StateCalculator, NO_INCOME_TAX_STATES } from './stateRegistry.js';
 import { allocateStateIncome, calculateOtherStateCredit } from './allocation.js';
+import { calculateWashington } from './wa.js';
 import { round2 } from '../utils.js';
 
 /**
@@ -60,6 +61,15 @@ function calculateOneState(
   config: StateReturnConfig,
   nonResidentResults: StateCalculationResult[],
 ): StateCalculationResult | null {
+  // Washington: no income tax, but a tax on long-term capital gains (RCW 82.87).
+  // Its only credits are its own (RCW 82.87.100(2)), not the other-state credit below.
+  if (config.stateCode.toUpperCase() === 'WA') {
+    return calculateWashington(taxReturn, federalResult, config, {
+      withholding: getStateWithholding(taxReturn, 'WA'),
+      estimated: 0,
+    });
+  }
+
   // No income tax states — return zero result
   if (NO_INCOME_TAX_STATES.includes(config.stateCode)) {
     return {

@@ -76,6 +76,7 @@ export default function StateReviewStep() {
 
 function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
   const isRefund = sr.stateRefundOrOwed >= 0;
+  const capitalGains = sr.additionalLines?.capitalGainsTax === 1;
   const findTrace = (id: string) => sr.traces?.find((t: CalculationTrace) => t.lineId === id);
 
   return (
@@ -110,19 +111,19 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
         </div>
       </div>
 
-      {/* Computation breakdown */}
+      {/* Computation breakdown (Washington: its capital gains tax, RCW 82.87) */}
       <div className="space-y-0 text-sm border-t border-slate-700 pt-3">
-        <Row label="Federal AGI" value={sr.federalAGI} />
+        {!capitalGains && <Row label="Federal AGI" value={sr.federalAGI} />}
         {sr.stateAdditions > 0 && <Row label="State additions" value={sr.stateAdditions} plus />}
         {sr.stateSubtractions > 0 && <Row label="State subtractions" value={-sr.stateSubtractions} />}
-        <Row label="State AGI" value={sr.stateAGI} bold trace={findTrace('state.stateAGI')} />
-        {sr.stateDeduction > 0 && <Row label="Deduction" value={-sr.stateDeduction} />}
+        <Row label={capitalGains ? 'Adjusted capital gain' : 'State AGI'} value={sr.stateAGI} bold trace={findTrace('state.stateAGI')} />
+        {sr.stateDeduction > 0 && <Row label={capitalGains ? 'Standard and charitable deductions' : 'Deduction'} value={-sr.stateDeduction} />}
         {sr.stateExemptions > 0 && <Row label="Exemptions" value={-sr.stateExemptions} />}
-        <Row label="State taxable income" value={sr.stateTaxableIncome} bold trace={findTrace('state.taxableIncome')} />
+        <Row label={capitalGains ? `${sr.stateName} capital gains` : 'State taxable income'} value={sr.stateTaxableIncome} bold trace={findTrace('state.taxableIncome')} />
 
         <div className="border-t border-slate-700/50 my-2" />
 
-        <Row label="State income tax" value={sr.stateIncomeTax} trace={findTrace('state.incomeTax')} />
+        <Row label={capitalGains ? 'Capital gains tax' : 'State income tax'} value={sr.stateIncomeTax} trace={findTrace('state.incomeTax')} />
         {sr.stateCredits > 0 && <Row label="State credits" value={-sr.stateCredits} green />}
         {sr.localTax > 0 && <Row label="Local tax" value={sr.localTax} />}
         <Row label="Total state tax" value={sr.totalStateTax} bold trace={findTrace('state.totalTax')} />

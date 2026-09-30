@@ -23,7 +23,7 @@ import {
   type TaxFact,
   type TaxToolCallContext,
 } from '@hatax/local-ai';
-import type { FilingStatus } from '@hatax/engine';
+import type { FilingStatus, StateQuestion } from '@hatax/engine';
 import { getReturn, updateReturn } from '../api/client';
 import { appendAudit } from './caseAudit';
 import { loadDocuments, upsertDocument } from './documentIngestion';
@@ -159,6 +159,24 @@ export function recordAcquisition(returnId: string, assetId: string | 'vehicle',
     });
   }
   appendAudit(returnId, { kind: 'correction', field: assetId === 'vehicle' ? 'vehicle.acquisitionDate' : `depreciationAssets[${assetId}].acquisitionDate`, from: 'not set', to: facts.acquisitionDate });
+  return { ok: true, outcome: { kind: 'recorded' } };
+}
+
+/** The preparer's answer to a state rule's question, kept on that state's return. */
+export function recordStateAnswer(returnId: string, question: StateQuestion, value: unknown): DecisionResult {
+  if (question.kind === 'yes_no' && typeof value !== 'boolean') return { ok: false, error: 'Answer yes or no.' };
+  if (question.kind === 'amount') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return { ok: false, error: 'Enter the amount.' };
+    if (value < 0 && !question.allowNegative) return { ok: false, error: 'The amount cannot be negative.' };
+  }
+  const configs = getReturn(returnId).stateReturns ?? [];
+  const config = configs.find((c) => c.stateCode.toUpperCase() === question.stateCode);
+  if (!config) return { ok: false, error: `The return has no ${question.stateCode} state return.` };
+  const before = config.stateSpecificData?.[question.key];
+  updateReturn(returnId, {
+    stateReturns: configs.map((c) => (c === config ? { ...c, stateSpecificData: { ...(c.stateSpecificData ?? {}), [question.key]: value } } : c)),
+  });
+  appendAudit(returnId, { kind: 'correction', field: `${question.stateCode}: ${question.prompt}`, from: before ?? 'not answered', to: value });
   return { ok: true, outcome: { kind: 'recorded' } };
 }
 
