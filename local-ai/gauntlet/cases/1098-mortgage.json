@@ -22,23 +22,45 @@
     "RightCol[0].TagCorrectingSubform[0].f2_8[0]": "1"
   },
   "expectedBoxes": {
-    "1": { "money": 9412.37, "field": "RightCol[0].f2_11[0]" },
-    "2": { "money": 214880.15, "field": "RightCol[0].f2_12[0]" },
-    "3": { "text": "03/14/2021", "field": "RightCol[0].f2_13[0]" },
-    "6": { "money": 1200, "field": "RightCol[0].f2_16[0]" },
-    "9": { "text": "1", "field": "RightCol[0].TagCorrectingSubform[0].f2_8[0]" }
+    "1": {
+      "money": 9412.37,
+      "field": "RightCol[0].f2_11[0]"
+    },
+    "2": {
+      "money": 214880.15,
+      "field": "RightCol[0].f2_12[0]"
+    },
+    "3": {
+      "text": "03/14/2021",
+      "field": "RightCol[0].f2_13[0]"
+    },
+    "6": {
+      "money": 1200,
+      "field": "RightCol[0].f2_16[0]"
+    },
+    "9": {
+      "text": "1",
+      "field": "RightCol[0].TagCorrectingSubform[0].f2_8[0]"
+    }
   },
-  "blankBoxes": ["4", "5", "8", "10", "11"],
+  "blankBoxes": [
+    "4",
+    "5",
+    "8",
+    "10",
+    "11"
+  ],
   "expected": {
     "tool": "add_mortgage_interest",
     "args": {
       "lenderName": "CRESCENT CITY MORTGAGE CO",
+      "lenderTin": "72-3334445",
       "mortgageInterest": 9412.37,
       "outstandingPrincipal": 214880.15,
       "originationDate": "03/14/2021",
       "points": 1200,
-      "propertiesSecuringMortgage": 1
-    },
-    "note": "add_mortgage_interest is a §5 tool not yet implemented; expected args are the §16 target."
+      "propertyAddressSameAsBorrower": true,
+      "numberOfProperties": 1
+    }
   }
 }

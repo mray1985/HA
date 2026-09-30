@@ -1,0 +1,45 @@
+{
+  "id": "1098t-university",
+  "description": "2026 1098-T Copy B: tuition payments, scholarships, half-time student checked, graduate and next-period boxes unchecked. Synthetic data.",
+  "form": "f1098t.pdf",
+  "formType": "1098-T",
+  "pageIndex": 2,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "LeftCol[0].f2_1[0]": "BAYOU STATE UNIVERSITY",
+    "LeftCol[0].f2_2[0]": "1 UNIVERSITY PL",
+    "LeftCol[0].f2_4[0]": "BATON ROUGE",
+    "LeftCol[0].f2_5[0]": "LA",
+    "LeftCol[0].f2_7[0]": "70803",
+    "LeftCol[0].f2_8[0]": "225-555-0100",
+    "LeftCol[0].f2_9[0]": "72-6000111",
+    "LeftCol[0].f2_10[0]": "XXX-XX-7788",
+    "LeftCol[0].f2_11[0]": "JORDAN TESTPAYER",
+    "LeftCol[0].f2_12[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_14[0]": "BATON ROUGE",
+    "LeftCol[0].f2_15[0]": "LA",
+    "LeftCol[0].f2_17[0]": "70802",
+    "LeftCol[0].f2_18[0]": "S00423117",
+    "RightCol[0].f2_19[0]": "8,420.00",
+    "RightCol[0].f2_21[0]": "3,000.00",
+    "RightCol[0].c2_4[0]": true
+  },
+  "expectedBoxes": {
+    "1": { "money": 8420, "field": "RightCol[0].f2_19[0]" },
+    "5": { "money": 3000, "field": "RightCol[0].f2_21[0]" }
+  },
+  "blankBoxes": ["4", "6", "10"],
+  "expected": {
+    "tool": "add_education_expense",
+    "args": {
+      "institutionName": "BAYOU STATE UNIVERSITY",
+      "institutionEin": "72-6000111",
+      "studentName": "JORDAN TESTPAYER",
+      "tuitionPaid": 8420,
+      "scholarships": 3000,
+      "includesNextPeriod": false,
+      "halfTimeStudent": true,
+      "graduateStudent": false
+    }
+  }
+}

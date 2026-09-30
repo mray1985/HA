@@ -262,11 +262,7 @@ async function main() {
         return {
           mapped: m,
           args: m?.tool
-            ? extractStructuredFields(
-                { add_w2: 'w2', add_1099_int: '1099int', add_1099_div: '1099div', add_1099_nec: '1099nec', add_1099_r: '1099r' }[m.tool],
-                m.bag,
-                m.rawText,
-              ).args
+            ? extractStructuredFields(m.tool, m.bag, m.rawText).args
             : {},
         };
       };

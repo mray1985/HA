@@ -45,6 +45,20 @@ Tool arguments are counted over the 31 arguments that have a tax tool today
 | Granite Docling 258M (Q4_K_M and Q8_0) | 0.26B | — | — | — | loops on W-2, drops the money column |
 | hsarfraz/donut-irs-tax-docs-classifier | — | — | — | — | labels only W-2 / 1040 family; a W-2 came back `other_misc` |
 
+### All seven Phase 1 forms (work order §63)
+
+With 1099-DIV and 1098-T cases added and every Phase 1 form wired to a tool
+(1098 → `add_mortgage_interest`, 1098-T → `add_education_expense`,
+SSA-1099 → `add_ssa_1099`; SSA-1099 has no official fillable blank, so it is
+covered by unit tests):
+
+| Model (Q4_K_M) + page evidence | Classified | Tool args | Invented values | s/page |
+|---|---|---|---|---|
+| **Qwen3.5-0.8B** | 7/7 | **55/55** (model alone 49) | 0 | 35 |
+
+The 1099-DIV Section 199A amount (box 5, no engine field) routes to review,
+and every CORRECTED checkbox reads as unchecked.
+
 Findings that shaped the product code:
 
 - Model-reported coordinates are invented (uniform grids), so no model is asked
