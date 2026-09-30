@@ -1882,6 +1882,12 @@ export interface TaxReturn {
   educatorExpenses?: number;        // K-12 educator unreimbursed classroom expenses (up to $300)
   estimatedPaymentsMade?: number;
   estimatedQuarterlyPayments?: [number, number, number, number];  // Per-quarter payments: Q1(Apr 15), Q2(Jun 15), Q3(Sep 15), Q4(Jan 15)
+  /**
+   * Federal estimated payments with the date each was made (YYYY-MM-DD); a
+   * prior-year overpayment applied counts on the first installment's due date.
+   * Form 2210 counts each payment from its date. Sums to estimatedQuarterlyPayments.
+   */
+  estimatedPaymentSchedule?: Array<{ date: string; amount: number }>;
   priorYearTax?: number;                    // Prior year tax liability (for Form 2210 safe harbor)
   annualizedIncome?: AnnualizedIncomeInfo;  // Form 2210 Schedule AI — quarterly cumulative income for annualized method
   nolCarryforward?: number;                 // Prior year NOL available for carryforward

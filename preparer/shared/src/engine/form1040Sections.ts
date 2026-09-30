@@ -63,7 +63,7 @@ import { aggregateHSADistributions } from './hsaDistributions.js';
 import { calculateHSADeduction } from './hsaForm8889.js';
 import { calculateForm8606, Form8606Result } from './form8606.js';
 import type { Form8606Info } from '../types/index.js';
-import { calculateEstimatedTaxPenalty } from './estimatedTaxPenalty.js';
+import { calculateEstimatedTaxPenalty, installmentDueDates } from './estimatedTaxPenalty.js';
 import { calculateKiddieTax, KiddieTaxResult } from './kiddieTax.js';
 import { calculateFEIE, FEIEResult } from './feie.js';
 import { calculateScheduleH } from './scheduleH.js';
@@ -2415,6 +2415,14 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
 
   // Estimated Tax Penalty (Form 2210)
   // Always compute — when priorYearTax is undefined, uses 90% current-year test only.
+  // Payments count from when they were made: dated payments, else each quarter's
+  // payment on its due date, else the year's total spread over the installments.
+  const penaltyYear = taxReturn.taxYear || 2025;
+  const dueDates = installmentDueDates(penaltyYear);
+  const datedPayments = taxReturn.estimatedPaymentSchedule
+    ?? (taxReturn.estimatedQuarterlyPayments
+      ? taxReturn.estimatedQuarterlyPayments.map((amount, q) => ({ date: dueDates[q]!, amount: amount || 0 }))
+      : dueDates.map((date) => ({ date, amount: round2(ctx.estimatedPayments / 4) })));
   ctx.estimatedTaxPenaltyResult = calculateEstimatedTaxPenalty(
     Math.max(0, ctx.taxAfterCredits),
     ctx.totalPayments,
@@ -2422,6 +2430,8 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
     ctx.agi,
     ctx.filingStatus,
     taxReturn.annualizedIncome,
+    penaltyYear,
+    { withholding: ctx.totalWithholding, estimatedPayments: datedPayments },
   );
   ctx.estimatedTaxPenalty = ctx.estimatedTaxPenaltyResult.penalty;
 

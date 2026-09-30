@@ -14,6 +14,7 @@
  * missing what the engine requires is reported, not applied.
  */
 
+import { installmentDueDates } from '@hatax/engine';
 import { formKeyOf, validateImportedFacts } from './factValidation.js';
 import { compareSourceAuthority, type TaxFact, type TaxFactValue } from './taxFact.js';
 import { factPrefixOf, RESIDENCY_TYPES } from './taxTools.js';
@@ -213,41 +214,8 @@ export function dependentLabel(d: Pick<ResolvedDependent, 'fields'>): string {
 
 // ─── Estimated payments ──────────────────────────────────────
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-/** Third Monday of January (Martin Luther King Jr. Day). */
-function mlkDay(year: number): string {
-  const jan1 = new Date(Date.UTC(year, 0, 1)).getUTCDay();
-  const firstMonday = 1 + ((8 - jan1) % 7);
-  return iso(new Date(Date.UTC(year, 0, firstMonday + 14)));
-}
-
-/** DC Emancipation Day (April 16), as observed: Saturday → Friday, Sunday → Monday. */
-function emancipationDay(year: number): string {
-  const d = new Date(Date.UTC(year, 3, 16));
-  const day = d.getUTCDay();
-  if (day === 6) d.setUTCDate(15);
-  if (day === 0) d.setUTCDate(17);
-  return iso(d);
-}
-
-/** IRC §7503: a due date on a Saturday, Sunday or legal holiday moves to the next business day. */
-function nextBusinessDay(date: Date, holidays: ReadonlySet<string>): string {
-  const d = new Date(date);
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6 || holidays.has(iso(d))) d.setUTCDate(d.getUTCDate() + 1);
-  return iso(d);
-}
-
-/** Form 1040-ES installment due dates for a tax year: April 15, June 15, September 15, January 15 (§6654(c)), moved per §7503. */
-export function installmentDueDates(taxYear: number): [string, string, string, string] {
-  const holidays = new Set([emancipationDay(taxYear), mlkDay(taxYear + 1)]);
-  return [
-    nextBusinessDay(new Date(Date.UTC(taxYear, 3, 15)), holidays),
-    nextBusinessDay(new Date(Date.UTC(taxYear, 5, 15)), holidays),
-    nextBusinessDay(new Date(Date.UTC(taxYear, 8, 15)), holidays),
-    nextBusinessDay(new Date(Date.UTC(taxYear + 1, 0, 15)), holidays),
-  ];
-}
+/** Form 1040-ES due dates (§6654(c), moved per §7503) — the engine's, so Form 2210 and placement agree. */
+export { installmentDueDates };
 
 export interface EstimatedPaymentTotals {
   total: number;
@@ -255,8 +223,12 @@ export interface EstimatedPaymentTotals {
 }
 
 export interface ResolvedEstimatedPayments {
-  /** Federal payments by installment, when every federal payment can be placed. */
-  federal?: EstimatedPaymentTotals & { quarters: [number, number, number, number] };
+  /**
+   * Federal payments by installment, and each with the date it counts from
+   * (the date paid; an overpayment applied, or a payment known only by its
+   * installment, on that installment's due date) — when every one can be placed.
+   */
+  federal?: EstimatedPaymentTotals & { quarters: [number, number, number, number]; schedule: Array<{ date: string; amount: number }> };
   /** State payments by state code, for each state whose payments can all be counted. */
   states: Record<string, EstimatedPaymentTotals>;
   /** Payments that cannot be counted yet. Their jurisdiction's total is not written while any wait. */
@@ -272,7 +244,7 @@ export function resolveEstimatedPayments(facts: readonly TaxFact[], taxYear: num
   const due = installmentDueDates(taxYear);
   const waiting: ResolvedEstimatedPayments['waiting'] = [];
   const excluded: ResolvedEstimatedPayments['excluded'] = [];
-  const placed: Array<{ jurisdiction: string; amount: number; quarter?: number }> = [];
+  const placed: Array<{ jurisdiction: string; amount: number; quarter?: number; date?: string }> = [];
 
   for (const record of recordsOf(facts, factPrefixOf('add_estimated_payment'))) {
     const jurisdiction = extracted(record, 'jurisdiction') as string | undefined;
@@ -309,7 +281,9 @@ export function resolveEstimatedPayments(facts: readonly TaxFact[], taxYear: num
       else if (datePaid) quarter = datePaid <= due[0] ? 1 : datePaid <= due[1] ? 2 : datePaid <= due[2] ? 3 : 4;
       else { wait('The payment has no date paid or installment number, so its installment is unknown.'); continue; }
     }
-    placed.push({ jurisdiction, amount, ...(quarter !== undefined ? { quarter } : {}) });
+    // A prior-year overpayment applied counts as paid on the first installment's due date.
+    const countsFrom = overpayment ? due[0] : datePaid ?? (quarter !== undefined ? due[quarter - 1] : undefined);
+    placed.push({ jurisdiction, amount, ...(quarter !== undefined ? { quarter } : {}), ...(countsFrom ? { date: countsFrom } : {}) });
   }
 
   const waitingIn = new Set(waiting.map((w) => w.jurisdiction));
@@ -319,7 +293,8 @@ export function resolveEstimatedPayments(facts: readonly TaxFact[], taxYear: num
   if (federal.length > 0 && !waitingIn.has('federal') && !waitingIn.has(undefined)) {
     const quarters: [number, number, number, number] = [0, 0, 0, 0];
     for (const p of federal) quarters[p.quarter! - 1] = round2(quarters[p.quarter! - 1]! + p.amount);
-    out.federal = { quarters, total: round2(quarters.reduce((a, b) => a + b, 0)), payments: federal.length };
+    const schedule = federal.map((p) => ({ date: p.date!, amount: p.amount })).sort((a, b) => a.date.localeCompare(b.date));
+    out.federal = { quarters, total: round2(quarters.reduce((a, b) => a + b, 0)), payments: federal.length, schedule };
   }
   for (const p of placed) {
     if (p.jurisdiction === 'federal' || waitingIn.has(p.jurisdiction) || waitingIn.has(undefined)) continue;

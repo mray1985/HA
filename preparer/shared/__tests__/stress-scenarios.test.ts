@@ -1892,9 +1892,10 @@ describe('S23 — Additional Medicare Tax + NIIT Stack', () => {
   });
 
   it('computes correct amount owed', () => {
-    // $117,444.75 − $90,000 withholding = $27,444.75 base + ~$731 estimated tax penalty (day-count) ≈ $28,176
+    // $117,444.75 − $90,000 withholding = $27,444.75 base + ~$730 estimated tax penalty (Form 2210
+    // day count; the second installment was due June 16, 2025 — June 15 was a Sunday, IRC §7503) ≈ $28,175
     expect(f.totalPayments).toBeCloseTo(90000, 0);
-    expect(f.amountOwed).toBeCloseTo(28176, 0);
+    expect(f.amountOwed).toBeCloseTo(28175, 0);
   });
 });
 

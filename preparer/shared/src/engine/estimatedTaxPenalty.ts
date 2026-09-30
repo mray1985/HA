@@ -26,9 +26,15 @@ import { round2 } from './utils.js';
  *   IRC: Section 6621(a)(2) — underpayment rate = federal short-term rate + 3%
  *   Form: Form 2210
  *   Form: Form 2210, Schedule AI
- * @scope Estimated tax penalty with safe harbors, per-quarter day-count, and annualized income
+ * With a payment schedule, the regular method follows Form 2210 Part IV: each
+ * estimated payment counts from the day it was made and goes to the earliest
+ * unpaid installment, and withholding counts as paid in equal parts on the
+ * installment due dates (IRC §6654(g)(1)). Without one, payments are spread
+ * evenly over the installments.
+ *
+ * @scope Estimated tax penalty with safe harbors, dated payments, and annualized income
  * @limitations
- *   Does not model mid-quarter payments (assumes equal quarterly payments)
+ *   Withholding is always treated as paid evenly (the actual-dates election is not modeled)
  *   Annualized method does not model itemized deduction variations by period
  */
 export function calculateEstimatedTaxPenalty(
@@ -39,6 +45,7 @@ export function calculateEstimatedTaxPenalty(
   filingStatus: FilingStatus,
   annualizedIncome?: AnnualizedIncomeInfo,
   taxYear: number = 2025,
+  schedule?: PaymentSchedule,
 ): EstimatedTaxPenaltyResult {
   const c = getEstimatedTaxPenalty(taxYear);
 
@@ -81,12 +88,10 @@ export function calculateEstimatedTaxPenalty(
   // Underpayment = required - paid
   const underpaymentAmount = round2(Math.max(0, requiredAnnualPayment - totalPayments));
 
-  // ─── Per-Quarter Day-Count Penalty (Form 2210 Part IV) ──
-  // Distribute payments equally across quarters (simplified — no mid-quarter tracking)
-  const quarterlyPayment = round2(totalPayments / 4);
-  const quarterlyRequired = round2(requiredAnnualPayment / 4);
-
-  const regularResult = calculateDayCountPenalty(quarterlyRequired, quarterlyPayment, taxYear);
+  // ─── Regular method (Form 2210 Part IV) ──
+  const regularResult = schedule
+    ? calculateScheduledPenalty(requiredAnnualPayment, schedule, taxYear)
+    : calculateDayCountPenalty(round2(requiredAnnualPayment / 4), round2(totalPayments / 4), taxYear);
   const regularPenalty = regularResult.totalPenalty;
 
   // ─── Annualized Income Installment Method (Schedule AI) ──
@@ -126,6 +131,122 @@ export function calculateEstimatedTaxPenalty(
     annualizedPenalty: undefined,
     quarterlyDetail: regularResult.quarterlyDetail,
   };
+}
+
+/** When the year's payments were made (Form 2210 Part IV). */
+export interface PaymentSchedule {
+  /** Withholding for the year, treated as paid in four equal parts on the installment due dates (IRC §6654(g)(1)). */
+  withholding: number;
+  /** Estimated tax payments, each on the date it was made (YYYY-MM-DD). */
+  estimatedPayments: ReadonlyArray<{ date: string; amount: number }>;
+}
+
+const DAY_MS = 86_400_000;
+const utc = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
+const isoOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/** Third Monday of January (Martin Luther King Jr. Day). */
+function mlkDay(year: number): string {
+  const jan1 = new Date(Date.UTC(year, 0, 1)).getUTCDay();
+  return isoOf(Date.UTC(year, 0, 1 + ((8 - jan1) % 7) + 14));
+}
+
+/** DC Emancipation Day (April 16), as observed: Saturday → Friday, Sunday → Monday. */
+function emancipationDay(year: number): string {
+  const day = new Date(Date.UTC(year, 3, 16)).getUTCDay();
+  return isoOf(Date.UTC(year, 3, day === 6 ? 15 : day === 0 ? 17 : 16));
+}
+
+/**
+ * Form 1040-ES installment due dates for a tax year: April 15, June 15,
+ * September 15 and January 15 (IRC §6654(c)(2)), each moved to the next
+ * business day when it falls on a weekend or legal holiday (IRC §7503).
+ */
+export function installmentDueDates(taxYear: number): [string, string, string, string] {
+  const holidays = new Set([emancipationDay(taxYear), mlkDay(taxYear + 1)]);
+  const next = (y: number, m: number, d: number) => {
+    let ms = Date.UTC(y, m, d);
+    while ([0, 6].includes(new Date(ms).getUTCDay()) || holidays.has(isoOf(ms))) ms += DAY_MS;
+    return isoOf(ms);
+  };
+  return [next(taxYear, 3, 15), next(taxYear, 5, 15), next(taxYear, 8, 15), next(taxYear + 1, 0, 15)];
+}
+
+/**
+ * Rate period of a day (Form 2210 penalty worksheet): 0 April–June, 1 July–
+ * September, 2 October–December of the tax year, 3 January–April 15 after it.
+ */
+function ratePeriod(dayMs: number, taxYear: number): number {
+  const d = new Date(dayMs);
+  if (d.getUTCFullYear() > taxYear) return 3;
+  const month = d.getUTCMonth();
+  return month < 6 ? 0 : month < 9 ? 1 : 2;
+}
+
+/** Penalty on an amount unpaid from the day after `due` through `paid` (or April 15 after the year). */
+function accrue(amount: number, due: string, paid: string, taxYear: number, rates: readonly number[]): number {
+  const end = Math.min(utc(paid), utc(`${taxYear + 1}-04-15`));
+  let penalty = 0;
+  for (let day = utc(due) + DAY_MS; day <= end; day += DAY_MS) {
+    penalty += amount * rates[ratePeriod(day, taxYear)]! / 365;
+  }
+  return penalty;
+}
+
+/**
+ * Regular-method penalty from dated payments (Form 2210 Part IV). Each
+ * installment is 25% of the required annual payment. Payments are applied in
+ * date order to the earliest unpaid installment; an installment's unpaid part
+ * accrues from its due date until paid, or until April 15 after the year.
+ *
+ * @authority IRC §6654(a), (c), (d)(1), (g)(1); IRC §7503; Form 2210 Part IV
+ */
+export function calculateScheduledPenalty(
+  requiredAnnualPayment: number,
+  schedule: PaymentSchedule,
+  taxYear: number,
+): { totalPenalty: number; quarterlyDetail: QuarterlyPenaltyDetail[] } {
+  const rates = getEstimatedTaxPenalty(taxYear).PERIOD_RATES;
+  const due = installmentDueDates(taxYear);
+  const required = round2(requiredAnnualPayment * 0.25);
+  const installments = due.map((date) => ({ date, remaining: required, applied: 0, unpaidAtDue: 0, penalty: 0 }));
+
+  const withheld = round2(schedule.withholding / 4);
+  const payments = [
+    ...due.map((date) => ({ date, amount: withheld })),
+    ...schedule.estimatedPayments.filter((p) => p.amount > 0),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  // What each installment still owed on its due date: payments made by then.
+  const paidBy = (date: string) => payments.filter((p) => p.date <= date).reduce((s, p) => s + p.amount, 0);
+  due.forEach((date, i) => {
+    installments[i]!.unpaidAtDue = round2(Math.max(0, required * (i + 1) - paidBy(date)));
+  });
+
+  for (const payment of payments) {
+    let left = payment.amount;
+    for (const inst of installments) {
+      if (left <= 0) break;
+      if (inst.remaining <= 0) continue;
+      const portion = Math.min(left, inst.remaining);
+      if (payment.date > inst.date) inst.penalty += accrue(portion, inst.date, payment.date, taxYear, rates);
+      inst.remaining = round2(inst.remaining - portion);
+      inst.applied = round2(inst.applied + portion);
+      left = round2(left - portion);
+    }
+  }
+  // Never paid during the year: accrues to April 15 (paid with the return).
+  for (const inst of installments) {
+    if (inst.remaining > 0) inst.penalty += accrue(inst.remaining, inst.date, `${taxYear + 1}-04-15`, taxYear, rates);
+  }
+
+  const quarterlyDetail: QuarterlyPenaltyDetail[] = installments.map((inst) => ({
+    requiredInstallment: required,
+    paymentMade: inst.applied,
+    underpayment: Math.min(required, inst.unpaidAtDue),
+    penalty: round2(inst.penalty),
+  }));
+  return { totalPenalty: round2(quarterlyDetail.reduce((s, q) => s + q.penalty, 0)), quarterlyDetail };
 }
 
 /**

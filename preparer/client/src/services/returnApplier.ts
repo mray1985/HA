@@ -370,7 +370,11 @@ function recomputeEstimatedPayments(returnId: string, formKey: string): ApplyOut
   const facts = loadTaxFacts(returnId);
   const resolved = resolveEstimatedPayments(facts, tr.taxYear);
   if (resolved.federal) {
-    updateReturn(returnId, { estimatedQuarterlyPayments: resolved.federal.quarters, estimatedPaymentsMade: resolved.federal.total });
+    updateReturn(returnId, {
+      estimatedQuarterlyPayments: resolved.federal.quarters,
+      estimatedPaymentsMade: resolved.federal.total,
+      estimatedPaymentSchedule: resolved.federal.schedule,
+    });
   }
   const stateOutcomes = syncStateReturns(returnId);
 

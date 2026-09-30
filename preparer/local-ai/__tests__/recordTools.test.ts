@@ -125,7 +125,14 @@ describe('estimated payments', () => {
       ...record('add_estimated_payment', { jurisdiction: 'federal', amount: 800, taxYear: 2026, installment: 1 }, 'P8'),
     ];
     const resolved = resolveEstimatedPayments(facts, 2025);
-    expect(resolved.federal).toEqual({ quarters: [1250, 1000, 1000, 900], total: 4150, payments: 5 });
+    expect(resolved.federal).toEqual({
+      quarters: [1250, 1000, 1000, 900], total: 4150, payments: 5,
+      // Each payment counts from its date; the overpayment from the first due date, P5 (installment 4 only) from its due date.
+      schedule: [
+        { date: '2025-04-15', amount: 1000 }, { date: '2025-04-15', amount: 250 }, { date: '2025-06-16', amount: 1000 },
+        { date: '2025-06-17', amount: 1000 }, { date: '2026-01-15', amount: 900 },
+      ],
+    });
     expect(resolved.states).toEqual({ CA: { total: 700.5, payments: 2 } });
     expect(resolved.excluded).toEqual([{ formKey: 'P8#0', jurisdiction: 'federal', reason: 'The payment is for tax year 2026.' }]);
     expect(resolved.waiting).toEqual([]);
