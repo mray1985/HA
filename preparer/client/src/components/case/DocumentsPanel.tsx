@@ -28,6 +28,8 @@ const OUTCOME_LABEL: Record<DocumentPieceOutcome, { text: string; className: str
   aggregate_waiting: { text: 'Waiting — a related form is held', className: 'text-amber-300' },
   dependent: { text: 'Added as a dependent', className: 'text-emerald-300' },
   dependent_waiting: { text: 'Dependent — details needed', className: 'text-amber-300' },
+  correction: { text: 'Corrected the W-2', className: 'text-emerald-300' },
+  correction_waiting: { text: 'W-2c — waiting for its W-2', className: 'text-amber-300' },
   held:{ text: 'Held for review', className: 'text-amber-300' },
   recorded: { text: 'Recorded — needs your decision', className: 'text-sky-300' },
   not_applied: { text: 'Read — enter it on the return', className: 'text-sky-300' },

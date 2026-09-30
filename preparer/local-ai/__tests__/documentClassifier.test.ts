@@ -1,3 +1,4 @@
+import { formToolForIncomeType, TOOL_APPLICATION } from '../src/taxTools.js';
 import { describe, expect, it } from 'vitest';
 import {
   classificationAllowsIncomeWrite,
@@ -251,9 +252,12 @@ describe('W-2C (corrected W-2)', () => {
 });
 
 describe('classificationAllowsIncomeWrite and corrected W-2s', () => {
-  it('never lets a W-2C write income', () => {
+  it('sends a W-2C to its correction tool, which writes no income of its own', () => {
     const c = classifyDocument({ text: 'Form W-2c Corrected Wage and Tax Statement. Previously reported. Correct information.' });
-    expect(classificationAllowsIncomeWrite(c)).toBe(false);
+    expect(c.formType).toBe('W-2C');
+    expect(classificationAllowsIncomeWrite(c)).toBe(true);
+    expect(formToolForIncomeType(c.incomeType)).toBe('add_w2c');
+    expect(TOOL_APPLICATION.add_w2c).toEqual({ kind: 'w2_correction' });
     expect(classificationAllowsIncomeWrite(classifyDocument({ text: 'Form W-2 Wage and Tax Statement. Employer. Wages' }))).toBe(true);
   });
 });

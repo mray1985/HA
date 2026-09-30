@@ -454,9 +454,9 @@ export function classifyDocument(input: ClassifyDocumentInput): DocumentClassifi
 export function classificationAllowsIncomeWrite(
   classification: DocumentClassification,
 ): boolean {
-  // A W-2C corrects an earlier W-2; writing it as income would double-count
-  // wages. It is reconciled against the original by the preparer instead.
-  return classification.status === 'classified' && classification.formType !== 'W-2C';
+  // A W-2C goes through add_w2c, which only corrects the W-2 it names on the
+  // case — it is never written as income (that would double-count wages).
+  return classification.status === 'classified';
 }
 
 export function isClassifiableFormType(value: string | null | undefined): value is ClassifiableFormType {

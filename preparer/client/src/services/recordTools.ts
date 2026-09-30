@@ -52,6 +52,7 @@ export function describeOutcome(outcome: ApplyOutcome): string {
     case 'aggregate': return outcome.applied ? `included in the return (${outcome.forms} record${outcome.forms === 1 ? '' : 's'})` : outcome.reason;
     case 'dependent': return outcome.applied ? 'added as a dependent' : outcome.reason;
     case 'decided': return 'decided and entered on the return';
+    case 'correction': return outcome.applied ? `corrected the W-2 ${outcome.w2FormKey}` : outcome.reason;
     case 'held': return outcome.reason;
     case 'recorded': return 'recorded';
   }

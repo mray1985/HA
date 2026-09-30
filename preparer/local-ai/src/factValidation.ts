@@ -533,6 +533,7 @@ export function omitInvalidToolFields(
 /** Fact-type prefix → form, as written by the tax tools. */
 const FORM_BY_PREFIX: ReadonlyArray<[string, string]> = [
   ['W2_', 'W-2'],
+  ['W2C_', 'W-2C'],
   ['1099INT_', '1099-INT'],
   ['1099DIV_', '1099-DIV'],
   ['1099NEC_', '1099-NEC'],
@@ -582,13 +583,15 @@ export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> =
   '1099-S': ['grossProceeds'],
   'Business receipts': ['amount'],
   'Estimated payment': ['amount', 'jurisdiction'],
+  // Without the employer EIN a W-2c cannot be matched to the W-2 it corrects.
+  'W-2C': ['employerEin'],
 };
 
 /** Records from record tools (any evidence), as opposed to one tax form. */
 const RECORD_KINDS: ReadonlySet<string> = new Set(['Business receipts', 'Estimated payment']);
 
 /** Required fields that are not amounts: missing, the record cannot be placed at all. */
-const REQUIRED_NON_AMOUNT_FIELDS: ReadonlySet<string> = new Set(['jurisdiction', 'isLongTerm', 'distributionCode']);
+const REQUIRED_NON_AMOUNT_FIELDS: ReadonlySet<string> = new Set(['jurisdiction', 'isLongTerm', 'distributionCode', 'employerEin']);
 
 /**
  * Forms whose income may be in any of several boxes: at least one must be

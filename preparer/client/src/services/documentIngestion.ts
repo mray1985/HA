@@ -249,11 +249,11 @@ export function applyExtractionToDocument(input: {
       };
     }
 
-    // Prefer classifier income type when the extractor left it null.
-    // W-2C never reaches here (classificationAllowsIncomeWrite refuses it).
+    // Prefer classifier income type when the extractor left it null. A W-2C
+    // reaches add_w2c, which corrects the W-2 it names and writes no income.
     const extractedForTools: PDFExtractResult = {
       ...piece,
-      formType: piece.formType ?? (classification.formType === 'W-2C' ? null : classification.formType),
+      formType: piece.formType ?? classification.formType,
       incomeType: piece.incomeType ?? classification.incomeType,
     };
 

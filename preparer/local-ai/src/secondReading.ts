@@ -51,6 +51,11 @@ export function readingsAgree(a: string, b: string, kind: string): boolean {
     const y = parseMoneyToken(b.replace(/\s+/g, ''));
     return x !== undefined && y !== undefined && Math.abs(x - y) < 0.005;
   }
+  if (kind === 'integer') {
+    // A year or count, by the number printed ("2025 / W-2" and "2025" agree).
+    const x = /\d+/.exec(a)?.[0];
+    return x !== undefined && x === /\d+/.exec(b)?.[0];
+  }
   const x = normalizedText(a);
   return x.length > 0 && x === normalizedText(b);
 }

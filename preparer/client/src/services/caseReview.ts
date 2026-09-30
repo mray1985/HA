@@ -33,6 +33,7 @@ import {
   resolveDependents,
   resolveEstimatedPayments,
   resolveStateResidency,
+  resolveW2Corrections,
   validateImportedFacts,
   type ChoiceTool,
   type DocumentToolName,
@@ -247,6 +248,17 @@ function recordItems(facts: TaxFact[], taxReturn: TaxReturn): ReviewItem[] {
     items.push({ id: `record:dependent:${key}`, category: 'REVIEW', group: 'dependents', source: 'document', documentId: documentOf(key),
       message: `${dependentWaitReason(person)} (${person.formKeys.map(labelOf).join(', ')})`,
       ...(canComplete ? { action: { kind: 'dependent' as const, firstName: person.fields.firstName!, lastName: person.fields.lastName!, missing: answerable } } : {}) });
+  }
+
+  for (const c of resolveW2Corrections(facts, taxReturn.taxYear)) {
+    const who = c.employerName ? ` from ${c.employerName}` : '';
+    if (!c.ready) {
+      items.push({ id: `record:w2c:${c.formKey}`, category: 'REVIEW', group: 'income', source: 'document', documentId: documentOf(c.formKey),
+        message: `The W-2c${who} (${labelOf(c.formKey)}) is not applied: ${c.problems.join(' ')}` });
+    } else if (c.identityOnly) {
+      items.push({ id: `record:w2c:${c.formKey}`, category: 'REVIEW', group: 'personal', source: 'document', documentId: documentOf(c.formKey),
+        message: `The W-2c${who} (${labelOf(c.formKey)}) corrects the employee's SSN or name only: check the taxpayer's identity on the return.` });
+    }
   }
 
   const payments = resolveEstimatedPayments(facts, taxReturn.taxYear);

@@ -7,6 +7,7 @@ export * from './returnTools.js';
 export * from './recordResolution.js';
 export * from './preparerChoices.js';
 export * from './holdingPeriod.js';
+export * from './w2Corrections.js';
 export * from './documentIngestion.js';
 export * from './documentClassifier.js';
 export * from './documentOcr.js';

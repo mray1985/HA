@@ -10,7 +10,7 @@ import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
 
 // ─── Types ─────────────────────────────────────────
 
-export type SupportedFormType = 'W-2' | '1099-INT' | '1099-DIV' | '1099-R' | '1099-NEC' | '1099-MISC' | '1099-G' | '1099-B' | '1099-K' | '1099-OID' | 'SSA-1099' | '1099-SA' | '1099-Q'
+export type SupportedFormType = 'W-2' | 'W-2C' | '1099-INT' | '1099-DIV' | '1099-R' | '1099-NEC' | '1099-MISC' | '1099-G' | '1099-B' | '1099-K' | '1099-OID' | 'SSA-1099' | '1099-SA' | '1099-Q'
   | '1098' | '1098-T' | '1098-E' | '1095-A' | 'K-1' | 'W-2G' | '1099-C' | '1099-S';
 
 export interface TextBlock {
@@ -171,6 +171,15 @@ const FORM_SIGNATURES: FormSignature[] = [
     incomeType: 'w2g',
     primaryKeywords: ['w-2g', 'certain gambling winnings'],
     secondaryKeywords: ['reportable winnings', 'gross winnings', 'type of wager', 'winnings'],
+  },
+  // A W-2c prints "Corrected Wage and Tax Statement" and "Form W-2c", which hold
+  // both W-2 keywords: it must be tried first, and its secondary keywords are a
+  // superset of the W-2's so OCR scoring never prefers the W-2 for it.
+  {
+    type: 'W-2C',
+    incomeType: 'w2c',
+    primaryKeywords: ['w-2c', 'corrected wage and tax statement'],
+    secondaryKeywords: ['previously reported', 'correct information', 'employer', 'wages', 'federal income tax withheld', 'social security'],
   },
   {
     type: 'W-2',
@@ -1586,6 +1595,7 @@ export function extract1099SFields(
 
 export const FORM_TYPE_LABELS: Record<SupportedFormType, string> = {
   'W-2': 'W-2 Wage and Tax Statement',
+  'W-2C': 'W-2c Corrected Wage and Tax Statement',
   '1099-INT': '1099-INT Interest Income',
   '1099-DIV': '1099-DIV Dividends',
   '1099-R': '1099-R Retirement Distributions',
@@ -1658,6 +1668,8 @@ export const INCOME_DISCOVERY_KEYS: Record<string, string> = {
 
 /** Human-readable field labels per form type (for trace entries). */
 const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
+  // No text-layer extraction: a W-2c's paired columns are read by the document model.
+  'W-2C': {},
   'W-2': {
     employerName: 'Employer Name',
     wages: 'Wages, Tips (Box 1)',

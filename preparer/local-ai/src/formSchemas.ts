@@ -697,6 +697,66 @@ const S_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/** One W-2c box printed twice: as previously reported, and as corrected. */
+function correctedPair(key: string, label: string, kind: BoxValueKind, use: BoxUse): FormBoxSchema[] {
+  return [
+    box(`${key}.prev`, `${label} (previously reported)`, kind, use, key.split('.')[0]),
+    box(`${key}.correct`, `${label} (correct information)`, kind, use, key.split('.')[0]),
+  ];
+}
+
+/**
+ * Form W-2c (Rev. January 2026), Copy B. Only corrected boxes are printed;
+ * each shows the previously reported and the correct amount side by side.
+ */
+const W2C_SCHEMA: FormExtractionSchema = {
+  formType: 'W-2C',
+  revision: 'January 2026',
+  boxes: [
+    box('a', "Employer's name, address, and ZIP code", 'text', 'tool'),
+    box('b', 'Employer identification number (EIN)', 'tin', 'tool'),
+    box('c', 'Tax year/Form corrected', 'integer', 'tool'),
+    box('d', "Employee's correct SSN", 'tin', 'info'),
+    box('e', 'Corrected SSN and/or name', 'checkbox', 'tool'),
+    box('f', "Employee's previously reported SSN", 'tin', 'info'),
+    box('g', "Employee's previously reported name", 'text', 'info'),
+    box('h', "Employee's first name and initial, Last name, Suff.", 'text', 'info'),
+    box('i', "Employee's address and ZIP code", 'text', 'info'),
+    ...correctedPair('1', 'Wages, tips, other compensation', 'money', 'tool'),
+    ...correctedPair('2', 'Federal income tax withheld', 'money', 'tool'),
+    ...correctedPair('3', 'Social security wages', 'money', 'tool'),
+    ...correctedPair('4', 'Social security tax withheld', 'money', 'tool'),
+    ...correctedPair('5', 'Medicare wages and tips', 'money', 'tool'),
+    ...correctedPair('6', 'Medicare tax withheld', 'money', 'tool'),
+    ...correctedPair('7', 'Social security tips', 'money', 'review'),
+    ...correctedPair('8', 'Allocated tips', 'money', 'review'),
+    ...correctedPair('10', 'Dependent care benefits', 'money', 'review'),
+    ...correctedPair('11', 'Nonqualified plans', 'money', 'review'),
+    ...['12a', '12b', '12c', '12d'].flatMap((slot) => [
+      ...correctedPair(`${slot}.code`, `Box ${slot} code`, 'code', 'review'),
+      ...correctedPair(`${slot}.amount`, `Box ${slot} amount`, 'money', 'review'),
+    ]),
+    ...correctedPair('13.statutory', 'Statutory employee', 'checkbox', 'review'),
+    ...correctedPair('13.retirement', 'Retirement plan', 'checkbox', 'review'),
+    ...correctedPair('13.sickPay', 'Third-party sick pay', 'checkbox', 'review'),
+    ...correctedPair('14a', 'Other (see instructions)', 'text', 'review'),
+    ...correctedPair('14b', 'Treasury Tipped Occupation Code(s)', 'code', 'review'),
+    // State correction information: two rows; only the first feeds the tool.
+    ...[1, 2].flatMap((row) => {
+      const use: BoxUse = row === 1 ? 'tool' : 'review';
+      return [
+        ...correctedPair(`15.state.${row}`, `State (line ${row})`, 'stateCode', use),
+        ...correctedPair(`15.id.${row}`, `Employer's state ID number (line ${row})`, 'text', 'info'),
+        ...correctedPair(`16.${row}`, `State wages, tips, etc. (line ${row})`, 'money', use),
+        ...correctedPair(`17.${row}`, `State income tax (line ${row})`, 'money', use),
+        ...correctedPair(`18.${row}`, `Local wages, tips, etc. (line ${row})`, 'money', 'review'),
+        ...correctedPair(`19.${row}`, `Local income tax (line ${row})`, 'money', 'review'),
+        ...correctedPair(`20.${row}`, `Locality name (line ${row})`, 'text', 'review'),
+      ];
+    }),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -715,6 +775,7 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   '1099-Q': Q_SCHEMA,
   '1099-SA': SA_SCHEMA,
   '1099-S': S_SCHEMA,
+  'W-2C': W2C_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -883,6 +944,10 @@ interface ToolMappingSpec {
   choice?: { field: string; options: Record<string, string | boolean> };
   /** W-2 box 12 entries and box 13 checkboxes. */
   w2?: true;
+  /** Further state-code cells (W-2c: the previously reported and the correct state). */
+  moreStates?: ReadonlyArray<{ key: string; field: string }>;
+  /** A four-digit year printed in a text cell (W-2c box c, "2025 / W-2"). */
+  year?: { key: string; field: string };
 }
 
 const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
@@ -1051,6 +1116,24 @@ const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
     name: { keys: ['payer.name'], field: 'filerName' },
     checkboxes: { '7': 'transferorIsForeign' },
   },
+  'W-2C': {
+    tool: 'add_w2c',
+    direct: {
+      b: 'employerEin',
+      '1.prev': 'previousWages', '1.correct': 'correctWages',
+      '2.prev': 'previousFederalTaxWithheld', '2.correct': 'correctFederalTaxWithheld',
+      '3.prev': 'previousSocialSecurityWages', '3.correct': 'correctSocialSecurityWages',
+      '4.prev': 'previousSocialSecurityTax', '4.correct': 'correctSocialSecurityTax',
+      '5.prev': 'previousMedicareWages', '5.correct': 'correctMedicareWages',
+      '6.prev': 'previousMedicareTax', '6.correct': 'correctMedicareTax',
+      '16.1.prev': 'previousStateWages', '16.1.correct': 'correctStateWages',
+      '17.1.prev': 'previousStateTaxWithheld', '17.1.correct': 'correctStateTaxWithheld',
+    },
+    name: { keys: ['a'], field: 'employerName' },
+    moreStates: [{ key: '15.state.1.prev', field: 'previousState' }, { key: '15.state.1.correct', field: 'correctState' }],
+    year: { key: 'c', field: 'taxYearCorrected' },
+    checkboxes: { e: 'correctsSsnOrName' },
+  },
   '1098-T': {
     tool: 'add_education_expense',
     direct: {
@@ -1130,6 +1213,18 @@ export function mapBoxesToTool(
     } else {
       put(field, state, text);
     }
+  }
+
+  for (const cell of spec.moreStates ?? []) {
+    const text = values[cell.key];
+    if (text !== undefined) put(cell.field, stateCodeFromCell(text), text);
+  }
+
+  if (spec.year && values[spec.year.key] !== undefined) {
+    const text = values[spec.year.key]!;
+    const year = /\b(20\d\d)\b/.exec(text)?.[1];
+    // A cell with no year stays unknown, never a guessed year.
+    put(spec.year.field, year !== undefined ? year : undefined, text);
   }
 
   if (spec.choice) {

@@ -300,6 +300,17 @@ function make1099QBlocks(): TextBlock[] {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('detectFormType', () => {
+  it('reads a W-2c as a W-2c, never as a second W-2 (its title holds both W-2 keywords)', () => {
+    const blocks = ['Form W-2c (Rev. 1-2026) Corrected Wage and Tax Statement', 'b Employer identification number (EIN)',
+      'Previously reported', '1 Wages, tips, other compensation', 'Correct information', '2 Federal income tax withheld', '3 Social security wages']
+      .map((text, i) => ({ text, x: 10, y: 10 + 14 * i, width: 300, height: 10, page: 1 }));
+    for (const ocr of [false, true]) {
+      expect(detectFormType(blocks as TextBlock[], ocr).type).toBe('W-2C');
+    }
+    // A plain W-2 still reads as a W-2 on both paths.
+    expect(detectFormType(makeW2Blocks(), true).type).toBe('W-2');
+  });
+
   it('detects W-2 with high confidence', () => {
     const result = detectFormType(makeW2Blocks());
     expect(result.type).toBe('W-2');

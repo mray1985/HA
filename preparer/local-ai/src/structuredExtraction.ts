@@ -9,6 +9,8 @@
 import {
   isDocumentTool,
   formToolForIncomeType,
+  W2C_CORRECTABLE,
+  w2cField,
   type DocumentToolName,
 } from './taxTools.js';
 import { isLongTermHolding } from './holdingPeriod.js';
@@ -223,6 +225,18 @@ const S_FIELDS: Record<string, FieldKind> = {
   transferorIsForeign: 'boolean',
 };
 
+const W2C_FIELDS: Record<string, FieldKind> = {
+  employerName: 'text',
+  employerEin: 'text',
+  taxYearCorrected: 'integer',
+  ...Object.fromEntries(W2C_CORRECTABLE.flatMap((f) => (['previous', 'correct'] as const).map((side) => [
+    w2cField(side, f),
+    (f === 'state' ? 'text' : 'money') as FieldKind,
+  ]))),
+  correctsSsnOrName: 'boolean',
+  isSpouse: 'boolean',
+};
+
 const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_w2: W2_FIELDS,
   add_1099_int: INT_FIELDS,
@@ -241,6 +255,7 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_1099_q: Q_FIELDS,
   add_1099_sa: SA_FIELDS,
   add_1099_s: S_FIELDS,
+  add_w2c: W2C_FIELDS,
 };
 
 interface Normalized {

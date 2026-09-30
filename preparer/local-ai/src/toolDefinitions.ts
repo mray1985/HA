@@ -106,6 +106,7 @@ const DESCRIPTIONS: Record<TaxToolName | ReturnToolName, string> = {
   add_1099_c: `Add one Form 1099-C (cancellation of debt). ${NO_GUESSING}`,
   add_1099_q: `Record one Form 1099-Q (qualified education program payment). The qualified expenses it paid are decided separately. ${NO_GUESSING}`,
   add_1099_sa: `Record one Form 1099-SA (HSA / MSA distribution). Whether it paid qualified medical expenses is decided separately. ${NO_GUESSING}`,
+  add_w2c: `Add one Form W-2c (corrected wage and tax statement). Pass only the boxes printed on it, each as previously reported and as corrected; it corrects the W-2 with the same employer EIN. ${NO_GUESSING}`,
   add_1099_s: `Record one Form 1099-S (real estate sale). Basis and the home-sale exclusion are decided separately. ${NO_GUESSING}`,
   add_mortgage_interest: `Add one Form 1098 (mortgage interest statement). ${NO_GUESSING}`,
   add_education_expense: `Add one Form 1098-T (tuition statement). This records the statement; which education credit applies is decided separately. ${NO_GUESSING}`,

@@ -132,6 +132,35 @@ describe('work order §16 forms', () => {
   });
 });
 
+describe('W-2c', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  const readW2 = () => readDocument('add_w2', { employerName: 'RIVERBEND LOGISTICS', employerEin: '72-1234567', wages: 52431.18, federalTaxWithheld: 5873.4 }, 'DOC-W2');
+
+  it('corrects the W-2 on the return, and the correction survives the W-2 being read again', () => {
+    readW2();
+    expect(readDocument('add_w2c', { employerEin: '72-1234567', taxYearCorrected: 2025, previousWages: 52431.18, correctWages: 54000 }, 'DOC-W2C'))
+      .toEqual({ kind: 'correction', applied: true, w2FormKey: 'DOC-W2#0' });
+    expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 54000, federalTaxWithheld: 5873.4, [SOURCE_FORM_KEY]: 'DOC-W2#0' })]);
+    readW2();
+    expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 54000 })]);
+  });
+
+  it('waits for the W-2 it corrects and says so in the review', () => {
+    expect(readDocument('add_w2c', { employerName: 'RIVERBEND LOGISTICS', employerEin: '72-1234567', correctWages: 54000 }, 'DOC-W2C'))
+      .toMatchObject({ kind: 'correction', applied: false, reason: expect.stringMatching(/not on the case/) });
+    expect(getReturn(returnId).w2Income).toEqual([]);
+    const item = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [] }).items.find((i) => i.id === 'record:w2c:DOC-W2C#0');
+    expect(item?.message).toMatch(/The W-2c from RIVERBEND LOGISTICS .* is not applied/);
+  });
+});
+
 describe('applyExtraction', () => {
   beforeEach(() => {
     installMemoryLocalStorage();

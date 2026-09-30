@@ -55,7 +55,9 @@ export interface DocumentClassificationRecord {
  * recorded as facts only (a preparer choice is needed), or not applied
  * automatically (entered by hand).
  */
-export type DocumentPieceOutcome = 'income_item' | 'aggregate' | 'aggregate_waiting' | 'dependent' | 'dependent_waiting' | 'held' | 'recorded' | 'not_applied';
+export type DocumentPieceOutcome =
+  | 'income_item' | 'aggregate' | 'aggregate_waiting' | 'dependent' | 'dependent_waiting'
+  | 'correction' | 'correction_waiting' | 'held' | 'recorded' | 'not_applied';
 
 export interface IngestedDocument {
   documentId: string;

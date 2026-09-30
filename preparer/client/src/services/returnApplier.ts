@@ -38,6 +38,7 @@
 import type { Dependent, StateReturnConfig, TaxReturn } from '@hatax/engine';
 import {
   amountFromFact,
+  applyW2Corrections,
   buildChoiceItem,
   choiceForms,
   dependentLabel,
@@ -45,6 +46,8 @@ import {
   resolveDependents,
   resolveEstimatedPayments,
   resolveStateResidency,
+  resolveW2Corrections,
+  toolFieldsFromFacts,
   engineItemFields,
   formToolForIncomeType,
   TOOL_APPLICATION,
@@ -74,6 +77,9 @@ export type ApplyOutcome =
   | { kind: 'dependent'; applied: false; reason: string }
   /** A form that needed a preparer decision, now on the return. */
   | { kind: 'decided'; itemId: string }
+  /** A W-2c: the W-2 it corrects (on the return, corrected), or why it waits. */
+  | { kind: 'correction'; applied: true; w2FormKey: string }
+  | { kind: 'correction'; applied: false; reason: string }
   | { kind: 'held'; reason: string }
   | { kind: 'recorded' };
 
@@ -98,7 +104,10 @@ export function applyToolResult(
         return { kind: 'held', reason: 'Validation holds this form until a preparer reviews it.' };
       }
       markDiscovered(returnId, INCOME_DISCOVERY_KEYS[app.itemType]);
-      const fields = app.itemType === 'business-receipts' ? businessReceiptItem(returnId, result.fields) : result.fields;
+      const fields = app.itemType === 'business-receipts' ? businessReceiptItem(returnId, result.fields)
+        // A W-2 read again keeps the corrections its W-2cs make.
+        : app.itemType === 'w2' ? applyW2Corrections(formKey, result.fields, resolveW2Corrections(loadTaxFacts(returnId), getReturn(returnId).taxYear))
+        : result.fields;
       return putIncomeItem(returnId, app.itemType, formKey, fields);
     }
     case 'aggregate': {
@@ -110,6 +119,8 @@ export function applyToolResult(
     }
     case 'dependent':
       return recomputeDependents(returnId).get(formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex })) ?? { kind: 'recorded' };
+    case 'w2_correction':
+      return recomputeW2Corrections(returnId).get(formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex })) ?? { kind: 'recorded' };
     case 'needs_preparer_choice':
       return applyChoiceForm(returnId, CHOICE_TOOL[app.target], formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex }));
     case 'candidate_fact':
@@ -131,6 +142,7 @@ export function outcomeOfApply(outcome: ApplyOutcome): DocumentPieceOutcome {
     case 'aggregate': return outcome.applied ? 'aggregate' : 'aggregate_waiting';
     case 'dependent': return outcome.applied ? 'dependent' : 'dependent_waiting';
     case 'decided': return 'income_item';
+    case 'correction': return outcome.applied ? 'correction' : 'correction_waiting';
     case 'held': return 'held';
     case 'recorded': return 'recorded';
   }
@@ -146,7 +158,7 @@ export function applyExtraction(returnId: string, extraction: ApplyExtractionRes
     if (piece.toolError || !piece.incomeType) return 'not_applied';
     const application = applicationFor(piece.incomeType);
     if (!application) return 'not_applied';
-    if (application.kind === 'income_item' && Object.keys(piece.toolFields).length === 0) return 'not_applied';
+    if ((application.kind === 'income_item' || application.kind === 'w2_correction') && Object.keys(piece.toolFields).length === 0) return 'not_applied';
     return outcomeOfApply(applyToolResult(returnId, { application, fields: piece.toolFields },
       { documentId: extraction.document.documentId, formIndex }));
   });
@@ -526,4 +538,41 @@ export function applyChoiceForm(returnId: string, tool: ChoiceTool, formKey: str
   markDiscovered(returnId, INCOME_DISCOVERY_KEYS[CHOICE_LIST[built.target]] ?? (built.target === 'educationCredits' ? INCOME_DISCOVERY_KEYS['1098t'] : undefined));
   const put = putIncomeItem(returnId, CHOICE_LIST[built.target], formKey, built.item);
   return put.kind === 'income_item' ? { kind: 'decided', itemId: put.itemId } : put;
+}
+
+// ─── W-2c corrections ────────────────────────────────────────
+
+/**
+ * Rewrite every W-2 on the return from its own facts and the W-2cs that
+ * correct it (a correction that no longer resolves drops out). Returns the
+ * outcome for each W-2c, by form key.
+ */
+export function recomputeW2Corrections(returnId: string): Map<string, ApplyOutcome> {
+  const facts = loadTaxFacts(returnId);
+  const tr = getReturn(returnId);
+  const corrections = resolveW2Corrections(facts, tr.taxYear);
+  const held = heldForms(returnId);
+  const onReturn = new Set((tr.w2Income ?? []).map((w) => ownerKey(w)).filter((k): k is string => Boolean(k)));
+  const w2Facts = new Map<string, TaxFact[]>();
+  for (const f of facts) {
+    if (!f.factType.startsWith('W2_')) continue;
+    w2Facts.set(formKeyOf(f), [...(w2Facts.get(formKeyOf(f)) ?? []), f]);
+  }
+  for (const [key, fs] of w2Facts) {
+    if (!onReturn.has(key) || held.has(key)) continue;
+    putIncomeItem(returnId, 'w2', key, applyW2Corrections(key, toolFieldsFromFacts('add_w2', fs), corrections));
+  }
+
+  const outcomes = new Map<string, ApplyOutcome>();
+  for (const c of corrections) {
+    let outcome: ApplyOutcome;
+    if (held.has(c.formKey)) outcome = { kind: 'held', reason: 'Validation holds this W-2c until a preparer reviews it.' };
+    else if (!c.ready) outcome = { kind: 'correction', applied: false, reason: c.problems.join(' ') };
+    else if (c.identityOnly) outcome = { kind: 'recorded' };
+    else if (c.targetKey && held.has(c.targetKey)) outcome = { kind: 'correction', applied: false, reason: 'The W-2 it corrects is held for review; the correction waits for it.' };
+    else if (c.targetKey && !onReturn.has(c.targetKey)) outcome = { kind: 'correction', applied: false, reason: 'The W-2 it corrects is not on the return yet.' };
+    else outcome = { kind: 'correction', applied: true, w2FormKey: c.targetKey! };
+    outcomes.set(c.formKey, outcome);
+  }
+  return outcomes;
 }

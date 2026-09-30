@@ -109,6 +109,12 @@ field takes: the 1099-G state refund, its tax year and the box 8 square, and the
 1099-OID FATCA square. A value the model wrote into the empty second 1099-MISC
 state row was dropped because the page does not print it.
 
+W-2c (Rev. 1-2026, boxes 1–3 corrected, both columns): classified W-2C, 9/9
+tool arguments, 0 invented, 0 confirmed wrong, 114 s/page — the second model
+reads the paired columns, so it runs on more boxes. Box c ("2025 / W-2") is
+compared by its year, so the second model's "2025" confirms it rather than
+conflicting.
+
 ### Checkbox reader alone (`checkboxes.ts`)
 
 53 checkboxes per variant: 21 on the seven Phase 1 forms and 32 on the §16

@@ -41,6 +41,7 @@ export const FORM_TOOL_NAMES = [
   'add_1099_q',
   'add_1099_sa',
   'add_1099_s',
+  'add_w2c',
 ] as const;
 
 /**
@@ -98,6 +99,8 @@ export type TaxToolApplication =
   | { kind: 'income_item'; itemType: TaxToolIncomeType }
   | { kind: 'aggregate'; target: AggregateTarget }
   | { kind: 'dependent' }
+  /** A W-2c: corrects the boxes of the W-2 it names (same employer EIN and year) on this case. */
+  | { kind: 'w2_correction' }
   | { kind: 'needs_preparer_choice'; target: PreparerChoiceTarget; choice: PreparerChoice }
   | { kind: 'candidate_fact' };
 
@@ -160,6 +163,7 @@ const INCOME_TYPE_TO_FORM_TOOL: Record<string, DocumentToolName> = {
   '1099q': 'add_1099_q',
   '1099sa': 'add_1099_sa',
   '1099s': 'add_1099_s',
+  w2c: 'add_w2c',
 };
 
 export function formToolForIncomeType(incomeType: string | null | undefined): DocumentToolName | null {
@@ -495,6 +499,42 @@ const Add1099SFieldsSchema = z
   })
   .strict();
 
+/** W-2 boxes a W-2c corrects on the return (each printed as previously reported / correct). */
+export const W2C_CORRECTABLE = [
+  'wages',
+  'federalTaxWithheld',
+  'socialSecurityWages',
+  'socialSecurityTax',
+  'medicareWages',
+  'medicareTax',
+  'state',
+  'stateWages',
+  'stateTaxWithheld',
+] as const;
+
+export type W2cCorrectable = (typeof W2C_CORRECTABLE)[number];
+
+const cap = (f: string) => f[0]!.toUpperCase() + f.slice(1);
+/** "wages" → "previousWages" / "correctWages". */
+export const w2cField = (side: 'previous' | 'correct', field: W2cCorrectable) => `${side}${cap(field)}`;
+
+/** Form W-2c (Rev. January 2026): only the corrected boxes are printed. */
+const AddW2cFieldsSchema = z
+  .object({
+    employerName: optionalString,
+    employerEin: optionalString,
+    /** Box c: the year of the W-2 being corrected. */
+    taxYearCorrected: z.preprocess(asMissing, z.number().int().min(2000).max(2100).optional()),
+    ...Object.fromEntries(W2C_CORRECTABLE.flatMap((f) => (['previous', 'correct'] as const).map((side) => [
+      w2cField(side, f),
+      f === 'state' ? optionalString : optionalAmount,
+    ]))),
+    /** Box e: the SSN or name was corrected (not an amount correction). */
+    correctsSsnOrName: optionalBoolean,
+    isSpouse: optionalBoolean,
+  })
+  .strict();
+
 export const SetFilingStatusCandidateSchema = z
   .object({
     status: z.enum(FILING_STATUS_CANDIDATES),
@@ -624,6 +664,7 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_1099_q: Add1099QFieldsSchema,
   add_1099_sa: Add1099SaFieldsSchema,
   add_1099_s: Add1099SFieldsSchema,
+  add_w2c: AddW2cFieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
@@ -657,6 +698,7 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_1099_q: { kind: 'needs_preparer_choice', target: 'qualifiedTuitionProgram', choice: 'qualifiedExpenses' },
   add_1099_sa: { kind: 'needs_preparer_choice', target: 'hsaDistribution', choice: 'qualifiedMedicalExpenses' },
   add_1099_s: { kind: 'needs_preparer_choice', target: 'homeSale', choice: 'ownershipAndBasis' },
+  add_w2c: { kind: 'w2_correction' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -702,6 +744,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_1099_q: '1099Q',
   add_1099_sa: '1099SA',
   add_1099_s: '1099S',
+  add_w2c: 'W2C',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',
