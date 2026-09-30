@@ -15,7 +15,9 @@ export type CaseAuditEvent =
   | { at: string; kind: 'approval' }
   | { at: string; kind: 'document'; documentId: string; fileName: string; outcome: string }
   /** A tax-engine tool call (work order §40): accepted or rejected by validation, and what it did. */
-  | { at: string; kind: 'tool'; tool: string; accepted: boolean; source?: string; detail: string };
+  | { at: string; kind: 'tool'; tool: string; accepted: boolean; source?: string; detail: string }
+  /** A preparer's answer to what a form could not say (§38). */
+  | { at: string; kind: 'decision'; subject: string; detail: string };
 
 /** An event before it is stamped with its time. */
 export type NewAuditEvent = CaseAuditEvent extends infer E ? (E extends CaseAuditEvent ? Omit<E, 'at'> : never) : never;

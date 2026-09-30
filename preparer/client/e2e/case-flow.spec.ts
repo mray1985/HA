@@ -53,3 +53,25 @@ test('the Explain and Return tabs render for a new case', async ({ page }) => {
   await expect(page).toHaveURL(/\/return$/);
   expect(errors).toEqual([]);
 });
+
+test('a 1099-Q waits for the qualified expenses, and the review list takes the decision', async ({ page }) => {
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+
+  await page.getByRole('link', { name: /^Review/ }).click();
+  const item = page.getByRole('listitem').filter({ hasText: 'enter the qualified education expenses' });
+  await expect(item).toBeVisible();
+  await item.getByRole('button', { name: 'Decide' }).click();
+  await item.getByLabel('Qualified expenses').fill('5000');
+  // A text layer cannot see box 6, so the form asks who received the distribution too.
+  await item.getByRole('button', { name: 'Save' }).click();
+  await expect(item.getByRole('alert')).toContainText('Answer every question');
+  await item.getByLabel('Box 6').selectOption('yes');
+  await item.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('enter the qualified education expenses')).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Approve' }).click();
+  await expect(page.getByText(/Decided for 1099q-529\.pdf.*qualifiedExpenses=5000/)).toBeVisible();
+});

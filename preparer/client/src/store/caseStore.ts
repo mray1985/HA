@@ -28,6 +28,7 @@ import {
 } from '../services/caseReview';
 import { loadDocuments } from '../services/documentIngestion';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
+import type { DecisionResult } from '../services/preparerDecisions';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
 export type CaseTab = 'review' | 'documents' | 'return' | 'explain' | 'scenarios' | 'approve';
@@ -95,6 +96,8 @@ interface CaseState {
   applyEdit: (label: string, next: TaxReturn, from: unknown, to: unknown) => void;
 
   resolve: (item: ReviewItem, decision: ReviewResolution['decision'], note: string) => void;
+  /** A review action (§38 decision, held-form value, dependent details); the return is re-applied and the case reloaded. */
+  act: (run: (returnId: string) => DecisionResult) => DecisionResult;
   reopen: (itemId: string) => void;
   approve: () => void;
 
@@ -207,13 +210,23 @@ export const useCaseStore = create<CaseState>((set, get) => {
       const id = get().returnId;
       if (!id) return;
       flushCaseSave();
-      refresh(getReturn(id), { facts: loadTaxFacts(id), documents: loadDocuments(id) });
+      refresh(getReturn(id), { facts: loadTaxFacts(id), documents: loadDocuments(id), audit: loadAudit(id) });
     },
 
     updateField: (field, value) => change(field, value, (tr) => ({ ...tr, [field]: value })),
     applyEdit: (label, next, from, to) => edit(label, next, from, to),
     updateDeepField: (path, value) =>
       change(path, value, (tr) => setDeepPath(tr as unknown as Record<string, unknown>, path, value) as unknown as TaxReturn),
+
+    act: (run) => {
+      const id = get().returnId;
+      if (!id) return { ok: false, error: 'No case is open.' };
+      // The preparer's pending edit is saved before the applier reads the return.
+      flushCaseSave();
+      const result = run(id);
+      get().reloadEvidence();
+      return result;
+    },
 
     resolve: (item, decision, note) => {
       saveRecord(resolveItem(get().reviewRecord, item, decision, note));

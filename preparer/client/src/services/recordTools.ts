@@ -51,6 +51,7 @@ export function describeOutcome(outcome: ApplyOutcome): string {
     case 'income_item': return outcome.replaced ? 'replaced its return entry' : 'entered on the return';
     case 'aggregate': return outcome.applied ? `included in the return (${outcome.forms} record${outcome.forms === 1 ? '' : 's'})` : outcome.reason;
     case 'dependent': return outcome.applied ? 'added as a dependent' : outcome.reason;
+    case 'decided': return 'decided and entered on the return';
     case 'held': return outcome.reason;
     case 'recorded': return 'recorded';
   }

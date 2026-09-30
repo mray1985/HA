@@ -15,6 +15,7 @@
 
 import { getForm4137 } from '@hatax/engine';
 import type { TaxFact, TaxFactValue } from './taxFact.js';
+import { isLongTermHolding } from './holdingPeriod.js';
 import { HSA_DISTRIBUTION_CODES, IDENTIFIABLE_EVENT_CODES, US_STATE_CODES as STATE_CODE_LIST } from './taxTools.js';
 
 /** Rounding tolerance for FICA percentage checks (cents). */
@@ -759,6 +760,18 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
       case '1099-B': {
         const proceeds = amount(fields, 'proceeds');
         const withheld = amount(fields, 'federalTaxWithheld');
+        const term = fields.get('isLongTerm');
+        const fromDates = isLongTermHolding(
+          fields.get('dateAcquired')?.status === 'extracted' ? String(fields.get('dateAcquired')!.value) : undefined,
+          fields.get('dateSold')?.status === 'extracted' ? String(fields.get('dateSold')!.value) : undefined,
+        );
+        if (term?.status === 'extracted' && fromDates !== undefined && term.value !== fromDates) {
+          issues.push(formIssue(fields, formKey, {
+            code: 'B_TERM_CONTRADICTS_DATES',
+            message: `1099-B box 2 says ${term.value ? 'long' : 'short'}-term but boxes 1b and 1c make it ${fromDates ? 'long' : 'short'}-term; one was misread. Form held.`,
+            sourceField: 'isLongTerm', factId: term.factId, holdsForm: true,
+          }));
+        }
         if (proceeds !== undefined && withheld !== undefined && withheld > proceeds) {
           hold('B_WITHHOLDING_EXCEEDS_PROCEEDS', `1099-B box 4 (${withheld}) exceeds box 1d proceeds (${proceeds}); one was misread. Form held.`, 'federalTaxWithheld', withheld);
         }

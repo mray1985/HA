@@ -9,6 +9,7 @@ import { AlertTriangle, CheckCircle2, ExternalLink, FileText, RotateCcw } from '
 import { REVIEW_GROUPS, type ReviewItem, type ReviewResolution } from '../../services/caseReview';
 import { useCaseStore } from '../../store/caseStore';
 import { CategoryBadge } from './caseBadges';
+import ReviewActionForm, { actionLabel } from './ReviewActions';
 
 const DECISIONS: Array<{ value: ReviewResolution['decision']; label: string }> = [
   { value: 'accepted', label: 'Checked — correct as is' },
@@ -64,6 +65,7 @@ function ItemRow({ item }: { item: ReviewItem }) {
   const requestTab = useCaseStore((s) => s.requestTab);
   const reopen = useCaseStore((s) => s.reopen);
   const [resolving, setResolving] = useState(false);
+  const [acting, setActing] = useState(false);
   const resolvable = item.category === 'WARNING' || item.category === 'REVIEW';
   const muted = item.category === 'INFORMATIONAL' || Boolean(item.resolution);
 
@@ -90,6 +92,11 @@ function ItemRow({ item }: { item: ReviewItem }) {
                 <ExternalLink className="w-3.5 h-3.5" /> Open the return
               </button>
             )}
+            {item.action && !item.resolution && !acting && (
+              <button onClick={() => { setActing(true); setResolving(false); }} className="text-xs font-medium text-emerald-300 hover:text-emerald-200">
+                {actionLabel(item.action)}
+              </button>
+            )}
             {resolvable && !item.resolution && !resolving && (
               <button onClick={() => setResolving(true)} className="text-xs text-HATaxService-orange-400 hover:text-HATaxService-orange-300">
                 Record a decision
@@ -101,6 +108,7 @@ function ItemRow({ item }: { item: ReviewItem }) {
               </button>
             )}
           </div>
+          {acting && item.action && <ReviewActionForm action={item.action} onDone={() => setActing(false)} />}
           {resolving && <ResolveForm item={item} onDone={() => setResolving(false)} />}
         </div>
       </div>

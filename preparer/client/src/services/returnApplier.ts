@@ -38,6 +38,8 @@
 import type { Dependent, StateReturnConfig, TaxReturn } from '@hatax/engine';
 import {
   amountFromFact,
+  buildChoiceItem,
+  choiceForms,
   dependentLabel,
   formKeyOf,
   resolveDependents,
@@ -48,6 +50,8 @@ import {
   TOOL_APPLICATION,
   validateImportedFacts,
   type AggregateTarget,
+  type ChoiceTool,
+  type PreparerChoiceTarget,
   type DocumentPieceOutcome,
   type ResolvedDependent,
   type TaxFact,
@@ -68,6 +72,8 @@ export type ApplyOutcome =
   | { kind: 'aggregate'; target: AggregateTarget; applied: false; reason: string }
   | { kind: 'dependent'; applied: true; dependentId: string }
   | { kind: 'dependent'; applied: false; reason: string }
+  /** A form that needed a preparer decision, now on the return. */
+  | { kind: 'decided'; itemId: string }
   | { kind: 'held'; reason: string }
   | { kind: 'recorded' };
 
@@ -105,6 +111,7 @@ export function applyToolResult(
     case 'dependent':
       return recomputeDependents(returnId).get(formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex })) ?? { kind: 'recorded' };
     case 'needs_preparer_choice':
+      return applyChoiceForm(returnId, CHOICE_TOOL[app.target], formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex }));
     case 'candidate_fact':
       return { kind: 'recorded' };
   }
@@ -118,11 +125,12 @@ function applicationFor(incomeType: string | null): TaxToolApplication | null {
   return null;
 }
 
-function outcomeOf(outcome: ApplyOutcome): DocumentPieceOutcome {
+export function outcomeOfApply(outcome: ApplyOutcome): DocumentPieceOutcome {
   switch (outcome.kind) {
     case 'income_item': return 'income_item';
     case 'aggregate': return outcome.applied ? 'aggregate' : 'aggregate_waiting';
     case 'dependent': return outcome.applied ? 'dependent' : 'dependent_waiting';
+    case 'decided': return 'income_item';
     case 'held': return 'held';
     case 'recorded': return 'recorded';
   }
@@ -139,7 +147,7 @@ export function applyExtraction(returnId: string, extraction: ApplyExtractionRes
     const application = applicationFor(piece.incomeType);
     if (!application) return 'not_applied';
     if (application.kind === 'income_item' && Object.keys(piece.toolFields).length === 0) return 'not_applied';
-    return outcomeOf(applyToolResult(returnId, { application, fields: piece.toolFields },
+    return outcomeOfApply(applyToolResult(returnId, { application, fields: piece.toolFields },
       { documentId: extraction.document.documentId, formIndex }));
   });
   upsertDocument(returnId, { ...extraction.document, appliedAs: outcomes });
@@ -449,4 +457,69 @@ export function syncStateReturns(returnId: string): Map<string, ApplyOutcome> {
 
   if (JSON.stringify(next) !== JSON.stringify(existing)) updateReturn(returnId, { stateReturns: next });
   return outcomes;
+}
+
+// ─── Forms that wait for a preparer decision ─────────────────
+
+const CHOICE_TOOL: Record<PreparerChoiceTarget, ChoiceTool> = {
+  educationCredit: 'add_education_expense',
+  qualifiedTuitionProgram: 'add_1099_q',
+  hsaDistribution: 'add_1099_sa',
+  homeSale: 'add_1099_s',
+};
+
+/** Item-type keys (ARRAY_FIELD_MAP) of the list targets. */
+const CHOICE_LIST: Record<'educationCredits' | 'income1099Q' | 'income1099SA', string> = {
+  educationCredits: 'education-credits',
+  income1099Q: '1099q',
+  income1099SA: '1099sa',
+};
+
+const CHOICE_TARGET_FIELD: Record<ChoiceTool, keyof TaxReturn> = {
+  add_education_expense: 'educationCredits',
+  add_1099_q: 'income1099Q',
+  add_1099_sa: 'income1099SA',
+  add_1099_s: 'homeSale',
+};
+
+/** Take a form's entry off the return (its answer changed, or it can no longer be applied). */
+function withdrawChoiceItem(returnId: string, tool: ChoiceTool, formKey: string): void {
+  const field = CHOICE_TARGET_FIELD[tool];
+  const tr = getReturn(returnId);
+  const current = tr[field] as unknown;
+  if (Array.isArray(current)) {
+    const next = current.filter((e) => (e as Record<string, unknown>)[SOURCE_FORM_KEY] !== formKey);
+    if (next.length !== current.length) updateReturn(returnId, { [field]: next });
+  } else if (current && (current as Record<string, unknown>)[SOURCE_FORM_KEY] === formKey) {
+    updateReturn(returnId, { [field]: undefined });
+  }
+}
+
+/**
+ * Apply a decided form: its engine item is built from the form's facts and the
+ * preparer's answers. Until the answers are complete it is only recorded; an
+ * item applied earlier is withdrawn when the answers no longer produce one.
+ */
+export function applyChoiceForm(returnId: string, tool: ChoiceTool, formKey: string): ApplyOutcome {
+  const facts = choiceForms(loadTaxFacts(returnId), tool).get(formKey) ?? [];
+  if (heldForms(returnId).has(formKey)) {
+    withdrawChoiceItem(returnId, tool, formKey);
+    return { kind: 'held', reason: 'Validation holds this form until a preparer reviews it.' };
+  }
+  const built = buildChoiceItem(tool, facts);
+  if (built.state !== 'ready') {
+    withdrawChoiceItem(returnId, tool, formKey);
+    return { kind: 'recorded' };
+  }
+  if (built.target === 'homeSale') {
+    const current = getReturn(returnId).homeSale as unknown as Record<string, unknown> | undefined;
+    if (current && current[SOURCE_FORM_KEY] !== formKey) {
+      return { kind: 'held', reason: current[SOURCE_FORM_KEY] ? 'The return already has a home sale from another 1099-S; the engine takes one.' : 'The return already has a home sale entered by hand.' };
+    }
+    updateReturn(returnId, { homeSale: { ...built.item, [SOURCE_FORM_KEY]: formKey } });
+    return { kind: 'decided', itemId: formKey };
+  }
+  markDiscovered(returnId, INCOME_DISCOVERY_KEYS[CHOICE_LIST[built.target]] ?? (built.target === 'educationCredits' ? INCOME_DISCOVERY_KEYS['1098t'] : undefined));
+  const put = putIncomeItem(returnId, CHOICE_LIST[built.target], formKey, built.item);
+  return put.kind === 'income_item' ? { kind: 'decided', itemId: put.itemId } : put;
 }

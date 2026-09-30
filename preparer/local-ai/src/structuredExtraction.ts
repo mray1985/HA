@@ -11,6 +11,7 @@ import {
   formToolForIncomeType,
   type DocumentToolName,
 } from './taxTools.js';
+import { isLongTermHolding } from './holdingPeriod.js';
 
 export type StructuredFieldStatus = 'extracted' | 'unknown';
 
@@ -480,6 +481,16 @@ export function extractStructuredFields(
     if (raw) rawText[key] = raw;
     if (normalized.status === 'extracted') args[key] = normalized.value;
     else args[key] = undefined;
+  }
+
+  // 1099-B box 2 unread (a text layer cannot see squares): the term follows
+  // from boxes 1b and 1c when both are calendar dates (IRC §1222).
+  if (tool === 'add_1099_b' && args.isLongTerm === undefined) {
+    const term = isLongTermHolding(args.dateAcquired as string | undefined, args.dateSold as string | undefined);
+    if (term !== undefined) {
+      args.isLongTerm = term;
+      rawText.isLongTerm = `derived from box 1b ${String(args.dateAcquired)} and box 1c ${String(args.dateSold)}`;
+    }
   }
 
   return { tool, args, rawText };

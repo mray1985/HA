@@ -25,11 +25,17 @@
 import type { CalculationResult, Diagnostic, DiagnosticCategory, TaxReturn } from '@hatax/engine';
 import { DIAGNOSTIC_CATEGORIES, runReturnDiagnostics } from '@hatax/engine';
 import {
+  buildChoiceItem,
+  choiceForms,
+  fieldSchemaFor,
   formKeyOf,
+  formToolOfFacts,
   resolveDependents,
   resolveEstimatedPayments,
   resolveStateResidency,
   validateImportedFacts,
+  type ChoiceTool,
+  type DocumentToolName,
   type IngestedDocument,
   type TaxFact,
 } from '@hatax/local-ai';
@@ -81,7 +87,19 @@ export interface ReviewItem {
   documentId?: string;
   /** Present when a preparer recorded a decision. */
   resolution?: ReviewResolution;
+  /** What the preparer can do from the review list to clear the item. */
+  action?: ReviewAction;
 }
+
+/**
+ * - choice: answer what the form cannot say (the form is then applied);
+ * - fix: give the value of each field that holds the form;
+ * - dependent: give what a dependent named in the evidence still needs.
+ */
+export type ReviewAction =
+  | { kind: 'choice'; tool: ChoiceTool; formKey: string; missing: string[] }
+  | { kind: 'fix'; tool: DocumentToolName; formKey: string; fields: string[] }
+  | { kind: 'dependent'; firstName: string; lastName: string; missing: Array<'relationship' | 'monthsLivedWithYou'> };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -145,9 +163,11 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
 
   const validation = validateImportedFacts(facts);
   const byForm = new Map<string, string[]>();
+  const heldFields = new Map<string, Set<string>>();
   for (const issue of validation.issues) {
     if (issue.holdsForm && issue.formKey) {
       byForm.set(issue.formKey, [...(byForm.get(issue.formKey) ?? []), issue.message]);
+      if (issue.sourceField) heldFields.set(issue.formKey, (heldFields.get(issue.formKey) ?? new Set()).add(issue.sourceField));
       continue;
     }
     items.push({
@@ -162,6 +182,9 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
   }
   for (const [formKey, messages] of byForm) {
     const documentId = formKey.split('#')[0];
+    const tool = formToolOfFacts(facts.filter((f) => formKeyOf(f) === formKey));
+    const shape = tool ? (fieldSchemaFor(tool).shape as Record<string, unknown>) : {};
+    const fields = [...(heldFields.get(formKey) ?? [])].filter((f) => Object.prototype.hasOwnProperty.call(shape, f));
     items.push({
       id: `document:held:${formKey}`,
       category: 'BLOCKING',
@@ -169,6 +192,7 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
       source: 'document',
       documentId,
       message: `${nameOf(documentId)} is held and not in the return: ${[...new Set(messages)].join(' ')}`,
+      ...(tool && fields.length > 0 ? { action: { kind: 'fix' as const, tool, formKey, fields } } : {}),
     });
   }
 
@@ -177,17 +201,18 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
     const target = taxReturn[choice.field] as unknown;
     const entries = Array.isArray(target) ? target : target ? [target] : [];
     const applied = new Set(entries.map((e) => (e as Record<string, unknown>)[SOURCE_FORM_KEY]));
-    const forms = new Set(facts.filter((f) => f.factType.startsWith(choice.factPrefix)).map(formKeyOf));
-    for (const formKey of forms) {
-      if (applied.has(formKey)) continue;
+    for (const [formKey, formFacts] of choiceForms(facts, choice.tool)) {
+      if (applied.has(formKey) || validation.heldForms.includes(formKey)) continue;
       const documentId = formKey.split('#')[0];
+      const built = buildChoiceItem(choice.tool, formFacts);
       items.push({
         id: `document:${choice.id}:${formKey}`,
         category: 'REVIEW',
         group: choice.group,
         source: 'document',
         documentId,
-        message: `${nameOf(documentId)}: ${choice.ask}`,
+        message: `${nameOf(documentId)}: ${built.state === 'manual' ? built.reason : built.state === 'ready' ? 'the decision is recorded but the form could not be entered — see the document.' : choice.ask}`,
+        ...(built.state === 'needs_answer' ? { action: { kind: 'choice' as const, tool: choice.tool, formKey, missing: built.missing } } : {}),
       });
     }
   }
@@ -195,15 +220,15 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
 }
 
 /** Forms recorded but not applied until the preparer decides what the form cannot say. */
-const PREPARER_CHOICES: ReadonlyArray<{ id: string; factPrefix: string; field: keyof TaxReturn; group: ReviewGroup; ask: string }> = [
-  { id: 'education-choice', factPrefix: '1098T_', field: 'educationCredits', group: 'credits',
+const PREPARER_CHOICES: ReadonlyArray<{ id: string; tool: ChoiceTool; field: keyof TaxReturn; group: ReviewGroup; ask: string }> = [
+  { id: 'education-choice', tool: 'add_education_expense', field: 'educationCredits', group: 'credits',
     ask: 'choose the American Opportunity or Lifetime Learning credit for this student.' },
-  { id: 'qtp-expenses', factPrefix: '1099Q_', field: 'income1099Q', group: 'income',
+  { id: 'qtp-expenses', tool: 'add_1099_q', field: 'income1099Q', group: 'income',
     ask: 'enter the qualified education expenses this 1099-Q distribution paid; until then it is not on the return.' },
-  { id: 'hsa-use', factPrefix: '1099SA_', field: 'income1099SA', group: 'income',
+  { id: 'hsa-use', tool: 'add_1099_sa', field: 'income1099SA', group: 'income',
     ask: 'confirm whether this distribution paid qualified medical expenses; until then it is not on the return.' },
-  { id: 'home-sale', factPrefix: '1099S_', field: 'homeSale', group: 'income',
-    ask: 'enter the basis and the months owned and used as a main home (§121) for this sale; until then it is not on the return.' },
+  { id: 'home-sale', tool: 'add_1099_s', field: 'homeSale', group: 'income',
+    ask: 'say whether this was the main home and enter its basis and months owned and used (§121); until then it is not on the return.' },
 ];
 
 /** Evidence recorded by the record tools that the return does not hold yet. */
@@ -216,8 +241,12 @@ function recordItems(facts: TaxFact[], taxReturn: TaxReturn): ReviewItem[] {
   for (const person of resolveDependents(facts, taxReturn.taxYear)) {
     if (person.ready) continue;
     const key = person.formKeys[0]!;
+    const answerable = person.missing.filter((f): f is 'relationship' | 'monthsLivedWithYou' => f === 'relationship' || f === 'monthsLivedWithYou');
+    const canComplete = person.fields.firstName && person.fields.lastName && answerable.length === person.missing.length
+      && person.conflicts.length === 0 && person.problems.length === 0;
     items.push({ id: `record:dependent:${key}`, category: 'REVIEW', group: 'dependents', source: 'document', documentId: documentOf(key),
-      message: `${dependentWaitReason(person)} (${person.formKeys.map(labelOf).join(', ')})` });
+      message: `${dependentWaitReason(person)} (${person.formKeys.map(labelOf).join(', ')})`,
+      ...(canComplete ? { action: { kind: 'dependent' as const, firstName: person.fields.firstName!, lastName: person.fields.lastName!, missing: answerable } } : {}) });
   }
 
   const payments = resolveEstimatedPayments(facts, taxReturn.taxYear);
