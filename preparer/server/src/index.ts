@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { authRoutes } from './routes/auth.js';
+import { modelRoutes } from './routes/models.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -69,11 +70,14 @@ app.use(cors({
   credentials: true,
 }));
 
+// A page image for the local models is larger than any other request.
+app.use('/api/models', express.json({ limit: '25mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/models', modelRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -108,11 +112,6 @@ if (clientDist) {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Server error:', err);
   res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
-});
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-  process.exit(0);
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {

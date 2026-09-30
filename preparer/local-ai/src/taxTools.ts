@@ -17,6 +17,7 @@ import {
   type FieldRawTextSource,
   type FieldSourceLocationSource,
   type TaxFact,
+  type TaxFactSecondReading,
   type TaxFactSourceKind,
 } from './taxFact.js';
 
@@ -772,6 +773,12 @@ export interface TaxToolCallContext {
   sourceFormIndex?: number;
   /** §60 source kind. Absent means an original tax document. */
   sourceKind?: TaxFactSourceKind;
+  /** Extractor build: model file SHA-256 prefix and quantization, or code version. */
+  extractorVersion?: string;
+  /** The model run that read these values (§42). */
+  modelRunId?: string;
+  /** Independent second reading by field (§33). */
+  secondReading?: Record<string, TaxFactSecondReading | undefined>;
   sourceFileName: string;
   extractor: string;
   /** Per-field score. A missing field stays null. */
@@ -856,6 +863,8 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       extractor: context.extractor,
       formIndex: context.sourceFormIndex,
       sourceKind: context.sourceKind,
+      extractorVersion: context.extractorVersion,
+      modelRunId: context.modelRunId,
       fields,
       factTypeFor: () => 'FILING_STATUS_CANDIDATE',
       confidence: context.confidence,
@@ -901,6 +910,9 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
     extractor: context.extractor,
     formIndex: context.sourceFormIndex,
     sourceKind: context.sourceKind,
+    extractorVersion: context.extractorVersion,
+    modelRunId: context.modelRunId,
+    secondReading: context.secondReading,
     fields: factFields,
     factTypeFor: (field) => `${prefix}_${field}`,
     confidence: context.confidence,

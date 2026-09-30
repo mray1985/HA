@@ -825,6 +825,44 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
   }
   detectReceiptsRepeating1099(forms, issues);
   detectDuplicateForms(forms, issues);
+  checkReadings(forms, issues);
+}
+
+/** A model reading below this agreement score goes to review (confirmed readings score 1). */
+export const READING_REVIEW_THRESHOLD = 1;
+
+/**
+ * Model readings (work order §33): readers that disagree, or a box the page
+ * prints that no reader read, hold the form; a value only one model read is
+ * reviewed. Facts without a score (text layer, preparer entries) are not rated.
+ */
+function checkReadings(forms: Map<string, Map<string, TaxFact>>, issues: FactValidationIssue[]): void {
+  for (const [formKey, fields] of forms) {
+    if (!formOf(fields)) continue;
+    for (const [field, fact] of fields) {
+      if (fact.sourceKind === 'preparer_correction') continue;
+      if (fact.secondReading && !fact.secondReading.agrees) {
+        issues.push(formIssue(fields, formKey, {
+          code: 'READERS_DISAGREE',
+          message: `${field}: the readers disagree ("${fact.rawText}" vs "${fact.secondReading.text}"). Form held until the preparer enters the value.`,
+          sourceField: field, factId: fact.factId, holdsForm: true,
+        }));
+      } else if (fact.status === 'unknown' && fact.rawText.trim() && fact.confidence === 0) {
+        issues.push(formIssue(fields, formKey, {
+          code: 'PRINTED_VALUE_UNREAD',
+          message: `${field}: the page prints "${fact.rawText}" but no reader read it. Form held: the engine would read it as zero.`,
+          sourceField: field, factId: fact.factId, observed: 'unknown', holdsForm: true,
+        }));
+      } else if (fact.status === 'extracted' && fact.confidence !== null && fact.confidence < READING_REVIEW_THRESHOLD) {
+        issues.push(formIssue(fields, formKey, {
+          code: 'UNCONFIRMED_READING',
+          severity: 'warning',
+          message: `${field} (${JSON.stringify(fact.value)}) was read by one model only; neither the page text nor the second reader confirmed it.`,
+          sourceField: field, factId: fact.factId, observed: fact.value,
+        }));
+      }
+    }
+  }
 }
 
 /**

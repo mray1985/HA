@@ -28,22 +28,11 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
-import { CLASSIFIABLE_FORM_TYPES, type ClassifiableFormType } from '../src/documentClassifier.js';
-import {
-  boxValuesFromTemplate,
-  buildExtractionTemplate,
-  getFormExtractionSchema,
-  mapBoxesToTool,
-} from '../src/formSchemas.js';
+import type { ClassifiableFormType } from '../src/documentClassifier.js';
+import { finishReading, readPagePrimary, readPageSecond, type ReaderPage, type VisionModel } from '../src/documentReader.js';
+import { getFormExtractionSchema, mapBoxesToTool } from '../src/formSchemas.js';
 import { extractStructuredFields, parseMoneyToken } from '../src/structuredExtraction.js';
-import { applyPageEvidence, type FormEvidenceResult } from '../src/formEvidence.js';
-import {
-  keysNeedingSecondReader,
-  secondReaderSchema,
-  valuesAfterVerification,
-  verifyReadings,
-  type FieldReading,
-} from '../src/secondReading.js';
+import type { FieldReading } from '../src/secondReading.js';
 import { createRequire } from 'node:module';
 import { closeOcr, HERE, nativePage, OUT_DIR, REPO, scanPage } from './pages.js';
 
@@ -59,9 +48,6 @@ interface GauntletCase {
   blankBoxes: string[];
   expected: { tool: string; args: Record<string, unknown> };
 }
-
-/** Second-model prompt: GLM-OCR's documented information-extraction prompt. */
-const SECOND_READER_PROMPT = '请按下列JSON格式输出图中信息:\n';
 
 /**
  * Whether the value a reading would apply is right: by the case's expectation
@@ -86,15 +72,6 @@ function readingIsRight(c: GauntletCase, formType: ClassifiableFormType, r: Fiel
   if (spec.contains !== undefined) return text.toUpperCase().includes(spec.contains.toUpperCase());
   return undefined;
 }
-
-const TEMPLATE_PROMPTS: Record<string, string> = {
-  // GLM-OCR's documented information-extraction prompt.
-  glm: '请按下列JSON格式输出图中信息:\n',
-  plain:
-    'Fill in this JSON with the values printed in each box of the tax form in the image. ' +
-    'Copy each value exactly as printed. Use "" for a blank box; never write 0 for a blank box. ' +
-    'The value is never the printed box label.\n',
-};
 
 function argOf(name: string, fallback?: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -204,11 +181,9 @@ async function main() {
   const suffix = argOf('--image-suffix', '')!;
   // --scan <variant>: read out/<case>-<variant>.png with OCR evidence (no text layer).
   const scan = argOf('--scan');
-  const style = argOf('--style', 'glm')!;
   const outFile = argOf('--out');
   const ids = argsOf('--case');
   for (const f of [model, mmproj, secondModel, secondMmproj]) if (f && !existsSync(f)) throw new Error(`Missing ${f}`);
-  if (!TEMPLATE_PROMPTS[style]) throw new Error(`Unknown --style ${style}`);
 
   const cases: GauntletCase[] = readdirSync(join(HERE, 'cases'))
     .filter((f) => f.endsWith('.json'))
@@ -218,7 +193,16 @@ async function main() {
   const { child, loadMs } = await startServer(model, mmproj, port);
   const second = secondModel && secondMmproj ? await startServer(secondModel, secondMmproj, port + 1) : null;
   const report: Record<string, unknown> = {
-    model: basename(model), mmproj: basename(mmproj), secondModel: secondModel ? basename(secondModel) : null, style, loadMs, cases: [],
+    model: basename(model), mmproj: basename(mmproj), secondModel: secondModel ? basename(secondModel) : null, loadMs, cases: [],
+  };
+  // The product's reading pipeline (documentReader), with the models on llama-server.
+  const vision: VisionModel = {
+    async chat(role, req) {
+      const r = await chat(role === 'reader' ? port : port + 1, req.imagePng, req.prompt, {
+        response_format: { type: 'json_schema', json_schema: { name: req.name, schema: req.jsonSchema } },
+      });
+      return { content: r.content, ms: r.ms };
+    },
   };
   let totals = { argsOk: 0, argsTotal: 0, modelOnlyArgsOk: 0, invented: 0, classified: 0, cases: 0, ms: 0 };
   const readingTotals: Record<string, number> = { confirmed: 0, confirmedByModel: 0, unconfirmed: 0, conflict: 0, missed: 0, recovered: 0, confirmedWrong: 0 };
@@ -230,74 +214,22 @@ async function main() {
       const scanned = scan ? await scanPage(png) : null;
       const image = scanned ? await modelImageFor(scanned.deskewed) : readFileSync(png).toString('base64');
 
-      // 1. Classify: printed form number + tax year, constrained to known forms.
-      const classifyTemplate = { 'Form number': '', 'Tax year': '' };
-      const t = await chat(port, image, TEMPLATE_PROMPTS[style] + JSON.stringify(classifyTemplate, null, 2), {
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'classify',
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              required: ['Form number', 'Tax year'],
-              properties: {
-                'Form number': { type: 'string', enum: [...CLASSIFIABLE_FORM_TYPES, 'OTHER'] },
-                'Tax year': { type: 'string' },
-              },
-            },
-          },
-        },
-      });
-      let classified: { 'Form number'?: string; 'Tax year'?: string } = {};
-      try { classified = JSON.parse(t.content); } catch { /* scored as unclassified */ }
-      const formType = (CLASSIFIABLE_FORM_TYPES as readonly string[]).includes(classified['Form number'] ?? '')
-        ? (classified['Form number'] as ClassifiableFormType)
-        : null;
-      const classification = { reason: `model reported form ${classified['Form number'] ?? '(none)'}, tax year ${classified['Tax year'] ?? '(none)'}` };
+      // 1–5: the product pipeline.
+      const pageEvidence = scanned ?? (await nativePage(c.id, png));
+      const page: ReaderPage = { imagePng: image, raster: pageEvidence.raster, words: pageEvidence.words, pageNumber: 1 };
+      const primary = await readPagePrimary(page, vision);
+      const secondRead = second ? await readPageSecond(primary, page, vision) : null;
+      const reading = finishReading(primary, page, secondRead);
+      const formType = reading.formType;
+      const classification = { reason: reading.classificationReason };
       const schema = getFormExtractionSchema(formType);
-
-      let extraction: Record<string, unknown> | null = null;
-      let e: Awaited<ReturnType<typeof chat>> | null = null;
-      let values: Record<string, string> = {};
-      if (schema) {
-        // 2. Template extraction under a JSON grammar.
-        const tpl = buildExtractionTemplate(schema);
-        e = await chat(port, image, TEMPLATE_PROMPTS[style] + JSON.stringify(tpl.template, null, 2), {
-          response_format: { type: 'json_schema', json_schema: { name: 'form', schema: tpl.jsonSchema } },
-        });
-        try { extraction = JSON.parse(e.content); } catch { extraction = null; }
-        if (extraction) values = boxValuesFromTemplate(extraction, tpl, schema);
-      }
-
-      // 3. Deterministic page evidence: locate values, read checkboxes and box 12 codes.
-      const modelOnlyValues = values;
-      let evidence: FormEvidenceResult | null = null;
-      if (schema) {
-        const page = scanned ?? (await nativePage(c.id, png));
-        evidence = applyPageEvidence(schema, values, page);
-        values = evidence.values;
-      }
-
-      // 4. Two-reader verification: the second model reads only what the page
-      //    could not confirm, plus boxes the primary model missed.
-      let readings: FieldReading[] = [];
-      let secondMs = 0;
-      if (schema && evidence) {
-        const keys = keysNeedingSecondReader(schema, evidence);
-        let secondValues: Record<string, string> | undefined;
-        if (second && keys.length > 0) {
-          const sub = secondReaderSchema(schema, keys);
-          const tpl = buildExtractionTemplate(sub);
-          const s2 = await chat(port + 1, image, SECOND_READER_PROMPT + JSON.stringify(tpl.template, null, 2), {
-            response_format: { type: 'json_schema', json_schema: { name: 'form', schema: tpl.jsonSchema } },
-          });
-          secondMs = s2.ms;
-          try { secondValues = boxValuesFromTemplate(JSON.parse(s2.content), tpl, sub); } catch { secondValues = {}; }
-        }
-        readings = verifyReadings(schema, evidence, secondValues);
-        values = valuesAfterVerification(values, readings);
-      }
+      const evidence = reading.evidence;
+      const modelOnlyValues = reading.modelValues;
+      let values = reading.values;
+      const readings: FieldReading[] = reading.readings;
+      const t = { ms: reading.runs.find((r) => r.stage === 'classify')?.ms ?? 0 };
+      const e = reading.runs.some((r) => r.stage === 'extract') ? { ms: reading.runs.find((r) => r.stage === 'extract')!.ms } : null;
+      const secondMs = secondRead?.run.ms ?? 0;
       const readingChecks = formType ? readings.map((r) => ({ ...r, right: readingIsRight(c, formType, r) })) : [];
       const confirmedWrong = readingChecks.filter((r) => (r.status === 'confirmed' || r.status === 'recovered') && r.right === false);
       for (const r of readings) readingTotals[r.status] = (readingTotals[r.status] ?? 0) + 1;
@@ -348,9 +280,9 @@ async function main() {
         argsOk: argChecks.filter((x) => x.ok).length, argsTotal: argChecks.length, argChecks, unexpectedArgs, modelOnlyArgsOk,
         located: locatedCount, locatable: locatableCount, checkboxes: evidence?.checkboxes ?? {}, box12Codes: evidence?.box12Codes ?? {},
         boxesOk: boxChecks.filter((x) => x.ok).length, boxesTotal: boxChecks.length, boxChecks,
-        invented, reviewBoxes: mapped?.reviewBoxes ?? [], finish: e?.finish, usage: { transcribe: t.usage, extract: e?.usage },
+        invented, reviewBoxes: mapped?.reviewBoxes ?? [],
         secondMs, readings: readingChecks, confirmedWrong, missed: evidence?.missed ?? [],
-        transcript: t.content, extraction,
+        modelValues: modelOnlyValues, runs: reading.runs,
       };
       (report.cases as unknown[]).push(entry);
       totals = {

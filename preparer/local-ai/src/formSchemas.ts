@@ -897,6 +897,8 @@ export interface ToolMapping {
    * preparer review before the return can be treated as complete.
    */
   reviewBoxes: Array<{ key: string; label: string; text: string }>;
+  /** The box keys each tool field was read from (for source location and second readings). */
+  sourceKeys: Record<string, string[]>;
 }
 
 const CHECKED_TOKEN = /^(x|✓|✔|☑|☒|yes|checked|true)$/i;
@@ -1172,9 +1174,11 @@ export function mapBoxesToTool(
   const reviewBoxes: ToolMapping['reviewBoxes'] = [];
   const boxByKey = new Map(schema.boxes.map((b) => [b.key, b]));
 
-  const put = (field: string, value: unknown, raw: string) => {
+  const sourceKeys: Record<string, string[]> = {};
+  const put = (field: string, value: unknown, raw: string, keys: string[]) => {
     bag[field] = value;
     rawText[field] = raw;
+    sourceKeys[field] = keys;
   };
 
   for (const b of schema.boxes) {
@@ -1186,22 +1190,22 @@ export function mapBoxesToTool(
       reviewBoxes.push({ key: b.key, label: b.label, text });
     }
   }
-  if (!spec || !tool) return { tool, bag, rawText, reviewBoxes };
+  if (!spec || !tool) return { tool, bag, rawText, reviewBoxes, sourceKeys };
 
   for (const [key, field] of Object.entries(spec.direct)) {
     const text = values[key];
-    if (text !== undefined) put(field, text, text);
+    if (text !== undefined) put(field, text, text, [key]);
   }
 
   if (spec.name) {
     const key = spec.name.keys.find((k) => values[k] !== undefined);
-    if (key) put(spec.name.field, firstLine(values[key]!), values[key]!);
+    if (key) put(spec.name.field, firstLine(values[key]!), values[key]!, [key]);
   }
 
   if (spec.state && values[spec.state.key] !== undefined) {
     const stateText = values[spec.state.key]!;
     // An unreadable state cell stays unknown (undefined), never a guessed code.
-    put(spec.state.field, stateCodeFromCell(stateText), stateText);
+    put(spec.state.field, stateCodeFromCell(stateText), stateText, [spec.state.key]);
   }
 
   for (const [key, field] of Object.entries(spec.checkboxes ?? {})) {
@@ -1211,20 +1215,20 @@ export function mapBoxesToTool(
     if (state === undefined) {
       reviewBoxes.push({ key, label: boxByKey.get(key)!.label, text });
     } else {
-      put(field, state, text);
+      put(field, state, text, [key]);
     }
   }
 
   for (const cell of spec.moreStates ?? []) {
     const text = values[cell.key];
-    if (text !== undefined) put(cell.field, stateCodeFromCell(text), text);
+    if (text !== undefined) put(cell.field, stateCodeFromCell(text), text, [cell.key]);
   }
 
   if (spec.year && values[spec.year.key] !== undefined) {
     const text = values[spec.year.key]!;
     const year = /\b(20\d\d)\b/.exec(text)?.[1];
     // A cell with no year stays unknown, never a guessed year.
-    put(spec.year.field, year !== undefined ? year : undefined, text);
+    put(spec.year.field, year !== undefined ? year : undefined, text, [spec.year.key]);
   }
 
   if (spec.choice) {
@@ -1233,7 +1237,7 @@ export function mapBoxesToTool(
       .map((key) => ({ key, text: values[key]!, state: checkboxState(values[key]) }));
     const checked = read.filter((r) => r.state === true);
     if (checked.length === 1 && !read.some((r) => r.state === undefined)) {
-      put(spec.choice.field, spec.choice.options[checked[0]!.key]!, read.map((r) => `${r.key}=${r.text}`).join('; '));
+      put(spec.choice.field, spec.choice.options[checked[0]!.key]!, read.map((r) => `${r.key}=${r.text}`).join('; '), [checked[0]!.key]);
     } else if (checked.length > 1 || read.some((r) => r.state === undefined)) {
       for (const r of read) reviewBoxes.push({ key: r.key, label: boxByKey.get(r.key)!.label, text: r.text });
     }
@@ -1258,7 +1262,7 @@ export function mapBoxesToTool(
         });
       }
     }
-    if (entries.length > 0) put('box12', entries, raws.join('; '));
+    if (entries.length > 0) put('box12', entries, raws.join('; '), ['12a', '12b', '12c', '12d'].flatMap((slot) => [`${slot}.code`, `${slot}.amount`]).filter((k) => values[k] !== undefined));
 
     const box13: Record<string, boolean> = {};
     const box13Raw: string[] = [];
@@ -1277,8 +1281,8 @@ export function mapBoxesToTool(
         box13[field] = state;
       }
     }
-    if (Object.keys(box13).length > 0) put('box13', box13, box13Raw.join('; '));
+    if (Object.keys(box13).length > 0) put('box13', box13, box13Raw.join('; '), ['13.statutory', '13.retirement', '13.sickPay'].filter((k) => values[k] !== undefined));
   }
 
-  return { tool, bag, rawText, reviewBoxes };
+  return { tool, bag, rawText, reviewBoxes, sourceKeys };
 }

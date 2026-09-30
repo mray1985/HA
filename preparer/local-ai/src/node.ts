@@ -1,2 +1,3 @@
-// Node-only: checks the approved model files on disk against the manifest.
+// Node-only: model files and the model runtime (llama-server processes).
 export * from './modelFiles.js';
+export * from './modelRuntime.js';

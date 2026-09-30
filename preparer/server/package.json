@@ -9,6 +9,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hatax/local-ai": "*",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",

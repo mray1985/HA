@@ -38,7 +38,7 @@ Ryzen AI 7 350 with 15 GB RAM, using llama.cpp `llama-server` build 11262.
 node local-ai/gauntlet/render-cases.mjs --dpi 150 --suffix -150dpi
 node local-ai/gauntlet/render-scans.mjs
 npx tsx local-ai/gauntlet/run.ts --model <gguf> --mmproj <mmproj.gguf> \
-  --second-model <glm-ocr.gguf> --second-mmproj <glm-mmproj.gguf> --style plain \
+  --second-model <glm-ocr.gguf> --second-mmproj <glm-mmproj.gguf> \
   --image-suffix -150dpi            # or: --scan scan|fax|faded
 npx tsx local-ai/gauntlet/checkboxes.ts
 npx tsx local-ai/gauntlet/run-tools.ts --model <gguf>
@@ -92,6 +92,15 @@ code, and the model left the 1099-DIV withholding blank. "Recovered" is a box
 the model left blank that GLM-OCR and the page's own text both read (1099-DIV
 box 4, `0.00`). The 1099-DIV Section 199A amount (box 5, no engine field)
 routes to review.
+
+### Every case through the product reader (`src/documentReader.ts`)
+
+`run.ts` reads each page with the app's own pipeline module (the same calls
+the app makes through its model runtime). All 15 cases, native 150 dpi:
+
+| Classified | Tool args | Invented | Confirmed wrong | s/page |
+|---|---|---|---|---|
+| 15/15 | **105/105** (model alone 92) | 0 | 0 | 42 |
 
 ### Work order §16 forms (7 cases, Qwen3.5-0.8B + page evidence + GLM-OCR)
 

@@ -70,6 +70,8 @@ export type ClassificationConfidence = 'high' | 'medium' | 'low';
 export type ClassificationSource =
   | 'text_markers'
   | 'importer_markers'
+  /** The reader model's printed form number, not contradicted by the page's markers. */
+  | 'reader_model'
   | 'none';
 
 interface FormMarkerSignature {
@@ -451,6 +453,38 @@ export function classifyDocument(input: ClassifyDocumentInput): DocumentClassifi
 }
 
 /** True when classification is allowed to drive tax-tool / income writes. */
+/** The income-item key a form type is read as. */
+export function incomeTypeForFormType(formType: ClassifiableFormType): ClassifiedIncomeType {
+  return FORM_MARKER_SIGNATURES.find((s) => s.formType === formType)!.incomeType;
+}
+
+/**
+ * A page's form from the reader model's printed form number, checked against
+ * the page's own printed markers (text layer or OCR). Markers that name
+ * another form leave the page unclassified — never a guess between the two;
+ * a page whose title the OCR could not read takes the model's form number.
+ */
+export function classifyModelReading(input: { modelFormType: ClassifiableFormType | null; pageText: string }): DocumentClassification {
+  if (!input.modelFormType) return unclassified('The reader did not recognize a supported form on the page.', []);
+  const fromPage = classifyFromHaystack(normalizeText(input.pageText), 'text_markers', null);
+  const incomeType = incomeTypeForFormType(input.modelFormType);
+  if (fromPage.status === 'classified' && fromPage.formType !== input.modelFormType) {
+    return unclassified(`The reader reported ${input.modelFormType} but the page's printed markers are ${fromPage.formType}; type left unclassified.`, fromPage.matchedMarkers);
+  }
+  const agrees = fromPage.status === 'classified';
+  return {
+    status: 'classified',
+    formType: input.modelFormType,
+    incomeType,
+    confidence: agrees ? 'high' : 'medium',
+    reason: agrees
+      ? `The reader reported ${input.modelFormType}, and the page prints ${fromPage.matchedMarkers.map((m) => `"${m}"`).join(', ')}.`
+      : `The reader reported ${input.modelFormType}; the page's printed title was not read to confirm it.`,
+    matchedMarkers: fromPage.status === 'classified' ? fromPage.matchedMarkers : [],
+    source: 'reader_model',
+  };
+}
+
 export function classificationAllowsIncomeWrite(
   classification: DocumentClassification,
 ): boolean {
