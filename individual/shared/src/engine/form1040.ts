@@ -35,6 +35,7 @@ import {
   calculateLiabilitySection,
   assembleForm1040Result,
 } from './form1040Sections.js';
+import { findUnsupportedPatterns, unsupportedForState } from './unsupported.js';
 
 // Re-export Form1040Context for external use
 export type { Form1040Context } from './form1040Sections.js';
@@ -100,6 +101,16 @@ export function calculateForm1040(taxReturn: TaxReturn, traceOptions?: TraceOpti
   // ─── State Tax Calculation ─────────────────────────
   if (taxReturn.stateReturns && taxReturn.stateReturns.length > 0) {
     federalResult.stateResults = calculateStateTaxes(taxReturn, federalResult);
+  }
+
+  // ─── Fail closed: what the engine cannot compute to the official rules ─
+  const unsupported = findUnsupportedPatterns(taxReturn, federalResult);
+  if (unsupported.length > 0) {
+    federalResult.unsupported = unsupported;
+    for (const state of federalResult.stateResults ?? []) {
+      const reasons = unsupportedForState(unsupported, state.stateCode);
+      if (reasons.length > 0) state.unsupported = reasons;
+    }
   }
 
   return federalResult;

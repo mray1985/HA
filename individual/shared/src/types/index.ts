@@ -1936,10 +1936,25 @@ export interface StateReturnConfig {
   stateSpecificData?: Record<string, unknown>;  // State-specific fields
 }
 
+/**
+ * A situation the engine cannot compute to the official rules (fail closed):
+ * reported, never approximated. See engine/unsupported.ts.
+ */
+export interface UnsupportedPattern {
+  /** Corpus rule or discrepancy id. */
+  ruleId: string;
+  /** 'US' or a state code. */
+  jurisdiction: string;
+  section: 'state' | 'depreciation' | 'federal';
+  message: string;
+}
+
 export interface StateCalculationResult {
   stateCode: string;
   stateName: string;
   residencyType: StateResidencyType;
+  /** Why this state's figures are not to be relied on (fail closed): each blocks approval and export. */
+  unsupported?: string[];
 
   // Income
   federalAGI: number;                   // Starting point — federal AGI
@@ -2521,6 +2536,8 @@ export interface CalculationResult {
   amt?: import('../engine/amt.js').AMTResult;
   form8582?: Form8582Result;
   stateResults?: StateCalculationResult[];
+  /** What the engine could not compute to the official rules (engine/unsupported.ts). */
+  unsupported?: UnsupportedPattern[];
   credits: CreditsResult;
   form1040: Form1040Result;
   /** Optional calculation trace tree — only present when tracing is enabled. */

@@ -30,6 +30,11 @@ import type { StateCalculator } from './stateRegistry.js';
 
 // ─── Helpers ────────────────────────────────────────────────────
 
+/** A flat-tax state's configuration for a tax year, when one is checked in. */
+export function flatTaxConfigFor(stateCode: string, taxYear: number): FlatTaxStateConfig | undefined {
+  return getFlatTaxConstants(taxYear)[stateCode];
+}
+
 function getFlatTaxConstants(taxYear: number): Record<string, FlatTaxStateConfig> {
   switch (taxYear) {
     case 2024:

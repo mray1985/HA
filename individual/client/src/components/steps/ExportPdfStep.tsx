@@ -172,10 +172,23 @@ export default function ExportPdfStep() {
   }, []);
   useFocusTrap(exportModalRef, showPasswordModal, dismissPasswordModal);
 
+  // ── Tax calculation for hero number ──────────────────────────
+  const calcResult = useMemo(() => {
+    if (!taxReturn) return null;
+    try {
+      return calculateForm1040({
+        ...taxReturn,
+        filingStatus: taxReturn.filingStatus || FilingStatus.Single,
+      });
+    } catch {
+      return null;
+    }
+  }, [taxReturn]);
+
   // ── Pre-export readiness ─────────────────────────────────────
   const readiness = useMemo(
-    () => taxReturn ? checkExportReadiness(taxReturn) : { ready: false, blockers: [], blockerCount: 0 },
-    [taxReturn],
+    () => taxReturn ? checkExportReadiness(taxReturn, calcResult) : { ready: false, blockers: [], blockerCount: 0 },
+    [taxReturn, calcResult],
   );
   const advisoryWarnings = useWarnings();
   const advisoryCount = getTotalWarningCount(advisoryWarnings);
@@ -314,18 +327,6 @@ export default function ExportPdfStep() {
     navigate('/');
   };
 
-  // ── Tax calculation for hero number ──────────────────────────
-  const calcResult = useMemo(() => {
-    if (!taxReturn) return null;
-    try {
-      return calculateForm1040({
-        ...taxReturn,
-        filingStatus: taxReturn.filingStatus || FilingStatus.Single,
-      });
-    } catch {
-      return null;
-    }
-  }, [taxReturn]);
 
   const f = calcResult?.form1040;
   const isRefund = f ? f.refundAmount > 0 : false;
@@ -422,7 +423,7 @@ export default function ExportPdfStep() {
               <div className="flex items-center gap-2">
                 <XCircle className="w-4 h-4 text-red-400 shrink-0" />
                 <span className="text-xs font-medium text-red-300">
-                  {readiness.blockerCount} missing required {readiness.blockerCount === 1 ? 'field' : 'fields'}
+                  {readiness.blockerCount} {readiness.blockerCount === 1 ? 'issue' : 'issues'} to resolve before export
                 </span>
               </div>
               {blockersExpanded
@@ -436,7 +437,7 @@ export default function ExportPdfStep() {
                   <div key={i} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />
-                      <span className="text-xs text-slate-400 truncate">{b.message}</span>
+                      <span className="text-xs text-slate-400">{b.message}</span>
                     </div>
                     <button
                       onClick={() => goToStep(b.stepId)}

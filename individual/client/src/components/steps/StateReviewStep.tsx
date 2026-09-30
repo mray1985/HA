@@ -89,15 +89,24 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
           <div>
             <h3 className="font-medium text-slate-200">{sr.stateName}</h3>
             <p className="text-xs text-slate-400 capitalize">{sr.residencyType === 'resident' ? 'Full-year resident' : sr.residencyType === 'part_year' ? 'Part-year resident' : 'Nonresident'}</p>
+            {sr.unsupported?.map((reason) => (
+              <p key={reason} role="alert" className="text-xs text-amber-300 mt-1">{reason}</p>
+            ))}
           </div>
         </div>
         <div className="text-right">
-          <p className={`text-xl font-bold ${isRefund ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {isRefund ? '+' : ''}${sr.stateRefundOrOwed.toLocaleString()}
-          </p>
-          <p className="text-xs text-slate-400">
-            {isRefund ? 'Refund' : 'Owed'}
-          </p>
+          {sr.unsupported?.length ? (
+            <p className="text-sm font-medium text-amber-300">Not calculated</p>
+          ) : (
+            <>
+              <p className={`text-xl font-bold ${isRefund ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {isRefund ? '+' : ''}${sr.stateRefundOrOwed.toLocaleString()}
+              </p>
+              <p className="text-xs text-slate-400">
+                {isRefund ? 'Refund' : 'Owed'}
+              </p>
+            </>
+          )}
         </div>
       </div>
 

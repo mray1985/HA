@@ -112,3 +112,11 @@ describe('return warnings use the return\'s own tax year', () => {
     expect(w.find((x) => x.field === 'income1099B[0].dateSold')?.message).toContain('tax year 2026');
   });
 });
+
+describe('what the engine cannot compute is BLOCKING (fail closed)', () => {
+  it('blocks a state return the engine does not calculate to its rules', () => {
+    const tr = makeTaxReturn({ taxYear: 2025, stateReturns: [{ stateCode: 'CA', residencyType: 'part_year', daysLivedInState: 100 }] } as Partial<TaxReturn>);
+    const found = runReturnDiagnostics(tr, calculateForm1040(tr)).filter((d) => d.source === 'unsupported');
+    expect(found).toEqual([expect.objectContaining({ id: 'unsupported:TAX-008:CA', category: 'BLOCKING', section: 'state_ca', message: expect.stringContaining('California part-year return') })]);
+  });
+});

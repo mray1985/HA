@@ -135,6 +135,11 @@ export default function ApprovePanel() {
             </button>
           )}
         </div>
+        {(calculation?.stateResults ?? []).filter((s) => s.unsupported?.length).map((s) => (
+          <p key={s.stateCode} role="alert" className="text-xs text-amber-300 mt-2">
+            {s.stateName}: not supported — {s.unsupported!.join(' ')}
+          </p>
+        ))}
       </section>
 
       <div className="grid lg:grid-cols-2 gap-4">

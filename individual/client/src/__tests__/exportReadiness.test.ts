@@ -275,3 +275,18 @@ describe('checkExportReadiness', () => {
     expect(broken.blockerCount).toBe(broken.blockers.length);
   });
 });
+
+describe('what the engine cannot compute blocks export (fail closed)', () => {
+  it('blocks a return with a state the engine does not calculate to its rules', async () => {
+    const { calculateForm1040 } = await import('@hatax/engine');
+    const tr = makeTaxReturn({ stateReturns: [{ stateCode: 'PA', residencyType: 'resident' }] } as Partial<TaxReturn>);
+    const result = checkExportReadiness(tr, calculateForm1040(tr));
+    expect(result.ready).toBe(false);
+    expect(result.blockers).toContainEqual(expect.objectContaining({ section: 'State Taxes', stepId: 'state_details', message: expect.stringContaining('Pennsylvania taxes eight classes') }));
+  });
+
+  it('finds the state checks that need no calculation without one', () => {
+    const tr = makeTaxReturn({ stateReturns: [{ stateCode: 'IN', residencyType: 'resident' }] } as Partial<TaxReturn>);
+    expect(checkExportReadiness(tr).blockers.map((b) => b.message)).toContainEqual(expect.stringContaining('Indiana county income tax'));
+  });
+});

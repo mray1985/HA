@@ -47,6 +47,7 @@ export * from './engine/investmentInterest.js';
 export * from './engine/form5329.js';
 export * from './engine/form8911.js';
 export * from './engine/form4562.js';
+export * from './engine/unsupported.js';
 export * from './engine/form4797.js';
 export * from './engine/form4684.js';
 export * from './engine/form4835.js';

@@ -18,6 +18,7 @@
  */
 
 import type { CalculationResult, TaxReturn } from '../types/index.js';
+import { findUnsupportedPatterns } from '../engine/unsupported.js';
 import { buildDocumentInventory } from './documentInventory.js';
 import { checkExportReadiness } from './readiness.js';
 import { getReturnWarnings } from './returnWarnings.js';
@@ -34,7 +35,7 @@ export type DiagnosticCategory = 'ERROR' | 'BLOCKING' | 'WARNING' | 'REVIEW' | '
 /** Most severe first. */
 export const DIAGNOSTIC_CATEGORIES: readonly DiagnosticCategory[] = ['ERROR', 'BLOCKING', 'WARNING', 'REVIEW', 'INFORMATIONAL'];
 
-export type DiagnosticSource = 'filing_status' | 'readiness' | 'inventory' | 'validation' | 'suggestion';
+export type DiagnosticSource = 'filing_status' | 'readiness' | 'inventory' | 'validation' | 'suggestion' | 'unsupported';
 
 export interface Diagnostic {
   /** Stable across runs for the same finding, so a preparer's resolution can be kept. */
@@ -82,6 +83,17 @@ export function runReturnDiagnostics(taxReturn: TaxReturn, calculation?: Calcula
       source: 'readiness',
       section: issue.sectionId,
       message: issue.message,
+    });
+  }
+
+  // What the engine cannot compute to the official rules is never approximated (engine/unsupported.ts).
+  for (const u of calculation?.unsupported ?? findUnsupportedPatterns(taxReturn)) {
+    out.push({
+      id: `unsupported:${u.ruleId}:${u.jurisdiction}`,
+      category: 'BLOCKING',
+      source: 'unsupported',
+      section: u.section === 'state' ? `state_${u.jurisdiction.toLowerCase()}` : u.section,
+      message: u.message,
     });
   }
 

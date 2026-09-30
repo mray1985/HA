@@ -11,8 +11,8 @@
  * into a pre-export validation panel.
  */
 
-import type { TaxReturn } from '@hatax/engine';
-import { FilingStatus } from '@hatax/engine';
+import type { CalculationResult, TaxReturn } from '@hatax/engine';
+import { FilingStatus, findUnsupportedPatterns } from '@hatax/engine';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,8 +35,18 @@ export interface ReadinessResult {
 // Required-field checks
 // ---------------------------------------------------------------------------
 
-export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
+export function checkExportReadiness(taxReturn: TaxReturn, calculation?: CalculationResult | null): ReadinessResult {
   const blockers: ReadinessIssue[] = [];
+
+  // What the engine cannot compute to the official rules is never exported as if it were.
+  for (const u of calculation?.unsupported ?? findUnsupportedPatterns(taxReturn)) {
+    blockers.push({
+      severity: 'blocker',
+      section: u.section === 'state' ? 'State Taxes' : u.section === 'depreciation' ? 'Depreciation' : 'Federal',
+      stepId: u.section === 'state' ? 'state_details' : u.section === 'depreciation' ? 'depreciation_assets' : 'review_form_1040',
+      message: u.message,
+    });
+  }
 
   // ── Personal Info ──────────────────────────────────────────────
   if (!taxReturn.firstName?.trim()) {
