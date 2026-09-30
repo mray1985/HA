@@ -5,14 +5,16 @@
  * Bank statements and other structured imports live alongside.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
 import { selectDocumentExtractKind, type DocumentPieceOutcome, type IngestedDocument, type TaxFact } from '@hatax/local-ai';
-import { applyExtractionToDocument, registerDroppedDocument } from '../../services/documentIngestion';
+import { applyExtractionToDocument, applyModelReadingsToDocument, registerDroppedDocument, type ApplyExtractionResult } from '../../services/documentIngestion';
+import { fetchModelStatus, type LocalRuntimeStatus, type ModelRunRecord } from '../../services/localModels';
+import { readWithLocalModels, type ModelReadItem, type ModelReadResult } from '../../services/modelIngestion';
 import { extractFromImage, extractFromPDF, extractFromPDFWithOCR } from '../../services/pdfImporter';
 import type { PDFExtractResult } from '../../services/pdfExtractHelpers';
 import { applyExtraction } from '../../services/returnApplier';
-import { appendAudit } from '../../services/caseAudit';
+import { appendAudit, appendModelRuns } from '../../services/caseAudit';
 import { runReturnChecks } from '../../services/recordTools';
 import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 import ExpenseScannerToolView from '../tools/ExpenseScannerToolView';
@@ -99,6 +101,23 @@ function DocumentCard({ doc, facts }: { doc: IngestedDocument; facts: TaxFact[] 
   );
 }
 
+/** How documents will be read: the local models, or the text layer and OCR. */
+function RuntimeLine({ status }: { status: LocalRuntimeStatus | null | undefined }) {
+  if (status === undefined) return null;
+  if (status === null) {
+    return <p className="text-xs text-slate-500 mt-2">Documents are read from their text layer and with OCR.</p>;
+  }
+  const names = status.models.map((m) => m.name).join(' + ');
+  const loaded = status.models.find((m) => m.loaded);
+  return status.available ? (
+    <p className="text-xs text-emerald-300 mt-2">
+      Local AI ready: {names}{loaded?.memoryBytes ? ` · ${loaded.name} loaded (${Math.round(loaded.memoryBytes / 1_048_576)} MB)` : ''}
+    </p>
+  ) : (
+    <p className="text-xs text-amber-300 mt-2">Local AI unavailable — {status.reason}. Documents are read from their text layer and with OCR.</p>
+  );
+}
+
 type Section = 'forms' | 'bank' | 'imports';
 type ImportPanel = 'csv' | 'txf' | 'fdx' | 'competitor' | null;
 
@@ -113,6 +132,13 @@ export default function DocumentsPanel() {
   const [importPanel, setImportPanel] = useState<ImportPanel>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [runtime, setRuntime] = useState<LocalRuntimeStatus | null | undefined>(undefined);
+
+  useEffect(() => {
+    let live = true;
+    void fetchModelStatus().then((status) => { if (live) setRuntime(status); });
+    return () => { live = false; };
+  }, []);
 
   const factsByDocument = useMemo(() => {
     const map = new Map<string, TaxFact[]>();
@@ -123,25 +149,66 @@ export default function DocumentsPanel() {
   const onFiles = async (list: FileList | null) => {
     if (!returnId || !taxReturn || !list || list.length === 0) return;
     const failures: string[] = [];
+
+    // 1. Register each file: hashed, screened, and a file already on the case is not read twice.
+    const items: ModelReadItem[] = [];
     for (const file of Array.from(list)) {
-      setBusy(`Reading ${file.name}…`);
+      setBusy(`Checking ${file.name}…`);
       try {
         const registered = await registerDroppedDocument({ returnId, file });
         if (registered.rejected || registered.duplicate) {
           appendAudit(returnId, { kind: 'document', documentId: registered.document.documentId, fileName: file.name, outcome: registered.rejected ? 'rejected' : 'duplicate' });
           continue;
         }
-        const extracted = await readFile(file);
-        // An edit made while the file was read is saved before the applier reads the return.
-        flushCaseSave();
-        const applied = applyExtractionToDocument({ returnId, taxYear: taxReturn.taxYear, document: registered.document, extracted });
+        items.push({ document: registered.document, file });
+      } catch (err) {
+        failures.push(`${file.name}: ${err instanceof Error ? err.message : 'could not be read'}`);
+      }
+    }
+
+    // 2. The local models read the batch when the runtime is ready; the text layer and OCR otherwise.
+    const status = await fetchModelStatus();
+    setRuntime(status);
+    const runs: ModelRunRecord[] = [];
+    let results: ModelReadResult[];
+    if (status?.available) {
+      try {
+        results = await readWithLocalModels(items, setBusy, runs);
+      } catch (err) {
+        const reason = `the local models failed (${err instanceof Error ? err.message : String(err)})`;
+        results = items.map((item) => ({ item, fallback: reason }));
+      }
+      appendModelRuns(returnId, runs);
+    } else {
+      const reason = status ? `local AI unavailable: ${status.reason ?? 'not ready'}` : '';
+      results = items.map((item) => ({ item, fallback: reason }));
+    }
+
+    // 3. Each document to the return.
+    for (const result of results) {
+      const { file, document } = result.item;
+      try {
+        let applied: ApplyExtractionResult;
+        let how: string;
+        if ('readings' in result) {
+          // An edit made while the batch was read is saved before the applier reads the return.
+          flushCaseSave();
+          applied = applyModelReadingsToDocument({ returnId, taxYear: taxReturn.taxYear, document, readings: result.readings });
+          how = `read by the local models in ${result.seconds}s`;
+        } else {
+          setBusy(`Reading ${file.name}…`);
+          const extracted = await readFile(file);
+          flushCaseSave();
+          applied = applyExtractionToDocument({ returnId, taxYear: taxReturn.taxYear, document, extracted });
+          how = result.fallback ? `read from the text layer — ${result.fallback}` : 'read from the text layer';
+        }
         if (applied.provenanceError) failures.push(`${file.name}: ${applied.provenanceError}`);
         const outcomes = applyExtraction(returnId, applied);
         appendAudit(returnId, {
           kind: 'document',
           documentId: applied.document.documentId,
           fileName: file.name,
-          outcome: applied.unclassified ? 'not identified' : outcomes.join(', ') || 'nothing applied',
+          outcome: `${applied.unclassified ? 'not identified' : outcomes.join(', ') || 'nothing applied'} (${how})`,
         });
         reloadEvidence();
       } catch (err) {
@@ -180,6 +247,7 @@ export default function DocumentsPanel() {
           <label className="block border border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-HATaxService-orange-500">
             <Upload className="w-6 h-6 mx-auto text-slate-400 mb-2" />
             <span className="text-white font-medium">{busy ?? 'Drop or choose the client’s PDFs and photos'}</span>
+            <RuntimeLine status={runtime} />
             <p className="text-xs text-slate-400 mt-2">
               Read on this computer. Each file is hashed and kept with its source; a form that cannot be identified, or a value that cannot be read, is never entered as income or as zero.
             </p>

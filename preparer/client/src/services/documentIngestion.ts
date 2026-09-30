@@ -9,8 +9,11 @@
  */
 
 import {
+  approvedModel,
   assertImportedValuesHaveSource,
   classificationAllowsIncomeWrite,
+  executeDeterministicToolCall,
+  factSourcesOf,
   classifyDocument,
   classificationInputFromOcr,
   createIngestedDocument,
@@ -21,6 +24,7 @@ import {
   type DocumentClassificationRecord,
   type FactValidationResult,
   type IngestedDocument,
+  type PageReading,
   type TaxFact,
 } from '@hatax/local-ai';
 import type { PDFExtractResult } from './pdfExtractHelpers';
@@ -182,7 +186,8 @@ export interface IngestExtractionPiece {
   toolError?: string;
   /** Structural validation issues for this piece — values are never rewritten. */
   validation: FactValidationResult;
-  extracted: PDFExtractResult;
+  /** The text-layer / OCR extraction, when the piece was read that way (not by the models). */
+  extracted?: PDFExtractResult;
   classification: DocumentClassification;
 }
 
@@ -326,4 +331,101 @@ export function applyExtractionToDocument(input: {
     facts,
     classification: primaryClassified ?? classifications[0],
   };
+}
+
+// ─── Document read by the local models ───────────────────────
+
+/**
+ * A document read by the local models (documentReader): each classified page
+ * is one form, sent through the same validated tool call as the text-layer
+ * path; identical copies of a form in one file (Copy B, C, 2) count once.
+ * Facts carry the model's provenance — reader, file hash and quantization,
+ * run id — and each value's location and second reading.
+ */
+export function applyModelReadingsToDocument(input: {
+  returnId: string;
+  taxYear: number;
+  document: IngestedDocument;
+  readings: PageReading[];
+}): ApplyExtractionResult {
+  const reader = approvedModel('reader');
+  const second = approvedModel('second_reader');
+  const forms = input.readings.filter((r) => r.classification.status === 'classified');
+  if (forms.length === 0) {
+    const primary = input.readings[0]?.classification ?? classifyDocument({});
+    const updated = markDocumentUnclassified({
+      returnId: input.returnId,
+      document: input.document,
+      classification: primary,
+      classifications: input.readings.map((r) => r.classification),
+    });
+    return { document: updated, pieces: [], facts: [], unclassified: true, classification: primary };
+  }
+
+  const seen = new Set<string>();
+  const kept = forms.filter((r) => {
+    const identity = `${r.formType}|${JSON.stringify(r.args)}`;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+
+  const pieces: IngestExtractionPiece[] = kept.map((reading, index) => {
+    const classification = reading.classification;
+    if (!reading.tool) {
+      return { facts: [], toolFields: {}, incomeType: classification.incomeType, toolError: `${reading.formType} is not read by the models; enter it by hand.`, validation: EMPTY_VALIDATION, classification };
+    }
+    const sources = factSourcesOf(reading, second.name);
+    const extractRun = reading.runs.find((r) => r.stage === 'extract');
+    const called = executeDeterministicToolCall({
+      proposal: { tool: reading.tool, args: reading.args },
+      context: {
+        returnId: input.returnId,
+        taxYear: input.taxYear,
+        sourceDocumentId: input.document.documentId,
+        sourceFormIndex: index,
+        sourceFileName: input.document.fileName,
+        extractor: reader.id,
+        extractorVersion: `${reader.weights.sha256.slice(0, 12)} ${reader.quantization}`,
+        ...(extractRun?.runId ? { modelRunId: extractRun.runId } : {}),
+        rawText: sources.rawText,
+        confidence: sources.confidence,
+        sourceLocation: sources.sourceLocation,
+        secondReading: sources.secondReading,
+      },
+    });
+    if (!called.ok || !called.result?.ok) {
+      return {
+        facts: called.facts,
+        toolFields: {},
+        incomeType: null,
+        toolError: called.error ?? (called.result && !called.result.ok ? called.result.error : 'Tool call failed'),
+        validation: called.validation,
+        classification,
+      };
+    }
+    return {
+      facts: called.facts,
+      toolFields: called.appliedArgs,
+      incomeType: classification.incomeType,
+      validation: called.validation,
+      classification,
+    };
+  });
+
+  const facts = pieces.flatMap((p) => p.facts);
+  const provenance = assertImportedValuesHaveSource(facts, input.document.documentId);
+  if (!provenance.ok) return { document: input.document, pieces, facts: [], provenanceError: provenance.error };
+  if (facts.length > 0) appendTaxFacts(input.returnId, facts);
+
+  const updated: IngestedDocument = {
+    ...input.document,
+    status: 'extracted',
+    extractor: `${reader.id} + ${second.id}`,
+    formTypes: kept.map((r) => r.formType).filter((t): t is NonNullable<typeof t> => Boolean(t)),
+    classification: classificationRecord(kept[0]!.classification),
+    classifications: kept.map((r) => classificationRecord(r.classification)),
+  };
+  upsertDocument(input.returnId, updated);
+  return { document: updated, pieces, facts, classification: kept[0]!.classification };
 }

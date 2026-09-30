@@ -6,7 +6,8 @@
 
 import type { CaseReviewRecord, ReviewResolution } from './caseReview';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
-import { AUDIT_KEY_PREFIX, auditStorageKey, REVIEW_KEY_PREFIX, reviewStorageKey } from './storageScope';
+import type { ModelRunRecord } from './localModels';
+import { AUDIT_KEY_PREFIX, auditStorageKey, MODEL_RUN_KEY_PREFIX, modelRunStorageKey, REVIEW_KEY_PREFIX, reviewStorageKey } from './storageScope';
 
 export type CaseAuditEvent =
   | { at: string; kind: 'correction'; field: string; from: unknown; to: unknown }
@@ -56,14 +57,26 @@ export function appendAudit(returnId: string, event: NewAuditEvent, now = new Da
   return events;
 }
 
-/** Remove a case's review record and audit trail (paired with deleteReturn). */
+/** The local model runs that read this case's documents (§42); facts name theirs by run id. */
+export function loadModelRuns(returnId: string): ModelRunRecord[] {
+  return readRecord<ModelRunRecord[]>(modelRunStorageKey(returnId)) ?? [];
+}
+
+export function appendModelRuns(returnId: string, runs: readonly ModelRunRecord[]): void {
+  if (runs.length === 0) return;
+  writeRecord(modelRunStorageKey(returnId), [...loadModelRuns(returnId), ...runs]);
+}
+
+/** Remove a case's review record, audit trail and model runs (paired with deleteReturn). */
 export function deleteCaseReview(returnId: string): void {
   removeRecord(reviewStorageKey(returnId));
   removeRecord(auditStorageKey(returnId));
+  removeRecord(modelRunStorageKey(returnId));
 }
 
-/** Remove every case's review record and audit trail (paired with wipeAllData). */
+/** Remove every case's review record, audit trail and model runs (paired with wipeAllData). */
 export function deleteAllCaseReviews(): void {
   removeRecordsWithPrefix(REVIEW_KEY_PREFIX);
   removeRecordsWithPrefix(AUDIT_KEY_PREFIX);
+  removeRecordsWithPrefix(MODEL_RUN_KEY_PREFIX);
 }

@@ -340,3 +340,13 @@ export async function recognizeImages(
   const lines = groupWordsToLines(allWordBlocks);
   return lines.map(b => ({ ...b, text: normalizeOCRText(b.text) }));
 }
+
+/**
+ * OCR for page evidence (scans and photos): Tesseract straightens the page
+ * (rotateAuto) and returns word boxes in the straightened image, plus that
+ * image in grayscale — the page the checkbox reader and the models then use.
+ */
+export async function recognizeUpright(image: HTMLCanvasElement): Promise<{ data: { blocks?: unknown[]; imageGrey?: string; rotateRadians?: number } }> {
+  const worker = await getWorker();
+  return worker.recognize(image, { rotateAuto: true }, { blocks: true, imageGrey: true });
+}

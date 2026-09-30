@@ -31,6 +31,13 @@ export function auditStorageKey(returnId: string): string {
   return `${AUDIT_KEY_PREFIX}${returnId}`;
 }
 
+/** Local model runs for a case (§42): which model, file hash and quantization read which page. */
+export const MODEL_RUN_KEY_PREFIX = isPreparerApp() ? 'hatax-preparer:model-runs:' : 'hatax:model-runs:';
+
+export function modelRunStorageKey(returnId: string): string {
+  return `${MODEL_RUN_KEY_PREFIX}${returnId}`;
+}
+
 /** Provenance records for dropped preparer documents (metadata only, not file bytes). */
 export const DOCUMENT_KEY_PREFIX = isPreparerApp()
   ? 'hatax-preparer:documents:'

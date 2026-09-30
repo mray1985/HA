@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { checkModelFile, type ModelFileStatus } from './modelFiles.js';
-import { APPROVED_MODELS, approvedModel, modelFilePath, type ApprovedModel, type ModelFile, type ModelRole } from './modelManifest.js';
+import { APPROVED_MODELS, modelFilePath, type ApprovedModel, type ModelFile, type ModelRole } from './modelManifest.js';
 
 export interface ModelRuntimeOptions {
   /** Folder holding the model files as `<repo>/<file>` (modelFilePath). */
@@ -39,6 +39,10 @@ export interface ModelRuntimeOptions {
   maxLoaded?: number;
   startTimeoutMs?: number;
   log?: (message: string) => void;
+  /** The models to run (default: the approved manifest). */
+  models?: readonly ApprovedModel[];
+  /** Arguments placed before llama-server's own (e.g. a script run by node). */
+  llamaServerArgs?: readonly string[];
 }
 
 /** One grammar-constrained page read. */
@@ -146,6 +150,7 @@ export async function processMemoryBytes(pid: number): Promise<number | undefine
 
 export class ModelRuntime {
   private readonly opts: Required<Omit<ModelRuntimeOptions, 'log'>> & { log: (m: string) => void };
+  private readonly models: readonly ApprovedModel[];
   private readonly loaded = new Map<ModelRole, Loaded>();
   private readonly stats = new Map<ModelRole, Stats>();
   private readonly files = new Map<string, ModelFileStatus>();
@@ -162,8 +167,17 @@ export class ModelRuntime {
       maxLoaded: 1,
       startTimeoutMs: 300_000,
       log: () => {},
+      models: APPROVED_MODELS,
+      llamaServerArgs: [],
       ...options,
     };
+    this.models = this.opts.models;
+  }
+
+  private modelFor(role: ModelRole): ApprovedModel {
+    const model = this.models.find((m) => m.role === role);
+    if (!model) throw new Error(`No ${role} model is configured`);
+    return model;
   }
 
   /** Why the runtime cannot run at all (no llama-server), or null. */
@@ -199,7 +213,7 @@ export class ModelRuntime {
   /** Verify every approved model file (once per runtime; unchanged files are not re-hashed). */
   verify(): Promise<void> {
     this.verified ??= (async () => {
-      for (const model of APPROVED_MODELS) {
+      for (const model of this.models) {
         for (const file of [model.weights, model.projector]) {
           const status = await this.checkFile(file);
           this.files.set(modelFilePath(file), status);
@@ -218,7 +232,7 @@ export class ModelRuntime {
     const reason = this.unavailableReason();
     if (!reason) await this.verify();
     const models: ModelStatus[] = [];
-    for (const model of APPROVED_MODELS) {
+    for (const model of this.models) {
       const l = this.loaded.get(model.role);
       const s = this.stats.get(model.role) ?? { calls: 0, totalMs: 0 };
       models.push({
@@ -249,7 +263,7 @@ export class ModelRuntime {
   }
 
   private async start(role: ModelRole): Promise<Loaded> {
-    const model = approvedModel(role);
+    const model = this.modelFor(role);
     const port = await freePort();
     const args = [
       '-m', join(this.opts.modelsDir, modelFilePath(model.weights)),
@@ -258,7 +272,7 @@ export class ModelRuntime {
       '-c', String(this.opts.contextSize), '--jinja', '--no-webui', '-np', '1',
     ];
     const t0 = Date.now();
-    const child = spawn(this.opts.llamaServer, args, { stdio: 'ignore', windowsHide: true });
+    const child = spawn(this.opts.llamaServer, [...this.opts.llamaServerArgs, ...args], { stdio: 'ignore', windowsHide: true });
     let exited: number | null = null;
     child.on('exit', (code) => {
       exited = code ?? -1;
@@ -294,14 +308,14 @@ export class ModelRuntime {
       l.child.kill();
       setTimeout(resolve, 5000).unref();
     });
-    this.opts.log(`${approvedModel(role).name} stopped`);
+    this.opts.log(`${this.modelFor(role).name} stopped`);
   }
 
   private async ensureLoaded(role: ModelRole): Promise<Loaded> {
     const current = this.loaded.get(role);
     if (current && current.child.exitCode === null) return current;
     await this.verify();
-    const model = approvedModel(role);
+    const model = this.modelFor(role);
     if (!this.usable(model)) throw new Error(`${model.name} model files are not verified; it cannot be loaded`);
     // Keep at most maxLoaded models in memory: stop the least recently used first.
     while (this.loaded.size >= this.opts.maxLoaded) {
@@ -338,7 +352,7 @@ export class ModelRuntime {
 
   private async readNow(role: ModelRole, request: ReadRequest): Promise<{ content: string; run: ModelRunRecord }> {
     if (this.closed) throw new Error('The model runtime is shut down.');
-    const model = approvedModel(role);
+    const model = this.modelFor(role);
     const startedAt = new Date().toISOString();
     const record = (ms: number, ok: boolean, error?: string): ModelRunRecord => ({
       runId: randomUUID(), role, modelId: model.id, modelName: model.name, quantization: model.quantization,

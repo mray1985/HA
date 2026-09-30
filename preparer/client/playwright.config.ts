@@ -36,5 +36,8 @@ export default defineConfig({
     url: 'http://127.0.0.1:5174',
     reuseExistingServer: !process.env.CI,
     timeout: 60000,
+    // Documents are read from the text layer unless E2E_MODELS=1 runs the
+    // local models (e2e/local-models.spec.ts needs the model files).
+    env: { ...process.env, HATAX_LLAMA_SERVER: process.env.E2E_MODELS ? '' : 'e2e-no-local-models' } as Record<string, string>,
   },
 });
