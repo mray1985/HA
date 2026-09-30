@@ -281,7 +281,8 @@ function searchRegion(label: PixelBox, direction: CheckboxDirection, r: PageRast
   switch (direction) {
     case 'below': return clamp([label[0] - h, label[3], label[2] + h, label[3] + 4 * h]);
     case 'above': return clamp([label[0] - h, label[1] - 4 * h, label[2] + h, label[1]]);
-    case 'right': return clamp([label[2], label[1] - h, label[2] + Math.max(6 * h, w * 0.6), label[3] + 2 * h]);
+    // Squares often sit at the far right of the label's cell.
+    case 'right': return clamp([label[2], label[1] - h, label[2] + Math.max(12 * h, w), label[3] + 2 * h]);
     case 'left': return clamp([label[0] - 6 * h, label[1] - h, label[0], label[3] + h]);
   }
 }
