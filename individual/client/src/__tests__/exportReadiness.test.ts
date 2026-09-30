@@ -282,7 +282,7 @@ describe('what the engine cannot compute blocks export (fail closed)', () => {
     const tr = makeTaxReturn({ stateReturns: [{ stateCode: 'PA', residencyType: 'resident' }] } as Partial<TaxReturn>);
     const result = checkExportReadiness(tr, calculateForm1040(tr));
     expect(result.ready).toBe(false);
-    expect(result.blockers).toContainEqual(expect.objectContaining({ section: 'State Taxes', stepId: 'state_details', message: expect.stringContaining('Pennsylvania taxes eight classes') }));
+    expect(result.blockers).toContainEqual(expect.objectContaining({ section: 'State Taxes', stepId: 'state_details', message: expect.stringContaining('Pennsylvania') }));
   });
 
   it('sends a Washington question to the state details, and a missing Washington return to the state selection', async () => {

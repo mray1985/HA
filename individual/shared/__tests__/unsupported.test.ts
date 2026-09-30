@@ -41,11 +41,12 @@ describe('what the engine cannot compute is reported, not approximated', () => {
     expect(rules(makeTaxReturn({ stateReturns: [state('TX', 'part_year'), state('CA')] }))).toEqual([]);
   });
 
-  it('asks Indiana (county tax) and Iowa residents (school surtax) what they need, and stops Pennsylvania (eight classes)', () => {
+  it('asks Indiana (county tax), Iowa residents (school surtax) and Pennsylvania residents (eight classes) what they need', () => {
     expect(rules(makeTaxReturn({ stateReturns: [state('IN')] }))).toEqual(['TAX-006:IN']);
     // Iowa: the items the return cannot show, and the county (state/ia.ts).
     expect(rules(makeTaxReturn({ stateReturns: [state('IA')] }))).toEqual(['TAX-007:IA', 'TAX-007:IA']);
-    expect(rules(makeTaxReturn({ stateReturns: [state('PA')] }))).toEqual(['TAX-002:PA']);
+    // Pennsylvania: the questions the PA-40 classes need (state/pa.ts).
+    expect([...new Set(rules(makeTaxReturn({ stateReturns: [state('PA')] })))]).toEqual(['TAX-002:PA']);
   });
 
   it("stops DC itemizers, whose DC deductions are not calculated", () => {
@@ -74,11 +75,11 @@ describe('what the engine cannot compute is reported, not approximated', () => {
 
   it("marks the state's own result", () => {
     const result = calculateForm1040(makeTaxReturn({ stateReturns: [state('PA'), state('NJ')] }));
-    expect(result.stateResults?.find((s) => s.stateCode === 'PA')?.unsupported).toEqual([expect.stringContaining('Pennsylvania taxes eight classes')]);
+    expect(result.stateResults?.find((s) => s.stateCode === 'PA')?.unsupported).toContainEqual(expect.stringContaining('Pennsylvania: some PA-40 items'));
     expect(result.stateResults?.find((s) => s.stateCode === 'NJ')?.unsupported).toBeUndefined();
   });
 
   it('works without a calculation for the checks that need none', () => {
-    expect(findUnsupportedPatterns(makeTaxReturn({ stateReturns: [state('PA')] })).map((u) => u.ruleId)).toEqual(['TAX-002']);
+    expect(new Set(findUnsupportedPatterns(makeTaxReturn({ stateReturns: [state('PA')] })).map((u) => u.ruleId))).toEqual(new Set(['TAX-002']));
   });
 });

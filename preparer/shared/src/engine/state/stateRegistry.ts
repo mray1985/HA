@@ -25,6 +25,7 @@ import { calculateHawaii } from './hi.js';
 import { createNHCalculator } from './nh.js';
 import { withIndianaCountyTax } from './in.js';
 import { withIowaResident } from './ia.js';
+import { withPennsylvaniaResident } from './pa.js';
 
 // Factories
 import { createFlatTaxCalculator } from './flatTax.js';
@@ -110,7 +111,8 @@ const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator 
   NH: (_taxYear: number) => createNHCalculator(),
 
   // Flat-tax states
-  PA: (taxYear: number) => createFlatTaxCalculator('PA', taxYear),
+  // Pennsylvania: the PA-40's eight income classes for full-year residents (pa.ts).
+  PA: (taxYear: number) => withPennsylvaniaResident(createFlatTaxCalculator('PA', taxYear)),
   IL: (taxYear: number) => createFlatTaxCalculator('IL', taxYear),
   MA: (taxYear: number) => createFlatTaxCalculator('MA', taxYear),
   NC: (taxYear: number) => createFlatTaxCalculator('NC', taxYear),

@@ -16,6 +16,7 @@ import { getStateName } from './state/index.js';
 import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
 import { assessIowa } from './state/ia.js';
 import { assessIndiana } from './state/in.js';
+import { assessPennsylvania } from './state/pa.js';
 import { assessWashingtonCapitalGains } from './state/wa.js';
 
 export type { UnsupportedPattern };
@@ -46,9 +47,6 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
       add('STATE.YEAR.NOT_SUPPORTED', code, 'state', `${name} tax for ${year} is not calculated by HATax. ${STATE_ONLY}`);
     }
 
-    if (code === 'PA') {
-      add('TAX-002', code, 'state', `Pennsylvania taxes eight classes of income separately, without netting a loss in one against another; HATax computes it from federal AGI. ${STATE_ONLY}`);
-    }
     if (code === 'UT' && !flatTaxConfigFor('UT', year)?.utahTaxpayerCredit) {
       add('UT.TC40.TAXPAYER_CREDIT', code, 'state', `Utah's ${year} taxpayer tax credit amounts are not published in HATax yet, so its phase-out cannot be applied. ${STATE_ONLY}`);
     }
@@ -83,6 +81,9 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
+  // TAX-002: Pennsylvania's eight income classes (state/pa.ts) — what the return does not settle.
+  out.push(...assessPennsylvania(taxReturn, calculation).findings);
+
   // TAX-007: Iowa's IA 1040 and school district / EMS surtax (state/ia.ts) — what the return does not settle.
   out.push(...assessIowa(taxReturn, calculation).findings);
 
@@ -101,6 +102,7 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
  */
 export function stateQuestions(taxReturn: TaxReturn, calculation?: CalculationResult | null): StateQuestion[] {
   return [
+    ...assessPennsylvania(taxReturn, calculation).questions,
     ...assessIowa(taxReturn, calculation).questions,
     ...assessIndiana(taxReturn, calculation?.form1040.agi).questions,
     ...(calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : []),

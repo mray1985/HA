@@ -725,6 +725,10 @@ These states impose no individual income tax (or tax only interest/dividends):
 |------|------|
 | Rate | 3.07% |
 | Standard deduction | $0 (none) |
+| Income classes (PA-40 lines 1-8) | Compensation (W-2 box 16), interest, dividends and capital gain distributions, business, property gains, rents and royalties, estate or trust, gambling; line 9 adds only positive classes, and a spouse's loss never reduces the other's income |
+| Deductions (line 10) | HSA and Archer MSA contributions, student loan interest up to $2,500 (new for 2025), 529 and PA ABLE contributions up to $19,000 per beneficiary per contributor |
+| Tax forgiveness (Schedule SP) | 100% up to $6,500 ($13,000 married) + $9,500 per dependent child, then 10 points less per $250 |
+| Not on the PA-40 | Working Pennsylvanians Tax Credit (2025: figured and paid by the department); local earned income tax (Act 32, filed locally) |
 
 ### Illinois
 **Authority:** 35 ILCS 5/201(b)(5.3)

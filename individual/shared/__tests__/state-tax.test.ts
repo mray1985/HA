@@ -70,6 +70,8 @@ function makeW2Return(wages: number, stateCode: string, stateWithheld = 0, filin
       medicareTax: wages * 0.0145,
       state: stateCode,
       stateTaxWithheld: stateWithheld,
+      // Pennsylvania taxes box 16 (PA-40 line 1a).
+      ...(stateCode === 'PA' ? { stateWages: wages } : {}),
     }],
     stateReturns: [{ stateCode, residencyType: 'resident' as const }],
   });

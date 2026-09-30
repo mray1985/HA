@@ -463,6 +463,7 @@ export function withIowaResident(calculator: StateCalculator | null): StateCalcu
             { lineId: 'ia.surtaxRate', label: 'Surtax rate', value: lines.surtaxRate ?? 0 },
           ]),
           trace('state.totalTax', 'Total state and local tax (line 20)', lines.line20, 'Line 18 + line 19'),
+          trace('state.refundOrOwed', payments - lines.line20 >= 0 ? 'Iowa Refund' : 'Iowa Amount Owed', round2(payments - lines.line20), 'Withholding + payments + refundable credits − line 20'),
         ],
       };
     },

@@ -482,6 +482,7 @@ describe('E2E: MFJ with Pennsylvania Flat Tax ($80k)', () => {
         employerName: 'Pittsburgh Corp',
         wages: 80000,
         federalTaxWithheld: 8000,
+        state: 'PA',
         stateWages: 80000,
         stateTaxWithheld: 2400,
       },
