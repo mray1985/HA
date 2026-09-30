@@ -11,21 +11,27 @@ import {
   validateImportedFacts,
 } from '@hatax/local-ai';
 import type { FieldSourceLocationValue, PDFExtractResult } from './pdfExtractHelpers';
-import { taxFactStorageKey } from './storageScope';
+import { TAX_FACT_KEY_PREFIX, taxFactStorageKey } from './storageScope';
+import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 
+/** A case's TaxFacts, from the encrypted record cache (loaded when the vault unlocks). */
 export function loadTaxFacts(returnId: string): TaxFact[] {
-  const raw = localStorage.getItem(taxFactStorageKey(returnId));
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as TaxFact[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const facts = readRecord<TaxFact[]>(taxFactStorageKey(returnId));
+  return Array.isArray(facts) ? facts : [];
 }
 
 export function saveTaxFacts(returnId: string, facts: TaxFact[]): void {
-  localStorage.setItem(taxFactStorageKey(returnId), JSON.stringify(facts));
+  writeRecord(taxFactStorageKey(returnId), facts);
+}
+
+/** Remove a case's facts (paired with deleteReturn). */
+export function deleteTaxFacts(returnId: string): void {
+  removeRecord(taxFactStorageKey(returnId));
+}
+
+/** Remove every case's facts (paired with wipeAllData). */
+export function deleteAllTaxFacts(): void {
+  removeRecordsWithPrefix(TAX_FACT_KEY_PREFIX);
 }
 
 export function appendTaxFacts(returnId: string, facts: TaxFact[]): TaxFact[] {

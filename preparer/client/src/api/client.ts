@@ -6,6 +6,8 @@
  *   hatax:returns          → string[] of return IDs
  *   hatax:return:{id}      → encrypted TaxReturn JSON (or plaintext for unencrypted)
  *   hatax:chat:{id}        → encrypted chat history JSON (per-return)
+ *   …:facts:{id}           → encrypted TaxFacts for a case (services/caseRecords)
+ *   …:documents:{id}       → encrypted document provenance for a case
  *   hatax:salt             → PBKDF2 salt for key derivation
  *   hatax:verify           → encrypted verification token
  *
@@ -25,8 +27,10 @@ import {
 } from '../services/crypto';
 import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersistence';
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
+import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
+import { clearRecordCache, hasPendingRecordWrites, loadRecords } from '../services/caseRecords';
 
-import { RETURN_LIST_KEY, returnStorageKey } from '../services/storageScope';
+import { RETURN_LIST_KEY, documentStorageKey, returnStorageKey, taxFactStorageKey } from '../services/storageScope';
 
 const RETURNS_KEY = RETURN_LIST_KEY;
 const returnKey = (id: string) => returnStorageKey(id);
@@ -74,10 +78,14 @@ export async function loadAllReturns(): Promise<void> {
       returnCache.set(id, parsed);
     } catch { /* skip corrupted entries */ }
   }
+
+  // Each case's facts and document provenance.
+  await loadRecords(ids.flatMap((id) => [taxFactStorageKey(id), documentStorageKey(id)]));
 }
 
 export function clearReturnCache(): void {
   returnCache.clear();
+  clearRecordCache();
 }
 
 // ─── Helpers ─────────────────────────────────────
@@ -129,7 +137,7 @@ let pendingWrites = 0;
 const writeVersions = new Map<string, number>();
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (pendingWrites > 0) {
+  if (pendingWrites > 0 || hasPendingRecordWrites()) {
     e.preventDefault();
     // Legacy browsers need returnValue set
     e.returnValue = '';
@@ -341,6 +349,7 @@ export function deleteReturn(id: string): { success: boolean } {
   returnCache.delete(id);
   deleteChatHistory(id);
   deleteDocuments(id);
+  deleteTaxFacts(id);
   const ids = getReturnIds().filter((i) => i !== id);
   saveReturnIds(ids);
   return { success: true };
@@ -370,6 +379,8 @@ export async function wipeAllData(): Promise<void> {
   localStorage.removeItem('hatax:expense-scanner-enc');
   deleteAllChatHistory();
   deleteAllDocuments();
+  deleteAllTaxFacts();
+  clearRecordCache();
 
   // 2. Clear sessionStorage
   sessionStorage.clear();

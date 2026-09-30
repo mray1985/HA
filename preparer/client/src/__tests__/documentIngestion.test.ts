@@ -15,6 +15,7 @@ import {
   registerDroppedDocument,
   saveDocuments,
 } from '../services/documentIngestion';
+import { clearRecordCache } from '../services/caseRecords';
 import { loadTaxFacts, saveTaxFacts } from '../services/preparerTaxFacts';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from '../services/storageScope';
 import type { PDFExtractResult, SupportedFormType } from '../services/pdfExtractHelpers';
@@ -64,6 +65,7 @@ function baseDoc(overrides: Partial<IngestedDocument> = {}): IngestedDocument {
 describe('documentIngestion client pipeline', () => {
   beforeEach(() => {
     installMemoryLocalStorage();
+    clearRecordCache();
     vi.stubGlobal('crypto', {
       subtle: {
         digest: async (_algo: string, data: ArrayBuffer) => {

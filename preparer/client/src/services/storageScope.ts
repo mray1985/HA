@@ -11,8 +11,10 @@ export function returnStorageKey(id: string): string {
 
 export const CHAT_KEY_PREFIX = isPreparerApp() ? 'hatax-preparer:chat:' : 'hatax:chat:';
 
+export const TAX_FACT_KEY_PREFIX = isPreparerApp() ? 'hatax-preparer:facts:' : 'hatax:facts:';
+
 export function taxFactStorageKey(returnId: string): string {
-  return isPreparerApp() ? `hatax-preparer:facts:${returnId}` : `hatax:facts:${returnId}`;
+  return `${TAX_FACT_KEY_PREFIX}${returnId}`;
 }
 
 /** Provenance records for dropped preparer documents (metadata only, not file bytes). */

@@ -25,6 +25,7 @@ import {
 } from '@hatax/local-ai';
 import type { PDFExtractResult } from './pdfExtractHelpers';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
+import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
 
 const EMPTY_VALIDATION: FactValidationResult = { ready: true, issues: [], heldForms: [] };
@@ -36,38 +37,24 @@ export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
     .join('');
 }
 
+/** A case's document provenance, from the encrypted record cache (loaded when the vault unlocks). */
 export function loadDocuments(returnId: string): IngestedDocument[] {
-  const raw = localStorage.getItem(documentStorageKey(returnId));
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as IngestedDocument[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const documents = readRecord<IngestedDocument[]>(documentStorageKey(returnId));
+  return Array.isArray(documents) ? documents : [];
 }
 
 export function saveDocuments(returnId: string, documents: IngestedDocument[]): void {
-  localStorage.setItem(documentStorageKey(returnId), JSON.stringify(documents));
+  writeRecord(documentStorageKey(returnId), documents);
 }
 
 /** Remove provenance for one return (paired with deleteReturn). */
 export function deleteDocuments(returnId: string): void {
-  localStorage.removeItem(documentStorageKey(returnId));
+  removeRecord(documentStorageKey(returnId));
 }
 
 /** Remove all document provenance keys for the current app (paired with wipeAllData). */
 export function deleteAllDocuments(): void {
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(DOCUMENT_KEY_PREFIX)) {
-      keysToRemove.push(key);
-    }
-  }
-  for (const key of keysToRemove) {
-    localStorage.removeItem(key);
-  }
+  removeRecordsWithPrefix(DOCUMENT_KEY_PREFIX);
 }
 
 export function upsertDocument(returnId: string, document: IngestedDocument): IngestedDocument[] {
