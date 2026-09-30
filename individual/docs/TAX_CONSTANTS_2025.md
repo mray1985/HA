@@ -853,12 +853,13 @@ These states impose no individual income tax (or tax only interest/dividends):
 
 | Constant | Value |
 |------|------|
-| Rate | 3.8% |
-| Std. deduction (S) | $2,130 |
-| Std. deduction (MFJ) | $5,240 |
-| Std. deduction (HoH) | $5,240 |
-| Personal exemption | $40 per person |
-| Dependent exemption | $40 |
+| Starting point | Federal taxable income (IA 1040 line 2; rolling conformity) |
+| Rate | 3.8% (2024: 4.4% / 4.82% / 5.7% over $6,210 / $31,050; joint $12,420 / $62,100) |
+| Exemption credit | $40 personal (two for joint and head of household), $20 each 65 or older or blind, $40 per dependent |
+| Low-income exemption | Net income $9,000 single ($24,000 at 65), $13,500 others ($32,000 at 65); alternate tax 4.3% (2024: 5.7%) over those |
+| Retirement exclusion | Retirement income of a recipient 55 or older, disabled, or a qualifying surviving spouse |
+| School district / EMS surtax | Line 18 × the district rate (table 41-027), in `constants/states/ia.ts` |
+| Refundable credits | Iowa EITC 15% of federal; child care credit 30%–75% of Form 2441 line 9c under $90,000 |
 
 ---
 

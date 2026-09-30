@@ -14,6 +14,7 @@ import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
 import { getStateName } from './state/index.js';
 import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
+import { assessIowa } from './state/ia.js';
 import { assessIndiana } from './state/in.js';
 import { assessWashingtonCapitalGains } from './state/wa.js';
 
@@ -45,9 +46,6 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
       add('STATE.YEAR.NOT_SUPPORTED', code, 'state', `${name} tax for ${year} is not calculated by HATax. ${STATE_ONLY}`);
     }
 
-    if (code === 'IA' && s.residencyType !== 'nonresident') {
-      add('TAX-007', code, 'state', `Iowa school district and EMS surtax is not calculated yet. ${STATE_ONLY}`);
-    }
     if (code === 'PA') {
       add('TAX-002', code, 'state', `Pennsylvania taxes eight classes of income separately, without netting a loss in one against another; HATax computes it from federal AGI. ${STATE_ONLY}`);
     }
@@ -85,6 +83,9 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
+  // TAX-007: Iowa's IA 1040 and school district / EMS surtax (state/ia.ts) — what the return does not settle.
+  out.push(...assessIowa(taxReturn, calculation).findings);
+
   // TAX-006: Indiana county tax and exemptions (state/in.ts) — what the return does not settle.
   out.push(...assessIndiana(taxReturn, calculation?.form1040.agi).findings);
 
@@ -100,6 +101,7 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
  */
 export function stateQuestions(taxReturn: TaxReturn, calculation?: CalculationResult | null): StateQuestion[] {
   return [
+    ...assessIowa(taxReturn, calculation).questions,
     ...assessIndiana(taxReturn, calculation?.form1040.agi).questions,
     ...(calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : []),
   ];

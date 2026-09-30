@@ -41,9 +41,10 @@ describe('what the engine cannot compute is reported, not approximated', () => {
     expect(rules(makeTaxReturn({ stateReturns: [state('TX', 'part_year'), state('CA')] }))).toEqual([]);
   });
 
-  it('stops Indiana (county tax), Iowa residents (school surtax) and Pennsylvania (eight classes)', () => {
+  it('asks Indiana (county tax) and Iowa residents (school surtax) what they need, and stops Pennsylvania (eight classes)', () => {
     expect(rules(makeTaxReturn({ stateReturns: [state('IN')] }))).toEqual(['TAX-006:IN']);
-    expect(rules(makeTaxReturn({ stateReturns: [state('IA')] }))).toEqual(['TAX-007:IA']);
+    // Iowa: the items the return cannot show, and the county (state/ia.ts).
+    expect(rules(makeTaxReturn({ stateReturns: [state('IA')] }))).toEqual(['TAX-007:IA', 'TAX-007:IA']);
     expect(rules(makeTaxReturn({ stateReturns: [state('PA')] }))).toEqual(['TAX-002:PA']);
   });
 

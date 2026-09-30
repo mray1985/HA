@@ -24,6 +24,7 @@ import { calculateAlabama } from './al.js';
 import { calculateHawaii } from './hi.js';
 import { createNHCalculator } from './nh.js';
 import { withIndianaCountyTax } from './in.js';
+import { withIowaResident } from './ia.js';
 
 // Factories
 import { createFlatTaxCalculator } from './flatTax.js';
@@ -122,7 +123,8 @@ const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator 
   GA: (taxYear: number) => createFlatTaxCalculator('GA', taxYear),
   AZ: (taxYear: number) => createFlatTaxCalculator('AZ', taxYear),
   LA: (taxYear: number) => createFlatTaxCalculator('LA', taxYear),
-  IA: (taxYear: number) => createFlatTaxCalculator('IA', taxYear),
+  // Iowa: the IA 1040 for full-year residents, with the school district / EMS surtax (ia.ts).
+  IA: (taxYear: number) => withIowaResident(createFlatTaxCalculator('IA', taxYear)),
 
   // Progressive-tax states
   VA: (taxYear: number) => createProgressiveTaxCalculator(VA_CONFIG, taxYear),

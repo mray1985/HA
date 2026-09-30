@@ -77,6 +77,9 @@ export default function StateReviewStep() {
 function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
   const isRefund = sr.stateRefundOrOwed >= 0;
   const capitalGains = sr.additionalLines?.capitalGainsTax === 1;
+  // Iowa starts from federal taxable income (IA 1040 line 2); its refundable credits are lines 24 and 25.
+  const iowa = sr.stateCode === 'IA' && sr.additionalLines?.line2FederalTaxableIncome !== undefined;
+  const iowaRefundable = iowa ? (sr.additionalLines?.line24ChildCareCredit ?? 0) + (sr.additionalLines?.line25EarnedIncomeCredit ?? 0) : 0;
   const findTrace = (id: string) => sr.traces?.find((t: CalculationTrace) => t.lineId === id);
 
   return (
@@ -116,16 +119,16 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
         {!capitalGains && <Row label="Federal AGI" value={sr.federalAGI} />}
         {sr.stateAdditions > 0 && <Row label="State additions" value={sr.stateAdditions} plus />}
         {sr.stateSubtractions > 0 && <Row label="State subtractions" value={-sr.stateSubtractions} />}
-        <Row label={capitalGains ? 'Adjusted capital gain' : 'State AGI'} value={sr.stateAGI} bold trace={findTrace('state.stateAGI')} />
+        <Row label={capitalGains ? 'Adjusted capital gain' : iowa ? 'Federal taxable income' : 'State AGI'} value={sr.stateAGI} bold trace={findTrace('state.stateAGI')} />
         {sr.stateDeduction > 0 && <Row label={capitalGains ? 'Standard and charitable deductions' : 'Deduction'} value={-sr.stateDeduction} />}
         {sr.stateExemptions > 0 && <Row label="Exemptions" value={-sr.stateExemptions} />}
-        <Row label={capitalGains ? `${sr.stateName} capital gains` : 'State taxable income'} value={sr.stateTaxableIncome} bold trace={findTrace('state.taxableIncome')} />
+        <Row label={capitalGains ? `${sr.stateName} capital gains` : iowa ? 'Iowa taxable income' : 'State taxable income'} value={sr.stateTaxableIncome} bold trace={findTrace('state.taxableIncome')} />
 
         <div className="border-t border-slate-700/50 my-2" />
 
         <Row label={capitalGains ? 'Capital gains tax' : 'State income tax'} value={sr.stateIncomeTax} trace={findTrace('state.incomeTax')} />
         {sr.stateCredits > 0 && <Row label="State credits" value={-sr.stateCredits} green />}
-        {sr.localTax > 0 && <Row label={sr.stateCode === 'IN' ? 'County tax' : 'Local tax'} value={sr.localTax} trace={findTrace('state.localTax')} />}
+        {sr.localTax > 0 && <Row label={sr.stateCode === 'IN' ? 'County tax' : sr.stateCode === 'IA' ? 'School district surtax' : 'Local tax'} value={sr.localTax} trace={findTrace('state.localTax')} />}
         <Row label="Total state tax" value={sr.totalStateTax} bold trace={findTrace('state.totalTax')} />
 
         {sr.stateWithholding > 0 && (
@@ -134,6 +137,7 @@ function StateResultCard({ result: sr }: { result: StateCalculationResult }) {
             <Row label="State withholding" value={-sr.stateWithholding} green />
           </>
         )}
+        {iowaRefundable > 0 && <Row label="Refundable credits (child care, earned income)" value={-iowaRefundable} green />}
 
         <div className="border-t border-slate-700/50 my-2" />
         <div className="flex items-center justify-between py-1">
