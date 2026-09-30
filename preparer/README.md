@@ -11,9 +11,14 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
 - **Cases, not forms.** The dashboard shows every case by status — waiting for
   documents, needs attention, needs review, ready to approve, approved.
 - **Documents in, return out.** Each file is hashed and kept with its source,
-  identified, read on this machine (PDF text layer, or OCR for scans and
-  photos), turned into TaxFacts through schema-validated tax tools, and applied
-  to the return. A value that cannot be read stays unknown — never zero.
+  then read on this machine by the local models: Qwen3.5-0.8B identifies the
+  form and fills its template, the page itself confirms each value (text layer
+  or OCR) and reads the checkboxes, and GLM-OCR re-reads only what the page
+  could not confirm. Values become TaxFacts through schema-validated tax tools
+  and are applied to the return. Readers that disagree, or a printed value no
+  reader read, hold the form for the preparer; a value that cannot be read
+  stays unknown — never zero. Without the models (a web deployment) documents
+  are read from the PDF text layer and with OCR.
 - **Review.** Every deterministic check of the return (the diagnostics engine
   in `shared/src/diagnostics`) and every piece of document evidence that needs
   a person — held forms, unread documents, credit choices — in one checklist.
@@ -22,8 +27,10 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
 - **Approve.** Approval is refused while anything is open and is withdrawn by
   any later change to the return. The approved return produces the federal
   filing packet and state forms.
-- **Local only.** No cloud model: local models run on the preparer's CPU
-  (`local-ai`), and all case data is encrypted at rest with AES-256-GCM.
+- **Local only.** No cloud model: the models run on the preparer's CPU, one
+  at a time, through llama.cpp (`local-ai/src/modelRuntime.ts`), from files
+  pinned by SHA-256 and bundled by the installer. All case data is encrypted at
+  rest with AES-256-GCM.
 
 ## Architecture
 
@@ -32,9 +39,10 @@ preparer/
 ├── shared/    → @hatax/engine — tax engine, form mappings, return diagnostics
 ├── local-ai/  → @hatax/local-ai — TaxFacts, tax tools, document reading, two-reader verification, model gauntlet
 ├── client/    → @hatax/preparer — case dashboard and case review (React 19 + Vite 6 + Tailwind + Zustand 5)
-├── server/    → Express + better-sqlite3 — preparer sign-in and seat (port 3002)
-├── tools/     → llama.cpp CPU runtime (not committed)
-└── models/    → local model weights (not committed)
+├── server/    → Express + better-sqlite3 — sign-in, seat, local model routes (port 3002)
+├── desktop/   → Electron app and Windows installer (bundles the site, llama.cpp and the models)
+├── tools/     → llama.cpp CPU runtime, b11262 (not committed)
+└── models/    → approved model files, as <repo>/<file> (not committed)
 ```
 
 **Tech stack:** TypeScript throughout. React 19 with Vite 6. Zustand 5 for state. Tailwind CSS. Vitest and Playwright for testing. pdf-lib for IRS and state form generation. llama.cpp (CPU) for local models.
@@ -51,6 +59,24 @@ npm run build      # production client build
 
 # Client unit tests and end-to-end tests
 cd client && npx vitest run src/__tests__ && npx playwright test --project=chromium
+E2E_MODELS=1 npx playwright test e2e/local-models.spec.ts --project=chromium   # with the models
+```
+
+### Desktop app
+
+The approved model files (`local-ai/src/modelManifest.ts`) go under `models/`
+as `<repo>/<file>`, and llama.cpp b11262 (win-cpu-x64) under
+`tools/llama-cpp/bin`. Building the native modules for Electron needs Visual
+Studio Build Tools and Python.
+
+```bash
+npm run build -w client
+cd desktop && npm install
+npm start          # run from the repository
+npm run pack       # release/win-unpacked
+npm run dist       # release/HA-Tax-Preparer-Setup-<version>.exe
+# The desktop app end to end (unpackaged, or DESKTOP_EXE=<packaged exe>):
+cd ../client && npx playwright test -c playwright.desktop.config.ts
 ```
 
 ## Tax Coverage

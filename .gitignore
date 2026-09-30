@@ -42,3 +42,6 @@ __pycache__/
 
 # Model gauntlet renders
 preparer/local-ai/gauntlet/out/
+
+# Development server data (sign-in database, token key, model verification)
+preparer/server/data/

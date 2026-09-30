@@ -1,0 +1,95 @@
+{
+  "name": "hatax-preparer-desktop",
+  "productName": "HA Tax Preparer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HA Tax Preparer: automated preparation with local AI, as an installable Windows application.",
+  "author": "HATax",
+  "license": "UNLICENSED",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "native": "node scripts/rebuild-native.mjs",
+    "start": "npm run build && npm run native && electron .",
+    "pack": "npm run build && npm run native && electron-builder --win dir",
+    "dist": "npm run build && npm run native && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "bcrypt": "6.0.0",
+    "better-sqlite3": "12.6.2"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.25.0"
+  },
+  "build": {
+    "appId": "com.hatax.preparer",
+    "productName": "HA Tax Preparer",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "extraResources": [
+      {
+        "from": "../client/dist",
+        "to": "client"
+      },
+      {
+        "from": "../tools/llama-cpp/bin",
+        "to": "llama-cpp",
+        "filter": [
+          "llama-server.exe",
+          "*.dll",
+          "LICENSE*"
+        ]
+      },
+      {
+        "from": "../models/unsloth/Qwen3.5-0.8B-GGUF",
+        "to": "models/unsloth/Qwen3.5-0.8B-GGUF",
+        "filter": [
+          "Qwen3.5-0.8B-Q4_K_M.gguf",
+          "mmproj-F16.gguf"
+        ]
+      },
+      {
+        "from": "../models/mradermacher/GLM-OCR-GGUF",
+        "to": "models/mradermacher/GLM-OCR-GGUF",
+        "filter": [
+          "GLM-OCR.Q4_K_M.gguf"
+        ]
+      },
+      {
+        "from": "../models/ggml-org/GLM-OCR-GGUF",
+        "to": "models/ggml-org/GLM-OCR-GGUF",
+        "filter": [
+          "mmproj-GLM-OCR-Q8_0.gguf"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "HA-Tax-Preparer-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "HA Tax Preparer"
+    }
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "esbuild@0.25.12": true,
+    "better-sqlite3@12.6.2": true,
+    "bcrypt@6.0.0": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

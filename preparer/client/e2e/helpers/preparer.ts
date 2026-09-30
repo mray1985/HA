@@ -6,8 +6,8 @@ const PASSPHRASE = 'e2e-passphrase-2026';
  * Register a new preparer, set up the vault, start the season seat, and land
  * on the case dashboard.
  */
-export async function openCaseDashboard(page: Page): Promise<void> {
-  await page.goto('/preparer/register');
+export async function openCaseDashboard(page: Page, origin = ''): Promise<void> {
+  await page.goto(`${origin}/preparer/register`);
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   await page.locator('#name').fill('E2E Preparer');
   await page.locator('#email').fill(`e2e-preparer-${suffix}@example.com`);
