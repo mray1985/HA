@@ -2,7 +2,7 @@
  * IRS Form 2210 (2025) -- AcroForm Field Mapping
  *
  * Underpayment of Estimated Tax by Individuals, Estates, and Trusts
- * PDF: client/public/irs-forms/f2210.pdf (Form 2210, 2025)
+ * PDF: apps/public/irs-forms/f2210.pdf (Form 2210, 2025)
  * Attachment Sequence No. 06
  * Total fields: ~30 (text: ~24, checkbox: ~6)
  *

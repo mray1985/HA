@@ -13,13 +13,13 @@ Comprehensive reference for running, understanding, and extending the HATax test
 cd shared && npx vitest run
 
 # Run all client unit/service tests
-cd client && npx vitest run
+cd apps/individual && npx vitest run
 
 # Run all server tests
 cd server && npx vitest run
 
 # Run E2E tests (requires dev server or auto-starts via Playwright)
-cd client && npx playwright test
+cd apps/individual && npx playwright test
 
 # Run a specific test file
 cd shared && npx vitest run __tests__/irs-tax-table.test.ts
@@ -35,9 +35,12 @@ cd shared && npx vitest
 ```
 tax-project/
 ├── shared/__tests__/           96 files — Engine: brackets, forms, credits, states, fuzzing (`npm test`)
-├── client/src/__tests__/       30 files — Services: import, parsing, AI, audit risk
-├── client/e2e/                  9 files — Playwright: wizard flow, accessibility, fuzzer
+├── local-ai/__tests__/         11 files — Preparer AI: TaxFacts, tax tools, classifier, OCR, tool caller
+├── apps/individual/src/__tests__/  Services: import, parsing, AI, audit risk
+├── apps/individual/e2e/        Playwright: wizard flow, accessibility, fuzzer
 │   └── scenario-fuzzer/        13 archetypes, 8 generators, PRNG-seeded
+├── apps/preparer/src/__tests__/    Same as individual, plus preparer document intake
+├── apps/preparer/e2e/          Same as individual, plus preparer unlock flow
 └── server/__tests__/            1 file  — PII stripping
 ```
 
@@ -211,7 +214,7 @@ cd shared && npx vitest run __tests__/smoke-credits.test.ts
 Service-layer tests validating import, parsing, AI, and business logic.
 
 ```bash
-cd client && npx vitest run
+cd apps/individual && npx vitest run
 ```
 
 ### 2.1 Import & Parsing (10 files)
@@ -247,7 +250,7 @@ cd client && npx vitest run
 ### 2.3 Fuzzer (1 file)
 
 ```bash
-cd client && npx vitest run src/__tests__/fuzzerCalcValidation.test.ts
+cd apps/individual && npx vitest run src/__tests__/fuzzerCalcValidation.test.ts
 ```
 
 Generates 50 randomized TaxReturn objects from 13 archetypes, runs `calculateForm1040()` on each, validates no NaN/undefined/negative values in critical fields.
@@ -260,13 +263,13 @@ Browser-based end-to-end tests across Chromium, Firefox, and WebKit.
 
 ```bash
 # Run all E2E tests
-cd client && npx playwright test
+cd apps/individual && npx playwright test
 
 # Run with UI (interactive mode)
-cd client && npx playwright test --ui
+cd apps/individual && npx playwright test --ui
 
 # Run specific spec
-cd client && npx playwright test e2e/wizard-flow.spec.ts
+cd apps/individual && npx playwright test e2e/wizard-flow.spec.ts
 ```
 
 ### 3.1 Core Wizard Tests
@@ -290,7 +293,7 @@ cd client && npx playwright test e2e/wizard-flow.spec.ts
 ### 3.3 Scenario Fuzzer
 
 ```bash
-cd client && npx playwright test e2e/scenario-fuzzer/
+cd apps/individual && npx playwright test e2e/scenario-fuzzer/
 ```
 
 The E2E fuzzer generates 20 diverse TaxReturn objects from 13 archetypes, injects them via localStorage, walks every visible wizard step, and validates UI health and calculation results.
@@ -324,8 +327,8 @@ cd server && npx vitest run
 | Layer | File | Approach |
 |-------|------|----------|
 | Engine | `shared/__tests__/fuzzing.test.ts` | 111 tests: boundary values, extreme inputs, negative numbers, pathological combos |
-| Client | `client/src/__tests__/fuzzerCalcValidation.test.ts` | 50 randomized returns from 13 archetypes |
-| E2E | `client/e2e/scenario-fuzzer/` | 20 full-stack scenarios through the UI |
+| Client | `apps/individual/src/__tests__/fuzzerCalcValidation.test.ts` | 50 randomized returns from 13 archetypes |
+| E2E | `apps/individual/e2e/scenario-fuzzer/` | 20 full-stack scenarios through the UI |
 
 ### Cross-Validation (2 sources)
 
@@ -391,7 +394,7 @@ describe('My New Test', () => {
 
 ### Adding a new E2E archetype
 
-Create a new generator in `client/e2e/scenario-fuzzer/generators/` and register it in the archetype list.
+Create a new generator in `apps/individual/e2e/scenario-fuzzer/generators/` and register it in the archetype list.
 
 ---
 
@@ -400,11 +403,11 @@ Create a new generator in `client/e2e/scenario-fuzzer/generators/` and register 
 ```bash
 # Full local validation (recommended before pushing)
 cd shared && npx vitest run          # ~18s, 4,500+ tests
-cd client && npx vitest run          # ~8s, 1,000+ tests
+cd apps/individual && npx vitest run          # ~8s, 1,000+ tests
 cd server && npx vitest run          # ~2s, 80+ tests
 
 # E2E (slower, requires browser binaries)
-cd client && npx playwright test     # ~45s, 320+ tests across 3 browsers
+cd apps/individual && npx playwright test     # ~45s, 320+ tests across 3 browsers
 
 ```
 
@@ -419,7 +422,7 @@ cd client && npx playwright test     # ~45s, 320+ tests across 3 browsers
 | Integration scenarios | `shared/__tests__/integration.test.ts` |
 | Boundary values | `shared/__tests__/boundary-values.test.ts` |
 | Fuzz testing | `shared/__tests__/fuzzing.test.ts` |
-| E2E wizard flow | `client/e2e/wizard-flow.spec.ts` |
-| E2E scenario fuzzer | `client/e2e/scenario-fuzzer/scenario-fuzzer.spec.ts` |
-| Playwright config | `client/playwright.config.ts` |
+| E2E wizard flow | `apps/individual/e2e/wizard-flow.spec.ts` |
+| E2E scenario fuzzer | `apps/individual/e2e/scenario-fuzzer/scenario-fuzzer.spec.ts` |
+| Playwright config | `apps/individual/playwright.config.ts` |
 | Audit report | `docs/AUDIT_REPORT.md` |

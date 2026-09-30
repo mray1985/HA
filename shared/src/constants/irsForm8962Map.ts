@@ -2,7 +2,7 @@
  * IRS Form 8962 (2025) — AcroForm Field Mapping
  *
  * Premium Tax Credit (PTC)
- * PDF: client/public/irs-forms/f8962.pdf (Form 8962, 2025)
+ * PDF: apps/public/irs-forms/f8962.pdf (Form 8962, 2025)
  * Attachment Sequence No. 73
  * Total fields: 141 (text: 133, checkbox: 8)
  *

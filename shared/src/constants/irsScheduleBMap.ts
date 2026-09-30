@@ -2,7 +2,7 @@
  * IRS Schedule B (2025) — AcroForm Field Mapping
  *
  * Interest and Ordinary Dividends
- * PDF: client/public/irs-forms/f1040sb.pdf (Schedule B, 2025)
+ * PDF: apps/public/irs-forms/f1040sb.pdf (Schedule B, 2025)
  * Attachment Sequence No. 08
  * Total fields: 66 text + 6 checkboxes
  *

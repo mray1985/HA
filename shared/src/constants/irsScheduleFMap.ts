@@ -2,7 +2,7 @@
  * IRS Schedule F (2025) — AcroForm Field Mapping
  *
  * Profit or Loss From Farming
- * PDF: client/public/irs-forms/f1040sf.pdf (Schedule F, 2025)
+ * PDF: apps/public/irs-forms/f1040sf.pdf (Schedule F, 2025)
  * Attachment Sequence No. 15
  * Total fields: ~78 (text: ~72, checkbox: ~6)
  *

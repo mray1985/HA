@@ -2,7 +2,7 @@
  * IRS Form 8911 (2025) -- AcroForm Field Mapping
  *
  * Alternative Fuel Vehicle Refueling Property Credit
- * PDF: client/public/irs-forms/f8911.pdf (Form 8911, 2025)
+ * PDF: apps/public/irs-forms/f8911.pdf (Form 8911, 2025)
  * Attachment Sequence No. 151
  * Total fields: 15 (text only)
  *

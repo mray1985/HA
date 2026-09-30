@@ -2,7 +2,7 @@
  * IRS Form 8949 (2025) — AcroForm Field Mapping
  *
  * Sales and Other Dispositions of Capital Assets
- * PDF: client/public/irs-forms/f8949.pdf (Form 8949, 2025)
+ * PDF: apps/public/irs-forms/f8949.pdf (Form 8949, 2025)
  * Attachment Sequence No. 12a
  * Total fields: 202 (text: 196, checkbox: 6 per page)
  *

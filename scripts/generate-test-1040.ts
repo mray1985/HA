@@ -28,7 +28,7 @@ import { FORM_1040_TEMPLATE } from '../shared/src/constants/irsForm1040Map.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '..');
-const IRS_FORMS_DIR = join(PROJECT_ROOT, 'client', 'public', 'irs-forms');
+const IRS_FORMS_DIR = join(PROJECT_ROOT, 'apps', 'public', 'irs-forms');
 const OUTPUT_DIR = join(PROJECT_ROOT, 'test-corpus', 'forms');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });

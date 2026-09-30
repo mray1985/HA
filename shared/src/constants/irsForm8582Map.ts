@@ -2,7 +2,7 @@
  * IRS Form 8582 (2025) — AcroForm Field Mapping
  *
  * Passive Activity Loss Limitations
- * PDF: client/public/irs-forms/f8582.pdf (Form 8582, 2025)
+ * PDF: apps/public/irs-forms/f8582.pdf (Form 8582, 2025)
  * Attachment Sequence No. 88
  * Total fields: ~205 text fields across 2 pages
  *

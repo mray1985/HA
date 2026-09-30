@@ -8,7 +8,7 @@
  * Starts from federal AGI, applies DC-specific additions/subtractions,
  * then DC standard or itemized deduction.
  *
- * PDF: client/public/state-forms/dc-d40.pdf (62 fields, 3 pages)
+ * PDF: apps/public/state-forms/dc-d40.pdf (62 fields, 3 pages)
  */
 import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';

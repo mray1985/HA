@@ -11,7 +11,7 @@ import { PDFDocument, PDFTextField, rgb } from 'pdf-lib';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-const INPUT = resolve(__dirname, '../client/public/state-forms/wv-it140.pdf');
+const INPUT = resolve(__dirname, '../apps/public/state-forms/wv-it140.pdf');
 const OUTPUT = INPUT; // overwrite in place
 
 interface FieldDef {

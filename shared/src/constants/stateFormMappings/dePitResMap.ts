@@ -9,8 +9,8 @@
  * Personal exemption credit: $110 per exemption.
  * DE EITC: taxpayer picks better of 4.5% refundable or 20% non-refundable.
  *
- * PDF: client/public/state-forms/de-pit-res.pdf (183 fields)
- * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts client/public/state-forms/de-pit-res.pdf
+ * PDF: apps/public/state-forms/de-pit-res.pdf (183 fields)
+ * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts apps/public/state-forms/de-pit-res.pdf
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

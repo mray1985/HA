@@ -3,7 +3,7 @@
  *
  * Reduction of Tax Attributes Due to Discharge of Indebtedness
  * (and Section 1082 Basis Adjustment)
- * PDF: client/public/irs-forms/f982.pdf
+ * PDF: apps/public/irs-forms/f982.pdf
  * Attachment Sequence No. 94
  *
  * Field prefix: topmostSubform[0].Page1[0]

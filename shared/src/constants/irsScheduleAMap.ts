@@ -2,7 +2,7 @@
  * IRS Schedule A (2025) — AcroForm Field Mapping
  *
  * Itemized Deductions
- * PDF: client/public/irs-forms/f1040sa.pdf (Schedule A, 2025)
+ * PDF: apps/public/irs-forms/f1040sa.pdf (Schedule A, 2025)
  * Attachment Sequence No. 07
  * Total fields: 33 (text: 30, checkbox: 3)
  *

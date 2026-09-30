@@ -7,7 +7,7 @@
  * OK is a progressive-tax state: 6 brackets, top 4.75%.
  * $1,000 personal exemption per person, 5% refundable state EITC.
  *
- * PDF: client/public/state-forms/ok-511.pdf (294 fields)
+ * PDF: apps/public/state-forms/ok-511.pdf (294 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

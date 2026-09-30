@@ -2,7 +2,7 @@
  * IRS Form 8283 (2025) -- AcroForm Field Mapping
  *
  * Noncash Charitable Contributions
- * PDF: client/public/irs-forms/f8283.pdf (Form 8283, 2025)
+ * PDF: apps/public/irs-forms/f8283.pdf (Form 8283, 2025)
  * Attachment Sequence No. 155
  *
  * NOTE: This PDF uses `Form8283[0]` as its AcroForm prefix (NOT `topmostSubform[0]`)

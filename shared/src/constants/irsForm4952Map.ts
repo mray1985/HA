@@ -2,7 +2,7 @@
  * IRS Form 4952 (2025) -- AcroForm Field Mapping
  *
  * Investment Interest Expense Deduction
- * PDF: client/public/irs-forms/f4952.pdf (Form 4952, 2025)
+ * PDF: apps/public/irs-forms/f4952.pdf (Form 4952, 2025)
  * Attachment Sequence No. 51
  *
  * Field prefix: topmostSubform[0].Page1[0]

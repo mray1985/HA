@@ -42,7 +42,7 @@ import { SCHEDULE_A_TEMPLATE } from '../shared/src/constants/irsScheduleAMap.js'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '..');
-const IRS_FORMS_DIR = join(PROJECT_ROOT, 'client', 'public', 'irs-forms');
+const IRS_FORMS_DIR = join(PROJECT_ROOT, 'apps', 'public', 'irs-forms');
 const OUTPUT_DIR = join(PROJECT_ROOT, 'scripts', 'output');
 
 // ── All templates ──

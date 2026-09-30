@@ -10,7 +10,7 @@
  *
  * PDF field names are descriptive (e.g., "Form 1040ME Your First Name").
  *
- * PDF: client/public/state-forms/me-1040.pdf (110 fields)
+ * PDF: apps/public/state-forms/me-1040.pdf (110 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

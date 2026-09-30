@@ -2,7 +2,7 @@
  * IRS Schedule D (Form 1040) 2025 — AcroForm Field Mapping
  *
  * Capital Gains and Losses
- * PDF: client/public/irs-forms/f1040sd.pdf (Schedule D, 2025, Created 10/6/25)
+ * PDF: apps/public/irs-forms/f1040sd.pdf (Schedule D, 2025, Created 10/6/25)
  * Attachment Sequence No. 12
  * Total fields: 55 (text: 49, checkbox: 6)
  *

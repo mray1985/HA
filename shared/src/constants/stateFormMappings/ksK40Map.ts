@@ -8,7 +8,7 @@
  * $9,160 personal exemption, $2,320 dependent exemption.
  * 17% refundable state EITC.
  *
- * PDF: client/public/state-forms/ks-k40.pdf (313 fields)
+ * PDF: apps/public/state-forms/ks-k40.pdf (313 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

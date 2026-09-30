@@ -8,7 +8,7 @@
  * Starts from federal AGI (no net modifications for most filers).
  * Standard deduction applies. $5,100 personal/dependent exemption.
  *
- * PDF: client/public/state-forms/ri-1040.pdf (51 fields)
+ * PDF: apps/public/state-forms/ri-1040.pdf (51 fields)
  */
 import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';

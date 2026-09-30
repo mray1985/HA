@@ -11,7 +11,7 @@
  * PDF field names are a mix of descriptive names (FirstName1, IncomeL7, etc.)
  * and form-section prefixed names (TxCompL13, CreditsL21, etc.).
  *
- * PDF: client/public/state-forms/id-40.pdf (793 fields, many worksheets)
+ * PDF: apps/public/state-forms/id-40.pdf (793 fields, many worksheets)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

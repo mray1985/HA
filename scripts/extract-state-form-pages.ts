@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, basename } from 'path';
 
 const BOOKLETS_DIR = resolve(__dirname, '../docs/state-tax-booklets');
-const OUTPUT_DIR = resolve(__dirname, '../client/public/state-forms');
+const OUTPUT_DIR = resolve(__dirname, '../apps/public/state-forms');
 
 // Booklets to process: [filename, output name, description]
 const BOOKLETS: [string, string, string][] = [

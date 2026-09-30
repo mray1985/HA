@@ -8,7 +8,7 @@
  * Starts from federal AGI. No standard deduction. $2,000 personal/dependent
  * exemption. Same brackets for all filing statuses.
  *
- * PDF: client/public/state-forms/wv-it140.pdf (49 fields)
+ * PDF: apps/public/state-forms/wv-it140.pdf (49 fields)
  */
 import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';

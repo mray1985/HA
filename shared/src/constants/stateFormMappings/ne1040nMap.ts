@@ -8,7 +8,7 @@
  * Uses exemption credits ($171 per exemption) rather than deductions.
  * 10% refundable state EITC.
  *
- * PDF: client/public/state-forms/ne-1040n.pdf (388 fields)
+ * PDF: apps/public/state-forms/ne-1040n.pdf (388 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

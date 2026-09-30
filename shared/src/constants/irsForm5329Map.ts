@@ -2,7 +2,7 @@
  * IRS Form 5329 (2025) -- AcroForm Field Mapping
  *
  * Additional Taxes on Qualified Plans (Including IRAs) and Other Tax-Favored Accounts
- * PDF: client/public/irs-forms/f5329.pdf (Form 5329, 2025)
+ * PDF: apps/public/irs-forms/f5329.pdf (Form 5329, 2025)
  * Attachment Sequence No. 29
  * Total fields: 74 (text: 73, checkbox: 2)
  *

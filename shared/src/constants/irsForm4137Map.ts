@@ -2,7 +2,7 @@
  * IRS Form 4137 (2025) -- AcroForm Field Mapping
  *
  * Social Security and Medicare Tax on Unreported Tip Income
- * PDF: client/public/irs-forms/f4137.pdf (Form 4137, 2025)
+ * PDF: apps/public/irs-forms/f4137.pdf (Form 4137, 2025)
  * Attachment Sequence No. 56
  * Total fields: ~34 (text fields + table)
  *

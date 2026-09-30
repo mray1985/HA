@@ -2,7 +2,7 @@
  * IRS Schedule R (Form 1040) 2025 -- AcroForm Field Mapping
  *
  * Credit for the Elderly or the Disabled
- * PDF: client/public/irs-forms/f1040sr.pdf (Schedule R, 2025)
+ * PDF: apps/public/irs-forms/f1040sr.pdf (Schedule R, 2025)
  * Attachment Sequence No. 16
  * Total fields: ~20 (text + checkboxes)
  *

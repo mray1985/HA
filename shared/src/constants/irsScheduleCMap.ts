@@ -2,7 +2,7 @@
  * IRS Schedule C (Form 1040) 2025 — AcroForm Field Mapping
  *
  * Profit or Loss From Business (Sole Proprietorship)
- * PDF: client/public/irs-forms/f1040sc.pdf (Schedule C, 2025, Created 4/3/25)
+ * PDF: apps/public/irs-forms/f1040sc.pdf (Schedule C, 2025, Created 4/3/25)
  * Attachment Sequence No. 09
  * Total fields: 105 (text: 78, checkbox: 27)
  *

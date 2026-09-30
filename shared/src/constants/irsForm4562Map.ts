@@ -2,7 +2,7 @@
  * IRS Form 4562 (2025) — AcroForm Field Mapping
  *
  * Depreciation and Amortization (Including Information on Listed Property)
- * PDF: client/public/irs-forms/f4562.pdf (Form 4562, 2025)
+ * PDF: apps/public/irs-forms/f4562.pdf (Form 4562, 2025)
  * Attachment Sequence No. 179
  *
  * Field prefix: topmostSubform[0].Page1[0] (page 1)

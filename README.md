@@ -21,12 +21,20 @@ HATax is a free, open-source tax preparation app. The federal engine covers tax 
 
 ## Architecture
 
+HATax ships as two apps built on one tax engine:
+
+- **Individual app** (`apps/individual`) — the free household app described above. No AI beyond optional BYOK.
+- **Preparer app** (`apps/preparer`) — the same wizard plus a preparer seat, client document intake, and the local AI stack (`local-ai`). Local models run on the preparer's machine and never ship in the individual app.
+
 ```
 tax-project/
-├── shared/   → @hatax/engine (open-source tax calculation library)
-├── client/   → React 19 + Vite 6 + Tailwind CSS + Zustand 5
-├── server/   → Express + better-sqlite3 + pdf-lib
-└── docs/     → Project documentation
+├── shared/            → @hatax/engine (open-source tax calculation library, used by both apps)
+├── apps/individual/   → @hatax/individual — free household app (React 19 + Vite 6 + Tailwind CSS + Zustand 5)
+├── apps/preparer/     → @hatax/preparer — preparer seat + document intake + local AI
+├── apps/public/       → IRS/state form PDFs, OCR data and icons served by both apps
+├── local-ai/          → @hatax/local-ai — preparer-only TaxFacts, tax tools, classifiers, Q4_K_M model runners
+├── server/            → Express + better-sqlite3 + pdf-lib (BYOK proxy, preparer sign-in)
+└── docs/              → Project documentation
 ```
 
 **Tech stack:** TypeScript throughout. React 19 with Vite 6. Zustand 5 for state. Tailwind CSS with HA Tax service brand colors. Vitest for testing. pdf-lib for IRS form generation.
@@ -39,14 +47,18 @@ tax-project/
 # Install dependencies (from repo root)
 npm install
 
-# Consumer PWA only (Private Mode — no API key, no server required)
-npm run dev:client
+# Individual app only (Private Mode — no API key, no server required)
+npm run dev:individual
 # → http://127.0.0.1:5173
 
-# Optional: client + BYOK Express server together
+# Preparer app (needs the Express server for sign-in)
+# npm run dev:server & npm run dev:preparer
+# → http://127.0.0.1:5174/preparer
+
+# Optional: server + both apps together
 # npm run dev
 
-# Engine tests
+# Engine + local-AI tests
 npm test
 ```
 

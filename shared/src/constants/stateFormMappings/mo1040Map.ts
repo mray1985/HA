@@ -8,7 +8,7 @@
  * Starts from federal AGI. Federal standard deduction conformity.
  * $1,200 dependent exemption. 20% non-refundable state EITC.
  *
- * PDF: client/public/state-forms/mo-1040.pdf (192 fields)
+ * PDF: apps/public/state-forms/mo-1040.pdf (192 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

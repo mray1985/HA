@@ -2,7 +2,7 @@
  * IRS Form 8936 (2025) — AcroForm Field Mapping
  *
  * Clean Vehicle Credits
- * PDF: client/public/irs-forms/f8936.pdf (Form 8936, 2025)
+ * PDF: apps/public/irs-forms/f8936.pdf (Form 8936, 2025)
  * Attachment Sequence No. 13a
  * Total fields: 31 (all text)
  *

@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "__tests__/taxFact.test.ts",
+    "__tests__/structuredExtraction.test.ts",
+    "__tests__/factValidation.test.ts",
+    "__tests__/toolCaller.test.ts",
+    "__tests__/lfmToolCaller.test.ts",
+    "__tests__/modelCatalog.test.ts",
+    "__tests__/ggufOcrAndDonut.test.ts"
+  ],
+  "exclude": ["dist"]
+}

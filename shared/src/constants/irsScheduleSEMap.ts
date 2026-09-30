@@ -2,7 +2,7 @@
  * IRS Schedule SE (Form 1040) 2025 — AcroForm Field Mapping
  *
  * Self-Employment Tax
- * PDF: client/public/irs-forms/f1040sse.pdf (Schedule SE, 2025, Created 5/7/25)
+ * PDF: apps/public/irs-forms/f1040sse.pdf (Schedule SE, 2025, Created 5/7/25)
  * Attachment Sequence No. 17
  * Total fields: 27 (text: 26, checkbox: 1)
  *

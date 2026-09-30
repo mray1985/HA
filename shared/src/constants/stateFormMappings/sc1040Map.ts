@@ -7,7 +7,7 @@
  * SC is a progressive-tax state: 3 brackets (0% / 3% / 6.4%).
  * Starts from federal taxable income (not AGI).
  *
- * PDF: client/public/state-forms/sc-1040.pdf (43 fields)
+ * PDF: apps/public/state-forms/sc-1040.pdf (43 fields)
  */
 import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';

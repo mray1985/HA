@@ -2,7 +2,7 @@
  * IRS Form 5695 (2025) — AcroForm Field Mapping
  *
  * Residential Energy Credits
- * PDF: client/public/irs-forms/f5695.pdf (Form 5695, 2025)
+ * PDF: apps/public/irs-forms/f5695.pdf (Form 5695, 2025)
  * Attachment Sequence No. 158
  * Total fields: 167 (text: 149, checkbox: 18)
  *
