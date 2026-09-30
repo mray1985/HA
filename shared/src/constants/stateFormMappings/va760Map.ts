@@ -8,8 +8,8 @@
  * $930 personal exemption, $930 dependent exemption.
  * 20% refundable state EITC.
  *
- * PDF: client/public/state-forms/va-760.pdf (114 fields)
- * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts client/public/state-forms/va-760.pdf
+ * PDF: apps/public/state-forms/va-760.pdf (114 fields)
+ * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts apps/public/state-forms/va-760.pdf
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

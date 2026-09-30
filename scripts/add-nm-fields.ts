@@ -10,7 +10,7 @@ import { PDFDocument } from 'pdf-lib';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-const INPUT = resolve(__dirname, '../client/public/state-forms/nm-pit1.pdf');
+const INPUT = resolve(__dirname, '../apps/public/state-forms/nm-pit1.pdf');
 const OUTPUT = INPUT;
 
 interface FieldDef {

@@ -9,7 +9,7 @@
  *
  * PDF field names are descriptive (e.g., "First Name MI", "SX 1a", "Line 4a").
  *
- * PDF: client/public/state-forms/nd-1.pdf (92 fields)
+ * PDF: apps/public/state-forms/nd-1.pdf (92 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

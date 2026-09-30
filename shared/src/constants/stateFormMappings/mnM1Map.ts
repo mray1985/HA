@@ -8,7 +8,7 @@
  * Starts from federal taxable income. $5,200 dependent exemption.
  * 45% refundable state EITC.
  *
- * PDF: client/public/state-forms/mn-m1.pdf (81 fields)
+ * PDF: apps/public/state-forms/mn-m1.pdf (81 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

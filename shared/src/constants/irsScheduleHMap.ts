@@ -2,7 +2,7 @@
  * IRS Schedule H (2025) — AcroForm Field Mapping
  *
  * Household Employment Taxes
- * PDF: client/public/irs-forms/f1040sh.pdf (Schedule H, 2025)
+ * PDF: apps/public/irs-forms/f1040sh.pdf (Schedule H, 2025)
  * Attachment Sequence No. 44
  * Total fields: ~30+ (text + checkbox)
  *

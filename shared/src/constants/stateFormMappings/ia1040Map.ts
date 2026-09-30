@@ -7,8 +7,8 @@
  * IA uses federal AGI as starting point. Flat 3.8% rate.
  * Federal standard deduction conformity. $40 per exemption credit.
  *
- * PDF: client/public/state-forms/ia-1040.pdf (236 fields)
- * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts client/public/state-forms/ia-1040.pdf
+ * PDF: apps/public/state-forms/ia-1040.pdf (236 fields)
+ * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts apps/public/state-forms/ia-1040.pdf
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

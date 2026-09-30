@@ -2,7 +2,7 @@
  * IRS Form 8863 (2025) — AcroForm Field Mapping
  *
  * Education Credits (American Opportunity and Lifetime Learning Credits)
- * PDF: client/public/irs-forms/f8863.pdf (Form 8863, 2025)
+ * PDF: apps/public/irs-forms/f8863.pdf (Form 8863, 2025)
  * Attachment Sequence No. 50
  * Total fields: 77 (text: 61, checkbox: 16)
  *

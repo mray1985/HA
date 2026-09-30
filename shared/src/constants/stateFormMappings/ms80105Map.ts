@@ -8,8 +8,8 @@
  * $2,300–$4,600 standard deduction. Personal exemptions: $6,000–$12,000.
  * $1,500 dependent exemption.
  *
- * PDF: client/public/state-forms/ms-80105.pdf (159 fields)
- * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts client/public/state-forms/ms-80105.pdf
+ * PDF: apps/public/state-forms/ms-80105.pdf (159 fields)
+ * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts apps/public/state-forms/ms-80105.pdf
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

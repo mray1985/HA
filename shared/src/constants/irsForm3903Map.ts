@@ -4,7 +4,7 @@
  * Moving Expenses
  * For Members of the Armed Forces Only
  * Attachment Sequence No. 62
- * PDF: client/public/irs-forms/f3903.pdf
+ * PDF: apps/public/irs-forms/f3903.pdf
  *
  * Total fields: 7 (all text)
  *

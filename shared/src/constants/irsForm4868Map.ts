@@ -3,7 +3,7 @@
  *
  * Application for Automatic Extension of Time to File
  * U.S. Individual Income Tax Return
- * PDF: client/public/irs-forms/f4868.pdf
+ * PDF: apps/public/irs-forms/f4868.pdf
  *
  * Total fields: 17 (text: 15, checkbox: 2)
  *

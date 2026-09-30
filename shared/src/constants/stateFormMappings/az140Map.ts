@@ -7,7 +7,7 @@
  * AZ is a flat-tax state at 2.5%. Conforms to federal standard deduction.
  * Aged exemption of $2,100 for 65+. Dependent credits: $100 under-17, $25 17+.
  *
- * PDF: client/public/state-forms/az-140.pdf (406 fields)
+ * PDF: apps/public/state-forms/az-140.pdf (406 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

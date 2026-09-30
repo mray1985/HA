@@ -10,7 +10,7 @@
  *
  * PDF field names follow the pattern: or-40-p{page}-{field_number}
  *
- * PDF: client/public/state-forms/or-40.pdf (146 fields)
+ * PDF: apps/public/state-forms/or-40.pdf (146 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

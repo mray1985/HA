@@ -2,7 +2,7 @@
  * IRS Form 6251 (2025) — AcroForm Field Mapping
  *
  * Alternative Minimum Tax — Individuals
- * PDF: client/public/irs-forms/f6251.pdf (Form 6251, 2025)
+ * PDF: apps/public/irs-forms/f6251.pdf (Form 6251, 2025)
  * Attachment Sequence No. 32
  * Total fields: ~62 text fields across 2 pages
  *

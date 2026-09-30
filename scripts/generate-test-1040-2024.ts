@@ -25,7 +25,7 @@ import type { TaxReturn, CalculationResult } from '../shared/src/types/index.js'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '..');
-const FORM_2024_PATH = join(PROJECT_ROOT, 'client', 'public', 'irs-forms', 'f1040-2024.pdf');
+const FORM_2024_PATH = join(PROJECT_ROOT, 'apps', 'public', 'irs-forms', 'f1040-2024.pdf');
 const OUTPUT_DIR = join(PROJECT_ROOT, 'test-corpus', 'forms');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });

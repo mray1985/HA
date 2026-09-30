@@ -2,7 +2,7 @@
  * IRS Form 8606 (2025) -- AcroForm Field Mapping
  *
  * Nondeductible IRAs
- * PDF: client/public/irs-forms/f8606.pdf (Form 8606, 2025)
+ * PDF: apps/public/irs-forms/f8606.pdf (Form 8606, 2025)
  * Attachment Sequence No. 48
  *
  * Field prefix: topmostSubform[0]

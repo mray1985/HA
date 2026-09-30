@@ -96,7 +96,7 @@ All example data used in tests is entirely fictional. Any SSNs, names, or addres
 
 ## Dependency Supply Chain
 
-The project uses `package-lock.json` for deterministic dependency resolution. The Syncfusion PDF Viewer (proprietary, Community License) is the only non-standard dependency; its WASM binary is vendored in `client/public/ej2-pdfviewer-lib/`.
+The project uses `package-lock.json` for deterministic dependency resolution. The Syncfusion PDF Viewer (proprietary, Community License) is the only non-standard dependency; its WASM binary is vendored in `apps/public/ej2-pdfviewer-lib/` (shared by both apps).
 
 ## Reporting Vulnerabilities
 

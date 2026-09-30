@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import * as fs from 'fs';
 
 async function main() {
-  const bytes = fs.readFileSync('client/public/irs-forms/f1040.pdf');
+  const bytes = fs.readFileSync('apps/public/irs-forms/f1040.pdf');
   const doc = await PDFDocument.load(bytes);
   const form = doc.getForm();
 

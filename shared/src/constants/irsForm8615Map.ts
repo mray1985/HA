@@ -2,7 +2,7 @@
  * IRS Form 8615 (2025) — AcroForm Field Mapping
  *
  * Tax for Certain Children Who Have Unearned Income
- * PDF: client/public/irs-forms/f8615.pdf (Form 8615, 2025)
+ * PDF: apps/public/irs-forms/f8615.pdf (Form 8615, 2025)
  * Attachment Sequence No. 33
  *
  * Field prefix: topmostSubform[0].Page1[0]

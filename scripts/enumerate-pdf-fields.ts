@@ -2,8 +2,8 @@
  * Dev tool: Enumerate all AcroForm fields in an IRS fillable PDF.
  *
  * Usage:
- *   npx tsx scripts/enumerate-pdf-fields.ts client/public/irs-forms/f1040.pdf
- *   npx tsx scripts/enumerate-pdf-fields.ts client/public/irs-forms/f1040s1.pdf
+ *   npx tsx scripts/enumerate-pdf-fields.ts apps/public/irs-forms/f1040.pdf
+ *   npx tsx scripts/enumerate-pdf-fields.ts apps/public/irs-forms/f1040s1.pdf
  */
 import { PDFDocument } from 'pdf-lib';
 import { readFileSync } from 'fs';

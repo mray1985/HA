@@ -3,7 +3,7 @@
  *
  * Supplemental Income and Loss
  * (From rental real estate, royalties, partnerships, S corporations, estates, trusts, REMICs, etc.)
- * PDF: client/public/irs-forms/f1040se.pdf (Schedule E, 2025)
+ * PDF: apps/public/irs-forms/f1040se.pdf (Schedule E, 2025)
  * Attachment Sequence No. 13
  * Total fields: 185 (text: 167, checkbox: 18)
  *

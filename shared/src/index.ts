@@ -2,6 +2,7 @@ export * from './types/index.js';
 export * from './constants/tax2025.js';
 export {
   getAdditionalStandardDeduction,
+  getForm4137,
   getStandardDeduction,
   getTaxBrackets,
   getTaxConstants,
@@ -159,17 +160,3 @@ export * from './migrations/index.js';
 // Declarative wizard conditions (inspired by Direct File's condition-driven flow)
 export * from './wizard/conditionTypes.js';
 export * from './wizard/conditionEvaluator.js';
-export * from './taxfacts/taxFact.js';
-export * from './taxfacts/taxTools.js';
-export * from './taxfacts/documentIngestion.js';
-export * from './taxfacts/documentClassifier.js';
-export * from './taxfacts/documentOcr.js';
-export * from './taxfacts/structuredExtraction.js';
-export * from './taxfacts/factValidation.js';
-export * from './taxfacts/toolCaller.js';
-export * from './taxfacts/modelCatalog.js';
-// lfmToolCaller / ggufRuntime / ggufOcr / donutClassifier are Node-only
-// (llama.cpp / transformers spawn + local weights). Import from
-// `./taxfacts/lfmToolCaller.js`, `./taxfacts/ggufRuntime.js`,
-// `./taxfacts/ggufOcr.js`, or `./taxfacts/donutClassifier.js` in Node/tests —
-// do not barrel-export those for the client.

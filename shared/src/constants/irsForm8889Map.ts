@@ -2,7 +2,7 @@
  * IRS Form 8889 (2025) -- AcroForm Field Mapping
  *
  * Health Savings Accounts (HSAs)
- * PDF: client/public/irs-forms/f8889.pdf (Form 8889, 2025)
+ * PDF: apps/public/irs-forms/f8889.pdf (Form 8889, 2025)
  * Attachment Sequence No. 52
  * Total fields: 27 (text: 24, checkbox: 3)
  *

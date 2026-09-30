@@ -15,12 +15,12 @@ server/data/*.db-wal
 .claude/
 
 # Test artifacts
-client/playwright-report/
-client/test-results/
+apps/*/playwright-report/
+apps/*/test-results/
 
 # Internal audit & review docs
-client/SECURITY-AUDIT*.md
-client/UX-REVIEW*.md
+apps/*/SECURITY-AUDIT*.md
+apps/*/UX-REVIEW*.md
 *.rtf
 
 # Archive (private files, research, strategy, test data)
@@ -34,3 +34,6 @@ models/
 
 # Local llama.cpp binaries (quantize / cli) — not part of the product tree
 tools/llama-cpp/
+
+# Python bytecode from local-ai/scripts
+__pycache__/

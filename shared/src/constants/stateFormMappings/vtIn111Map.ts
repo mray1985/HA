@@ -10,7 +10,7 @@
  *
  * PDF field names are descriptive (e.g., "TPFirstName", "Line1", "Line2").
  *
- * PDF: client/public/state-forms/vt-in111.pdf (89 fields)
+ * PDF: apps/public/state-forms/vt-in111.pdf (89 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

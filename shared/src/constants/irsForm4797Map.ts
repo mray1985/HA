@@ -2,7 +2,7 @@
  * IRS Form 4797 (2025) -- AcroForm Field Mapping
  *
  * Sales of Business Property
- * PDF: client/public/irs-forms/f4797.pdf (Form 4797, 2025)
+ * PDF: apps/public/irs-forms/f4797.pdf (Form 4797, 2025)
  * Attachment Sequence No. 27
  *
  * Field prefix: topmostSubform[0]

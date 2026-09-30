@@ -33,6 +33,9 @@ jobs:
       - name: Run shared engine tests
         run: npm test -w shared
 
+      - name: Run preparer local-AI tests
+        run: npm test -w @hatax/local-ai
+
       - name: Run server tests
         run: npm test -w server
 
@@ -58,11 +61,17 @@ jobs:
       - name: Type-check shared engine
         run: npx tsc -p shared/tsconfig.json --noEmit
 
-      - name: Type-check TaxFact compile-time assertions
-        run: npx tsc -p shared/tsconfig.tests.json --noEmit
+      - name: Type-check preparer local-AI package
+        run: npx tsc -p local-ai/tsconfig.json --noEmit
 
-      - name: Type-check client
-        run: npx tsc -p client/tsconfig.json --noEmit
+      - name: Type-check TaxFact compile-time assertions
+        run: npx tsc -p local-ai/tsconfig.tests.json --noEmit
+
+      - name: Type-check individual app
+        run: npx tsc -p apps/individual/tsconfig.json --noEmit
+
+      - name: Type-check preparer app
+        run: npx tsc -p apps/preparer/tsconfig.json --noEmit
 
       - name: Dependency audit
         run: npm audit --audit-level=high || true
@@ -71,9 +80,13 @@ jobs:
   # Job 3: E2E Tests (Playwright — Chromium only in CI)
   # ──────────────────────────────────────────────
   e2e-tests:
-    name: E2E Tests (Playwright)
+    name: E2E Tests (Playwright, ${{ matrix.app }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [individual, preparer]
 
     steps:
       - uses: actions/checkout@v4
@@ -88,18 +101,18 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        working-directory: client
+        working-directory: apps/${{ matrix.app }}
 
       - name: Run E2E tests (Chromium)
         run: npx playwright test --project=chromium
-        working-directory: client
+        working-directory: apps/${{ matrix.app }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
-          path: client/playwright-report/
+          name: playwright-report-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/playwright-report/
           retention-days: 7
 
   # ──────────────────────────────────────────────
@@ -124,5 +137,8 @@ jobs:
       - name: Build shared engine
         run: npm run build -w shared
 
-      - name: Build client
-        run: npm run build -w client
+      - name: Build individual app
+        run: npm run build:individual
+
+      - name: Build preparer app
+        run: npm run build:preparer

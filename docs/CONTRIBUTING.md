@@ -19,18 +19,23 @@ Acceptable authority sources:
 
 ## Project Structure
 
-HATax is a monorepo with three packages:
+HATax is a monorepo with two apps on one engine:
 
 ```
 tax-project/
-├── shared/          @hatax/engine — tax calculation engine (pure functions)
-├── client/          React + Vite frontend (wizard-based tax return UI)
-└── server/          Express backend (optional AI features: chat, OCR, expense scanning)
+├── shared/            @hatax/engine — tax calculation engine (pure functions)
+├── apps/individual/   Free household app — React + Vite wizard (BYOK is the only AI)
+├── apps/preparer/     Preparer app — same wizard + preparer seat + local AI intake
+├── apps/public/       Static assets (IRS/state PDFs, OCR data, icons) served by both apps
+├── local-ai/          @hatax/local-ai — preparer-only TaxFacts, tax tools, local model runners
+└── server/            Express backend (optional AI features: chat, OCR, expense scanning; preparer sign-in)
 ```
 
-- **`shared/`** is the core — all tax math lives here. No I/O, no side effects, no dependencies on client or server.
-- **`client/`** is the UI — wizard steps, form filling, PDF export, AI chat, tools.
-- **`server/`** is optional — provides BYOK API proxying for AI features. The app works fully offline without it.
+- **`shared/`** is the core — all tax math lives here. No I/O, no side effects, no dependencies on the apps or server.
+- **`apps/individual/`** is the free UI — wizard steps, form filling, PDF export, BYOK AI chat, tools.
+- **`apps/preparer/`** is the individual UI plus preparer pages and document intake. It is the only app that may import `@hatax/local-ai`.
+- **`local-ai/`** holds the work-order AI stack. `@hatax/local-ai` is browser-safe; `@hatax/local-ai/node` spawns local models and must never be imported from a Vite bundle.
+- **`server/`** is optional — provides BYOK API proxying for AI features. The individual app works fully offline without it.
 
 ## Development Setup
 
@@ -51,17 +56,18 @@ npm install          # installs all three packages via workspaces
 
 ```bash
 # Copy the example env files
-cp client/.env.example client/.env
+cp apps/individual/.env.example apps/individual/.env
+cp apps/preparer/.env.example apps/preparer/.env
 cp server/.env.example server/.env
 ```
 
-The client requires a **Syncfusion Community License key** in `client/.env` for the PDF viewer and charts. Syncfusion Community License is free for individuals and companies with less than $1M revenue. Get your key at [syncfusion.com](https://www.syncfusion.com/products/communitylicense).
+The client requires a **Syncfusion Community License key** in `apps/individual/.env` and `apps/preparer/.env` for the PDF viewer and charts. Syncfusion Community License is free for individuals and companies with less than $1M revenue. Get your key at [syncfusion.com](https://www.syncfusion.com/products/communitylicense).
 
 ### Running the App
 
 ```bash
 # Start the client dev server
-cd client && npm run dev
+cd apps/individual && npm run dev
 
 # Start the server (optional, only needed for AI features)
 cd server && npm run dev
@@ -74,13 +80,13 @@ cd server && npm run dev
 cd shared && npx vitest run
 
 # Client unit/service tests (~1,000+ tests)
-cd client && npx vitest run
+cd apps/individual && npx vitest run
 
 # Server tests
 cd server && npx vitest run
 
 # E2E tests (requires browser binaries)
-cd client && npx playwright test
+cd apps/individual && npx playwright test
 
 # Watch mode (re-runs on file changes)
 cd shared && npx vitest
@@ -167,7 +173,7 @@ Missing a filing status is a test failure.
 
 ## Adding Wizard Steps (Client)
 
-All wizard step components live in `client/src/components/steps/`. Follow the **[Step Style Guide](./STEP_STYLE_GUIDE.md)** for required elements and ordering. Every data entry step must include:
+All wizard step components live in `apps/individual/src/components/steps/`, with a copy in `apps/preparer/src/components/steps/` — a wizard change must land in both apps. Follow the **[Step Style Guide](./STEP_STYLE_GUIDE.md)** for required elements and ordering. Every data entry step must include:
 
 1. `<StepWarningsBanner stepId="..." />` — first element
 2. `<SectionIntro />` — icon + title + description

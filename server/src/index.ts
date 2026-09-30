@@ -48,9 +48,11 @@ app.use(helmet({
 
 // ─── CORS ────────────────────────────────────────
 const DEFAULT_ORIGINS = [
-  'http://localhost:5173',   // Vite dev server
+  'http://localhost:5173',   // Vite dev server (individual app)
   'http://localhost:4173',   // Vite preview
   'http://127.0.0.1:5173',
+  'http://localhost:5174',   // Vite dev server (preparer app)
+  'http://127.0.0.1:5174',
   `http://localhost:${PORT}`,
   `http://127.0.0.1:${PORT}`,
 ];
@@ -98,24 +100,28 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Built site, when client/dist is present. Same origin as /api so sign-in works
-// without a separate dev proxy.
+// Built site, when an app's dist is present. Same origin as /api so sign-in works
+// without a separate dev proxy. CLIENT_DIST picks the app (scripts/start-site.mjs
+// sets it); otherwise the preparer build is served, since it needs sign-in.
 function findClientDist(): string | null {
   const candidates = [
     process.env.CLIENT_DIST,
-    resolve(process.cwd(), 'client', 'dist'),
-    resolve(process.cwd(), '..', 'client', 'dist'),
+    resolve(process.cwd(), 'apps', 'preparer', 'dist'),
+    resolve(process.cwd(), '..', 'apps', 'preparer', 'dist'),
   ].filter((dir): dir is string => Boolean(dir));
   return candidates.find((dir) => existsSync(resolve(dir, 'index.html'))) ?? null;
 }
 
 const clientDist = findClientDist();
 if (clientDist) {
+  // The individual build has no preparer.html — its /preparer paths fall back to index.html.
+  const preparerHtml = existsSync(resolve(clientDist, 'preparer.html'));
   app.use(express.static(clientDist));
   app.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (req.path.startsWith('/api')) return next();
-    const preparer = req.path === '/preparer' || req.path.startsWith('/preparer/');
+    const preparer =
+      preparerHtml && (req.path === '/preparer' || req.path.startsWith('/preparer/'));
     res.sendFile(resolve(clientDist, preparer ? 'preparer.html' : 'index.html'));
   });
 }

@@ -10,7 +10,7 @@
  * PDF field names follow the pattern: F_NR-{page}-{field_number}
  * Page 1 fields: F_NR-1-*, Page 2: F_NR0-2-*, Page 3: F_NR-3-*
  *
- * PDF: client/public/state-forms/ar-1000f.pdf (220 fields)
+ * PDF: apps/public/state-forms/ar-1000f.pdf (220 fields)
  */
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 

@@ -2,7 +2,7 @@
  * IRS Form 2555 (2025) -- AcroForm Field Mapping
  *
  * Foreign Earned Income
- * PDF: client/public/irs-forms/f2555.pdf (Form 2555, 2025)
+ * PDF: apps/public/irs-forms/f2555.pdf (Form 2555, 2025)
  * Attachment Sequence No. 34
  *
  * Field prefixes:

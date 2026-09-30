@@ -9,8 +9,8 @@
  * No standard deduction. Social Security fully exempt.
  * Same brackets for all filing statuses.
  *
- * PDF: client/public/state-forms/oh-it1040.pdf (588 fields)
- * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts client/public/state-forms/oh-it1040.pdf
+ * PDF: apps/public/state-forms/oh-it1040.pdf (588 fields)
+ * Enumerated via: npx tsx scripts/enumerate-pdf-fields.ts apps/public/state-forms/oh-it1040.pdf
  *
  * additionalLines from OH calculator:
  *   - ohTaxBeforeCredits: tax before credits

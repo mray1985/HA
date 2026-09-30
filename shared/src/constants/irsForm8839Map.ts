@@ -2,7 +2,7 @@
  * IRS Form 8839 (2025) -- AcroForm Field Mapping
  *
  * Qualified Adoption Expenses
- * PDF: client/public/irs-forms/f8839.pdf (Form 8839, 2025)
+ * PDF: apps/public/irs-forms/f8839.pdf (Form 8839, 2025)
  * Attachment Sequence No. 38
  *
  * Structure:

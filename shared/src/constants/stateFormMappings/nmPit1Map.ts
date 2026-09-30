@@ -8,7 +8,7 @@
  * Starts from federal AGI. Applies federal standard/itemized deduction,
  * dependent deduction, and NM low/middle income exemption.
  *
- * PDF: client/public/state-forms/nm-pit1.pdf (42 fields)
+ * PDF: apps/public/state-forms/nm-pit1.pdf (42 fields)
  */
 import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
