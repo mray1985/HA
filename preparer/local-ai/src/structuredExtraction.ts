@@ -8,7 +8,7 @@
 
 import {
   isDocumentTool,
-  toolNameForIncomeType,
+  formToolForIncomeType,
   type DocumentToolName,
 } from './taxTools.js';
 
@@ -134,6 +134,94 @@ const EDUCATION_FIELDS: Record<string, FieldKind> = {
   insuranceReimbursement: 'money',
 };
 
+const MISC_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  rents: 'money',
+  royalties: 'money',
+  otherIncome: 'money',
+  federalTaxWithheld: 'money',
+  stateCode: 'text',
+  stateTaxWithheld: 'money',
+};
+
+const G_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  unemploymentCompensation: 'money',
+  federalTaxWithheld: 'money',
+  stateCode: 'text',
+  stateTaxWithheld: 'money',
+};
+
+const B_FIELDS: Record<string, FieldKind> = {
+  brokerName: 'text',
+  description: 'text',
+  dateAcquired: 'text',
+  dateSold: 'text',
+  proceeds: 'money',
+  costBasis: 'money',
+  isLongTerm: 'boolean',
+  federalTaxWithheld: 'money',
+  washSaleLossDisallowed: 'money',
+  basisReportedToIRS: 'boolean',
+  isCollectible: 'boolean',
+};
+
+const K_FIELDS: Record<string, FieldKind> = {
+  platformName: 'text',
+  grossAmount: 'money',
+  cardNotPresent: 'money',
+  federalTaxWithheld: 'money',
+};
+
+const OID_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  originalIssueDiscount: 'money',
+  otherPeriodicInterest: 'money',
+  earlyWithdrawalPenalty: 'money',
+  federalTaxWithheld: 'money',
+  marketDiscount: 'money',
+  acquisitionPremium: 'money',
+  description: 'text',
+  stateCode: 'text',
+  stateTaxWithheld: 'money',
+};
+
+const C_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  dateOfCancellation: 'text',
+  amountCancelled: 'money',
+  interestIncluded: 'money',
+  debtDescription: 'text',
+  identifiableEventCode: 'text',
+  personallyLiable: 'boolean',
+};
+
+const Q_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  grossDistribution: 'money',
+  earnings: 'money',
+  basisReturn: 'money',
+  trusteeToTrusteeTransfer: 'boolean',
+  qtpToRothIra: 'boolean',
+  recipientNotDesignatedBeneficiary: 'boolean',
+};
+
+const SA_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  grossDistribution: 'money',
+  distributionCode: 'text',
+  accountType: 'text',
+};
+
+const S_FIELDS: Record<string, FieldKind> = {
+  filerName: 'text',
+  closingDate: 'text',
+  grossProceeds: 'money',
+  propertyAddress: 'text',
+  buyerRealEstateTax: 'money',
+  transferorIsForeign: 'boolean',
+};
+
 const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_w2: W2_FIELDS,
   add_1099_int: INT_FIELDS,
@@ -143,6 +231,15 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_ssa_1099: SSA_FIELDS,
   add_mortgage_interest: MORTGAGE_FIELDS,
   add_education_expense: EDUCATION_FIELDS,
+  add_1099_misc: MISC_FIELDS,
+  add_1099_g: G_FIELDS,
+  add_1099_b: B_FIELDS,
+  add_1099_k: K_FIELDS,
+  add_1099_oid: OID_FIELDS,
+  add_1099_c: C_FIELDS,
+  add_1099_q: Q_FIELDS,
+  add_1099_sa: SA_FIELDS,
+  add_1099_s: S_FIELDS,
 };
 
 interface Normalized {
@@ -357,7 +454,7 @@ export function extractStructuredFields(
   fieldRawTokens?: Record<string, string>,
 ): StructuredExtraction {
   const tool =
-    incomeTypeOrTool && isDocumentTool(incomeTypeOrTool) ? incomeTypeOrTool : toolNameForIncomeType(incomeTypeOrTool);
+    incomeTypeOrTool && isDocumentTool(incomeTypeOrTool) ? incomeTypeOrTool : formToolForIncomeType(incomeTypeOrTool);
   if (!tool) return { tool: null, args: {}, rawText: {} };
 
   const schema = FORM_FIELDS[tool];

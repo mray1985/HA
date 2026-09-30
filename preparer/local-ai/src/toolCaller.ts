@@ -25,21 +25,26 @@ import {
 } from './factValidation.js';
 import type { TaxFact } from './taxFact.js';
 import {
-  TAX_TOOL_NAMES,
+  FORM_TOOL_NAMES,
+  formToolForIncomeType,
   invokeTaxTool,
-  toolNameForIncomeType,
+  TAX_TOOL_INCOME_TYPE,
   type TaxToolCallContext,
   type TaxToolIncomeName,
   type TaxToolName,
   type TaxToolResult,
 } from './taxTools.js';
 
-/** Tools this caller may invoke. Tax calculation is intentionally absent. */
-export const TOOL_CALLER_ALLOWED_TOOLS = TAX_TOOL_NAMES;
+/**
+ * Tools this caller may invoke: one form's boxes → its form tool, and the
+ * filing-status candidate. Record tools take evidence that is not a form
+ * (client/recordTools), and the return tools run after the return changes.
+ */
+export const TOOL_CALLER_ALLOWED_TOOLS = [...FORM_TOOL_NAMES, 'set_filing_status_candidate'] as const;
 
 export type ToolCallerAllowedTool = (typeof TOOL_CALLER_ALLOWED_TOOLS)[number];
 
-/** Explicitly refused — belong to later development-order steps. */
+/** Refused here: record tools, return tools, and anything that would set the filing status or calculate tax. */
 const BLOCKED_TOOL_NAMES = new Set([
   'calculate_return',
   'calculate_tax',
@@ -52,9 +57,8 @@ const BLOCKED_TOOL_NAMES = new Set([
 ]);
 
 /**
- * A proposed tool call — from LiquidAI/LFM2-1.2B-Tool (spec) or the
- * deterministic FALLBACK when the model is absent/unloadable.
- * Models must not write return tables directly.
+ * A proposed tool call — from a model through groundedToolCall, or from the
+ * deterministic mapping of a form's fields. Models never write return tables.
  */
 export interface ToolCallProposal {
   tool: string;
@@ -90,10 +94,7 @@ export interface ToolCallerExecuteResult {
   error?: string;
 }
 
-/**
- * Caller interface. Spec: LFM proposes; `execute` always validates then
- * invokes tax-engine tools. Deterministic proposal is fallback-only.
- */
+/** Caller interface: `execute` always validates, then invokes the tax-engine tool. */
 export interface ToolCaller {
   execute(input: ToolCallerExecuteInput): ToolCallerExecuteResult;
 }
@@ -126,14 +127,14 @@ function schemaFailureValidation(message: string): FactValidationResult {
 }
 
 /**
- * Propose the income tool for a classified form type.
- * Returns null when the form is not one of the five supported income tools.
+ * Propose the form tool for a classified form type.
+ * Returns null when no tool reads that form.
  */
 export function proposeIncomeToolCall(
   incomeType: string | null | undefined,
   args: Record<string, unknown>,
 ): ToolCallProposal | null {
-  const tool = toolNameForIncomeType(incomeType);
+  const tool = formToolForIncomeType(incomeType);
   if (!tool) return null;
   return { tool, args };
 }
@@ -151,9 +152,8 @@ export function proposeFilingStatusCandidate(
 }
 
 /**
- * Deterministic FALLBACK path: validate → strip rejected fields → invokeTaxTool.
- * Prefer `proposeToolCallWithLfm` (LiquidAI/LFM2-1.2B-Tool Q4_K_M GGUF).
- * Use this proposal path only when the GGUF is absent or runtime fails.
+ * Validate → strip rejected fields → invokeTaxTool. Model proposals come
+ * through groundedToolCall; this path runs the deterministic proposal.
  * Does not invent amounts or calculate tax.
  */
 export function executeDeterministicToolCall(
@@ -169,7 +169,7 @@ export function executeDeterministicToolCall(
       result: null,
       facts: [],
       validation: schemaFailureValidation(
-        `Tool "${toolName}" is not allowed in the tool-caller phase (no tax calculation or later-phase tools).`,
+        `Tool "${toolName}" does not take a form's fields; it is not called from a document.`,
       ),
       appliedArgs: {},
       skippedFields: Object.keys(proposal.args),
@@ -294,7 +294,7 @@ export function callIncomeToolFromStructuredFields(input: {
       result: null,
       facts: [],
       validation: schemaFailureValidation(
-        `No tax-engine income tool for income type "${input.incomeType ?? ''}"`,
+        `No tax-engine form tool for income type "${input.incomeType ?? ''}"`,
       ),
       appliedArgs: {},
       skippedFields: Object.keys(input.args),
@@ -309,13 +309,7 @@ export function callIncomeToolFromStructuredFields(input: {
   });
 }
 
-/** Type guard for income tool names allowed here. */
+/** Type guard for the form tools whose result is an engine income item. */
 export function isToolCallerIncomeTool(tool: string): tool is TaxToolIncomeName {
-  return (
-    tool === 'add_w2' ||
-    tool === 'add_1099_int' ||
-    tool === 'add_1099_div' ||
-    tool === 'add_1099_nec' ||
-    tool === 'add_1099_r'
-  );
+  return tool !== 'add_schedule_c_income' && tool in TAX_TOOL_INCOME_TYPE;
 }

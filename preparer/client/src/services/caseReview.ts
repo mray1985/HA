@@ -172,23 +172,39 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
     });
   }
 
-  // Education forms need the preparer's credit choice before they reach the return.
-  const applied = new Set((taxReturn.educationCredits ?? []).map((e) => (e as unknown as Record<string, unknown>)[SOURCE_FORM_KEY]));
-  const educationForms = new Set(facts.filter((f) => f.factType.startsWith('1098T_')).map(formKeyOf));
-  for (const formKey of educationForms) {
-    if (applied.has(formKey)) continue;
-    const documentId = formKey.split('#')[0];
-    items.push({
-      id: `document:education-choice:${formKey}`,
-      category: 'REVIEW',
-      group: 'credits',
-      source: 'document',
-      documentId,
-      message: `${nameOf(documentId)}: choose the American Opportunity or Lifetime Learning credit for this student.`,
-    });
+  // Forms that need the preparer's decision before they reach the return.
+  for (const choice of PREPARER_CHOICES) {
+    const target = taxReturn[choice.field] as unknown;
+    const entries = Array.isArray(target) ? target : target ? [target] : [];
+    const applied = new Set(entries.map((e) => (e as Record<string, unknown>)[SOURCE_FORM_KEY]));
+    const forms = new Set(facts.filter((f) => f.factType.startsWith(choice.factPrefix)).map(formKeyOf));
+    for (const formKey of forms) {
+      if (applied.has(formKey)) continue;
+      const documentId = formKey.split('#')[0];
+      items.push({
+        id: `document:${choice.id}:${formKey}`,
+        category: 'REVIEW',
+        group: choice.group,
+        source: 'document',
+        documentId,
+        message: `${nameOf(documentId)}: ${choice.ask}`,
+      });
+    }
   }
   return items;
 }
+
+/** Forms recorded but not applied until the preparer decides what the form cannot say. */
+const PREPARER_CHOICES: ReadonlyArray<{ id: string; factPrefix: string; field: keyof TaxReturn; group: ReviewGroup; ask: string }> = [
+  { id: 'education-choice', factPrefix: '1098T_', field: 'educationCredits', group: 'credits',
+    ask: 'choose the American Opportunity or Lifetime Learning credit for this student.' },
+  { id: 'qtp-expenses', factPrefix: '1099Q_', field: 'income1099Q', group: 'income',
+    ask: 'enter the qualified education expenses this 1099-Q distribution paid; until then it is not on the return.' },
+  { id: 'hsa-use', factPrefix: '1099SA_', field: 'income1099SA', group: 'income',
+    ask: 'confirm whether this distribution paid qualified medical expenses; until then it is not on the return.' },
+  { id: 'home-sale', factPrefix: '1099S_', field: 'homeSale', group: 'income',
+    ask: 'enter the basis and the months owned and used as a main home (§121) for this sale; until then it is not on the return.' },
+];
 
 /** Evidence recorded by the record tools that the return does not hold yet. */
 function recordItems(facts: TaxFact[], taxReturn: TaxReturn): ReviewItem[] {

@@ -24,6 +24,13 @@ const CHECKED: Record<string, string[]> = {
   '1099r-ira': ['7b'],
   '1098-mortgage': ['7'],
   '1098t-university': ['8'],
+  '1099b-sale': ['2.long', '3.collectibles', '6.gross', '12'],
+  '1099q-529': ['5b', '6'],
+  '1099sa-archer': ['5.archer'],
+  '1099c-card': ['5'],
+  '1099g-unemployment': ['8'],
+  '1099misc-rents': ['7'],
+  '1099oid-bond': ['fatca'],
 };
 
 interface Case {

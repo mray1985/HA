@@ -262,6 +262,13 @@ export interface CheckboxSpec {
   direction: CheckboxDirection;
   /** Fallback when OCR cannot read the label: locate the squares by their table cell. */
   row?: CheckboxRowSpec;
+  /**
+   * Squares stacked one per printed line (1099-B box 2, 1099-SA box 5): search
+   * only the label's own line, so a square that cannot be found is "unknown"
+   * rather than the neighbouring line's square (measured: a faded 1099-B read
+   * the checked long-term square for the short-term label).
+   */
+  sameRow?: boolean;
 }
 
 /**
@@ -388,6 +395,12 @@ function labelInk(r: PageRaster, label: PixelBox, chars: number): { em: number; 
  * squares sit up to 9.6 em right of the label's end and 1.8 em below its
  * baseline ("right"), and up to 3.3 em below the label (W-2 box 13).
  */
+/** A search region cut to the label's own line (squares are about one em tall). */
+function sameRowRegion(region: PixelBox, label: PixelBox, em: number): PixelBox {
+  const mid = (label[1] + label[3]) / 2;
+  return [region[0], Math.max(region[1], Math.floor(mid - 1.1 * em)), region[2], Math.min(region[3], Math.ceil(mid + 1.1 * em))];
+}
+
 function searchRegion(label: PixelBox, direction: CheckboxDirection, r: PageRaster, em: number): PixelBox {
   const h = em;
   const w = label[2] - label[0];
@@ -783,7 +796,7 @@ export function readCheckbox(
   if (labels.length > 1 && !near) return { state: 'unknown', reason: `label "${spec.labelPhrase}" appears ${labels.length} times` };
   const label = labels.length === 1 ? labels[0]! : [...labels].sort((a, b) => boxGap(a, near!) - boxGap(b, near!))[0]!;
   const { em, ink } = labelInk(raster, label, spec.labelPhrase.length);
-  const region = searchRegion(ink, spec.direction, raster, em);
+  const region = spec.sameRow ? sameRowRegion(searchRegion(ink, spec.direction, raster, em), ink, em) : searchRegion(ink, spec.direction, raster, em);
 
   const glyph = words.find((w) => {
     if (!CHECK_MARK_TOKENS.has(normalizeToken(w.text)) && !CHECK_MARK_TOKENS.has(w.text.trim())) return false;
@@ -794,7 +807,11 @@ export function readCheckbox(
 
   const threshold = regionThreshold(raster, region);
   const squares = findSquares(raster, region, em, threshold);
-  if (squares.length === 0) return { state: 'unknown', reason: `no checkbox square found ${spec.direction} "${spec.labelPhrase}"` };
+  if (squares.length === 0) {
+    // A square set apart from its label (a cell's far corner) is found by its table cell.
+    const fromRow = spec.row ? readCheckboxRow(raster, words, spec.row, near) : null;
+    return fromRow ?? { state: 'unknown', reason: `no checkbox square found ${spec.direction} "${spec.labelPhrase}"` };
+  }
   // Nearest square to the label when the region holds more than one.
   const square = [...squares].sort((a, b) => anchorDistance(label, a) - anchorDistance(label, b))[0]!;
   const ratio = interiorInkRatio(raster, square, markThreshold(raster, square, threshold));

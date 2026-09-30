@@ -34,6 +34,7 @@ export {
   extract1099GFields,
   extract1099BFields,
   extract1099KFields,
+  extract1099OIDFields,
   extractSSA1099Fields,
   extract1099SAFields,
   extract1099QFields,
@@ -75,6 +76,7 @@ import {
   extract1099GFields,
   extract1099BFields,
   extract1099KFields,
+  extract1099OIDFields,
   extractSSA1099Fields,
   extract1099SAFields,
   extract1099QFields,
@@ -152,6 +154,10 @@ function extractFormData(
       extractedData = extract1099KFields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = (extractedData.platformName as string) || '';
       break;
+    case '1099-OID':
+      extractedData = extract1099OIDFields(blocks, fieldRawTokens, fieldSourceLocations);
+      payerName = (extractedData.payerName as string) || '';
+      break;
     case 'SSA-1099':
       extractedData = extractSSA1099Fields(blocks, fieldRawTokens, fieldSourceLocations);
       payerName = 'Social Security Administration';
@@ -194,7 +200,7 @@ function extractFormData(
       break;
     case '1099-S':
       extractedData = extract1099SFields(blocks, fieldRawTokens, fieldSourceLocations);
-      payerName = (extractedData.settlementAgent as string) || '';
+      payerName = (extractedData.filerName as string) || '';
       break;
   }
   return { extractedData, payerName, fieldRawTokens, fieldSourceLocations };

@@ -558,8 +558,9 @@ describe('extract1099BFields', () => {
     expect(data.proceeds).toBe(125000);
     expect(data.costBasis).toBe(110000);
     expect(data.federalTaxWithheld).toBe(250);
-    expect(data.description).toBe('Consolidated Summary (PDF Import)');
-    expect(data.isLongTerm).toBe(false);
+    // Box 2's term squares are not text: the term is never assumed.
+    expect(data).not.toHaveProperty('isLongTerm');
+    expect(data.description).not.toBe('Consolidated Summary (PDF Import)');
   });
 
   it('omits amounts when no matching fields exist', () => {
@@ -590,7 +591,7 @@ describe('extract1099KFields', () => {
 describe('extractSSA1099Fields', () => {
   it('extracts social security benefit fields', () => {
     const data = extractSSA1099Fields(makeSSA1099Blocks());
-    expect(data.totalBenefits).toBe(24000);
+    expect(data.netBenefits).toBe(24000);
     expect(data.federalTaxWithheld).toBe(2400);
   });
 
@@ -628,8 +629,9 @@ describe('extract1099QFields', () => {
     expect(data.grossDistribution).toBe(15000);
     expect(data.earnings).toBe(3200);
     expect(data.basisReturn).toBe(11800);
-    expect(data.distributionType).toBe('qualified');
-    expect(data.qualifiedExpenses).toBe(0);
+    // The qualified expenses it paid are not on the form: never assumed.
+    expect(data).not.toHaveProperty('distributionType');
+    expect(data).not.toHaveProperty('qualifiedExpenses');
   });
 
   it('omits missing amount fields instead of writing zero', () => {
@@ -644,7 +646,7 @@ describe('extract1099QFields', () => {
     expect(data.grossDistribution).toBe(5000);
     expect(data.earnings).toBeUndefined();
     expect(data.basisReturn).toBeUndefined();
-    expect(data.distributionType).toBe('qualified');
+    expect(data).not.toHaveProperty('distributionType');
   });
 });
 
@@ -935,7 +937,7 @@ describe('generateImportTrace', () => {
     expect(trace.summary).toContain('1099-B');
     const proceedsEntry = trace.fields.find(f => f.field === 'proceeds');
     expect(proceedsEntry!.status).toBe('found');
-    expect(proceedsEntry!.label).toBe('Total Proceeds (Box 1d)');
+    expect(proceedsEntry!.label).toBe('Proceeds (Box 1d)');
   });
 
   it('generates trace for SSA-1099 with field labels', () => {
@@ -943,7 +945,7 @@ describe('generateImportTrace', () => {
     const trace = generateImportTrace('SSA-1099', 'high', ['ssa-1099'], extractedData, 7, 1);
 
     expect(trace.summary).toContain('SSA-1099');
-    const benefitsEntry = trace.fields.find(f => f.field === 'totalBenefits');
+    const benefitsEntry = trace.fields.find(f => f.field === 'netBenefits');
     expect(benefitsEntry!.status).toBe('found');
     expect(benefitsEntry!.label).toBe('Net Benefits (Box 5)');
   });

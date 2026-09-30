@@ -93,18 +93,33 @@ the model left blank that GLM-OCR and the page's own text both read (1099-DIV
 box 4, `0.00`). The 1099-DIV Section 199A amount (box 5, no engine field)
 routes to review.
 
-### Checkbox reader alone (`checkboxes.ts`, 21 checkboxes per variant)
+### Checkbox reader alone (`checkboxes.ts`)
 
-| Page | Right | Unknown (review) | Wrong |
+53 checkboxes per variant: 21 on the seven Phase 1 forms and 32 on the §16
+forms (1099-B, 1099-Q, 1099-SA, 1099-C, 1099-G, 1099-MISC, 1099-OID).
+
+| Page | Right (Phase 1 / §16) | Unknown (review) | Wrong |
 |---|---|---|---|
-| Native PDF, 200 dpi | 21 | 0 | 0 |
-| Office scan | 20 | 1 | 0 |
-| Fax | 17 | 4 | 0 |
-| Faded copy | 14 | 7 | 0 |
+| Native PDF, 200 dpi | 53 (21 / 32) | 0 | 0 |
+| Office scan | 48 (20 / 28) | 5 | 0 |
+| Fax | 34 (17 / 17) | 19 | 0 |
+| Faded copy | 31 (14 / 17) | 22 | 0 |
 
 Most unknowns are labels OCR cannot read at all. W-2 box 13's labels are never
 readable on a scan, so its squares are found from the table cell below box 11
 (or of box 13 / above box 14a), which must hold exactly three squares.
+
+The §16 forms' square positions were measured on the official PDFs (each
+checkbox widget's rectangle against its printed label). Two findings:
+
+- Stacked squares (1099-B box 2, 1099-SA box 5, 1099-Q boxes 4 and 5) are
+  searched on the label's own line only. Before that, the faded 1099-B read
+  the checked long-term square for the short-term label — a wrong reading —
+  because the short-term outline had faded out.
+- The 1099-Q box 6 square sits alone in its cell's corner, far from the label,
+  so it is found by its table cell when the label search finds no square.
+  1099-S boxes 6 and 7 print their squares at the end of a dotted leader
+  beyond any label search, so they are read from the model only and reviewed.
 
 Findings that shaped the product code:
 
@@ -185,3 +200,10 @@ entities under USD 10 million annual revenue.
 | f1099g.pdf | 65a416c52508d8a3 |
 | f1098.pdf (Rev. April 2025) | 304da9c0f67a46ff |
 | f1098t.pdf | f461d17ce14de4ef |
+| f1099b.pdf (2026, irs-prior archive) | 31fb17392add5485 |
+| f1099k.pdf (Rev. December 2026) | fa3a2b659f7ee13d |
+| f1099s.pdf (Rev. December 2026) | f682abe945492be9 |
+| f1099c.pdf (Rev. April 2025) | 826fe6811249e38b |
+| f1099q.pdf (Rev. April 2025) | 19ad3c80de52d509 |
+| f1099sa.pdf (Rev. April 2025) | cc2324629a9bd416 |
+| f1099oid.pdf (Rev. January 2024) | cc88d18964125c3f |

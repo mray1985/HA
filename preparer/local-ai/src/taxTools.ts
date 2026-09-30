@@ -32,6 +32,15 @@ export const FORM_TOOL_NAMES = [
   'add_ssa_1099',
   'add_mortgage_interest',
   'add_education_expense',
+  'add_1099_misc',
+  'add_1099_g',
+  'add_1099_b',
+  'add_1099_k',
+  'add_1099_oid',
+  'add_1099_c',
+  'add_1099_q',
+  'add_1099_sa',
+  'add_1099_s',
 ] as const;
 
 /**
@@ -56,7 +65,10 @@ export type DocumentToolName = (typeof FORM_TOOL_NAMES)[number];
 export type RecordToolName = (typeof RECORD_TOOL_NAMES)[number];
 
 /** Tools whose result is one engine item per source (addIncomeItem). */
-export type TaxToolIncomeName = 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r' | 'add_schedule_c_income';
+export type TaxToolIncomeName =
+  | 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r'
+  | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c'
+  | 'add_schedule_c_income';
 
 export function isDocumentTool(name: string): name is DocumentToolName {
   return (FORM_TOOL_NAMES as readonly string[]).includes(name);
@@ -86,11 +98,28 @@ export type TaxToolApplication =
   | { kind: 'income_item'; itemType: TaxToolIncomeType }
   | { kind: 'aggregate'; target: AggregateTarget }
   | { kind: 'dependent' }
-  | { kind: 'needs_preparer_choice'; target: 'educationCredit'; choice: 'creditType' }
+  | { kind: 'needs_preparer_choice'; target: PreparerChoiceTarget; choice: PreparerChoice }
   | { kind: 'candidate_fact' };
 
+/**
+ * Decisions a form cannot make, which the engine needs before the form can be
+ * on the return:
+ * - educationCredit / creditType (1098-T): American Opportunity or Lifetime Learning;
+ * - qualifiedTuitionProgram / qualifiedExpenses (1099-Q): the qualified education
+ *   expenses the distribution paid;
+ * - hsaDistribution / qualifiedMedicalExpenses (1099-SA): whether it paid
+ *   qualified medical expenses (the engine otherwise taxes it and adds the penalty);
+ * - homeSale / ownershipAndBasis (1099-S): basis, and the months owned and used
+ *   as a main home (IRC §121).
+ */
+export type PreparerChoiceTarget = 'educationCredit' | 'qualifiedTuitionProgram' | 'hsaDistribution' | 'homeSale';
+export type PreparerChoice = 'creditType' | 'qualifiedExpenses' | 'qualifiedMedicalExpenses' | 'ownershipAndBasis';
+
 /** Income-item API keys used by addIncomeItem / intentExecutor. */
-export type TaxToolIncomeType = 'w2' | '1099int' | '1099div' | '1099nec' | '1099r' | 'business-receipts';
+export type TaxToolIncomeType =
+  | 'w2' | '1099int' | '1099div' | '1099nec' | '1099r'
+  | '1099misc' | '1099g' | '1099b' | '1099k' | '1099oid' | '1099c'
+  | 'business-receipts';
 
 export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
@@ -98,6 +127,12 @@ export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> 
   add_1099_div: '1099div',
   add_1099_nec: '1099nec',
   add_1099_r: '1099r',
+  add_1099_misc: '1099misc',
+  add_1099_g: '1099g',
+  add_1099_b: '1099b',
+  add_1099_k: '1099k',
+  add_1099_oid: '1099oid',
+  add_1099_c: '1099c',
   add_schedule_c_income: 'business-receipts',
 };
 
@@ -108,7 +143,29 @@ const INCOME_TYPE_TO_TOOL: Record<string, FormIncomeToolName> = {
   '1099div': 'add_1099_div',
   '1099nec': 'add_1099_nec',
   '1099r': 'add_1099_r',
+  '1099misc': 'add_1099_misc',
+  '1099g': 'add_1099_g',
+  '1099b': 'add_1099_b',
+  '1099k': 'add_1099_k',
+  '1099oid': 'add_1099_oid',
+  '1099c': 'add_1099_c',
 };
+
+/** Classified document income type → the form tool that reads it (income items and preparer-choice forms). */
+const INCOME_TYPE_TO_FORM_TOOL: Record<string, DocumentToolName> = {
+  ...INCOME_TYPE_TO_TOOL,
+  ssa1099: 'add_ssa_1099',
+  '1098': 'add_mortgage_interest',
+  '1098t': 'add_education_expense',
+  '1099q': 'add_1099_q',
+  '1099sa': 'add_1099_sa',
+  '1099s': 'add_1099_s',
+};
+
+export function formToolForIncomeType(incomeType: string | null | undefined): DocumentToolName | null {
+  if (!incomeType) return null;
+  return INCOME_TYPE_TO_FORM_TOOL[incomeType] ?? null;
+}
 
 type FormIncomeToolName = Exclude<TaxToolIncomeName, 'add_schedule_c_income'>;
 
@@ -300,6 +357,144 @@ const AddEducationExpenseFieldsSchema = z
   })
   .strict();
 
+// ─── Remaining information returns (work order §16) ──────────
+// Field names are the engine item's, so an applied item carries nothing the
+// engine does not define. Printed boxes the engine cannot take are review
+// boxes in formSchemas.ts, never tool fields.
+
+/** Form 1099-MISC (Rev. December 2026). */
+const Add1099MiscFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    rents: optionalAmount,
+    royalties: optionalAmount,
+    otherIncome: optionalAmount,
+    federalTaxWithheld: optionalAmount,
+    stateCode: optionalString,
+    stateTaxWithheld: optionalAmount,
+  })
+  .strict();
+
+/** Form 1099-G (Rev. December 2026). Box 2 refunds are reviewed, not income items. */
+const Add1099GFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    unemploymentCompensation: optionalAmount,
+    federalTaxWithheld: optionalAmount,
+    stateCode: optionalString,
+    stateTaxWithheld: optionalAmount,
+  })
+  .strict();
+
+/** Form 1099-B (2026): one sale. */
+const Add1099BFieldsSchema = z
+  .object({
+    brokerName: optionalString,
+    description: optionalString,
+    /** Box 1b as printed ("03/02/2019" or "VARIOUS"). */
+    dateAcquired: optionalString,
+    /** Box 1c as printed. */
+    dateSold: optionalString,
+    proceeds: optionalAmount,
+    costBasis: optionalAmount,
+    /** Box 2: long-term (true) or short-term (false). "Ordinary" is reviewed. */
+    isLongTerm: optionalBoolean,
+    federalTaxWithheld: optionalAmount,
+    washSaleLossDisallowed: optionalAmount,
+    /** Box 12. */
+    basisReportedToIRS: optionalBoolean,
+    /** Box 3 "Collectibles". */
+    isCollectible: optionalBoolean,
+  })
+  .strict();
+
+/** Form 1099-K (Rev. December 2026). */
+const Add1099KFieldsSchema = z
+  .object({
+    platformName: optionalString,
+    grossAmount: optionalAmount,
+    cardNotPresent: optionalAmount,
+    federalTaxWithheld: optionalAmount,
+  })
+  .strict();
+
+/** Form 1099-OID (Rev. January 2024). */
+const Add1099OidFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    originalIssueDiscount: optionalAmount,
+    otherPeriodicInterest: optionalAmount,
+    earlyWithdrawalPenalty: optionalAmount,
+    federalTaxWithheld: optionalAmount,
+    marketDiscount: optionalAmount,
+    acquisitionPremium: optionalAmount,
+    description: optionalString,
+    stateCode: optionalString,
+    stateTaxWithheld: optionalAmount,
+  })
+  .strict();
+
+/** 1099-C box 6 identifiable event codes (Instructions for Forms 1099-A and 1099-C). */
+export const IDENTIFIABLE_EVENT_CODES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+
+/** Form 1099-C (Rev. April 2025). */
+const Add1099CFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    /** Box 1 as printed. */
+    dateOfCancellation: optionalString,
+    amountCancelled: optionalAmount,
+    interestIncluded: optionalAmount,
+    debtDescription: optionalString,
+    identifiableEventCode: optionalString,
+    /** Box 5. Recorded for review (a nonrecourse debt may not be income); the engine has no field for it. */
+    personallyLiable: optionalBoolean,
+  })
+  .strict();
+
+/** Form 1099-Q (Rev. April 2025). The qualified expenses it paid are the preparer's to supply. */
+const Add1099QFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    grossDistribution: optionalAmount,
+    earnings: optionalAmount,
+    basisReturn: optionalAmount,
+    /** Box 4a / 4b. */
+    trusteeToTrusteeTransfer: optionalBoolean,
+    qtpToRothIra: optionalBoolean,
+    /** Box 6: the recipient is not the designated beneficiary. */
+    recipientNotDesignatedBeneficiary: optionalBoolean,
+  })
+  .strict();
+
+/** 1099-SA box 3 distribution codes (Instructions for Forms 1099-SA and 5498-SA). */
+export const HSA_DISTRIBUTION_CODES = ['1', '2', '3', '4', '5', '6'] as const;
+
+/** Form 1099-SA (Rev. April 2025). Whether it paid qualified medical expenses is the preparer's to answer. */
+const Add1099SaFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    grossDistribution: optionalAmount,
+    distributionCode: optionalString,
+    /** Box 5: which account paid it. */
+    accountType: z.preprocess(asMissing, z.enum(['HSA', 'Archer MSA', 'MA MSA']).optional()),
+  })
+  .strict();
+
+/** Form 1099-S (Rev. December 2026). The §121 facts (basis, ownership, use) are the preparer's to supply. */
+const Add1099SFieldsSchema = z
+  .object({
+    filerName: optionalString,
+    /** Box 1 as printed. */
+    closingDate: optionalString,
+    grossProceeds: optionalAmount,
+    propertyAddress: optionalString,
+    buyerRealEstateTax: optionalAmount,
+    /** Box 7. */
+    transferorIsForeign: optionalBoolean,
+  })
+  .strict();
+
 export const SetFilingStatusCandidateSchema = z
   .object({
     status: z.enum(FILING_STATUS_CANDIDATES),
@@ -420,7 +615,29 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_ssa_1099: AddSsa1099FieldsSchema,
   add_mortgage_interest: AddMortgageInterestFieldsSchema,
   add_education_expense: AddEducationExpenseFieldsSchema,
+  add_1099_misc: Add1099MiscFieldsSchema,
+  add_1099_g: Add1099GFieldsSchema,
+  add_1099_b: Add1099BFieldsSchema,
+  add_1099_k: Add1099KFieldsSchema,
+  add_1099_oid: Add1099OidFieldsSchema,
+  add_1099_c: Add1099CFieldsSchema,
+  add_1099_q: Add1099QFieldsSchema,
+  add_1099_sa: Add1099SaFieldsSchema,
+  add_1099_s: Add1099SFieldsSchema,
 };
+
+/** Fields recorded as facts for review but not written to the engine's item. */
+export const FACT_ONLY_FIELDS: Partial<Record<DocumentToolName, readonly string[]>> = {
+  add_1099_c: ['personallyLiable'],
+};
+
+/** An income item's fields as the engine takes them: fact-only fields removed. */
+export function engineItemFields(itemType: string, fields: Record<string, unknown>): Record<string, unknown> {
+  const tool = (Object.keys(TAX_TOOL_INCOME_TYPE) as TaxToolIncomeName[]).find((t) => TAX_TOOL_INCOME_TYPE[t] === itemType);
+  const factOnly = tool && isDocumentTool(tool) ? FACT_ONLY_FIELDS[tool] ?? [] : [];
+  if (factOnly.length === 0) return fields;
+  return Object.fromEntries(Object.entries(fields).filter(([key]) => !factOnly.includes(key)));
+}
 
 export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_w2: { kind: 'income_item', itemType: 'w2' },
@@ -431,6 +648,15 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_ssa_1099: { kind: 'aggregate', target: 'socialSecurityBenefits' },
   add_mortgage_interest: { kind: 'aggregate', target: 'mortgageInterest' },
   add_education_expense: { kind: 'needs_preparer_choice', target: 'educationCredit', choice: 'creditType' },
+  add_1099_misc: { kind: 'income_item', itemType: '1099misc' },
+  add_1099_g: { kind: 'income_item', itemType: '1099g' },
+  add_1099_b: { kind: 'income_item', itemType: '1099b' },
+  add_1099_k: { kind: 'income_item', itemType: '1099k' },
+  add_1099_oid: { kind: 'income_item', itemType: '1099oid' },
+  add_1099_c: { kind: 'income_item', itemType: '1099c' },
+  add_1099_q: { kind: 'needs_preparer_choice', target: 'qualifiedTuitionProgram', choice: 'qualifiedExpenses' },
+  add_1099_sa: { kind: 'needs_preparer_choice', target: 'hsaDistribution', choice: 'qualifiedMedicalExpenses' },
+  add_1099_s: { kind: 'needs_preparer_choice', target: 'homeSale', choice: 'ownershipAndBasis' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -467,6 +693,15 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_ssa_1099: 'SSA1099',
   add_mortgage_interest: '1098',
   add_education_expense: '1098T',
+  add_1099_misc: '1099MISC',
+  add_1099_g: '1099G',
+  add_1099_b: '1099B',
+  add_1099_k: '1099K',
+  add_1099_oid: '1099OID',
+  add_1099_c: '1099C',
+  add_1099_q: '1099Q',
+  add_1099_sa: '1099SA',
+  add_1099_s: '1099S',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',

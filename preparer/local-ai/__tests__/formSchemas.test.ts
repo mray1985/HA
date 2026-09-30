@@ -164,14 +164,14 @@ describe('mapBoxesToTool', () => {
 
   it('routes every filled tax box on a form without a tax tool to review', () => {
     const noTool: FormExtractionSchema = {
-      formType: '1099-G',
+      formType: 'W-2G',
       revision: 'test',
       boxes: [
-        { key: '1', box: '1', label: 'Unemployment compensation', kind: 'money', use: 'tool' },
+        { key: '1', box: '1', label: 'Reportable winnings', kind: 'money', use: 'tool' },
         { key: 'payer', box: '', label: "PAYER'S name", kind: 'text', use: 'info' },
       ],
     };
-    const mapped = mapBoxesToTool(noTool, { '1': '4,200.00', payer: 'LOUISIANA WORKFORCE COMMISSION' });
+    const mapped = mapBoxesToTool(noTool, { '1': '4,200.00', payer: 'RIVER CITY CASINO' });
     expect(mapped.tool).toBeNull();
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['1']);
   });

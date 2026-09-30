@@ -15,7 +15,7 @@
 
 import { getForm4137 } from '@hatax/engine';
 import type { TaxFact, TaxFactValue } from './taxFact.js';
-import { US_STATE_CODES as STATE_CODE_LIST } from './taxTools.js';
+import { HSA_DISTRIBUTION_CODES, IDENTIFIABLE_EVENT_CODES, US_STATE_CODES as STATE_CODE_LIST } from './taxTools.js';
 
 /** Rounding tolerance for FICA percentage checks (cents). */
 const FICA_TOLERANCE = 1;
@@ -61,11 +61,19 @@ const NON_NEGATIVE_AMOUNT_FIELDS = new Set([
   'rents',
   'royalties',
   'otherIncome',
+  'originalIssueDiscount',
+  'otherPeriodicInterest',
+  'marketDiscount',
+  'acquisitionPremium',
+  'washSaleLossDisallowed',
+  'amountCancelled',
+  'interestIncluded',
+  'grossProceeds',
+  'buyerRealEstateTax',
   'proceeds',
   'costBasis',
   'cardNotPresent',
   'totalBenefits',
-  'earnings',
   'basisReturn',
   'outstandingPrincipal',
   'mortgageInsurance',
@@ -531,6 +539,15 @@ const FORM_BY_PREFIX: ReadonlyArray<[string, string]> = [
   ['SSA1099_', 'SSA-1099'],
   ['1098T_', '1098-T'],
   ['1098_', '1098'],
+  ['1099MISC_', '1099-MISC'],
+  ['1099G_', '1099-G'],
+  ['1099B_', '1099-B'],
+  ['1099K_', '1099-K'],
+  ['1099OID_', '1099-OID'],
+  ['1099C_', '1099-C'],
+  ['1099Q_', '1099-Q'],
+  ['1099SA_', '1099-SA'],
+  ['1099S_', '1099-S'],
   ['SCHC_RECEIPTS_', 'Business receipts'],
   ['ESTPAY_', 'Estimated payment'],
 ];
@@ -554,6 +571,14 @@ export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> =
   'SSA-1099': ['netBenefits'],
   '1098': ['mortgageInterest'],
   '1098-T': ['tuitionPaid'],
+  // A blank cost basis (a noncovered security) would be read as zero basis.
+  '1099-B': ['proceeds', 'costBasis', 'isLongTerm'],
+  '1099-K': ['grossAmount'],
+  '1099-C': ['amountCancelled'],
+  // Box 1 is box 2 plus box 3; with only fair market value shown, earnings are figured (Pub. 970).
+  '1099-Q': ['grossDistribution', 'earnings', 'basisReturn'],
+  '1099-SA': ['grossDistribution', 'distributionCode'],
+  '1099-S': ['grossProceeds'],
   'Business receipts': ['amount'],
   'Estimated payment': ['amount', 'jurisdiction'],
 };
@@ -562,7 +587,16 @@ export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> =
 const RECORD_KINDS: ReadonlySet<string> = new Set(['Business receipts', 'Estimated payment']);
 
 /** Required fields that are not amounts: missing, the record cannot be placed at all. */
-const REQUIRED_NON_AMOUNT_FIELDS: ReadonlySet<string> = new Set(['jurisdiction']);
+const REQUIRED_NON_AMOUNT_FIELDS: ReadonlySet<string> = new Set(['jurisdiction', 'isLongTerm', 'distributionCode']);
+
+/**
+ * Forms whose income may be in any of several boxes: at least one must be
+ * read, or the form has nothing the engine can take.
+ */
+const ONE_OF_REQUIRED: Readonly<Record<string, readonly string[]>> = {
+  '1099-MISC': ['rents', 'royalties', 'otherIncome'],
+  '1099-OID': ['originalIssueDiscount', 'otherPeriodicInterest'],
+};
 
 /** 1099-R box 7 distribution codes (Instructions for Forms 1099-R and 5498). */
 export const DISTRIBUTION_CODES = new Set([
@@ -614,6 +648,17 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
         message: `${form} ${field} is ${fact ? 'unreadable' : RECORD_KINDS.has(form) ? 'not in the evidence' : 'not on the form'}. ${consequence}`,
         factId: fact?.factId,
         sourceField: field,
+        observed: 'unknown',
+        holdsForm: true,
+      }));
+    }
+
+    const oneOf = ONE_OF_REQUIRED[form];
+    if (oneOf && !oneOf.some((f) => fields.get(f)?.status === 'extracted')) {
+      issues.push(formIssue(fields, formKey, {
+        code: 'NO_INCOME_BOX_READ',
+        message: `${form}: none of ${oneOf.join(', ')} was read. The form is held; boxes the engine cannot take are reviewed separately.`,
+        sourceField: oneOf[0],
         observed: 'unknown',
         holdsForm: true,
       }));
@@ -695,6 +740,69 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
         }
         break;
       }
+      case '1099-MISC': {
+        const income = ['rents', 'royalties', 'otherIncome'].reduce((sum, f) => sum + (amount(fields, f) ?? 0), 0);
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (withheld !== undefined && income > 0 && withheld > income) {
+          warn('WITHHOLDING_EXCEEDS_INCOME', `1099-MISC withholding (${withheld}) exceeds boxes 1–3 (${income}).`, 'federalTaxWithheld', withheld);
+        }
+        break;
+      }
+      case '1099-G': {
+        const unemployment = amount(fields, 'unemploymentCompensation');
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (unemployment !== undefined && withheld !== undefined && withheld > unemployment) {
+          warn('WITHHOLDING_EXCEEDS_INCOME', `1099-G withholding (${withheld}) exceeds box 1 unemployment compensation (${unemployment}).`, 'federalTaxWithheld', withheld);
+        }
+        break;
+      }
+      case '1099-B': {
+        const proceeds = amount(fields, 'proceeds');
+        const withheld = amount(fields, 'federalTaxWithheld');
+        if (proceeds !== undefined && withheld !== undefined && withheld > proceeds) {
+          hold('B_WITHHOLDING_EXCEEDS_PROCEEDS', `1099-B box 4 (${withheld}) exceeds box 1d proceeds (${proceeds}); one was misread. Form held.`, 'federalTaxWithheld', withheld);
+        }
+        break;
+      }
+      case '1099-K': {
+        const gross = amount(fields, 'grossAmount');
+        const cardNotPresent = amount(fields, 'cardNotPresent');
+        if (gross !== undefined && cardNotPresent !== undefined && cardNotPresent > gross) {
+          hold('K_CARD_NOT_PRESENT_EXCEEDS_GROSS', `1099-K box 1b (${cardNotPresent}) is part of box 1a (${gross}) and cannot exceed it; one was misread. Form held.`, 'cardNotPresent', cardNotPresent);
+        }
+        break;
+      }
+      case '1099-C': {
+        const discharged = amount(fields, 'amountCancelled');
+        const interest = amount(fields, 'interestIncluded');
+        if (discharged !== undefined && interest !== undefined && interest > discharged) {
+          hold('C_INTEREST_EXCEEDS_DEBT', `1099-C box 3 interest (${interest}) is included in box 2 (${discharged}) and cannot exceed it. Form held.`, 'interestIncluded', interest);
+        }
+        const code = fields.get('identifiableEventCode');
+        if (code?.status === 'extracted' && typeof code.value === 'string' && !(IDENTIFIABLE_EVENT_CODES as readonly string[]).includes(code.value.trim().toUpperCase())) {
+          hold('C_INVALID_EVENT_CODE', `1099-C box 6 "${code.value}" is not an identifiable event code (A–H). Form held.`, 'identifiableEventCode', undefined);
+        }
+        if (fields.get('personallyLiable')?.status === 'extracted' && fields.get('personallyLiable')!.value === false) {
+          warn('C_NOT_PERSONALLY_LIABLE', '1099-C box 5 is not checked: for a nonrecourse debt the amount may not be cancellation-of-debt income (Pub. 4681).', 'personallyLiable', false);
+        }
+        break;
+      }
+      case '1099-Q': {
+        const gross = amount(fields, 'grossDistribution');
+        const earnings = amount(fields, 'earnings');
+        const basis = amount(fields, 'basisReturn');
+        if (gross !== undefined && earnings !== undefined && basis !== undefined && Math.abs(gross - earnings - basis) > 0.005) {
+          hold('Q_BOXES_DO_NOT_ADD', `1099-Q box 1 (${gross}) is not box 2 (${earnings}) plus box 3 (${basis}); one was misread. Form held.`, 'grossDistribution', gross);
+        }
+        break;
+      }
+      case '1099-SA': {
+        const code = fields.get('distributionCode');
+        if (code?.status === 'extracted' && typeof code.value === 'string' && !(HSA_DISTRIBUTION_CODES as readonly string[]).includes(code.value.trim())) {
+          hold('SA_INVALID_DISTRIBUTION_CODE', `1099-SA box 3 "${code.value}" is not a distribution code (1–6). Form held.`, 'distributionCode', undefined);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -730,18 +838,30 @@ function detectReceiptsRepeating1099(forms: Map<string, Map<string, TaxFact>>, i
   }
 }
 
-/** Identity used to spot the same form imported twice from different files. */
-const DUPLICATE_KEYS: Readonly<Record<string, readonly string[]>> = {
-  'W-2': ['employerEin', 'wages', 'federalTaxWithheld'],
-  '1099-INT': ['payerName', 'amount'],
-  '1099-DIV': ['payerName', 'ordinaryDividends'],
-  '1099-NEC': ['payerEin', 'amount'],
-  '1099-R': ['payerName', 'grossDistribution', 'distributionCode'],
-  'SSA-1099': ['netBenefits', 'beneficiaryName'],
-  '1098': ['lenderTin', 'mortgageInterest'],
-  '1098-T': ['institutionEin', 'tuitionPaid', 'studentName'],
-  'Business receipts': ['description', 'amount'],
-  'Estimated payment': ['jurisdiction', 'amount', 'datePaid'],
+/**
+ * Identity used to spot the same form imported twice from different files:
+ * `required` fields must all be read; `optional` fields count as read or blank.
+ */
+const DUPLICATE_KEYS: Readonly<Record<string, { required: readonly string[]; optional?: readonly string[] }>> = {
+  'W-2': { required: ['employerEin', 'wages', 'federalTaxWithheld'] },
+  '1099-INT': { required: ['payerName', 'amount'] },
+  '1099-DIV': { required: ['payerName', 'ordinaryDividends'] },
+  '1099-NEC': { required: ['payerEin', 'amount'] },
+  '1099-R': { required: ['payerName', 'grossDistribution', 'distributionCode'] },
+  'SSA-1099': { required: ['netBenefits', 'beneficiaryName'] },
+  '1098': { required: ['lenderTin', 'mortgageInterest'] },
+  '1098-T': { required: ['institutionEin', 'tuitionPaid', 'studentName'] },
+  '1099-MISC': { required: ['payerName'], optional: ['rents', 'royalties', 'otherIncome'] },
+  '1099-G': { required: ['payerName'], optional: ['unemploymentCompensation', 'federalTaxWithheld'] },
+  '1099-B': { required: ['brokerName', 'proceeds'], optional: ['description', 'dateSold', 'costBasis'] },
+  '1099-K': { required: ['platformName', 'grossAmount'] },
+  '1099-OID': { required: ['payerName'], optional: ['originalIssueDiscount', 'otherPeriodicInterest'] },
+  '1099-C': { required: ['payerName', 'amountCancelled'], optional: ['dateOfCancellation'] },
+  '1099-Q': { required: ['payerName', 'grossDistribution'] },
+  '1099-SA': { required: ['payerName', 'grossDistribution'], optional: ['distributionCode'] },
+  '1099-S': { required: ['grossProceeds'], optional: ['closingDate', 'propertyAddress'] },
+  'Business receipts': { required: ['description', 'amount'] },
+  'Estimated payment': { required: ['jurisdiction', 'amount', 'datePaid'] },
 };
 
 /**
@@ -753,16 +873,21 @@ function detectDuplicateForms(forms: Map<string, Map<string, TaxFact>>, issues: 
   const seen = new Map<string, string>();
   for (const [formKey, fields] of forms) {
     const form = formOf(fields);
-    const keys = form ? DUPLICATE_KEYS[form] : undefined;
-    if (!form || !keys) continue;
+    const identityKeys = form ? DUPLICATE_KEYS[form] : undefined;
+    if (!form || !identityKeys) continue;
     const parts: string[] = [];
     let complete = true;
-    for (const k of keys) {
+    for (const k of identityKeys.required) {
       const fact = fields.get(k);
       if (fact?.status !== 'extracted') { complete = false; break; }
       parts.push(JSON.stringify(fact.value));
     }
     if (!complete) continue;
+    for (const k of identityKeys.optional ?? []) {
+      const fact = fields.get(k);
+      parts.push(fact?.status === 'extracted' ? JSON.stringify(fact.value) : '-');
+    }
+    const keys = [...identityKeys.required, ...(identityKeys.optional ?? [])];
     const identity = `${form}|${parts.join('|')}`;
     const first = seen.get(identity);
     if (!first) {

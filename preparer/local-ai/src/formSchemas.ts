@@ -253,7 +253,8 @@ const R_SCHEMA: FormExtractionSchema = {
   revision: '2026',
   boxes: [
     checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
-    ...SPLIT_PAYER_RECIPIENT,
+    // The 1099-R tool takes no payer TIN.
+    ...SPLIT_PAYER_RECIPIENT.map((b) => (b.key === 'payer.tin' ? { ...b, use: 'info' as const } : b)),
     box('1', 'Gross distribution', 'money', 'tool'),
     box('2a', 'Taxable amount', 'money', 'tool'),
     checkbox('2b.notDetermined', 'Taxable amount not determined', 'review', { labelPhrase: 'determined', direction: 'right' }),
@@ -398,6 +399,304 @@ const SSA_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+// ─── Remaining information returns (work order §16) ──────────
+// Labels and box numbers are from each form's Copy B as downloaded from
+// irs.gov (local-ai/gauntlet/forms). Checkbox positions were measured on those
+// PDFs: the square's rectangle against the printed label's position.
+
+/** Split payer/recipient cells (2026 revisions), with the form's own party words. */
+function splitParties(payer: string, recipient: string): FormBoxSchema[] {
+  return [
+    box('payer.name', `${payer} name`, 'text', 'tool', ''),
+    box('payer.street', `${payer} street address`, 'text', 'info', ''),
+    box('payer.suite', `${payer} room or suite no.`, 'text', 'info', ''),
+    box('payer.city', `${payer} city or town`, 'text', 'info', ''),
+    box('payer.phone', `${payer} telephone number`, 'text', 'info', ''),
+    box('payer.state', `${payer} state or province`, 'text', 'info', ''),
+    box('payer.country', `${payer} country`, 'text', 'info', ''),
+    box('payer.zip', `${payer} ZIP or foreign postal code`, 'text', 'info', ''),
+    box('payer.tin', `${payer} TIN`, 'tin', 'info', ''),
+    box('recipient.tin', `${recipient} TIN`, 'tin', 'info', ''),
+    box('recipient.name', `${recipient} name`, 'text', 'info', ''),
+    box('recipient.street', `${recipient} street address`, 'text', 'info', ''),
+    box('recipient.apt', `${recipient} apt. no.`, 'text', 'info', ''),
+    box('recipient.city', `${recipient} city or town`, 'text', 'info', ''),
+    box('recipient.state', `${recipient} state or province`, 'text', 'info', ''),
+    box('recipient.country', `${recipient} country`, 'text', 'info', ''),
+    box('recipient.zip', `${recipient} ZIP or foreign postal code`, 'text', 'info', ''),
+    box('account', 'Account number (see instructions)', 'text', 'info', ''),
+  ];
+}
+
+/** One combined payer block (older revisions), with the form's own party words. */
+function combinedParties(payerBlock: string, payerTin: string, recipient: string): FormBoxSchema[] {
+  return [
+    box('payer.block', payerBlock, 'text', 'tool', ''),
+    box('payer.tin', payerTin, 'tin', 'info', ''),
+    box('recipient.tin', `${recipient} TIN`, 'tin', 'info', ''),
+    box('recipient.name', `${recipient} name`, 'text', 'info', ''),
+    box('recipient.street', 'Street address (including apt. no.)', 'text', 'info', ''),
+    box('recipient.city', 'City or town, state or province, country, and ZIP or foreign postal code', 'text', 'info', ''),
+    box('account', 'Account number (see instructions)', 'text', 'info', ''),
+  ];
+}
+
+const CORRECTED = checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, '');
+
+const MISC_SCHEMA: FormExtractionSchema = {
+  formType: '1099-MISC',
+  revision: 'December 2026',
+  boxes: [
+    CORRECTED,
+    ...splitParties("PAYER'S", "RECIPIENT'S"),
+    checkbox('fatca', 'FATCA filing requirement', 'review', { labelPhrase: 'requirement', direction: 'below' }, ''),
+    box('1', 'Rents', 'money', 'tool'),
+    box('2', 'Royalties', 'money', 'tool'),
+    box('3', 'Other income', 'money', 'tool'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'Fishing boat proceeds', 'money', 'review'),
+    box('6', 'Medical and health care payments', 'money', 'review'),
+    checkbox('7', 'Payer made direct sales totaling $5,000 or more of consumer products to recipient for resale', 'info', { labelPhrase: 'for resale', direction: 'right' }),
+    box('8', 'Substitute payments in lieu of dividends or interest', 'money', 'review'),
+    box('9', 'Crop insurance proceeds', 'money', 'review'),
+    box('10', 'Gross proceeds paid to an attorney', 'money', 'review'),
+    box('11', 'Fish purchased for resale', 'money', 'review'),
+    box('12', 'Section 409A deferrals', 'money', 'review'),
+    box('13a', 'Cash tips', 'money', 'review'),
+    box('13b', 'TTOC', 'code', 'review'),
+    box('14', 'Overtime compensation', 'money', 'review'),
+    box('15', 'Nonqualified deferred compensation', 'money', 'review'),
+    ...stateRows(2, [
+      { key: '16', label: 'State tax withheld', kind: 'money', use: 'tool' },
+      { key: '17', label: "State/Payer's state no.", kind: 'stateAndId', use: 'tool' },
+      { key: '18', label: 'State income', kind: 'money', use: 'info' },
+    ]),
+  ],
+};
+
+const G_SCHEMA: FormExtractionSchema = {
+  formType: '1099-G',
+  revision: 'December 2026',
+  boxes: [
+    CORRECTED,
+    ...splitParties("PAYER'S", "RECIPIENT'S"),
+    box('1', 'Unemployment compensation', 'money', 'tool'),
+    box('2', 'State or local income tax refunds, credits, or offsets', 'money', 'review'),
+    box('3', 'Box 2 amount is for tax year', 'integer', 'review'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'RTAA payments', 'money', 'review'),
+    box('6', 'Taxable grants', 'money', 'review'),
+    box('7', 'Agriculture payments', 'money', 'review'),
+    checkbox('8', 'If checked, box 2 is trade or business income', 'review', { labelPhrase: 'trade or business', direction: 'right' }),
+    box('9', 'Market gain', 'money', 'review'),
+    box('10', 'Family leave benefits', 'money', 'review'),
+    ...stateRows(2, [
+      { key: '11a', label: 'State', kind: 'stateCode', use: 'tool' },
+      { key: '11b', label: 'State identification no.', kind: 'text', use: 'info' },
+      { key: '12', label: 'State income tax withheld', kind: 'money', use: 'tool' },
+    ]),
+  ],
+};
+
+const B_SCHEMA: FormExtractionSchema = {
+  formType: '1099-B',
+  revision: '2026',
+  boxes: [
+    CORRECTED,
+    ...splitParties("PAYER'S", "RECIPIENT'S"),
+    box('cusip', 'CUSIP number', 'text', 'info', ''),
+    checkbox('fatca', 'FATCA filing requirement', 'review', { labelPhrase: 'requirement', direction: 'right' }, ''),
+    box('8949', 'Applicable checkbox on Form 8949', 'code', 'info', ''),
+    box('1a', 'Description of property (Example: 100 sh. XYZ Co.)', 'text', 'tool'),
+    // "VARIOUS" is a valid acquisition date, so the box is text.
+    box('1b', 'Date acquired', 'text', 'tool'),
+    box('1c', 'Date sold or disposed', 'date', 'tool'),
+    box('1d', 'Proceeds', 'money', 'tool'),
+    box('1e', 'Cost or other basis', 'money', 'tool'),
+    box('1f', 'Accrued market discount', 'money', 'review'),
+    box('1g', 'Wash sale loss disallowed', 'money', 'tool'),
+    // Box 2: one of three squares, each at the right end of its label.
+    checkbox('2.short', 'Short-term gain or loss', 'tool', { labelPhrase: 'Short-term gain or loss', direction: 'right', sameRow: true }, '2'),
+    checkbox('2.long', 'Long-term gain or loss', 'tool', { labelPhrase: 'Long-term gain or loss', direction: 'right', sameRow: true }, '2'),
+    checkbox('2.ordinary', 'Ordinary', 'review', { labelPhrase: 'Ordinary', direction: 'right', sameRow: true }, '2'),
+    checkbox('3.collectibles', 'If checked, proceeds from: Collectibles', 'tool', { labelPhrase: 'Collectibles', direction: 'right', sameRow: true }, '3'),
+    checkbox('3.qof', 'If checked, proceeds from: QOF', 'review', { labelPhrase: 'QOF', direction: 'right', sameRow: true }, '3'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    // The square is right of the label's second line.
+    checkbox('5', 'If checked, noncovered security', 'review', { labelPhrase: 'security', direction: 'right' }),
+    checkbox('6.gross', 'Reported to IRS: Gross proceeds', 'info', { labelPhrase: 'Gross proceeds', direction: 'right', sameRow: true }, '6'),
+    checkbox('6.net', 'Reported to IRS: Net proceeds', 'info', { labelPhrase: 'Net proceeds', direction: 'right', sameRow: true }, '6'),
+    checkbox('7', 'If checked, loss is not allowed based on amount in 1d', 'review', { labelPhrase: 'amount in 1d', direction: 'right' }),
+    box('8', 'Profit or (loss) realized in 2026 on closed contracts', 'money', 'review'),
+    box('9', 'Unrealized profit or (loss) on open contracts—12/31/2025', 'money', 'review'),
+    box('10', 'Unrealized profit or (loss) on open contracts—12/31/2026', 'money', 'review'),
+    box('11', 'Aggregate profit or (loss) on contracts', 'money', 'review'),
+    // The square sits below "basis reported", at the end of the label's second line ("to IRS").
+    checkbox('12', 'If checked, basis reported to IRS', 'tool', { labelPhrase: 'basis reported', direction: 'below' }),
+    box('13', 'Bartering', 'money', 'review'),
+    // The engine keeps no state data for 1099-B; state withholding is reviewed.
+    ...stateRows(2, [
+      { key: '14', label: 'State name', kind: 'stateCode', use: 'review' },
+      { key: '15', label: 'State identification no.', kind: 'text', use: 'info' },
+      { key: '16', label: 'State tax withheld', kind: 'money', use: 'review' },
+    ]),
+  ],
+};
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const K_SCHEMA: FormExtractionSchema = {
+  formType: '1099-K',
+  revision: 'December 2026',
+  boxes: [
+    CORRECTED,
+    ...splitParties("FILER'S", "PAYEE'S"),
+    box('pse', "PSE'S name and telephone number", 'text', 'info', ''),
+    box('filer.pse', 'Check to indicate if FILER is a (an): Payment settlement entity (PSE)', 'checkbox', 'info', ''),
+    box('filer.epf', 'Check to indicate if FILER is a (an): Electronic payment facilitator (EPF)/Other third party', 'checkbox', 'info', ''),
+    box('transactions.card', 'Check to indicate transactions reported are: Payment card', 'checkbox', 'info', ''),
+    box('transactions.network', 'Check to indicate transactions reported are: Third party network', 'checkbox', 'info', ''),
+    box('1a', 'Gross amount of payment card/third party network transactions', 'money', 'tool'),
+    box('1b', 'Card Not Present transactions', 'money', 'tool'),
+    box('1c', 'Cash tips', 'money', 'review'),
+    box('1d', 'TTOC', 'code', 'review'),
+    box('2', 'Merchant category code', 'code', 'info'),
+    box('3', 'Number of payment transactions', 'integer', 'info'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    ...MONTHS.map((m, i) => box(`5${'abcdefghijkl'[i]}`, m, 'money', 'info')),
+    // The engine keeps no state data for 1099-K; state withholding is reviewed.
+    ...stateRows(2, [
+      { key: '6', label: 'State income tax withheld', kind: 'money', use: 'review' },
+      { key: '7', label: 'State identification no.', kind: 'text', use: 'info' },
+      { key: '8', label: 'State', kind: 'stateCode', use: 'review' },
+    ]),
+  ],
+};
+
+const OID_SCHEMA: FormExtractionSchema = {
+  formType: '1099-OID',
+  revision: 'January 2024',
+  boxes: [
+    CORRECTED,
+    ...combinedParties(
+      "PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.",
+      "PAYER'S TIN",
+      "RECIPIENT'S",
+    ),
+    checkbox('fatca', 'FATCA filing requirement', 'review', { labelPhrase: 'requirement', direction: 'below' }, ''),
+    box('1', 'Original issue discount for the year', 'money', 'tool'),
+    box('2', 'Other periodic interest', 'money', 'tool'),
+    box('3', 'Early withdrawal penalty', 'money', 'tool'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'Market discount', 'money', 'tool'),
+    box('6', 'Acquisition premium', 'money', 'tool'),
+    box('7', 'Description', 'text', 'tool'),
+    box('8', 'Original issue discount on U.S. Treasury obligations', 'money', 'review'),
+    box('9', 'Investment expenses', 'money', 'review'),
+    box('10', 'Bond premium', 'money', 'review'),
+    box('11', 'Tax-exempt OID', 'money', 'review'),
+    ...stateRows(2, [
+      { key: '12', label: 'State', kind: 'stateCode', use: 'tool' },
+      { key: '13', label: 'State identification no.', kind: 'text', use: 'info' },
+      { key: '14', label: 'State tax withheld', kind: 'money', use: 'tool' },
+    ]),
+  ],
+};
+
+const C_SCHEMA: FormExtractionSchema = {
+  formType: '1099-C',
+  revision: 'April 2025',
+  boxes: [
+    CORRECTED,
+    ...combinedParties(
+      "CREDITOR'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.",
+      "CREDITOR'S TIN",
+      "DEBTOR'S",
+    ),
+    box('1', 'Date of identifiable event', 'date', 'tool'),
+    box('2', 'Amount of debt discharged', 'money', 'tool'),
+    box('3', 'Interest, if included in box 2', 'money', 'tool'),
+    box('4', 'Debt description', 'text', 'tool'),
+    checkbox('5', 'If checked, the debtor was personally liable for repayment of the debt', 'tool', { labelPhrase: 'personally liable', direction: 'right' }),
+    box('6', 'Identifiable event code', 'code', 'tool'),
+    box('7', 'Fair market value of property', 'money', 'review'),
+  ],
+};
+
+const Q_SCHEMA: FormExtractionSchema = {
+  formType: '1099-Q',
+  revision: 'April 2025',
+  boxes: [
+    CORRECTED,
+    ...combinedParties(
+      "PAYER'S/TRUSTEE'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.",
+      "PAYER'S/TRUSTEE'S TIN",
+      "RECIPIENT'S",
+    ),
+    box('1', 'Gross distribution', 'money', 'tool'),
+    box('2', 'Earnings', 'money', 'tool'),
+    box('3', 'Basis', 'money', 'tool'),
+    checkbox('4a', 'Type of transfer: Trustee-to-trustee', 'tool', { labelPhrase: 'Trustee-to-trustee', direction: 'left', sameRow: true }),
+    checkbox('4b', 'Type of transfer: QTP to Roth IRA', 'tool', { labelPhrase: 'QTP to Roth IRA', direction: 'left', sameRow: true }),
+    checkbox('5a', 'Distribution is from: Private QTP', 'info', { labelPhrase: 'Private QTP', direction: 'left', sameRow: true }),
+    checkbox('5b', 'Distribution is from: State QTP', 'info', { labelPhrase: 'State QTP', direction: 'left', sameRow: true }),
+    // A Coverdell ESA is taxed under §530, not as a qualified tuition program.
+    checkbox('5c', 'Distribution is from: Coverdell ESA', 'review', { labelPhrase: 'Coverdell ESA', direction: 'left', sameRow: true }),
+    // The square sits alone in the cell's bottom-right corner, found by the cell.
+    checkbox('6', 'Check if the recipient is not the designated beneficiary', 'tool', {
+      labelPhrase: 'beneficiary',
+      direction: 'right',
+      row: { anchors: [{ phrase: 'Check if the recipient', cellOffset: 0 }], count: 1, index: 0 },
+    }),
+    // When the payer shows fair market value instead of earnings, the recipient figures earnings (Pub. 970).
+    box('7', 'If the fair market value (FMV) is shown below, see Pub. 970', 'money', 'review'),
+  ],
+};
+
+const SA_SCHEMA: FormExtractionSchema = {
+  formType: '1099-SA',
+  revision: 'April 2025',
+  boxes: [
+    CORRECTED,
+    ...combinedParties(
+      "TRUSTEE'S/PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number",
+      "PAYER'S TIN",
+      "RECIPIENT'S",
+    ),
+    box('1', 'Gross distribution', 'money', 'tool'),
+    box('2', 'Earnings on excess cont.', 'money', 'review'),
+    box('3', 'Distribution code', 'code', 'tool'),
+    box('4', 'FMV on date of death', 'money', 'review'),
+    // Box 5: one of three stacked squares, each right of its label.
+    checkbox('5.hsa', 'HSA', 'tool', { labelPhrase: 'HSA', direction: 'right', sameRow: true }, '5'),
+    checkbox('5.archer', 'Archer MSA', 'tool', { labelPhrase: 'Archer', direction: 'right', sameRow: true }, '5'),
+    checkbox('5.ma', 'MA MSA', 'tool', { labelPhrase: 'MA', direction: 'right', sameRow: true }, '5'),
+  ],
+};
+
+const S_SCHEMA: FormExtractionSchema = {
+  formType: '1099-S',
+  revision: 'December 2026',
+  boxes: [
+    CORRECTED,
+    ...splitParties("FILER'S", "TRANSFEROR'S"),
+    box('1', 'Date of closing', 'date', 'tool'),
+    box('2a', 'Total gross proceeds', 'money', 'tool'),
+    box('2b', 'Cash gross proceeds', 'money', 'info'),
+    box('2c', 'Digital asset gross proceeds', 'money', 'review'),
+    box('3', 'Address (including city, state, and ZIP code) or legal description', 'text', 'tool'),
+    box('4', "Buyer's part of real estate tax", 'money', 'tool'),
+    // Boxes 6 and 7 print their squares at the far end of a dotted leader,
+    // beyond the page reader's search window: they are read from the model only.
+    box('6', 'If checked, transferor received or will receive services or property (other than cash, notes, or digital assets) as part of the consideration', 'checkbox', 'review'),
+    box('7', 'If checked, transferor is a foreign person (nonresident alien, foreign partnership, foreign estate, or foreign trust)', 'checkbox', 'tool'),
+    box('8a', 'Code for digital asset received, or to be received, as consideration', 'code', 'review'),
+    box('8b', 'Name of digital asset received, or to be received, as consideration', 'text', 'review'),
+    box('8c', 'Number of digital asset units received, or to be received, as consideration', 'text', 'review'),
+    box('8d', 'Date digital asset received, or to be received, as consideration', 'date', 'review'),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -407,6 +706,15 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   'SSA-1099': SSA_SCHEMA,
   '1098': MORTGAGE_SCHEMA,
   '1098-T': TUITION_SCHEMA,
+  '1099-MISC': MISC_SCHEMA,
+  '1099-G': G_SCHEMA,
+  '1099-B': B_SCHEMA,
+  '1099-K': K_SCHEMA,
+  '1099-OID': OID_SCHEMA,
+  '1099-C': C_SCHEMA,
+  '1099-Q': Q_SCHEMA,
+  '1099-SA': SA_SCHEMA,
+  '1099-S': S_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -567,6 +875,12 @@ interface ToolMappingSpec {
   state?: { key: string; field: string };
   /** Checkbox box key → boolean tool field. Ambiguous checkboxes go to review. */
   checkboxes?: Record<string, string>;
+  /**
+   * A group of squares where exactly one is checked (1099-B box 2 term,
+   * 1099-SA box 5 account): the checked square's value. None read leaves the
+   * field unknown; two checked, or an unreadable square, goes to review.
+   */
+  choice?: { field: string; options: Record<string, string | boolean> };
   /** W-2 box 12 entries and box 13 checkboxes. */
   w2?: true;
 }
@@ -666,6 +980,77 @@ const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
     name: { keys: ['lender.block'], field: 'lenderName' },
     checkboxes: { '7': 'propertyAddressSameAsBorrower' },
   },
+  '1099-MISC': {
+    tool: 'add_1099_misc',
+    direct: { '1': 'rents', '2': 'royalties', '3': 'otherIncome', '4': 'federalTaxWithheld', '16.1': 'stateTaxWithheld' },
+    name: { keys: ['payer.name'], field: 'payerName' },
+    state: { key: '17.1', field: 'stateCode' },
+  },
+  '1099-G': {
+    tool: 'add_1099_g',
+    direct: { '1': 'unemploymentCompensation', '4': 'federalTaxWithheld', '12.1': 'stateTaxWithheld' },
+    name: { keys: ['payer.name'], field: 'payerName' },
+    state: { key: '11a.1', field: 'stateCode' },
+  },
+  '1099-B': {
+    tool: 'add_1099_b',
+    direct: {
+      '1a': 'description',
+      '1b': 'dateAcquired',
+      '1c': 'dateSold',
+      '1d': 'proceeds',
+      '1e': 'costBasis',
+      '1g': 'washSaleLossDisallowed',
+      '4': 'federalTaxWithheld',
+    },
+    name: { keys: ['payer.name'], field: 'brokerName' },
+    checkboxes: { '3.collectibles': 'isCollectible', '12': 'basisReportedToIRS' },
+    choice: { field: 'isLongTerm', options: { '2.short': false, '2.long': true } },
+  },
+  '1099-K': {
+    tool: 'add_1099_k',
+    direct: { '1a': 'grossAmount', '1b': 'cardNotPresent', '4': 'federalTaxWithheld' },
+    name: { keys: ['payer.name'], field: 'platformName' },
+  },
+  '1099-OID': {
+    tool: 'add_1099_oid',
+    direct: {
+      '1': 'originalIssueDiscount',
+      '2': 'otherPeriodicInterest',
+      '3': 'earlyWithdrawalPenalty',
+      '4': 'federalTaxWithheld',
+      '5': 'marketDiscount',
+      '6': 'acquisitionPremium',
+      '7': 'description',
+      '14.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    state: { key: '12.1', field: 'stateCode' },
+  },
+  '1099-C': {
+    tool: 'add_1099_c',
+    direct: { '1': 'dateOfCancellation', '2': 'amountCancelled', '3': 'interestIncluded', '4': 'debtDescription', '6': 'identifiableEventCode' },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    checkboxes: { '5': 'personallyLiable' },
+  },
+  '1099-Q': {
+    tool: 'add_1099_q',
+    direct: { '1': 'grossDistribution', '2': 'earnings', '3': 'basisReturn' },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    checkboxes: { '4a': 'trusteeToTrusteeTransfer', '4b': 'qtpToRothIra', '6': 'recipientNotDesignatedBeneficiary' },
+  },
+  '1099-SA': {
+    tool: 'add_1099_sa',
+    direct: { '1': 'grossDistribution', '3': 'distributionCode' },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    choice: { field: 'accountType', options: { '5.hsa': 'HSA', '5.archer': 'Archer MSA', '5.ma': 'MA MSA' } },
+  },
+  '1099-S': {
+    tool: 'add_1099_s',
+    direct: { '1': 'closingDate', '2a': 'grossProceeds', '3': 'propertyAddress', '4': 'buyerRealEstateTax' },
+    name: { keys: ['payer.name'], field: 'filerName' },
+    checkboxes: { '7': 'transferorIsForeign' },
+  },
   '1098-T': {
     tool: 'add_education_expense',
     direct: {
@@ -744,6 +1129,18 @@ export function mapBoxesToTool(
       reviewBoxes.push({ key, label: boxByKey.get(key)!.label, text });
     } else {
       put(field, state, text);
+    }
+  }
+
+  if (spec.choice) {
+    const read = Object.keys(spec.choice.options)
+      .filter((key) => values[key] !== undefined)
+      .map((key) => ({ key, text: values[key]!, state: checkboxState(values[key]) }));
+    const checked = read.filter((r) => r.state === true);
+    if (checked.length === 1 && !read.some((r) => r.state === undefined)) {
+      put(spec.choice.field, spec.choice.options[checked[0]!.key]!, read.map((r) => `${r.key}=${r.text}`).join('; '));
+    } else if (checked.length > 1 || read.some((r) => r.state === undefined)) {
+      for (const r of read) reviewBoxes.push({ key: r.key, label: boxByKey.get(r.key)!.label, text: r.text });
     }
   }
 

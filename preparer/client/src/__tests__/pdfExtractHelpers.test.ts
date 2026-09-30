@@ -652,7 +652,7 @@ describe('extract1098Fields with phrase-level blocks', () => {
     const fields = extract1098Fields(blocks);
     expect(fields.mortgageInterest).toBe(18750);
     expect(fields.outstandingPrincipal).toBe(342000);
-    expect(fields.mortgageInsurance).toBe(1200);
+    expect(fields.mortgageInsurancePremiums).toBe(1200);
   });
 });
 

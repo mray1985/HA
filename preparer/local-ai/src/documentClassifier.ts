@@ -25,6 +25,7 @@ export const CLASSIFIABLE_FORM_TYPES = [
   '1099-G',
   '1099-B',
   '1099-K',
+  '1099-OID',
   'SSA-1099',
   '1099-SA',
   '1099-Q',
@@ -52,6 +53,7 @@ export type ClassifiedIncomeType =
   | '1099g'
   | '1099b'
   | '1099k'
+  | '1099oid'
   | 'ssa1099'
   | '1099sa'
   | '1099q'
@@ -162,6 +164,12 @@ const FORM_MARKER_SIGNATURES: FormMarkerSignature[] = [
     incomeType: '1099k',
     primaryMarkers: ['1099-k', 'payment card and third party'],
     secondaryMarkers: ['payment settlement', 'gross amount', 'card not present', 'third party network'],
+  },
+  {
+    formType: '1099-OID',
+    incomeType: '1099oid',
+    primaryMarkers: ['1099-oid', 'original issue discount'],
+    secondaryMarkers: ['other periodic interest', 'acquisition premium', 'market discount', 'tax-exempt oid'],
   },
   {
     formType: 'SSA-1099',

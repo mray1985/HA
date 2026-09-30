@@ -28,9 +28,8 @@
  * matching discovery question (which makes the engine ignore that section)
  * becomes "yes".
  *
- * Forms read by HATax's deterministic extractors that have no tax tool yet
- * (1099-G, 1099-MISC, 1099-B, …) are applied the same way when their type is a
- * return item; anything else is left for the preparer to enter.
+ * Forms with no tax tool (W-2G, 1099-DA, K-1, …) are applied the same way
+ * when their type is a return item; anything else is left for the preparer.
  *
  * Call after the result's facts are saved (preparerTaxFacts.appendTaxFacts):
  * holds and totals are computed from the saved facts.
@@ -44,8 +43,9 @@ import {
   resolveDependents,
   resolveEstimatedPayments,
   resolveStateResidency,
+  engineItemFields,
+  formToolForIncomeType,
   TOOL_APPLICATION,
-  toolNameForIncomeType,
   validateImportedFacts,
   type AggregateTarget,
   type DocumentPieceOutcome,
@@ -112,7 +112,7 @@ export function applyToolResult(
 
 /** Where one extracted form goes: its tool's application, or a return item when HATax reads the type deterministically. */
 function applicationFor(incomeType: string | null): TaxToolApplication | null {
-  const tool = toolNameForIncomeType(incomeType);
+  const tool = formToolForIncomeType(incomeType);
   if (tool) return TOOL_APPLICATION[tool];
   if (incomeType && ARRAY_FIELD_MAP[incomeType]) return { kind: 'income_item', itemType: incomeType } as TaxToolApplication;
   return null;
@@ -165,7 +165,7 @@ function putIncomeItem(returnId: string, itemType: string, formKey: string, fiel
   const index = items.findIndex((i) => i[SOURCE_FORM_KEY] === formKey);
   // The whole item is rewritten: a box read before but unknown now must not linger.
   const id = index >= 0 ? String(items[index]!.id) : crypto.randomUUID();
-  const item = { ...fields, [SOURCE_FORM_KEY]: formKey, id };
+  const item = { ...engineItemFields(itemType, fields), [SOURCE_FORM_KEY]: formKey, id };
   const next = index >= 0 ? items.map((existing, i) => (i === index ? item : existing)) : [...items, item];
   updateReturn(returnId, { [field]: next });
   return { kind: 'income_item', itemType, itemId: id, replaced: index >= 0 };

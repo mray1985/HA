@@ -152,7 +152,10 @@ describe('tax tools (HA-AI-011)', () => {
   it('maps income types to tool names for supported forms only', () => {
     expect(toolNameForIncomeType('w2')).toBe('add_w2');
     expect(toolNameForIncomeType('1099int')).toBe('add_1099_int');
-    expect(toolNameForIncomeType('1099misc')).toBeNull();
+    expect(toolNameForIncomeType('1099misc')).toBe('add_1099_misc');
+    // Forms with no tax tool yet, and preparer-choice forms, are not income-item tools.
+    expect(toolNameForIncomeType('w2g')).toBeNull();
+    expect(toolNameForIncomeType('1099q')).toBeNull();
   });
 
   it('round-trips W-2 box12 codes and box13 flags through the tool', () => {

@@ -10,7 +10,7 @@ import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
 
 // ─── Types ─────────────────────────────────────────
 
-export type SupportedFormType = 'W-2' | '1099-INT' | '1099-DIV' | '1099-R' | '1099-NEC' | '1099-MISC' | '1099-G' | '1099-B' | '1099-K' | 'SSA-1099' | '1099-SA' | '1099-Q'
+export type SupportedFormType = 'W-2' | '1099-INT' | '1099-DIV' | '1099-R' | '1099-NEC' | '1099-MISC' | '1099-G' | '1099-B' | '1099-K' | '1099-OID' | 'SSA-1099' | '1099-SA' | '1099-Q'
   | '1098' | '1098-T' | '1098-E' | '1095-A' | 'K-1' | 'W-2G' | '1099-C' | '1099-S';
 
 export interface TextBlock {
@@ -225,6 +225,12 @@ const FORM_SIGNATURES: FormSignature[] = [
     incomeType: '1099k',
     primaryKeywords: ['1099-k', 'payment card and third party'],
     secondaryKeywords: ['payment settlement', 'gross amount', 'card not present', 'third party network'],
+  },
+  {
+    type: '1099-OID',
+    incomeType: '1099oid',
+    primaryKeywords: ['1099-oid', 'original issue discount'],
+    secondaryKeywords: ['other periodic interest', 'acquisition premium', 'market discount'],
   },
   {
     type: 'SSA-1099',
@@ -1253,7 +1259,7 @@ export function extract1099GFields(
   };
 }
 
-export function extract1099BFields(
+export function extract1099OIDFields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
   fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
@@ -1261,12 +1267,34 @@ export function extract1099BFields(
   const box = (key: string, keywords: string[]) =>
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
+    payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
+    originalIssueDiscount: box('originalIssueDiscount', ['original issue discount for', '1 original issue discount', 'box 1']),
+    otherPeriodicInterest: box('otherPeriodicInterest', ['other periodic interest', '2 other periodic', 'box 2']),
+    earlyWithdrawalPenalty: box('earlyWithdrawalPenalty', ['early withdrawal penalty', '3 early withdrawal', 'box 3']),
+    federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
+    marketDiscount: box('marketDiscount', ['market discount', '5 market discount', 'box 5']),
+    acquisitionPremium: box('acquisitionPremium', ['acquisition premium', '6 acquisition premium', 'box 6']),
+    description: extractBoxText(textBlocks, ['7 description', 'box 7'], fieldRawTokens, 'description', fieldSourceLocations),
+  };
+}
+
+export function extract1099BFields(
+  textBlocks: TextBlock[],
+  fieldRawTokens?: Record<string, string>,
+  fieldSourceLocations?: Record<string, FieldSourceLocationValue>,
+): Record<string, unknown> {
+  const box = (key: string, keywords: string[]) =>
+    extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
+  // Box 2's term squares are not text: the term stays unknown and the form is
+  // held for the preparer, never assumed short-term.
+  return {
     brokerName: extractPayerName(textBlocks, ["payer's name", 'payer name', "broker's name"], fieldRawTokens, 'brokerName', fieldSourceLocations),
-    description: 'Consolidated Summary (PDF Import)',
+    description: extractBoxText(textBlocks, ['description of property', '1a description', 'box 1a'], fieldRawTokens, 'description', fieldSourceLocations),
+    dateAcquired: extractBoxText(textBlocks, ['date acquired', '1b date acquired', 'box 1b'], fieldRawTokens, 'dateAcquired', fieldSourceLocations),
+    dateSold: extractBoxText(textBlocks, ['date sold or disposed', '1c date sold', 'box 1c'], fieldRawTokens, 'dateSold', fieldSourceLocations),
     proceeds: box('proceeds', ['total proceeds', '1d proceeds', '1d total']),
     costBasis: box('costBasis', ['total cost', 'cost or other basis', '1e cost', '1e total']),
-    isLongTerm: false,
-    dateSold: '',
+    washSaleLossDisallowed: box('washSaleLossDisallowed', ['wash sale loss disallowed', '1g wash sale', 'box 1g']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
   };
 }
@@ -1294,7 +1322,7 @@ export function extractSSA1099Fields(
   const box = (key: string, keywords: string[]) =>
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    totalBenefits: box('totalBenefits', ['net benefits', '5 net benefits', 'box 5']),
+    netBenefits: box('netBenefits', ['net benefits', '5 net benefits', 'box 5']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '6 voluntary federal', 'box 6']),
   };
 }
@@ -1310,7 +1338,6 @@ export function extract1099SAFields(
     payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross distribution', 'box 1']),
     distributionCode: extractBoxText(textBlocks, ['distribution code', '3 distribution code', 'box 3'], fieldRawTokens, 'distributionCode', fieldSourceLocations),
-    federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', 'tax withheld']),
   };
 }
 
@@ -1326,8 +1353,6 @@ export function extract1099QFields(
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross distribution', 'box 1']),
     earnings: box('earnings', ['earnings', '2 earnings', 'box 2']),
     basisReturn: box('basisReturn', ['basis', '3 basis', 'box 3']),
-    distributionType: 'qualified',
-    qualifiedExpenses: 0,
   };
 }
 
@@ -1342,7 +1367,7 @@ export function extract1098Fields(
     lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient'], fieldRawTokens, 'lenderName', fieldSourceLocations),
     mortgageInterest: box('mortgageInterest', ['mortgage interest received', '1 mortgage interest', 'box 1']),
     outstandingPrincipal: box('outstandingPrincipal', ['outstanding mortgage principal', '2 outstanding', 'box 2']),
-    mortgageInsurance: box('mortgageInsurance', ['mortgage insurance premiums', '5 mortgage insurance', 'box 5']),
+    mortgageInsurancePremiums: box('mortgageInsurancePremiums', ['mortgage insurance premiums', '5 mortgage insurance', 'box 5']),
   };
 }
 
@@ -1355,7 +1380,7 @@ export function extract1098TFields(
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
     institutionName: extractPayerName(textBlocks, ["filer's name", 'institution name', 'institution'], fieldRawTokens, 'institutionName', fieldSourceLocations),
-    tuitionPayments: box('tuitionPayments', ['payments received', '1 payments received', 'box 1']),
+    tuitionPaid: box('tuitionPaid', ['payments received', '1 payments received', 'box 1']),
     scholarships: box('scholarships', ['scholarships or grants', '5 scholarships', 'box 5']),
   };
 }
@@ -1384,11 +1409,9 @@ export function extract1095AFields(
 ): Record<string, unknown> {
   // Policy issuer name is Box 3 — use specific keywords first to avoid matching
   // the header "Health Insurance Marketplace Statement"
+  // Annual totals not found stay absent (unknown), never zero.
   const fields: Record<string, unknown> = {
     marketplaceName: extractPayerName(textBlocks, ["policy issuer", "issuer's name", 'issuer name'], fieldRawTokens, 'marketplaceName', fieldSourceLocations),
-    annualEnrollmentPremium: 0,
-    annualSLCSP: 0,
-    annualAdvancePTC: 0,
   };
 
   // 1095-A annual totals are a TABLE row (Line 33) with 3 numbers left-to-right:
@@ -1534,9 +1557,10 @@ export function extract1099CFields(
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
     payerName: extractPayerName(textBlocks, ["creditor's name", "payer's name", 'creditor', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
+    dateOfCancellation: extractBoxText(textBlocks, ['date of identifiable event', '1 date of identifiable', 'box 1'], fieldRawTokens, 'dateOfCancellation', fieldSourceLocations),
     amountCancelled: box('amountCancelled', ['amount of debt discharged', 'amount of debt', '2 amount of debt', 'box 2']),
     interestIncluded: box('interestIncluded', ['interest if included', '3 interest', 'box 3']),
-    debtDescription: extractBoxText(textBlocks, ['description of debt', '4 debt description', 'box 4'], fieldRawTokens, 'debtDescription', fieldSourceLocations),
+    debtDescription: extractBoxText(textBlocks, ['debt description', '4 debt description', 'description of debt', 'box 4'], fieldRawTokens, 'debtDescription', fieldSourceLocations),
     identifiableEventCode: extractBoxText(textBlocks, ['identifiable event code', '6 identifiable', 'box 6'], fieldRawTokens, 'identifiableEventCode', fieldSourceLocations),
   };
 }
@@ -1549,10 +1573,12 @@ export function extract1099SFields(
   const box = (key: string, keywords: string[]) =>
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
-    settlementAgent: extractPayerName(textBlocks, ["filer's name", "transferee's name", 'settlement agent', 'filer'], fieldRawTokens, 'settlementAgent', fieldSourceLocations),
-    grossProceeds: box('grossProceeds', ['gross proceeds', '2 gross proceeds', 'box 2']),
+    filerName: extractPayerName(textBlocks, ["filer's name", "transferee's name", 'settlement agent', 'filer'], fieldRawTokens, 'filerName', fieldSourceLocations),
+    // Box 2a, not 2b (cash) or 2c (digital asset), which also say "gross proceeds".
+    grossProceeds: box('grossProceeds', ['total gross proceeds', '2a total gross', 'box 2a']),
     closingDate: extractBoxText(textBlocks, ['date of closing', '1 date of closing', 'box 1'], fieldRawTokens, 'closingDate', fieldSourceLocations),
-    buyerRealEstateTax: box('buyerRealEstateTax', ["buyer's part of real estate tax", "6 buyer's part", '6 real estate tax', 'box 6']),
+    propertyAddress: extractBoxText(textBlocks, ['address (including city', '3 address', 'box 3'], fieldRawTokens, 'propertyAddress', fieldSourceLocations),
+    buyerRealEstateTax: box('buyerRealEstateTax', ["buyer's part of real estate tax", "4 buyer's part", 'box 4']),
   };
 }
 
@@ -1568,6 +1594,7 @@ export const FORM_TYPE_LABELS: Record<SupportedFormType, string> = {
   '1099-G': '1099-G Government Payments',
   '1099-B': '1099-B Broker Proceeds',
   '1099-K': '1099-K Payment Card Transactions',
+  '1099-OID': '1099-OID Original Issue Discount',
   'SSA-1099': 'SSA-1099 Social Security Benefits',
   '1099-SA': '1099-SA HSA Distributions',
   '1099-Q': '1099-Q Education Program Payments',
@@ -1683,12 +1710,23 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
   },
   '1099-B': {
     brokerName: 'Broker Name',
-    description: 'Description',
-    proceeds: 'Total Proceeds (Box 1d)',
-    costBasis: 'Total Cost Basis (Box 1e)',
-    isLongTerm: 'Long-Term',
-    dateSold: 'Date Sold',
+    description: 'Description (Box 1a)',
+    dateAcquired: 'Date Acquired (Box 1b)',
+    dateSold: 'Date Sold (Box 1c)',
+    proceeds: 'Proceeds (Box 1d)',
+    costBasis: 'Cost Basis (Box 1e)',
+    washSaleLossDisallowed: 'Wash Sale Loss Disallowed (Box 1g)',
     federalTaxWithheld: 'Federal Tax Withheld (Box 4)',
+  },
+  '1099-OID': {
+    payerName: 'Payer Name',
+    originalIssueDiscount: 'Original Issue Discount (Box 1)',
+    otherPeriodicInterest: 'Other Periodic Interest (Box 2)',
+    earlyWithdrawalPenalty: 'Early Withdrawal Penalty (Box 3)',
+    federalTaxWithheld: 'Federal Tax Withheld (Box 4)',
+    marketDiscount: 'Market Discount (Box 5)',
+    acquisitionPremium: 'Acquisition Premium (Box 6)',
+    description: 'Description (Box 7)',
   },
   '1099-K': {
     platformName: 'Platform / Filer Name',
@@ -1697,32 +1735,29 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
     federalTaxWithheld: 'Federal Tax Withheld (Box 4)',
   },
   'SSA-1099': {
-    totalBenefits: 'Net Benefits (Box 5)',
+    netBenefits: 'Net Benefits (Box 5)',
     federalTaxWithheld: 'Federal Tax Withheld (Box 6)',
   },
   '1099-SA': {
     payerName: 'Trustee / Payer Name',
     grossDistribution: 'Gross Distribution (Box 1)',
     distributionCode: 'Distribution Code (Box 3)',
-    federalTaxWithheld: 'Federal Tax Withheld',
   },
   '1099-Q': {
     payerName: 'Trustee / Payer Name',
     grossDistribution: 'Gross Distribution (Box 1)',
     earnings: 'Earnings (Box 2)',
     basisReturn: 'Basis (Box 3)',
-    distributionType: 'Distribution Type',
-    qualifiedExpenses: 'Qualified Expenses',
   },
   '1098': {
     lenderName: 'Lender Name',
     mortgageInterest: 'Mortgage Interest Received (Box 1)',
     outstandingPrincipal: 'Outstanding Mortgage Principal (Box 2)',
-    mortgageInsurance: 'Mortgage Insurance Premiums (Box 5)',
+    mortgageInsurancePremiums: 'Mortgage Insurance Premiums (Box 5)',
   },
   '1098-T': {
     institutionName: 'Institution Name',
-    tuitionPayments: 'Tuition Payments (Box 1)',
+    tuitionPaid: 'Tuition Payments (Box 1)',
     scholarships: 'Scholarships / Grants (Box 5)',
   },
   '1098-E': {
@@ -1757,16 +1792,18 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
   },
   '1099-C': {
     payerName: 'Creditor Name',
+    dateOfCancellation: 'Date of Identifiable Event (Box 1)',
     amountCancelled: 'Amount of Debt Cancelled (Box 2)',
     interestIncluded: 'Interest Included (Box 3)',
     debtDescription: 'Debt Description (Box 4)',
     identifiableEventCode: 'Identifiable Event Code (Box 6)',
   },
   '1099-S': {
-    settlementAgent: 'Settlement Agent / Filer',
-    grossProceeds: 'Gross Proceeds (Box 2)',
+    filerName: 'Filer / Settlement Agent',
+    grossProceeds: 'Total Gross Proceeds (Box 2a)',
     closingDate: 'Date of Closing (Box 1)',
-    buyerRealEstateTax: "Buyer's Real Estate Tax (Box 6)",
+    propertyAddress: 'Property Address (Box 3)',
+    buyerRealEstateTax: "Buyer's Part of Real Estate Tax (Box 4)",
   },
 };
 

@@ -7,7 +7,7 @@ import {
   normalizeGenericFields,
   ocrExtractorLabel,
   omitInvalidToolFields,
-  toolNameForIncomeType,
+  formToolForIncomeType,
   validateImportedFacts,
 } from '@hatax/local-ai';
 import type { FieldSourceLocationValue, PDFExtractResult } from './pdfExtractHelpers';
@@ -163,7 +163,7 @@ export function factsForExtraction(input: {
   validation: FactValidationResult;
 } {
   const extractor = extractorLabel(input.extracted);
-  const tool = toolNameForIncomeType(input.extracted.incomeType);
+  const tool = formToolForIncomeType(input.extracted.incomeType);
   const reconciled = reconcileFieldProvenance(
     input.extracted.extractedData,
     input.extracted.fieldRawTokens,

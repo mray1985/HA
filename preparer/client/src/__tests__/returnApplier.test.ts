@@ -96,6 +96,42 @@ describe('applyToolResult', () => {
   });
 });
 
+describe('work order §16 forms', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  it('records a 1099-Q, 1099-SA or 1099-S for the preparer instead of guessing what the form cannot say', () => {
+    expect(readDocument('add_1099_q', { payerName: 'LOUISIANA START', grossDistribution: 8000, earnings: 1200, basisReturn: 6800 }, 'DOC-Q')).toEqual({ kind: 'recorded' });
+    expect(readDocument('add_1099_sa', { payerName: 'HEALTH TRUST', grossDistribution: 900, distributionCode: '1' }, 'DOC-SA')).toEqual({ kind: 'recorded' });
+    expect(readDocument('add_1099_s', { filerName: 'MAGNOLIA TITLE', grossProceeds: 310000, closingDate: '06/12/2025' }, 'DOC-S')).toEqual({ kind: 'recorded' });
+    const tr = getReturn(returnId);
+    expect(tr.income1099Q ?? []).toEqual([]);
+    expect(tr.income1099SA ?? []).toEqual([]);
+    expect(tr.homeSale).toBeUndefined();
+
+    const ids = buildCaseReview({ taxReturn: tr, facts: loadTaxFacts(returnId), documents: [] }).items.map((i) => i.id);
+    expect(ids).toEqual(expect.arrayContaining(['document:qtp-expenses:DOC-Q#0', 'document:hsa-use:DOC-SA#0', 'document:home-sale:DOC-S#0']));
+  });
+
+  it('enters a 1099-C without its review-only box 5, and a 1099-OID as an OID item', () => {
+    readDocument('add_1099_c', { payerName: 'BAYOU BANK', amountCancelled: 3000, identifiableEventCode: 'G', personallyLiable: true }, 'DOC-C');
+    readDocument('add_1099_oid', { payerName: 'TREASURY DIRECT', originalIssueDiscount: 142.1 }, 'DOC-OID');
+    const tr = getReturn(returnId);
+    expect(tr.income1099C).toEqual([{ payerName: 'BAYOU BANK', amountCancelled: 3000, identifiableEventCode: 'G', [SOURCE_FORM_KEY]: 'DOC-C#0', id: expect.any(String) }]);
+    expect(tr.income1099OID).toEqual([expect.objectContaining({ originalIssueDiscount: 142.1, [SOURCE_FORM_KEY]: 'DOC-OID#0' })]);
+  });
+
+  it('holds a 1099-B with no term or basis instead of entering it short-term at zero basis', () => {
+    expect(readDocument('add_1099_b', { brokerName: 'SUMMIT BROKERAGE', proceeds: 12500 }, 'DOC-B')).toMatchObject({ kind: 'held' });
+    expect(getReturn(returnId).income1099B).toEqual([]);
+  });
+});
+
 describe('applyExtraction', () => {
   beforeEach(() => {
     installMemoryLocalStorage();
