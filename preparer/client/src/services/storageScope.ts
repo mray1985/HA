@@ -17,6 +17,20 @@ export function taxFactStorageKey(returnId: string): string {
   return `${TAX_FACT_KEY_PREFIX}${returnId}`;
 }
 
+/** Review decisions and approval for a case. */
+export const REVIEW_KEY_PREFIX = isPreparerApp() ? 'hatax-preparer:review:' : 'hatax:review:';
+
+export function reviewStorageKey(returnId: string): string {
+  return `${REVIEW_KEY_PREFIX}${returnId}`;
+}
+
+/** Audit trail for a case: corrections, review decisions, approvals, documents. */
+export const AUDIT_KEY_PREFIX = isPreparerApp() ? 'hatax-preparer:audit:' : 'hatax:audit:';
+
+export function auditStorageKey(returnId: string): string {
+  return `${AUDIT_KEY_PREFIX}${returnId}`;
+}
+
 /** Provenance records for dropped preparer documents (metadata only, not file bytes). */
 export const DOCUMENT_KEY_PREFIX = isPreparerApp()
   ? 'hatax-preparer:documents:'

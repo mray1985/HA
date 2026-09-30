@@ -29,8 +29,16 @@ import { deleteChatHistory, deleteAllChatHistory } from '../services/chatPersist
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
 import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
 import { clearRecordCache, hasPendingRecordWrites, loadRecords } from '../services/caseRecords';
+import { deleteAllCaseReviews, deleteCaseReview } from '../services/caseAudit';
 
-import { RETURN_LIST_KEY, documentStorageKey, returnStorageKey, taxFactStorageKey } from '../services/storageScope';
+import {
+  RETURN_LIST_KEY,
+  auditStorageKey,
+  documentStorageKey,
+  returnStorageKey,
+  reviewStorageKey,
+  taxFactStorageKey,
+} from '../services/storageScope';
 
 const RETURNS_KEY = RETURN_LIST_KEY;
 const returnKey = (id: string) => returnStorageKey(id);
@@ -79,8 +87,8 @@ export async function loadAllReturns(): Promise<void> {
     } catch { /* skip corrupted entries */ }
   }
 
-  // Each case's facts and document provenance.
-  await loadRecords(ids.flatMap((id) => [taxFactStorageKey(id), documentStorageKey(id)]));
+  // Each case's facts, document provenance, review record and audit trail.
+  await loadRecords(ids.flatMap((id) => [taxFactStorageKey(id), documentStorageKey(id), reviewStorageKey(id), auditStorageKey(id)]));
 }
 
 export function clearReturnCache(): void {
@@ -350,6 +358,7 @@ export function deleteReturn(id: string): { success: boolean } {
   deleteChatHistory(id);
   deleteDocuments(id);
   deleteTaxFacts(id);
+  deleteCaseReview(id);
   const ids = getReturnIds().filter((i) => i !== id);
   saveReturnIds(ids);
   return { success: true };
@@ -380,6 +389,7 @@ export async function wipeAllData(): Promise<void> {
   deleteAllChatHistory();
   deleteAllDocuments();
   deleteAllTaxFacts();
+  deleteAllCaseReviews();
   clearRecordCache();
 
   // 2. Clear sessionStorage
