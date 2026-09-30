@@ -6,7 +6,7 @@
  */
 
 import { _electron as electron, expect, test } from '@playwright/test';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -41,5 +41,6 @@ test('the desktop app reads a W-2 with its bundled models', async () => {
     await expect(page.getByText(/calculate_return: AGI \$52,431\.18/)).toBeVisible();
   } finally {
     await app.close();
+    rmSync(userData, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
   }
 });
