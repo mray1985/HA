@@ -28,6 +28,31 @@ import json
 import sys
 from pathlib import Path
 
+# Official Hub sample code for hsarfraz/donut-irs-tax-docs-classifier uses a
+# custom DonutForImageClassification head on DonutSwin — not AutoModel.
+
+
+def _build_donut_classifier_class():
+    import torch
+    from torch import nn
+    from transformers import DonutSwinModel, DonutSwinPreTrainedModel
+
+    class DonutForImageClassification(DonutSwinPreTrainedModel):
+        def __init__(self, config):
+            super().__init__(config)
+            self.num_labels = config.num_labels
+            self.swin = DonutSwinModel(config)
+            self.dropout = nn.Dropout(0.5)
+            self.classifier = nn.Linear(self.swin.num_features, config.num_labels)
+
+        def forward(self, pixel_values: torch.Tensor):
+            outputs = self.swin(pixel_values)
+            pooled_output = outputs[1]
+            pooled_output = self.dropout(pooled_output)
+            return self.classifier(pooled_output)
+
+    return DonutForImageClassification
+
 
 def main() -> int:
     try:
@@ -69,15 +94,17 @@ def main() -> int:
     try:
         import torch
         from PIL import Image
-        from transformers import AutoImageProcessor, AutoModelForImageClassification
+        from transformers import DonutProcessor
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({"ok": False, "error": f"transformers/Donut runtime unavailable: {exc}"}))
         return 1
 
     try:
         # Native vision runtime — Donut is not a llama.cpp / Q4_K_M GGUF target.
-        processor = AutoImageProcessor.from_pretrained(model_dir, local_files_only=True)
-        model = AutoModelForImageClassification.from_pretrained(
+        # Match Hub README: DonutProcessor + custom DonutForImageClassification.
+        DonutForImageClassification = _build_donut_classifier_class()
+        processor = DonutProcessor.from_pretrained(model_dir, local_files_only=True)
+        model = DonutForImageClassification.from_pretrained(
             model_dir, local_files_only=True
         )
         model.eval()
@@ -86,12 +113,13 @@ def main() -> int:
         # Finetune used ~1920×2560; keep aspect with a bounded resize.
         image = image.resize((1920, 2560), Image.Resampling.LANCZOS)
 
-        inputs = processor(image, return_tensors="pt")
         with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits if hasattr(outputs, "logits") else outputs
+            pixel_values = processor(image, return_tensors="pt").pixel_values
+            logits = model(pixel_values)
             if not hasattr(logits, "argmax"):
                 logits = torch.as_tensor(logits)
+            if logits.dim() == 1:
+                logits = logits.unsqueeze(0)
             probs = torch.softmax(logits, dim=-1)[0]
             pred = int(torch.argmax(probs).item())
             score = float(probs[pred].item())

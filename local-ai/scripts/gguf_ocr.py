@@ -54,6 +54,7 @@ def main() -> int:
 
     model_path = str(payload.get("model_path") or "").strip()
     image_path = str(payload.get("image_path") or "").strip()
+    mmproj_path = str(payload.get("mmproj_path") or "").strip()
     prompt = str(
         payload.get("prompt")
         or "Extract all readable text from this tax document. Output plain text only."
@@ -77,6 +78,10 @@ def main() -> int:
         print(json.dumps({"ok": False, "error": f"image missing: {image_path}"}))
         return 2
 
+    if mmproj_path and not Path(mmproj_path).is_file():
+        print(json.dumps({"ok": False, "error": f"mmproj missing: {mmproj_path}"}))
+        return 2
+
     try:
         from llama_cpp import Llama
     except Exception as exc:  # noqa: BLE001
@@ -87,7 +92,11 @@ def main() -> int:
         # Vision OCR models may accept chat completions with an image; when the
         # GGUF lacks a projector, fall back to a text prompt so cascade can try
         # the next tier rather than crashing the caller.
-        llm = Llama(model_path=model_path, n_ctx=4096, verbose=False)
+        load_kwargs: dict[str, Any] = {"model_path": model_path, "n_ctx": 4096, "verbose": False}
+        if mmproj_path:
+            # llama-cpp-python: clip_model_path attaches a multimodal projector.
+            load_kwargs["clip_model_path"] = mmproj_path
+        llm = Llama(**load_kwargs)
         text = ""
 
         if image_path:
