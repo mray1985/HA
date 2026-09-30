@@ -54,6 +54,23 @@ describe('runReturnDiagnostics', () => {
     expect(blocking.every((x) => x.section.length > 0)).toBe(true);
   });
 
+  it('requires taxpayer, joint-spouse and dependent identification numbers', () => {
+    const tr = makeTaxReturn({
+      ...COMPLETE,
+      ssn: '12345',
+      filingStatus: FilingStatus.MarriedFilingJointly,
+      spouseFirstName: 'Sam',
+      spouseLastName: 'Testpayer',
+      dependents: [{ id: 'd1', firstName: 'Jordan', lastName: 'Testpayer', relationship: 'son', monthsLivedWithYou: 12 }],
+    });
+    const messages = runReturnDiagnostics(tr).filter((x) => x.category === 'BLOCKING').map((x) => x.message);
+    expect(messages).toEqual(expect.arrayContaining([
+      'Social Security number must be 9 digits.',
+      'Spouse Social Security number is required for Married Filing Jointly.',
+      'Jordan Testpayer: a 9-digit SSN, ITIN or ATIN is required to claim this dependent.',
+    ]));
+  });
+
   it('blocks a W-2 entered without its required wages', () => {
     const tr = makeTaxReturn({
       ...COMPLETE,

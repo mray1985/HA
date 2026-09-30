@@ -124,6 +124,36 @@ export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
     });
   }
 
+  // ── Taxpayer identification numbers ──────────────────────────
+  // A return cannot be filed, and a dependent cannot be claimed, without one.
+  const isTin = (value: string | undefined) => /^\d{9}$/.test((value ?? '').replace(/-/g, ''));
+  if (!isTin(taxReturn.ssn)) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: taxReturn.ssn ? 'Social Security number must be 9 digits.' : 'Social Security number is required.',
+    });
+  }
+  if (taxReturn.filingStatus === FilingStatus.MarriedFilingJointly && !isTin(taxReturn.spouseSsn)) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Filing Status',
+      sectionId: 'filing_status',
+      message: 'Spouse Social Security number is required for Married Filing Jointly.',
+    });
+  }
+  (taxReturn.dependents || []).forEach((dep, idx) => {
+    if (isTin(dep.ssn)) return;
+    const name = [dep.firstName, dep.lastName].filter(Boolean).join(' ') || `Dependent ${idx + 1}`;
+    blockers.push({
+      severity: 'blocker',
+      section: 'Dependents',
+      sectionId: 'dependents',
+      message: `${name}: a 9-digit SSN, ITIN or ATIN is required to claim this dependent.`,
+    });
+  });
+
   // ── Income: at least one income source ─────────────────────────
   const hasAnyIncome =
     (taxReturn.w2Income?.length || 0) > 0 ||
