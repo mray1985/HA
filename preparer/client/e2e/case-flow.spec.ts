@@ -38,3 +38,18 @@ test('the dashboard counts the case as waiting for documents', async ({ page }) 
   await expect(row).toContainText('Waiting for documents');
   await expect(page.getByRole('button', { name: /1\s*Waiting for documents/ })).toBeVisible();
 });
+
+test('the Explain and Return tabs render for a new case', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+
+  await page.getByRole('link', { name: 'Explain' }).click();
+  await expect(page.getByRole('heading', { name: 'From income to taxable income' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Calculation trace' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Return' }).click();
+  await expect(page).toHaveURL(/\/return$/);
+  expect(errors).toEqual([]);
+});
