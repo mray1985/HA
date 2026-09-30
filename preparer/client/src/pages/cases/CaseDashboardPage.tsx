@@ -7,11 +7,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { CalendarPlus, Plus, Search, Trash2 } from 'lucide-react';
 import { SUPPORTED_TAX_YEARS } from '@hatax/engine';
 import { createReturn, deleteReturn, exportAllData } from '../../api/client';
 import type { CaseStatus } from '../../services/caseReview';
 import { caseQueue, STATUS_ORDER, type CaseRow } from '../../services/caseQueue';
+import { startNextYear } from '../../services/caseRollover';
 import { useAuthStore } from '../../store/authStore';
 import { STATUS_META, StatusChip, refundOrOwed } from '../../components/case/caseBadges';
 
@@ -40,6 +41,17 @@ export default function CaseDashboardPage() {
   const newCase = () => {
     const created = createReturn(newYear);
     navigate(`/preparer/case/${created.id}/documents`);
+  };
+
+  // §14: a returning client's new year starts from last year's case.
+  const startFrom = (row: CaseRow) => {
+    try {
+      const created = startNextYear(row.id);
+      toast.success(`${row.name}: ${created.taxYear} case started from ${row.taxYear}`);
+      navigate(`/preparer/case/${created.id}/review`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : `Could not start the ${row.taxYear + 1} case`);
+    }
   };
 
   const remove = (row: CaseRow) => {
@@ -147,7 +159,7 @@ export default function CaseDashboardPage() {
                   <th className="px-5 py-3 hidden md:table-cell">Documents</th>
                   <th className="px-5 py-3 hidden md:table-cell">Result</th>
                   <th className="px-5 py-3 hidden lg:table-cell">Updated</th>
-                  <th className="px-5 py-3 w-12" />
+                  <th className="px-5 py-3 w-12"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
@@ -164,7 +176,16 @@ export default function CaseDashboardPage() {
                     <td className="px-5 py-3 text-slate-300 hidden md:table-cell">{r.documents}</td>
                     <td className={`px-5 py-3 hidden md:table-cell text-sm ${result.className}`}>{result.text}</td>
                     <td className="px-5 py-3 text-slate-400 text-sm hidden lg:table-cell">{r.updatedAt ? format(new Date(r.updatedAt), 'MMM d, yyyy') : '—'}</td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      {r.nextYear !== null && (
+                        <button
+                          onClick={() => startFrom(r)}
+                          className="inline-flex items-center gap-1 mr-2 text-xs text-sky-300 hover:text-sky-200"
+                          title={`Start ${r.name}'s ${r.nextYear} case from this one: identity, dependents, filing status and carryovers`}
+                        >
+                          <CalendarPlus className="w-4 h-4" /> Start {r.nextYear}
+                        </button>
+                      )}
                       <button onClick={() => remove(r)} className="p-1.5 text-slate-500 hover:text-red-400" title="Delete case" aria-label={`Delete case for ${r.name}`}>
                         <Trash2 className="w-4 h-4" />
                       </button>

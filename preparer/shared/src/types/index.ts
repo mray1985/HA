@@ -1633,7 +1633,8 @@ export interface InvestmentInterestResult {
 
 // Prior-year summary for YoY comparison (LookBack)
 export interface PriorYearSummary {
-  source: 'hatax-json' | '1040-pdf' | 'competitor-pdf';
+  /** hatax-case: last year's case in this app, started into this year (preparer). */
+  source: 'hatax-json' | 'hatax-case' | '1040-pdf' | 'competitor-pdf';
   taxYear: number;
   filingStatus?: string;
   providerName?: string;           // Detected provider name (e.g. competitor software name)

@@ -12,7 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import './pdfWorkerInit'; // Ensure worker is configured
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
-import { documentsFromReturn } from '@hatax/local-ai';
+import { priorYearSummaryFromReturn } from './priorYearSummary';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
   extractTextBlocks,
@@ -156,36 +156,7 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
   });
 
   const f = result.form1040;
-
-  const summary: PriorYearSummary = {
-    source: 'hatax-json',
-    taxYear: tr.taxYear,
-    filingStatus: tr.filingStatus !== undefined ? FilingStatus[tr.filingStatus] : undefined,
-    totalIncome: f.totalIncome,
-    agi: f.agi,
-    taxableIncome: f.taxableIncome,
-    deductionAmount: f.deductionAmount,
-    totalTax: f.totalTax,
-    totalCredits: f.totalCredits,
-    totalPayments: f.totalPayments,
-    refundAmount: f.refundAmount,
-    amountOwed: f.amountOwed,
-    effectiveTaxRate: f.effectiveTaxRate,
-    // Detailed breakdown from JSON import
-    totalWages: f.totalWages,
-    totalInterest: f.totalInterest,
-    totalDividends: f.totalDividends,
-    scheduleCNetProfit: f.scheduleCNetProfit,
-    capitalGainOrLoss: f.capitalGainOrLoss,
-    seTax: f.seTax,
-    // Enhanced breakdown
-    estimatedTaxPayments: f.estimatedPayments > 0 ? f.estimatedPayments : undefined,
-    iraDistributions: f.iraDistributionsTaxable > 0 ? f.iraDistributionsTaxable : undefined,
-    pensionsAnnuities: f.pensionDistributionsTaxable > 0 ? f.pensionDistributionsTaxable : undefined,
-    socialSecurityBenefits: f.taxableSocialSecurity > 0 ? f.taxableSocialSecurity : undefined,
-    // Each payer's document, for the missing-document check (work order §23).
-    documents: documentsFromReturn(tr as TaxReturn),
-  };
+  const summary = priorYearSummaryFromReturn(tr as TaxReturn, result, 'hatax-json');
 
   // Extract carryforward suggestions
   const carryforwardSuggestions: PriorYearImportResult['carryforwardSuggestions'] = {
@@ -203,6 +174,7 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
 
   return { summary, carryforwardSuggestions, rawReturn: tr as TaxReturn, warnings, errors };
 }
+
 
 // ─── 1040 PDF Import ───────────────────────────────
 

@@ -260,7 +260,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
           <h3 className="font-medium text-HATaxService-blue-300">
             vs. {priorYear.taxYear} Return
             <span className="text-xs text-slate-400 ml-2 font-normal">
-              ({priorYear.source === 'hatax-json' ? 'JSON import' : 'PDF import'})
+              ({priorYear.source === 'hatax-json' ? 'JSON import' : priorYear.source === 'hatax-case' ? `the ${priorYear.taxYear} case` : 'PDF import'})
             </span>
           </h3>
         </div>

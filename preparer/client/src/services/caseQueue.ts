@@ -11,6 +11,7 @@ import { buildCaseReview, type CaseStatus } from './caseReview';
 import { loadDocuments } from './documentIngestion';
 import { caseMissingDocuments } from './missingDocuments';
 import { loadTaxFacts } from './preparerTaxFacts';
+import { nextYearToStart } from './caseRollover';
 
 export interface CaseRow {
   id: string;
@@ -22,6 +23,8 @@ export interface CaseRow {
   refundAmount?: number;
   amountOwed?: number;
   updatedAt: string;
+  /** The next tax year this client's case can be started for, from this one. */
+  nextYear: number | null;
 }
 
 /** Most urgent first: what needs the preparer, then what is ready, then what waits on others. */
@@ -37,7 +40,7 @@ export function clientName(tr: TaxReturn): string {
   return names.join(' & ') || 'New client';
 }
 
-export function summarizeCase(tr: TaxReturn): CaseRow {
+export function summarizeCase(tr: TaxReturn, all: readonly TaxReturn[] = listReturns()): CaseRow {
   const calculation = (() => {
     try {
       return calculateForm1040({ ...tr, filingStatus: tr.filingStatus || FilingStatus.Single });
@@ -64,6 +67,7 @@ export function summarizeCase(tr: TaxReturn): CaseRow {
     documents: documents.length,
     ...(calculation ? { refundAmount: calculation.form1040.refundAmount, amountOwed: calculation.form1040.amountOwed } : {}),
     updatedAt: tr.updatedAt,
+    nextYear: nextYearToStart(tr, all),
   };
 }
 
@@ -73,7 +77,8 @@ export function sortCases(rows: CaseRow[]): CaseRow[] {
 
 /** Every case, most urgent first. */
 export function caseQueue(): CaseRow[] {
-  return sortCases(listReturns().map(summarizeCase));
+  const all = listReturns();
+  return sortCases(all.map((tr) => summarizeCase(tr, all)));
 }
 
 /** The next case that needs the preparer, other than the one open; null when none does. */

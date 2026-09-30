@@ -213,7 +213,7 @@ const INFORMATION_RETURN_MINIMUM = 10;
  * the import kept them (a HATax return), otherwise what its totals imply.
  */
 export function priorYearFromSummary(summary: PriorYearSummary): PriorYearEvidence | null {
-  const source = summary.source === 'hatax-json' ? 'imported HATax return' : summary.providerName ? `return (${summary.providerName})` : 'return';
+  const source = summary.source === 'hatax-json' ? 'imported HATax return' : summary.source === 'hatax-case' ? 'case' : summary.providerName ? `return (${summary.providerName})` : 'return';
   const label = `the ${summary.taxYear} ${source}`;
   if (summary.documents && summary.documents.length > 0) {
     const documents = summary.documents

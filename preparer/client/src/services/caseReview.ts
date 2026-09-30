@@ -44,6 +44,7 @@ import {
 } from '@hatax/local-ai';
 import { dependentWaitReason, SOURCE_FORM_KEY } from './returnApplier';
 import { returnFieldSpec } from './returnFields';
+import type { RolloverRecord } from './caseRollover';
 
 export type ReviewGroup = 'personal' | 'income' | 'dependents' | 'deductions' | 'credits' | 'payments' | 'state' | 'documents' | 'other';
 
@@ -72,10 +73,11 @@ export interface CaseApproval {
   returnFingerprint: string;
 }
 
-/** Stored per case: decisions on review items and the approval. */
+/** Stored per case: decisions on review items, the approval, and what was carried from last year's case. */
 export interface CaseReviewRecord {
   resolutions: Record<string, ReviewResolution>;
   approval?: CaseApproval;
+  rollover?: RolloverRecord;
 }
 
 export interface ReviewItem {
@@ -111,7 +113,9 @@ export type ReviewAction =
   /** A fact a state rule needs (the engine's question), kept on the state return; `current` is the answer given. */
   | { kind: 'state_answer'; question: StateQuestion; current?: boolean | number | string }
   /** A return field the readiness check reports missing (name, SSN, address, filing status), filled in place. */
-  | { kind: 'return_field'; field: string };
+  | { kind: 'return_field'; field: string }
+  /** Last year's refund account, put on the return once the preparer confirms it. */
+  | { kind: 'use_bank'; label: string };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -356,6 +360,42 @@ function missingDocumentItems(missing: readonly MissingDocument[]): ReviewItem[]
   });
 }
 
+const ROLLOVER_GROUP: Record<string, ReviewGroup> = {
+  'capital-loss': 'income', nol: 'income', 'home-office': 'income', 'section-179': 'income', 'depreciation-assets': 'income',
+  'section-1231': 'income', charitable: 'deductions', 'investment-interest': 'deductions', 'form-8801': 'credits', adoption: 'credits',
+};
+
+/**
+ * §14: a case started from last year's case — what was carried (for the
+ * record), what to confirm with the client, the carryovers to enter, and last
+ * year's refund account until the preparer uses or declines it.
+ */
+function rolloverItems(record: CaseReviewRecord, taxReturn: TaxReturn): ReviewItem[] {
+  const r = record.rollover;
+  if (!r) return [];
+  const items: ReviewItem[] = [{
+    id: 'rollover:carried', category: 'INFORMATIONAL', group: 'personal', source: 'document',
+    message: `Started from the ${r.fromYear} case: carried ${r.carried.join('; ')}.`,
+  }];
+  if (!r.approved) {
+    items.push({ id: 'rollover:not-approved', category: 'REVIEW', group: 'other', source: 'document',
+      message: `The ${r.fromYear} case was not approved when this case started, so no carryovers were carried from it. Check the ${r.fromYear} return as filed for carryovers.` });
+  }
+  for (const c of r.confirm) {
+    items.push({ id: `rollover:confirm:${c.id}`, category: 'REVIEW', group: 'personal', source: 'document', message: c.text });
+  }
+  for (const m of r.manual) {
+    items.push({ id: `rollover:manual:${m.id}`, category: 'REVIEW', group: ROLLOVER_GROUP[m.id.split(':')[0]!] ?? 'income', source: 'document', message: `From the ${r.fromYear} case — ${m.text}` });
+  }
+  if (r.bank && !taxReturn.directDeposit) {
+    const label = `${r.bank.accountType} account ending ${r.bank.accountNumber.slice(-4)}`;
+    items.push({ id: 'rollover:bank', category: 'REVIEW', group: 'payments', source: 'document',
+      message: `Last year's refund went to the ${label} (routing ${r.bank.routingNumber}). Confirm it with the client before using it for ${taxReturn.taxYear}.`,
+      action: { kind: 'use_bank', label } });
+  }
+  return items;
+}
+
 /** State questions already answered: shown with the answer, which the preparer can change. */
 function answeredStateItems(taxReturn: TaxReturn, calculation: CalculationResult | null | undefined, engineItems: readonly ReviewItem[]): ReviewItem[] {
   const open = new Set(engineItems.flatMap((i) => (i.action?.kind === 'state_answer' ? [`${i.action.question.stateCode}:${i.action.question.key}`] : [])));
@@ -401,7 +441,7 @@ export function buildCaseReview(input: {
     ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
     ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
   }));
-  const items = [...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
+  const items = [...rolloverItems(record, input.taxReturn), ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

@@ -9,6 +9,7 @@ import { useState, type ReactNode } from 'react';
 import { getAllStates } from '@hatax/engine';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
 import { FILING_STATUS_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
+import { applyLastYearsAccount } from '../../services/caseRollover';
 import type { ReviewAction } from '../../services/caseReview';
 import { completeDependent, correctFormField, recordAcquisition, recordChoice, recordStateAnswer, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
@@ -207,13 +208,15 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   acquisition_date: 'Enter the date acquired',
   state_answer: 'Answer for the state return',
   return_field: 'Enter the value',
+  use_bank: "Use last year's account",
 };
 
 export function actionLabel(action: ReviewAction): string {
   return action.kind === 'choice' ? 'Decide' : action.kind === 'fix' ? 'Enter the missing value' : action.kind === 'filing_status' ? 'Use it'
     : action.kind === 'acquisition_date' ? 'Enter the date acquired'
     : action.kind === 'state_answer' ? (action.current === undefined ? 'Answer' : 'Change the answer')
-    : action.kind === 'return_field' ? 'Enter it' : 'Complete';
+    : action.kind === 'return_field' ? 'Enter it'
+    : action.kind === 'use_bank' ? 'Use it' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
@@ -260,6 +263,10 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
         case 'return_field':
           // Filled by ReturnFieldsForm, never through a decision.
           return { ok: false, error: 'Enter the value in its field.' };
+        case 'use_bank': {
+          const used = applyLastYearsAccount(returnId);
+          return used.ok ? { ok: true, outcome: { kind: 'recorded' } } : used;
+        }
       }
     });
     if (result.ok) onDone();
@@ -302,6 +309,7 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
           )}
         </Field>
       )}
+      {action.kind === 'use_bank' && <p className="text-sm text-slate-300">Put the {action.label} on the return for the refund. Use it only after the client confirms the account.</p>}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       <p className="text-xs text-slate-500">Recorded as a preparer entry and kept in the audit trail.</p>

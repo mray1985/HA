@@ -107,3 +107,39 @@ test('a review item opens its own document', async ({ page }) => {
   // The document's values are shown without another click.
   await expect(page.getByRole('button', { name: /Hide values read/ })).toBeVisible();
 });
+
+test("a returning client's next year starts from last year's case", async ({ page }) => {
+  await newCase(page, '2025');
+  await page.getByRole('link', { name: /^Review/ }).click();
+  await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
+  await page.getByLabel("Taxpayer's first name").fill('Maya');
+  await page.getByLabel("Taxpayer's last name").fill('Lee');
+  await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-6789');
+  await page.getByLabel('Street address').fill('815 Magnolia Ave');
+  await page.getByLabel('City').fill('Baton Rouge');
+  await page.getByLabel('State', { exact: true }).selectOption('LA');
+  await page.getByLabel('ZIP code').fill('70802');
+  await page.getByLabel('Filing status').selectOption({ label: 'Head of household' });
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Back to cases' }).click();
+  const row = page.getByRole('row', { name: /Maya Lee.*2025/ });
+  await row.getByRole('button', { name: 'Start 2026' }).click();
+
+  await expect(page).toHaveURL(/\/review$/);
+  await expect(page.getByText('Tax year 2026')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+  await expect(page.getByText(/Started from the 2025 case: carried name, SSN and address/)).toBeVisible();
+  await expect(page.getByText(/The 2025 case was not approved/)).toBeVisible();
+
+  // Last year's filing status is one click, and the client is still asked.
+  const status = page.getByRole('listitem').filter({ hasText: '2025 case states the filing status head of household' });
+  await status.getByRole('button', { name: 'Use it' }).click();
+  await status.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('2025 case states the filing status head of household')).toHaveCount(0);
+
+  // The dashboard no longer offers 2026 for this client.
+  await page.getByRole('link', { name: 'Back to cases' }).click();
+  await expect(page.getByRole('button', { name: 'Start 2026' })).toHaveCount(0);
+});
