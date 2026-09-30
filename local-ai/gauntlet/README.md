@@ -66,7 +66,27 @@ Findings that shaped the product code:
 
 No model is safe to apply unchecked: Qwen3.5-0.8B passed `wages: 0` for an
 unknown wage and invented a 1099-NEC for a 1098. Tool calls are therefore
-grounded in the extracted facts (grammar + deterministic verification).
+grounded in the extracted facts (`groundedToolCall.ts`):
+
+- only the tool for the classified form is offered, and a form with no tool is
+  never sent to the model;
+- each offered argument is a JSON Schema `const` of its extracted value, so the
+  grammar cannot produce a value the document does not contain;
+- every call is re-verified deterministically before it is applied;
+- a client's filing-status answer uses a grammar (five statuses or
+  `not_stated`) and is recorded only when the model agrees with a
+  deterministic reading of the client's words.
+
+Grounded run, `run-tools.ts --grounded` (17 cases, including 10 client answers):
+
+| Model | Correct | Wrong value | Unknown passed | Hallucinated tool | s/call |
+|---|---|---|---|---|---|
+| Qwen3.5-0.8B (grounded) | 16/17 | 0 | 0 | 0 | 1.6 |
+
+The one miss is a disagreement ("we want to file together": model said
+separately, the words say jointly), which records nothing and leaves the
+question to the preparer. Ungrounded, the same model filled
+`married_filing_separately` into three answers that state no status.
 
 LiquidAI models (LFM2 / LFM2.5, including the work order's LFM2-1.2B-Tool) are
 licensed under LFM Open License v1.0: commercial use is licensed only for

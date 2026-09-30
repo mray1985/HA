@@ -182,7 +182,7 @@ const Add1099RFieldsSchema = z
   })
   .strict();
 
-const FILING_STATUS_CANDIDATES = [
+export const FILING_STATUS_CANDIDATES = [
   'single',
   'married_filing_jointly',
   'married_filing_separately',
