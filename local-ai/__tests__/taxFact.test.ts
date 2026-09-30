@@ -5,6 +5,7 @@ import {
   isExtractedValue,
   normalizeSourceLocation,
   type TaxFact,
+  compareSourceAuthority,
 } from '../src/taxFact.js';
 
 const source = {
@@ -260,5 +261,67 @@ describe('TaxFact unknown-is-not-zero', () => {
     expect(fact.sourcePage).toBeUndefined();
     expect(fact.sourceBox).toBeUndefined();
     expect(fact.value).toEqual([{ code: 'D', amount: 5000 }, { code: 'DD', amount: 1200 }]);
+  });
+});
+
+describe('TaxFact provenance fields (work order §10, §33, §42, §60)', () => {
+  const base = {
+    returnId: 'R1',
+    taxYear: 2026,
+    documentId: 'DOC-abc',
+    fileName: 'w2s.pdf',
+    extractor: 'qwen3.5-0.8b',
+    factTypeFor: (f: string) => `W2_${f}`,
+  };
+
+  it('gives each form in a multi-form file its own fact ids', () => {
+    const first = factsFromFields({ ...base, fields: { wages: 100 }, formIndex: 0 });
+    const second = factsFromFields({ ...base, fields: { wages: 200 }, formIndex: 1 });
+    expect(first[0]!.factId).toBe('DOC-abc:wages');
+    expect(second[0]!.factId).toBe('DOC-abc#1:wages');
+    expect(second[0]!.sourceFormIndex).toBe(1);
+    expect(first[0]!).not.toHaveProperty('sourceFormIndex');
+  });
+
+  it('carries taxpayer, source kind, extractor version, model run and second reading', () => {
+    const [fact] = factsFromFields({
+      ...base,
+      fields: { wages: 52431.18 },
+      taxpayerId: 'spouse',
+      sourceKind: 'document',
+      extractorVersion: 'aaf42c8b Q4_K_M',
+      modelRunId: 'RUN-1',
+      secondReading: { wages: { source: 'pdf-text', text: '52431.18', agrees: true } },
+    });
+    expect(fact).toMatchObject({
+      taxpayerId: 'spouse',
+      sourceKind: 'document',
+      extractorVersion: 'aaf42c8b Q4_K_M',
+      modelRunId: 'RUN-1',
+      secondReading: { source: 'pdf-text', text: '52431.18', agrees: true },
+    });
+  });
+
+  it('keeps the page size with a located box and drops an invalid one', () => {
+    const [located] = factsFromFields({
+      ...base,
+      fields: { wages: 1 },
+      sourceLocation: { wages: { page: 1, box: { x: 1, y: 2, width: 3, height: 4 }, pageSize: { width: 612, height: 792 } } },
+    });
+    expect(located!.sourcePageSize).toEqual({ width: 612, height: 792 });
+    const [bad] = factsFromFields({
+      ...base,
+      fields: { wages: 1 },
+      sourceLocation: { wages: { page: 1, box: { x: 1, y: 2, width: 3, height: 4 }, pageSize: { width: 0, height: 792 } } },
+    });
+    expect(bad!.sourceBox).toEqual({ x: 1, y: 2, width: 3, height: 4 });
+    expect(bad).not.toHaveProperty('sourcePageSize');
+  });
+
+  it('orders sources by §60 authority, treating legacy facts as documents', () => {
+    expect(compareSourceAuthority({ sourceKind: 'document' }, { sourceKind: 'ai_inference' })).toBeLessThan(0);
+    expect(compareSourceAuthority({ sourceKind: 'client_response' }, { sourceKind: 'preparer_correction' })).toBeGreaterThan(0);
+    expect(compareSourceAuthority({}, { sourceKind: 'document' })).toBe(0);
+    expect(compareSourceAuthority({ sourceKind: 'structured_import' }, {})).toBeLessThan(0);
   });
 });
