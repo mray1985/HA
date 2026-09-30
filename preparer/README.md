@@ -79,6 +79,34 @@ npm run dist       # release/HA-Tax-Preparer-Setup-<version>.exe
 cd ../client && npx playwright test -c playwright.desktop.config.ts
 ```
 
+The program and installer icon is `desktop/build/icon.ico`, made from
+`client/public/icons/icon-512.png` by `npm run icon`.
+
+#### Signing the installer
+
+An unsigned installer shows Windows SmartScreen's "Unknown publisher" warning,
+and Windows 11 Smart App Control can block unsigned programs outright. The
+build signs the program, the installer and uninstaller, `llama-server` and
+every DLL and native module it ships (Microsoft's own DLLs keep their
+signature) when the build machine has a code-signing certificate. Nothing about
+the certificate is committed; set one of these before `npm run dist`:
+
+| Certificate | Environment |
+|---|---|
+| `.pfx` file | `WIN_CSC_LINK` (path, https URL or base64), `WIN_CSC_KEY_PASSWORD` |
+| Windows certificate store or USB token (every OV/EV certificate issued since June 2023) | `HATAX_SIGN_CERT_SHA1` (thumbprint) or `HATAX_SIGN_CERT_SUBJECT` |
+| Azure Trusted Signing | `HATAX_AZURE_SIGN_ENDPOINT`, `HATAX_AZURE_SIGN_ACCOUNT`, `HATAX_AZURE_SIGN_PROFILE`, `HATAX_SIGN_PUBLISHER`, and `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` |
+
+Set `HATAX_REQUIRE_SIGNING=1` for release builds: the build then fails instead
+of producing an unsigned installer. Signatures are SHA-256 and timestamped, so
+they stay valid after the certificate expires. A signed installer names the
+publisher and passes Smart App Control. SmartScreen's warning goes away once
+the certificate has download reputation. Since 2024 an EV certificate no longer
+skips that step.
+
+Check a build with PowerShell:
+`Get-AuthenticodeSignature release\*.exe, release\win-unpacked\*.exe`.
+
 ## Tax Coverage
 
 | Category | Coverage |
