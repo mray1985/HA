@@ -6,12 +6,16 @@
  * This step does not store coordinates, validate tax rules, or calculate tax.
  */
 
-import { toolNameForIncomeType, type TaxToolIncomeName } from './taxTools.js';
+import {
+  isDocumentTool,
+  toolNameForIncomeType,
+  type DocumentToolName,
+} from './taxTools.js';
 
 export type StructuredFieldStatus = 'extracted' | 'unknown';
 
 export interface StructuredExtraction {
-  tool: TaxToolIncomeName | null;
+  tool: DocumentToolName | null;
   /**
    * Arguments for the tax tool. Unreadable supplied fields are present as
    * undefined so they become unknown facts. Keys the extractor never sent
@@ -22,7 +26,7 @@ export interface StructuredExtraction {
   rawText: Record<string, string>;
 }
 
-type FieldKind = 'money' | 'text' | 'boolean' | 'box12' | 'box13' | 'simplifiedMethod';
+type FieldKind = 'money' | 'text' | 'boolean' | 'integer' | 'box12' | 'box13' | 'simplifiedMethod';
 
 const W2_FIELDS: Record<string, FieldKind> = {
   employerName: 'text',
@@ -92,12 +96,53 @@ const R_FIELDS: Record<string, FieldKind> = {
   simplifiedMethod: 'simplifiedMethod',
 };
 
-const FORM_FIELDS: Record<TaxToolIncomeName, Record<string, FieldKind>> = {
+const SSA_FIELDS: Record<string, FieldKind> = {
+  beneficiaryName: 'text',
+  benefitsPaid: 'money',
+  benefitsRepaid: 'money',
+  netBenefits: 'money',
+  federalTaxWithheld: 'money',
+  isSpouse: 'boolean',
+};
+
+const MORTGAGE_FIELDS: Record<string, FieldKind> = {
+  lenderName: 'text',
+  lenderTin: 'text',
+  mortgageInterest: 'money',
+  outstandingPrincipal: 'money',
+  originationDate: 'text',
+  refundOfOverpaidInterest: 'money',
+  mortgageInsurancePremiums: 'money',
+  points: 'money',
+  propertyAddressSameAsBorrower: 'boolean',
+  propertyAddress: 'text',
+  numberOfProperties: 'integer',
+  acquisitionDate: 'text',
+};
+
+const EDUCATION_FIELDS: Record<string, FieldKind> = {
+  institutionName: 'text',
+  institutionEin: 'text',
+  studentName: 'text',
+  tuitionPaid: 'money',
+  priorYearAdjustments: 'money',
+  scholarships: 'money',
+  scholarshipAdjustments: 'money',
+  includesNextPeriod: 'boolean',
+  halfTimeStudent: 'boolean',
+  graduateStudent: 'boolean',
+  insuranceReimbursement: 'money',
+};
+
+const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_w2: W2_FIELDS,
   add_1099_int: INT_FIELDS,
   add_1099_div: DIV_FIELDS,
   add_1099_nec: NEC_FIELDS,
   add_1099_r: R_FIELDS,
+  add_ssa_1099: SSA_FIELDS,
+  add_mortgage_interest: MORTGAGE_FIELDS,
+  add_education_expense: EDUCATION_FIELDS,
 };
 
 interface Normalized {
@@ -177,6 +222,17 @@ function normalizeBoolean(value: unknown): Normalized {
     return { status: 'extracted', value: false, rawText: value };
   }
   return { status: 'unknown', rawText: value };
+}
+
+/** A whole-number count ("1", "2"). Anything else stays unknown. */
+function normalizeInteger(value: unknown): Normalized {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? { status: 'extracted', value, rawText: '' } : { status: 'unknown', rawText: '' };
+  }
+  if (typeof value !== 'string') return { status: 'unknown', rawText: rawOf(value) };
+  const t = value.trim();
+  if (!/^\d+$/.test(t)) return { status: 'unknown', rawText: value };
+  return { status: 'extracted', value: Number(t), rawText: value };
 }
 
 function normalizeBox12(value: unknown): Normalized {
@@ -273,6 +329,8 @@ function normalizeField(kind: FieldKind, value: unknown): Normalized {
       return normalizeText(value);
     case 'boolean':
       return normalizeBoolean(value);
+    case 'integer':
+      return normalizeInteger(value);
     case 'box12':
       return normalizeBox12(value);
     case 'box13':
@@ -288,16 +346,18 @@ function normalizeField(kind: FieldKind, value: unknown): Normalized {
 
 /**
  * Normalize one classified form's extractor bag into tax-tool arguments.
- * Unknown form types return no tool and an empty argument list.
+ * `incomeTypeOrTool` is a document tool name ("add_ssa_1099") or a legacy
+ * income-item key ("w2"). Unknown form types return no tool and no arguments.
  * `fieldRawTokens` carries the extractor's original OCR/PDF tokens when the
  * bag already holds parsed numbers (or undefined for an unreadable token).
  */
 export function extractStructuredFields(
-  incomeType: string | null | undefined,
+  incomeTypeOrTool: string | null | undefined,
   data: Record<string, unknown>,
   fieldRawTokens?: Record<string, string>,
 ): StructuredExtraction {
-  const tool = toolNameForIncomeType(incomeType);
+  const tool =
+    incomeTypeOrTool && isDocumentTool(incomeTypeOrTool) ? incomeTypeOrTool : toolNameForIncomeType(incomeTypeOrTool);
   if (!tool) return { tool: null, args: {}, rawText: {} };
 
   const schema = FORM_FIELDS[tool];

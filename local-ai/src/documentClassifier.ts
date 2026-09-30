@@ -14,6 +14,7 @@
 /** Form types the classifier can assert from markers. */
 export const CLASSIFIABLE_FORM_TYPES = [
   'W-2',
+  'W-2C',
   'W-2G',
   '1099-INT',
   '1099-DIV',
@@ -40,6 +41,7 @@ export type ClassifiableFormType = (typeof CLASSIFIABLE_FORM_TYPES)[number];
 /** Income-item keys used by the tax-tool / add-income path. */
 export type ClassifiedIncomeType =
   | 'w2'
+  | 'w2c'
   | 'w2g'
   | '1099int'
   | '1099div'
@@ -99,6 +101,13 @@ const FORM_MARKER_SIGNATURES: FormMarkerSignature[] = [
     incomeType: 'w2g',
     primaryMarkers: ['w-2g', 'certain gambling winnings'],
     secondaryMarkers: ['reportable winnings', 'gross winnings', 'type of wager', 'winnings'],
+  },
+  {
+    // Before W-2: "wage and tax statement" is a substring of the W-2C title.
+    formType: 'W-2C',
+    incomeType: 'w2c',
+    primaryMarkers: ['w-2c', 'corrected wage and tax statement'],
+    secondaryMarkers: ['previously reported', 'correct information', 'employer', 'wages'],
   },
   {
     formType: 'W-2',
@@ -437,7 +446,9 @@ export function classifyDocument(input: ClassifyDocumentInput): DocumentClassifi
 export function classificationAllowsIncomeWrite(
   classification: DocumentClassification,
 ): boolean {
-  return classification.status === 'classified';
+  // A W-2C corrects an earlier W-2; writing it as income would double-count
+  // wages. It is reconciled against the original by the preparer instead.
+  return classification.status === 'classified' && classification.formType !== 'W-2C';
 }
 
 export function isClassifiableFormType(value: string | null | undefined): value is ClassifiableFormType {

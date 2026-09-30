@@ -47,14 +47,16 @@ describe('groundedToolDefinitions', () => {
   });
 
   it('offers nothing for a form without a tax tool, or with no usable facts', () => {
-    expect(groundedToolDefinitions('1098', facts)).toEqual([]);
+    expect(groundedToolDefinitions('K-1', facts)).toEqual([]);
     expect(groundedToolDefinitions(null, facts)).toEqual([]);
     expect(groundedToolDefinitions('W-2', [])).toEqual([]);
   });
 
   it('maps forms to tools', () => {
     expect(toolForFormType('1099-R')).toBe('add_1099_r');
-    expect(toolForFormType('SSA-1099')).toBeNull();
+    expect(toolForFormType('SSA-1099')).toBe('add_ssa_1099');
+    expect(toolForFormType('1098')).toBe('add_mortgage_interest');
+    expect(toolForFormType('K-1')).toBeNull();
   });
 });
 

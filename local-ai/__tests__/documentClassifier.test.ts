@@ -237,3 +237,23 @@ describe('document classifier (work-order step 4)', () => {
     expect(addW2).toBeTypeOf('function');
   });
 });
+
+describe('W-2C (corrected W-2)', () => {
+  it('classifies a W-2c as W-2C, never as a new W-2', () => {
+    const c = classifyDocument({ text: 'Form W-2c Corrected Wage and Tax Statement. Previously reported. Correct information. Employer' });
+    expect(c.status).toBe('classified');
+    expect(c.formType).toBe('W-2C');
+  });
+
+  it('still classifies an ordinary W-2 as W-2', () => {
+    expect(classifyDocument({ text: 'Form W-2 Wage and Tax Statement. Employer. Wages, tips' }).formType).toBe('W-2');
+  });
+});
+
+describe('classificationAllowsIncomeWrite and corrected W-2s', () => {
+  it('never lets a W-2C write income', () => {
+    const c = classifyDocument({ text: 'Form W-2c Corrected Wage and Tax Statement. Previously reported. Correct information.' });
+    expect(classificationAllowsIncomeWrite(c)).toBe(false);
+    expect(classificationAllowsIncomeWrite(classifyDocument({ text: 'Form W-2 Wage and Tax Statement. Employer. Wages' }))).toBe(true);
+  });
+});

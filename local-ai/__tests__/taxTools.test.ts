@@ -279,3 +279,43 @@ describe('tax tools (HA-AI-011)', () => {
     expect(carried.status).toBe('unknown');
   });
 });
+
+describe('SSA-1099, 1098 and 1098-T tools', () => {
+  const context = { returnId: 'R1', taxYear: 2026, sourceDocumentId: 'DOC-1', sourceFileName: 'f.pdf', extractor: 'test' };
+
+  it('reports how each result applies to the return', () => {
+    const ssa = invokeTaxTool({ tool: 'add_ssa_1099', args: { netBenefits: -250 }, context });
+    const mortgage = invokeTaxTool({ tool: 'add_mortgage_interest', args: { mortgageInterest: 9412.37, numberOfProperties: 1 }, context });
+    const tuition = invokeTaxTool({ tool: 'add_education_expense', args: { tuitionPaid: 8420, halfTimeStudent: true }, context });
+    const w2 = invokeTaxTool({ tool: 'add_w2', args: { wages: 1 }, context });
+    expect(ssa.ok && ssa.application).toEqual({ kind: 'aggregate', target: 'socialSecurityBenefits' });
+    expect(mortgage.ok && mortgage.application).toEqual({ kind: 'aggregate', target: 'mortgageInterest' });
+    expect(tuition.ok && tuition.application).toEqual({ kind: 'needs_preparer_choice', target: 'educationCredit', choice: 'creditType' });
+    expect(w2.ok && w2.application).toEqual({ kind: 'income_item', itemType: 'w2' });
+    // Only income-item tools carry an addIncomeItem type.
+    expect(ssa.ok && ssa.incomeType).toBeUndefined();
+    expect(w2.ok && w2.incomeType).toBe('w2');
+  });
+
+  it('keeps a negative SSA net benefit and prefixes its facts', () => {
+    const r = invokeTaxTool({ tool: 'add_ssa_1099', args: { netBenefits: -250, federalTaxWithheld: 0 }, context });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields).toEqual({ netBenefits: -250, federalTaxWithheld: 0 });
+    expect(r.facts.map((f) => f.factType)).toEqual(['SSA1099_netBenefits', 'SSA1099_federalTaxWithheld']);
+  });
+
+  it('rejects invented fields and a fractional property count', () => {
+    expect(invokeTaxTool({ tool: 'add_mortgage_interest', args: { mortgageInterest: 1, escrow: 500 }, context }).ok).toBe(false);
+    expect(invokeTaxTool({ tool: 'add_mortgage_interest', args: { numberOfProperties: 1.5 }, context }).ok).toBe(false);
+    expect(invokeTaxTool({ tool: 'add_education_expense', args: { creditType: 'american_opportunity' }, context }).ok).toBe(false);
+  });
+
+  it('keeps a missing 1098-T amount unknown, never zero', () => {
+    const r = invokeTaxTool({ tool: 'add_education_expense', args: { tuitionPaid: undefined, scholarships: 3000 }, context });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields).toEqual({ scholarships: 3000 });
+    expect(r.facts.find((f) => f.sourceField === 'tuitionPaid')?.status).toBe('unknown');
+  });
+});

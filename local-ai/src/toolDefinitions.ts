@@ -83,6 +83,9 @@ const DESCRIPTIONS: Record<TaxToolName, string> = {
   add_1099_div: `Add one Form 1099-DIV (dividends and distributions). ${NO_GUESSING}`,
   add_1099_nec: `Add one Form 1099-NEC (nonemployee compensation). ${NO_GUESSING}`,
   add_1099_r: `Add one Form 1099-R (retirement distribution). ${NO_GUESSING}`,
+  add_ssa_1099: `Add one Form SSA-1099 (Social Security benefit statement). Net benefits (box 5) may be negative. ${NO_GUESSING}`,
+  add_mortgage_interest: `Add one Form 1098 (mortgage interest statement). ${NO_GUESSING}`,
+  add_education_expense: `Add one Form 1098-T (tuition statement). This records the statement; which education credit applies is decided separately. ${NO_GUESSING}`,
   set_filing_status_candidate:
     'Record a filing-status candidate stated in the evidence. This does not set the final filing status; the tax engine and preparer decide that.',
 };

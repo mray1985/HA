@@ -18,21 +18,14 @@
  */
 
 import type { ClassifiableFormType } from './documentClassifier.js';
+import { toolForForm } from './formSchemas.js';
 import type { TaxFact, TaxFactValue } from './taxFact.js';
 import { FILING_STATUS_CANDIDATES, TAX_TOOL_NAMES, type TaxToolName } from './taxTools.js';
 import { taxToolDefinitions, type JsonSchema, type ToolDefinition } from './toolDefinitions.js';
 
-const TOOL_FOR_FORM: Partial<Record<ClassifiableFormType, TaxToolName>> = {
-  'W-2': 'add_w2',
-  '1099-INT': 'add_1099_int',
-  '1099-DIV': 'add_1099_div',
-  '1099-NEC': 'add_1099_nec',
-  '1099-R': 'add_1099_r',
-};
-
 /** The one tax tool a classified document may feed, or null when none exists yet. */
 export function toolForFormType(formType: ClassifiableFormType | null | undefined): TaxToolName | null {
-  return formType ? TOOL_FOR_FORM[formType] ?? null : null;
+  return toolForForm(formType);
 }
 
 function baseDefinition(tool: TaxToolName): ToolDefinition {

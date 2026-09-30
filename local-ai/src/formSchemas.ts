@@ -15,7 +15,7 @@
 
 import type { ClassifiableFormType } from './documentClassifier.js';
 import type { CheckboxSpec } from './pageEvidence.js';
-import type { TaxToolIncomeName } from './taxTools.js';
+import type { DocumentToolName } from './taxTools.js';
 
 export type BoxValueKind =
   | 'money'
@@ -184,6 +184,7 @@ const INT_SCHEMA: FormExtractionSchema = {
   formType: '1099-INT',
   revision: 'January 2024',
   boxes: [
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
     ...COMBINED_PAYER_RECIPIENT,
     box('rtn', "Payer's RTN (optional)", 'text', 'info', ''),
     checkbox('fatca', 'FATCA filing requirement', 'review', { labelPhrase: 'requirement', direction: 'below' }, ''),
@@ -213,6 +214,7 @@ const NEC_SCHEMA: FormExtractionSchema = {
   formType: '1099-NEC',
   revision: 'December 2026',
   boxes: [
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
     ...SPLIT_PAYER_RECIPIENT,
     box('1a', 'Nonemployee compensation', 'money', 'tool'),
     box('1b', 'Cash tips', 'money', 'review'),
@@ -233,6 +235,7 @@ const R_SCHEMA: FormExtractionSchema = {
   formType: '1099-R',
   revision: '2026',
   boxes: [
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
     ...SPLIT_PAYER_RECIPIENT,
     box('1', 'Gross distribution', 'money', 'tool'),
     box('2a', 'Taxable amount', 'money', 'tool'),
@@ -269,35 +272,124 @@ const MORTGAGE_SCHEMA: FormExtractionSchema = {
   formType: '1098',
   revision: 'April 2025',
   boxes: [
-    box('lender.block', "RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", 'text', 'info', ''),
-    box('lender.tin', "RECIPIENT'S/LENDER'S TIN", 'tin', 'info', ''),
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
+    box('lender.block', "RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", 'text', 'tool', ''),
+    box('lender.tin', "RECIPIENT'S/LENDER'S TIN", 'tin', 'tool', ''),
     box('borrower.tin', "PAYER'S/BORROWER'S TIN", 'tin', 'info', ''),
     box('borrower.name', "PAYER'S/BORROWER'S name", 'text', 'info', ''),
     box('borrower.street', "PAYER'S/BORROWER'S street address (including apt. no.)", 'text', 'info', ''),
     box('borrower.city', "PAYER'S/BORROWER'S city or town, state or province, country, and ZIP or foreign postal code", 'text', 'info', ''),
     box('account', 'Account number (see instructions)', 'text', 'info', ''),
-    // No mortgage-interest tax tool exists yet (work order §5), so every
-    // tax-relevant box routes the form to review instead of being dropped.
-    box('1', 'Mortgage interest received from payer(s)/borrower(s)', 'money', 'review'),
-    box('2', 'Outstanding mortgage principal', 'money', 'review'),
-    box('3', 'Mortgage origination date', 'date', 'review'),
-    box('4', 'Refund of overpaid interest', 'money', 'review'),
-    box('5', 'Mortgage insurance premiums', 'money', 'review'),
-    box('6', 'Points paid on purchase of principal residence', 'money', 'review'),
-    checkbox('7', "Address of property securing mortgage is the same as payer's/borrower's address", 'review', { labelPhrase: 'If address', direction: 'left' }),
-    box('8', 'Address or description of property securing mortgage', 'text', 'review'),
-    box('9', 'Number of properties securing the mortgage', 'integer', 'review'),
+    box('1', 'Mortgage interest received from payer(s)/borrower(s)', 'money', 'tool'),
+    box('2', 'Outstanding mortgage principal', 'money', 'tool'),
+    box('3', 'Mortgage origination date', 'date', 'tool'),
+    box('4', 'Refund of overpaid interest', 'money', 'tool'),
+    box('5', 'Mortgage insurance premiums', 'money', 'tool'),
+    box('6', 'Points paid on purchase of principal residence', 'money', 'tool'),
+    checkbox('7', "Address of property securing mortgage is the same as payer's/borrower's address", 'tool', { labelPhrase: 'If address', direction: 'left' }),
+    box('8', 'Address or description of property securing mortgage', 'text', 'tool'),
+    box('9', 'Number of properties securing the mortgage', 'integer', 'tool'),
     box('10', 'Other', 'text', 'review'),
-    box('11', 'Mortgage acquisition date', 'date', 'review'),
+    box('11', 'Mortgage acquisition date', 'date', 'tool'),
+  ],
+};
+
+const DIV_SCHEMA: FormExtractionSchema = {
+  formType: '1099-DIV',
+  revision: 'January 2024',
+  boxes: [
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
+    ...COMBINED_PAYER_RECIPIENT,
+    checkbox('11', 'FATCA filing requirement', 'review', { labelPhrase: 'requirement', direction: 'below' }),
+    box('1a', 'Total ordinary dividends', 'money', 'tool'),
+    box('1b', 'Qualified dividends', 'money', 'tool'),
+    box('2a', 'Total capital gain distr.', 'money', 'tool'),
+    box('2b', 'Unrecap. Sec. 1250 gain', 'money', 'review'),
+    box('2c', 'Section 1202 gain', 'money', 'review'),
+    box('2d', 'Collectibles (28%) gain', 'money', 'review'),
+    box('2e', 'Section 897 ordinary dividends', 'money', 'review'),
+    box('2f', 'Section 897 capital gain', 'money', 'review'),
+    box('3', 'Nondividend distributions', 'money', 'review'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'Section 199A dividends', 'money', 'review'),
+    box('6', 'Investment expenses', 'money', 'review'),
+    box('7', 'Foreign tax paid', 'money', 'tool'),
+    box('8', 'Foreign country or U.S. possession', 'text', 'info'),
+    box('9', 'Cash liquidation distributions', 'money', 'review'),
+    box('10', 'Noncash liquidation distributions', 'money', 'review'),
+    box('12', 'Exempt-interest dividends', 'money', 'review'),
+    box('13', 'Specified private activity bond interest dividends', 'money', 'review'),
+    ...stateRows(2, [
+      { key: '14', label: 'State', kind: 'stateCode', use: 'tool' },
+      { key: '15', label: 'State identification no.', kind: 'text', use: 'info' },
+      { key: '16', label: 'State tax withheld', kind: 'money', use: 'tool' },
+    ]),
+  ],
+};
+
+const TUITION_SCHEMA: FormExtractionSchema = {
+  formType: '1098-T',
+  revision: '2026',
+  boxes: [
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
+    box('filer.name', "FILER'S name", 'text', 'tool', ''),
+    box('filer.street', "FILER'S street address", 'text', 'info', ''),
+    box('filer.suite', "FILER'S room/suite no.", 'text', 'info', ''),
+    box('filer.city', "FILER'S city/town", 'text', 'info', ''),
+    box('filer.state', "FILER'S state/province", 'text', 'info', ''),
+    box('filer.country', "FILER'S country", 'text', 'info', ''),
+    box('filer.zip', "FILER'S ZIP/foreign code", 'text', 'info', ''),
+    box('filer.phone', "FILER'S telephone number", 'text', 'info', ''),
+    box('filer.ein', "FILER'S employer identification no.", 'tin', 'tool', ''),
+    box('student.tin', "STUDENT'S TIN", 'tin', 'info', ''),
+    box('student.name', "STUDENT'S name", 'text', 'tool', ''),
+    box('student.street', "STUDENT'S street address", 'text', 'info', ''),
+    box('student.apt', "STUDENT'S apt. no.", 'text', 'info', ''),
+    box('student.city', "STUDENT'S city/town", 'text', 'info', ''),
+    box('student.state', "STUDENT'S state/province", 'text', 'info', ''),
+    box('student.country', "STUDENT'S country", 'text', 'info', ''),
+    box('student.zip', "STUDENT'S ZIP/foreign code", 'text', 'info', ''),
+    box('account', 'Service Provider/Acct. No.', 'text', 'info', ''),
+    box('1', 'Payments received for qualified tuition and related expenses', 'money', 'tool'),
+    box('4', 'Adjustments made for a prior year', 'money', 'tool'),
+    box('5', 'Scholarships or grants', 'money', 'tool'),
+    box('6', 'Adjustments to scholarships or grants for a prior year', 'money', 'tool'),
+    // Squares sit at the right end of the last label line.
+    checkbox('7', 'Checked if the amount in box 1 includes amounts for an academic period beginning January-March of next year', 'tool', { labelPhrase: 'March', direction: 'right' }),
+    checkbox('8', 'Checked if at least half-time student', 'tool', { labelPhrase: 'half-time student', direction: 'right' }),
+    checkbox('9', 'Checked if a graduate student', 'tool', { labelPhrase: 'graduate', direction: 'right' }),
+    box('10', 'Ins. contract reimb./refund', 'money', 'tool'),
+  ],
+};
+
+/**
+ * SSA-1099 is issued by the Social Security Administration, not the IRS; the
+ * layout follows the SSA's printed Social Security Benefit Statement.
+ */
+const SSA_SCHEMA: FormExtractionSchema = {
+  formType: 'SSA-1099',
+  revision: 'SSA benefit statement',
+  boxes: [
+    box('1', 'Name', 'text', 'tool'),
+    box('2', "Beneficiary's Social Security Number", 'tin', 'info'),
+    box('3', 'Benefits paid', 'money', 'tool'),
+    box('4', 'Benefits repaid to SSA', 'money', 'tool'),
+    box('5', 'Net benefits (Box 3 minus Box 4)', 'money', 'tool'),
+    box('6', 'Voluntary federal income tax withheld', 'money', 'tool'),
+    box('7', 'Address', 'text', 'info'),
+    box('8', 'Claim number', 'text', 'info'),
   ],
 };
 
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
+  '1099-DIV': DIV_SCHEMA,
   '1099-NEC': NEC_SCHEMA,
   '1099-R': R_SCHEMA,
+  'SSA-1099': SSA_SCHEMA,
   '1098': MORTGAGE_SCHEMA,
+  '1098-T': TUITION_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -406,7 +498,7 @@ export function boxValuesFromTemplate(
 // ─── Deterministic mapping to tax-tool arguments ─────────────
 
 export interface ToolMapping {
-  tool: TaxToolIncomeName | null;
+  tool: DocumentToolName | null;
   /**
    * Extractor bag for extractStructuredFields: raw printed strings keyed by tool
    * field. Normalization (money, booleans, box 12/13) happens there.
@@ -444,49 +536,139 @@ function firstLine(text: string): string {
   return text.split(/\r?\n/)[0]!.trim();
 }
 
-const TOOL_FOR_FORM: Partial<Record<ClassifiableFormType, TaxToolIncomeName>> = {
-  'W-2': 'add_w2',
-  '1099-INT': 'add_1099_int',
-  '1099-NEC': 'add_1099_nec',
-  '1099-R': 'add_1099_r',
+/**
+ * How one form's boxes feed its tax tool. Everything is data so each form's
+ * mapping can be reviewed against its printed layout in one place.
+ */
+interface ToolMappingSpec {
+  tool: DocumentToolName;
+  /** Box key → tool field, copied as printed text. */
+  direct: Record<string, string>;
+  /** Name field: first line of the first present key. */
+  name?: { keys: readonly string[]; field: string };
+  /** State code (first state row only). */
+  state?: { key: string; field: string };
+  /** Checkbox box key → boolean tool field. Ambiguous checkboxes go to review. */
+  checkboxes?: Record<string, string>;
+  /** W-2 box 12 entries and box 13 checkboxes. */
+  w2?: true;
+}
+
+const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
+  'W-2': {
+    tool: 'add_w2',
+    direct: {
+      b: 'employerEin',
+      '1': 'wages',
+      '2': 'federalTaxWithheld',
+      '3': 'socialSecurityWages',
+      '4': 'socialSecurityTax',
+      '5': 'medicareWages',
+      '6': 'medicareTax',
+      '16.1': 'stateWages',
+      '17.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['c'], field: 'employerName' },
+    state: { key: '15.state.1', field: 'state' },
+    w2: true,
+  },
+  '1099-INT': {
+    tool: 'add_1099_int',
+    direct: {
+      '1': 'amount',
+      '2': 'earlyWithdrawalPenalty',
+      '3': 'usBondInterest',
+      '4': 'federalTaxWithheld',
+      '8': 'taxExemptInterest',
+      '17.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    state: { key: '15.1', field: 'stateCode' },
+  },
+  '1099-DIV': {
+    tool: 'add_1099_div',
+    direct: {
+      '1a': 'ordinaryDividends',
+      '1b': 'qualifiedDividends',
+      '2a': 'capitalGainDistributions',
+      '4': 'federalTaxWithheld',
+      '7': 'foreignTaxPaid',
+      '16.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.block'], field: 'payerName' },
+    state: { key: '14.1', field: 'stateCode' },
+  },
+  '1099-NEC': {
+    tool: 'add_1099_nec',
+    direct: {
+      'payer.tin': 'payerEin',
+      '1a': 'amount',
+      '4': 'federalTaxWithheld',
+      '5.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.name', 'payer.block'], field: 'payerName' },
+    state: { key: '6.1', field: 'stateCode' },
+  },
+  '1099-R': {
+    tool: 'add_1099_r',
+    direct: {
+      '1': 'grossDistribution',
+      '2a': 'taxableAmount',
+      '4': 'federalTaxWithheld',
+      '7a': 'distributionCode',
+      '14.1': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.name', 'payer.block'], field: 'payerName' },
+    state: { key: '15.1', field: 'stateCode' },
+    checkboxes: { '7b': 'isIRA' },
+  },
+  'SSA-1099': {
+    tool: 'add_ssa_1099',
+    direct: {
+      '3': 'benefitsPaid',
+      '4': 'benefitsRepaid',
+      '5': 'netBenefits',
+      '6': 'federalTaxWithheld',
+    },
+    name: { keys: ['1'], field: 'beneficiaryName' },
+  },
+  '1098': {
+    tool: 'add_mortgage_interest',
+    direct: {
+      'lender.tin': 'lenderTin',
+      '1': 'mortgageInterest',
+      '2': 'outstandingPrincipal',
+      '3': 'originationDate',
+      '4': 'refundOfOverpaidInterest',
+      '5': 'mortgageInsurancePremiums',
+      '6': 'points',
+      '8': 'propertyAddress',
+      '9': 'numberOfProperties',
+      '11': 'acquisitionDate',
+    },
+    name: { keys: ['lender.block'], field: 'lenderName' },
+    checkboxes: { '7': 'propertyAddressSameAsBorrower' },
+  },
+  '1098-T': {
+    tool: 'add_education_expense',
+    direct: {
+      'filer.ein': 'institutionEin',
+      'student.name': 'studentName',
+      '1': 'tuitionPaid',
+      '4': 'priorYearAdjustments',
+      '5': 'scholarships',
+      '6': 'scholarshipAdjustments',
+      '10': 'insuranceReimbursement',
+    },
+    name: { keys: ['filer.name'], field: 'institutionName' },
+    checkboxes: { '7': 'includesNextPeriod', '8': 'halfTimeStudent', '9': 'graduateStudent' },
+  },
 };
 
-/** Schema box key → tool field, per tool. Box 12/13 and state cells are assembled separately. */
-const DIRECT_FIELDS: Record<TaxToolIncomeName, Record<string, string>> = {
-  add_w2: {
-    b: 'employerEin',
-    '1': 'wages',
-    '2': 'federalTaxWithheld',
-    '3': 'socialSecurityWages',
-    '4': 'socialSecurityTax',
-    '5': 'medicareWages',
-    '6': 'medicareTax',
-    '16.1': 'stateWages',
-    '17.1': 'stateTaxWithheld',
-  },
-  add_1099_int: {
-    '1': 'amount',
-    '2': 'earlyWithdrawalPenalty',
-    '3': 'usBondInterest',
-    '4': 'federalTaxWithheld',
-    '8': 'taxExemptInterest',
-    '17.1': 'stateTaxWithheld',
-  },
-  add_1099_div: {},
-  add_1099_nec: {
-    'payer.tin': 'payerEin',
-    '1a': 'amount',
-    '4': 'federalTaxWithheld',
-    '5.1': 'stateTaxWithheld',
-  },
-  add_1099_r: {
-    '1': 'grossDistribution',
-    '2a': 'taxableAmount',
-    '4': 'federalTaxWithheld',
-    '7a': 'distributionCode',
-    '14.1': 'stateTaxWithheld',
-  },
-};
+/** The tool a classified form feeds, when one exists. */
+export function toolForForm(formType: ClassifiableFormType | null | undefined): DocumentToolName | null {
+  return formType ? TOOL_MAPPINGS[formType]?.tool ?? null : null;
+}
 
 /**
  * Deterministic mapping from transcribed box text to tax-tool inputs.
@@ -498,7 +680,8 @@ export function mapBoxesToTool(
   schema: FormExtractionSchema,
   values: Record<string, string>,
 ): ToolMapping {
-  const tool = TOOL_FOR_FORM[schema.formType] ?? null;
+  const spec = TOOL_MAPPINGS[schema.formType];
+  const tool = spec?.tool ?? null;
   const bag: Record<string, unknown> = {};
   const rawText: Record<string, string> = {};
   const reviewBoxes: ToolMapping['reviewBoxes'] = [];
@@ -518,30 +701,36 @@ export function mapBoxesToTool(
       reviewBoxes.push({ key: b.key, label: b.label, text });
     }
   }
-  if (!tool) return { tool, bag, rawText, reviewBoxes };
+  if (!spec || !tool) return { tool, bag, rawText, reviewBoxes };
 
-  for (const [key, field] of Object.entries(DIRECT_FIELDS[tool])) {
+  for (const [key, field] of Object.entries(spec.direct)) {
     const text = values[key];
     if (text !== undefined) put(field, text, text);
   }
 
-  // Payer / employer name: first line of the name cell or combined block only.
-  const nameKey = tool === 'add_w2' ? 'c' : values['payer.name'] !== undefined ? 'payer.name' : 'payer.block';
-  if (values[nameKey] !== undefined) {
-    put(tool === 'add_w2' ? 'employerName' : 'payerName', firstLine(values[nameKey]!), values[nameKey]!);
+  if (spec.name) {
+    const key = spec.name.keys.find((k) => values[k] !== undefined);
+    if (key) put(spec.name.field, firstLine(values[key]!), values[key]!);
   }
 
-  // State code (first state row only).
-  const stateKey =
-    tool === 'add_w2' ? '15.state.1' : tool === 'add_1099_int' ? '15.1' : tool === 'add_1099_nec' ? '6.1' : '15.1';
-  const stateText = values[stateKey];
-  if (stateText !== undefined) {
-    const code = stateCodeFromCell(stateText);
+  if (spec.state && values[spec.state.key] !== undefined) {
+    const stateText = values[spec.state.key]!;
     // An unreadable state cell stays unknown (undefined), never a guessed code.
-    put(tool === 'add_w2' ? 'state' : 'stateCode', code, stateText);
+    put(spec.state.field, stateCodeFromCell(stateText), stateText);
   }
 
-  if (tool === 'add_w2') {
+  for (const [key, field] of Object.entries(spec.checkboxes ?? {})) {
+    const text = values[key];
+    if (text === undefined) continue;
+    const state = checkboxState(text);
+    if (state === undefined) {
+      reviewBoxes.push({ key, label: boxByKey.get(key)!.label, text });
+    } else {
+      put(field, state, text);
+    }
+  }
+
+  if (spec.w2) {
     const entries: Array<{ code: string; amount: string }> = [];
     const raws: string[] = [];
     for (const slot of ['12a', '12b', '12c', '12d']) {
@@ -580,15 +769,6 @@ export function mapBoxesToTool(
       }
     }
     if (Object.keys(box13).length > 0) put('box13', box13, box13Raw.join('; '));
-  }
-
-  if (tool === 'add_1099_r' && values['7b'] !== undefined) {
-    const state = checkboxState(values['7b']);
-    if (state === undefined) {
-      reviewBoxes.push({ key: '7b', label: boxByKey.get('7b')!.label, text: values['7b']! });
-    } else {
-      put('isIRA', state, values['7b']!);
-    }
   }
 
   return { tool, bag, rawText, reviewBoxes };

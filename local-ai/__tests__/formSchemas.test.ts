@@ -163,10 +163,64 @@ describe('mapBoxesToTool', () => {
   });
 
   it('routes every filled tax box on a form without a tax tool to review', () => {
-    const mortgage = getFormExtractionSchema('1098')!;
-    const mapped = mapBoxesToTool(mortgage, { '1': '9,412.37', '2': '214,880.15', 'lender.name': 'CRESCENT CITY MORTGAGE CO' });
+    const noTool: FormExtractionSchema = {
+      formType: '1099-G',
+      revision: 'test',
+      boxes: [
+        { key: '1', box: '1', label: 'Unemployment compensation', kind: 'money', use: 'tool' },
+        { key: 'payer', box: '', label: "PAYER'S name", kind: 'text', use: 'info' },
+      ],
+    };
+    const mapped = mapBoxesToTool(noTool, { '1': '4,200.00', payer: 'LOUISIANA WORKFORCE COMMISSION' });
     expect(mapped.tool).toBeNull();
-    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['1', '2']);
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['1']);
+  });
+
+  it('maps a 1099-DIV and routes boxes without an engine field to review', () => {
+    const div = getFormExtractionSchema('1099-DIV')!;
+    const mapped = mapBoxesToTool(div, {
+      'payer.block': 'SUMMIT INDEX FUNDS\nPO BOX 100',
+      '1a': '2,410.55', '1b': '1,980.02', '2a': '310.00', '5': '44.10', '14.1': 'LA', '16.1': '20.00',
+    });
+    expect(extractStructuredFields('add_1099_div', mapped.bag, mapped.rawText).args).toEqual({
+      ordinaryDividends: 2410.55, qualifiedDividends: 1980.02, capitalGainDistributions: 310,
+      stateTaxWithheld: 20, payerName: 'SUMMIT INDEX FUNDS', stateCode: 'LA',
+    });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['5']);
+  });
+
+  it('maps an SSA-1099, keeping a negative net benefit as printed', () => {
+    const ssa = getFormExtractionSchema('SSA-1099')!;
+    const mapped = mapBoxesToTool(ssa, { '1': 'MAYA TESTPAYER', '3': '1,200.00', '4': '1,450.00', '5': '(250.00)', '6': '0.00' });
+    expect(mapped.tool).toBe('add_ssa_1099');
+    expect(extractStructuredFields('add_ssa_1099', mapped.bag, mapped.rawText).args).toEqual({
+      benefitsPaid: 1200, benefitsRepaid: 1450, netBenefits: -250, federalTaxWithheld: 0, beneficiaryName: 'MAYA TESTPAYER',
+    });
+  });
+
+  it('maps a 1098 including points, the address checkbox and the property count', () => {
+    const mortgage = getFormExtractionSchema('1098')!;
+    const mapped = mapBoxesToTool(mortgage, {
+      'lender.block': 'CRESCENT CITY MORTGAGE CO\n1500 POYDRAS ST', 'lender.tin': '72-3334445',
+      '1': '9,412.37', '2': '214,880.15', '3': '03/14/2021', '6': '1,200.00', '7': 'X', '9': '1',
+    });
+    expect(mapped.tool).toBe('add_mortgage_interest');
+    expect(mapped.reviewBoxes).toEqual([]);
+    expect(extractStructuredFields('add_mortgage_interest', mapped.bag, mapped.rawText).args).toEqual({
+      lenderTin: '72-3334445', mortgageInterest: 9412.37, outstandingPrincipal: 214880.15, originationDate: '03/14/2021',
+      points: 1200, numberOfProperties: 1, lenderName: 'CRESCENT CITY MORTGAGE CO', propertyAddressSameAsBorrower: true,
+    });
+  });
+
+  it('maps a 1098-T with its checkboxes', () => {
+    const tuition = getFormExtractionSchema('1098-T')!;
+    const mapped = mapBoxesToTool(tuition, {
+      'filer.name': 'BAYOU STATE UNIVERSITY', 'filer.ein': '72-6000111', '1': '8,420.00', '5': '3,000.00', '7': 'no', '8': 'X', '9': 'no',
+    });
+    expect(extractStructuredFields('add_education_expense', mapped.bag, mapped.rawText).args).toEqual({
+      institutionEin: '72-6000111', tuitionPaid: 8420, scholarships: 3000, institutionName: 'BAYOU STATE UNIVERSITY',
+      includesNextPeriod: false, halfTimeStudent: true, graduateStudent: false,
+    });
   });
 });
 
@@ -196,5 +250,20 @@ describe('checkboxState / stateCodeFromCell', () => {
     ['LA', 'LA'], ['la/1234567', 'LA'], ['LA 1234567', 'LA'], ['1234567', undefined], ['LOUISIANA', undefined],
   ])('state cell %j → %j', (text, expected) => {
     expect(stateCodeFromCell(text)).toBe(expected);
+  });
+});
+
+describe('corrected forms (work order §15 "corrected W-2 handling", §72)', () => {
+  it('routes a checked CORRECTED box to review, and ignores an unchecked one', () => {
+    const int = getFormExtractionSchema('1099-INT')!;
+    expect(mapBoxesToTool(int, { corrected: 'X', '1': '100.00' }).reviewBoxes.map((b) => b.key)).toEqual(['corrected']);
+    expect(mapBoxesToTool(int, { corrected: 'no', '1': '100.00' }).reviewBoxes).toEqual([]);
+  });
+
+  it('gives every 1099, 1098 and 1098-T schema a CORRECTED checkbox', () => {
+    for (const formType of ['1099-INT', '1099-DIV', '1099-NEC', '1099-R', '1098', '1098-T'] as const) {
+      const b = getFormExtractionSchema(formType)!.boxes.find((x) => x.key === 'corrected');
+      expect(b, formType).toMatchObject({ kind: 'checkbox', use: 'review', checkbox: { labelPhrase: 'CORRECTED', direction: 'left' } });
+    }
   });
 });

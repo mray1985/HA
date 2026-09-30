@@ -1,8 +1,9 @@
 /**
  * Schema-validated tax-engine tools for automation.
  * Models call these instead of writing Form 1040 line fields.
- * Successful calls return TaxFacts plus fields safe for addIncomeItem.
- * They do not calculate tax.
+ * Successful calls return TaxFacts, the validated fields, and how the result
+ * applies to the return (an income item, a total recomputed from every
+ * document, a preparer choice, or a candidate fact). They do not calculate tax.
  */
 
 import { z } from 'zod';
@@ -23,13 +24,39 @@ export const TAX_TOOL_NAMES = [
   'add_1099_div',
   'add_1099_nec',
   'add_1099_r',
+  'add_ssa_1099',
+  'add_mortgage_interest',
+  'add_education_expense',
   'set_filing_status_candidate',
 ] as const;
 
 export type TaxToolName = (typeof TAX_TOOL_NAMES)[number];
 
-/** Income tools only (excludes filing-status candidate). */
-export type TaxToolIncomeName = Exclude<TaxToolName, 'set_filing_status_candidate'>;
+/** Tools that take a source document's fields (every tool except the filing-status candidate). */
+export type DocumentToolName = Exclude<TaxToolName, 'set_filing_status_candidate'>;
+
+/** Tools whose result is one engine income item per document (addIncomeItem). */
+export type TaxToolIncomeName = 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r';
+
+export function isDocumentTool(name: string): name is DocumentToolName {
+  return name !== 'set_filing_status_candidate' && (TAX_TOOL_NAMES as readonly string[]).includes(name);
+}
+
+/**
+ * How a successful call applies to the return.
+ * - income_item: one engine item per document (addIncomeItem).
+ * - aggregate: the engine holds one total for the return (Social Security
+ *   benefits; Schedule A mortgage interest), so the value is recomputed from
+ *   every document's facts — re-importing a form can never double-count it.
+ * - needs_preparer_choice: the engine needs a decision the document cannot
+ *   make (education: American Opportunity vs Lifetime Learning credit).
+ * - candidate_fact: recorded as a fact only; never sets the return.
+ */
+export type TaxToolApplication =
+  | { kind: 'income_item'; itemType: TaxToolIncomeType }
+  | { kind: 'aggregate'; target: 'socialSecurityBenefits' | 'mortgageInterest' }
+  | { kind: 'needs_preparer_choice'; target: 'educationCredit'; choice: 'creditType' }
+  | { kind: 'candidate_fact' };
 
 /** Income-item API keys used by addIncomeItem / intentExecutor. */
 export type TaxToolIncomeType = 'w2' | '1099int' | '1099div' | '1099nec' | '1099r';
@@ -88,6 +115,7 @@ const W2Box13Schema = z
   .strict();
 
 const optionalBox12 = z.preprocess(asMissing, z.array(W2Box12EntrySchema).optional());
+const optionalInteger = z.preprocess(asMissing, z.number().int().optional());
 const optionalBox13 = z.preprocess(asMissing, W2Box13Schema.optional());
 
 /** 1099-R Simplified Method worksheet fields (matches Income1099R.simplifiedMethod). */
@@ -190,23 +218,85 @@ export const FILING_STATUS_CANDIDATES = [
   'qualifying_surviving_spouse',
 ] as const;
 
+/** SSA-1099 (issued by the Social Security Administration). Box 5 may be negative. */
+const AddSsa1099FieldsSchema = z
+  .object({
+    beneficiaryName: optionalString,
+    benefitsPaid: optionalAmount,
+    benefitsRepaid: optionalAmount,
+    netBenefits: optionalAmount,
+    federalTaxWithheld: optionalAmount,
+    isSpouse: optionalBoolean,
+  })
+  .strict();
+
+/** Form 1098 (Rev. April 2025). */
+const AddMortgageInterestFieldsSchema = z
+  .object({
+    lenderName: optionalString,
+    lenderTin: optionalString,
+    mortgageInterest: optionalAmount,
+    outstandingPrincipal: optionalAmount,
+    originationDate: optionalString,
+    refundOfOverpaidInterest: optionalAmount,
+    mortgageInsurancePremiums: optionalAmount,
+    points: optionalAmount,
+    propertyAddressSameAsBorrower: optionalBoolean,
+    propertyAddress: optionalString,
+    numberOfProperties: optionalInteger,
+    acquisitionDate: optionalString,
+  })
+  .strict();
+
+/** Form 1098-T. */
+const AddEducationExpenseFieldsSchema = z
+  .object({
+    institutionName: optionalString,
+    institutionEin: optionalString,
+    studentName: optionalString,
+    tuitionPaid: optionalAmount,
+    priorYearAdjustments: optionalAmount,
+    scholarships: optionalAmount,
+    scholarshipAdjustments: optionalAmount,
+    includesNextPeriod: optionalBoolean,
+    halfTimeStudent: optionalBoolean,
+    graduateStudent: optionalBoolean,
+    insuranceReimbursement: optionalAmount,
+  })
+  .strict();
+
 export const SetFilingStatusCandidateSchema = z
   .object({
     status: z.enum(FILING_STATUS_CANDIDATES),
   })
   .strict();
 
-export const TOOL_FIELD_SCHEMAS: Record<TaxToolIncomeName, z.ZodObject<z.ZodRawShape>> = {
+export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawShape>> = {
   add_w2: AddW2FieldsSchema,
   add_1099_int: Add1099IntFieldsSchema,
   add_1099_div: Add1099DivFieldsSchema,
   add_1099_nec: Add1099NecFieldsSchema,
   add_1099_r: Add1099RFieldsSchema,
+  add_ssa_1099: AddSsa1099FieldsSchema,
+  add_mortgage_interest: AddMortgageInterestFieldsSchema,
+  add_education_expense: AddEducationExpenseFieldsSchema,
+};
+
+export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
+  add_w2: { kind: 'income_item', itemType: 'w2' },
+  add_1099_int: { kind: 'income_item', itemType: '1099int' },
+  add_1099_div: { kind: 'income_item', itemType: '1099div' },
+  add_1099_nec: { kind: 'income_item', itemType: '1099nec' },
+  add_1099_r: { kind: 'income_item', itemType: '1099r' },
+  add_ssa_1099: { kind: 'aggregate', target: 'socialSecurityBenefits' },
+  add_mortgage_interest: { kind: 'aggregate', target: 'mortgageInterest' },
+  add_education_expense: { kind: 'needs_preparer_choice', target: 'educationCredit', choice: 'creditType' },
+  set_filing_status_candidate: { kind: 'candidate_fact' },
 };
 
 /** Keep only schema-known keys (for OCR bridges). Direct tool calls still reject unknowns. */
 export function pickToolFieldArgs(
-  tool: TaxToolIncomeName,
+  tool: DocumentToolName,
   args: Record<string, unknown>,
 ): Record<string, unknown> {
   const shape = TOOL_FIELD_SCHEMAS[tool].shape as Record<string, unknown>;
@@ -225,6 +315,9 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_1099_div: '1099DIV',
   add_1099_nec: '1099NEC',
   add_1099_r: '1099R',
+  add_ssa_1099: 'SSA1099',
+  add_mortgage_interest: '1098',
+  add_education_expense: '1098T',
   set_filing_status_candidate: 'FILING_STATUS',
 };
 
@@ -250,8 +343,10 @@ export interface TaxToolCallContext {
 export interface TaxToolSuccess {
   ok: true;
   tool: TaxToolName;
-  /** Present for income tools; safe for addIncomeItem / add_income. */
+  /** Present for income-item tools; safe for addIncomeItem / add_income. */
   incomeType?: TaxToolIncomeType;
+  /** How this result applies to the return. */
+  application: TaxToolApplication;
   /** Plain fields with missing amounts omitted (never zeroed). */
   fields: Record<string, unknown>;
   facts: TaxFact[];
@@ -325,6 +420,7 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
       tool,
       fields,
       facts,
+      application: TOOL_APPLICATION[tool],
       appliesFilingStatus: false,
     };
   }
@@ -366,7 +462,10 @@ export function invokeTaxTool(input: InvokeTaxToolInput): TaxToolResult {
   return {
     ok: true,
     tool,
-    incomeType: TAX_TOOL_INCOME_TYPE[tool],
+    ...(TOOL_APPLICATION[tool].kind === 'income_item'
+      ? { incomeType: TAX_TOOL_INCOME_TYPE[tool as TaxToolIncomeName] }
+      : {}),
+    application: TOOL_APPLICATION[tool],
     fields,
     facts,
   };
