@@ -176,9 +176,9 @@ export function calculateHomeOfficeDetailed(
 /**
  * Compute MACRS depreciation for the home (Form 8829 Part III, Lines 37-42).
  *
- * Residential property uses 27.5-year straight-line with mid-month convention.
+ * The business part of a home is 39-year nonresidential real property, straight line, mid-month (Form 8829 line 41).
  * First-year rate depends on the month the home was placed in service for business.
- * Subsequent years use a flat 3.636% rate (12/330).
+ * Later years use 2.564%.
  */
 function computeDepreciation(
   homeOffice: HomeOfficeInfo,
@@ -207,7 +207,7 @@ function computeDepreciation(
 /**
  * Get the MACRS depreciation rate based on when the home was first used for business.
  * - If placed in service in 2025, use first-year rate based on month
- * - If placed in service before 2025, use the subsequent-year rate (3.636%)
+ * - If placed in service before the tax year, use the subsequent-year rate (2.564%)
  * - If no date provided, use the subsequent-year rate as a safe default
  */
 function getDepreciationRate(dateFirstUsed?: string, taxYear: number = 2025): number {

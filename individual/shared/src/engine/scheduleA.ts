@@ -33,7 +33,6 @@ export function calculateScheduleA(
 ): ScheduleAResult {
   const taxConstants = getTaxConstants(taxYear);
   const SCHEDULE_A = taxConstants.SCHEDULE_A;
-  const CHARITABLE_AGI_LIMITS = taxConstants.CHARITABLE_AGI_LIMITS;
   // Medical: only amount exceeding 7.5% of AGI
   const medicalFloor = round2(agi * SCHEDULE_A.MEDICAL_AGI_THRESHOLD);
   const medicalDeduction = round2(Math.max(0, deductions.medicalExpenses - medicalFloor));
@@ -81,6 +80,8 @@ export function calculateScheduleA(
   // otherwise fall back to lump-sum calculation.
   let charitableDeduction: number;
   let form8283Result: Form8283Result | undefined;
+  let charitableCarryforwardUsed = 0;
+  let charitableExcessCarryforward = 0;
 
   if (deductions.nonCashDonations && deductions.nonCashDonations.length > 0) {
     // Per-item Form 8283 path: category-specific AGI limits + carryforward
@@ -89,15 +90,27 @@ export function calculateScheduleA(
       deductions.nonCashDonations,
       agi,
       deductions.charitableCarryforward,
+      taxYear,
     );
     charitableDeduction = round2(form8283Result.allowableCashDeduction + form8283Result.allowableNonCashDeduction);
+    charitableCarryforwardUsed = form8283Result.carryforwardUsed;
+    charitableExcessCarryforward = form8283Result.excessCarryforward;
   } else {
-    // Lump-sum fallback: existing behavior (backward compatible)
-    const cashLimit = round2(agi * CHARITABLE_AGI_LIMITS.CASH_PUBLIC_RATE);
-    const nonCashLimit = round2(agi * CHARITABLE_AGI_LIMITS.NON_CASH_RATE);
-    const allowableCash = round2(Math.min(Math.max(0, deductions.charitableCash), cashLimit));
-    const allowableNonCash = round2(Math.min(Math.max(0, deductions.charitableNonCash), nonCashLimit));
-    charitableDeduction = round2(Math.min(allowableCash + allowableNonCash, cashLimit));
+    // Lump sums: the same AGI limits, prior-year carryforwards and excess
+    // carryforward as the per-item path (IRC §170(b), §170(d)(1)). The non-cash
+    // lump sum is held to the capital gain property limit (30% of AGI), as
+    // before. No Form 8283 is produced: the lump sum has no items to list.
+    const nonCash = Math.max(0, deductions.charitableNonCash);
+    const lump = calculateForm8283(
+      Math.max(0, deductions.charitableCash),
+      nonCash > 0 ? [{ id: 'lump-non-cash', description: 'Non-cash contributions', doneeOrganization: '', dateOfContribution: '', fairMarketValue: nonCash, isCapitalGainProperty: true }] : [],
+      agi,
+      deductions.charitableCarryforward,
+      taxYear,
+    );
+    charitableDeduction = round2(lump.allowableCashDeduction + lump.allowableNonCashDeduction);
+    charitableCarryforwardUsed = lump.carryforwardUsed;
+    charitableExcessCarryforward = lump.excessCarryforward;
   }
 
   // Casualty loss: only federally-declared disaster losses deductible (since 2018 TCJA).
@@ -124,5 +137,7 @@ export function calculateScheduleA(
     otherDeduction,
     totalItemized,
     form8283: form8283Result,
+    ...(charitableCarryforwardUsed > 0 ? { charitableCarryforwardUsed } : {}),
+    ...(charitableExcessCarryforward > 0 ? { charitableExcessCarryforward } : {}),
   };
 }

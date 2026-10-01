@@ -134,41 +134,47 @@ export const HOME_OFFICE = {
 };
 
 // ──────────────────────────────────────────────────
-// Home Office Depreciation (MACRS — Residential Property)
-// Authority: IRC §168 — Accelerated cost recovery system
-// Constants: IRS Pub 946, Table A-6 — Residential Rental Property (27.5-year)
-// Mid-month convention per IRC §168(d)(2)
+// Home Office Depreciation (MACRS — Nonresidential Real Property)
+// Authority: IRC §168(c) — 39-year nonresidential real property, mid-month convention
+// Constants: Form 8829 instructions, line 41 (the business part of a home first
+//            used for business after May 12, 1993); Pub 946, Table A-7a
 // ──────────────────────────────────────────────────
 
 export const HOME_OFFICE_DEPRECIATION = {
-  RECOVERY_YEARS: 27.5,
+  RECOVERY_YEARS: 39,
 
+  // First year, by the month the home was first used for business.
   FIRST_YEAR_RATE_BY_MONTH: {
-    1:  0.03485,
-    2:  0.03182,
-    3:  0.02879,
-    4:  0.02576,
-    5:  0.02273,
-    6:  0.01970,
-    7:  0.01667,
-    8:  0.01364,
-    9:  0.01061,
-    10: 0.00758,
-    11: 0.00455,
-    12: 0.00152,
+    1:  0.02461,
+    2:  0.02247,
+    3:  0.02033,
+    4:  0.01819,
+    5:  0.01605,
+    6:  0.01391,
+    7:  0.01177,
+    8:  0.00963,
+    9:  0.00749,
+    10: 0.00535,
+    11: 0.00321,
+    12: 0.00107,
   } as Record<number, number>,
 
-  SUBSEQUENT_YEAR_RATE: 0.03636,
+  // Later years: 2.564%.
+  SUBSEQUENT_YEAR_RATE: 0.02564,
 };
 
 // ──────────────────────────────────────────────────
 // Vehicle / Standard Mileage
 // Authority: IRC §162 — Business expenses; IRC §274(d) — Substantiation requirements
-// Constants: IRS Notice — Standard mileage rate for 2026
+// Constants: Notice 2026-10 (2026-4 I.R.B. 378) — 72.5 cents a mile for 2026;
+//            modified by Announcement 2026-11 (2026-29 I.R.B.) — 76 cents a mile
+//            for business miles driven on or after July 1, 2026.
 // ──────────────────────────────────────────────────
 
 export const VEHICLE = {
-  STANDARD_MILEAGE_RATE: 0.71,
+  STANDARD_MILEAGE_RATE: 0.725,
+  /** Business miles driven on or after July 1, 2026 (Announcement 2026-11). */
+  STANDARD_MILEAGE_RATE_FROM_JULY_1: 0.76,
 };
 
 // ──────────────────────────────────────────────────

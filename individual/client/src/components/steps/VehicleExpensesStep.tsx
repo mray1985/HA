@@ -9,7 +9,7 @@ import SectionIntro from '../common/SectionIntro';
 import { Car, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
 import CalloutCard from '../common/CalloutCard';
 import WhatsNewCard from '../common/WhatsNewCard';
-import { calculateVehicleDetailed, compareVehicleMethods } from '@hatax/engine';
+import { calculateVehicleDetailed, compareVehicleMethods, getTaxConstants } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validateAssetAcquisitionDate, validatePlacedInServiceDate } from '../../utils/dateValidation';
 import StepWarningsBanner from '../common/StepWarningsBanner';
@@ -32,12 +32,36 @@ export default function VehicleExpensesStep() {
     ? Math.min(1, (vh.businessMiles || 0) / vh.totalMiles)
     : 0;
 
-  // Detailed calculation for preview
-  const detailed = vh.method ? calculateVehicleDetailed(vh) : null;
+  // The year's standard mileage rate; 2026 has a second rate from July 1
+  // (Notice 2026-10, Announcement 2026-11).
+  const taxYear = taxReturn.taxYear || 2025;
+  const rates = getTaxConstants(taxYear).VEHICLE as { STANDARD_MILEAGE_RATE: number; STANDARD_MILEAGE_RATE_FROM_JULY_1?: number };
+  const laterRate = rates.STANDARD_MILEAGE_RATE_FROM_JULY_1;
+  const cents = (rate: number) => `${Math.round(rate * 1000) / 10}¢`;
+  const rateText = laterRate !== undefined
+    ? `${cents(rates.STANDARD_MILEAGE_RATE)} a mile through June 30 and ${cents(laterRate)} from July 1`
+    : `$${rates.STANDARD_MILEAGE_RATE.toFixed(Number.isInteger(Math.round(rates.STANDARD_MILEAGE_RATE * 1000) / 10) ? 2 : 3)} a mile`;
+  const MILEAGE_NEWS: Record<number, { title: string; description: string }[]> = {
+    2024: [
+      { title: 'Standard Mileage Rate: $0.67/mile', description: 'Per Notice 2024-8. This rate covers gas, insurance, depreciation, and maintenance.' },
+      { title: 'Medical/Moving Mileage: $0.21/mile', description: 'Per Notice 2024-8.' },
+    ],
+    2025: [
+      { title: 'Standard Mileage Rate: $0.70/mile', description: 'Up from $0.67/mile in 2024 (per Notice 2025-5). This rate covers gas, insurance, depreciation, and maintenance.' },
+      { title: 'Medical/Moving Mileage: $0.21/mile', description: 'Unchanged from 2024 (per Notice 2025-5).' },
+    ],
+    2026: [
+      { title: 'Standard Mileage Rate: $0.725/mile, then $0.76 from July 1', description: 'Notice 2026-10 set 72.5 cents for 2026; Announcement 2026-11 raised it to 76 cents for miles driven on or after July 1, 2026, because of fuel prices. Track your business miles before and after July 1.' },
+      { title: 'Medical/Moving Mileage: $0.205/mile, then $0.235 from July 1', description: 'Notice 2026-10 and Announcement 2026-11.' },
+    ],
+  };
+
+  // Detailed calculation for preview, for this return's year
+  const detailed = vh.method ? calculateVehicleDetailed(vh, taxYear) : null;
 
   // Method comparison
   const comparison = (vh.businessMiles && vh.businessMiles > 0)
-    ? compareVehicleMethods(vh)
+    ? compareVehicleMethods(vh, taxYear)
     : null;
 
   const save = async () => {
@@ -50,17 +74,16 @@ export default function VehicleExpensesStep() {
     <div>
       <StepWarningsBanner stepId="vehicle_expenses" />
 
-      <SectionIntro icon={<Car className="w-8 h-8" />} title="Vehicle Expenses" description="Did you use a vehicle for business in 2025?" />
+      <SectionIntro icon={<Car className="w-8 h-8" />} title="Vehicle Expenses" description={`Did you use a vehicle for business in ${taxYear}?`} />
 
       <WhatsNewCard items={[
-        { title: 'Standard Mileage Rate: $0.70/mile', description: 'Up from $0.67/mile in 2024 (per Notice 2025-5). This rate covers gas, insurance, depreciation, and maintenance.' },
-        { title: 'Medical/Moving Mileage: $0.21/mile', description: 'Unchanged from 2024 (per Notice 2025-5).' },
+        ...(MILEAGE_NEWS[taxYear] ?? []),
         { title: 'Charitable Mileage: $0.14/mile', description: 'Set by statute and unchanged.' },
         { title: '100% Bonus Depreciation Restored', description: 'Under the One Big Beautiful Bill Act, 100% first-year bonus depreciation is back for vehicles placed in service in 2025 (previously reduced to 60%).' },
       ]} />
 
       <CalloutCard variant="info" title="About Vehicle Expenses" irsUrl="https://www.irs.gov/publications/p463">
-        You can deduct vehicle expenses using either the standard mileage rate ($0.70/mile for 2025)
+        You can deduct vehicle expenses using either the standard mileage rate ({rateText} for {taxYear})
         or actual expenses — but your first-year method choice is generally binding, so you cannot
         switch from actual to standard mileage for the same vehicle in later years. Commuting from
         home to a regular workplace is never deductible, though trips from a qualifying home office
@@ -74,7 +97,7 @@ export default function VehicleExpensesStep() {
         <FormField label="What vehicle expense method do you want to use?" tooltip={f('What vehicle expense method do you want to use?')?.tooltip}>
           <CardSelector
             options={[
-              { value: 'standard_mileage', label: 'Standard Mileage', description: '$0.70 per business mile. Simpler — just track your miles.' },
+              { value: 'standard_mileage', label: 'Standard Mileage', description: `${rateText}. Simpler — just track your miles.` },
               { value: 'actual', label: 'Actual Expenses', description: 'Deduct the business percentage of each vehicle cost category, plus depreciation.' },
               { value: 'none', label: 'No vehicle expenses', description: 'Skip this deduction.' },
             ]}
@@ -89,8 +112,23 @@ export default function VehicleExpensesStep() {
             <FormField label="Business Miles Driven" tooltip={f('Business Miles Driven')?.tooltip} helpText="Don't include commuting miles" irsRef={f('Business Miles Driven')?.irsRef}>
               <input type="number" className="input-field" value={vh.businessMiles || ''} onChange={(e) => updateVH('businessMiles', parseInt(e.target.value) || 0)} />
             </FormField>
+            {laterRate !== undefined && (
+              <FormField
+                label="Business Miles Driven On or After July 1"
+                helpText={`Of the miles above, those driven from July 1, ${taxYear} — they take ${cents(laterRate)} a mile (Announcement 2026-11).`}
+              >
+                <input
+                  type="number"
+                  className="input-field"
+                  min={0}
+                  value={vh.businessMilesFromJuly1 ?? ''}
+                  onChange={(e) => updateVH('businessMilesFromJuly1', e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0))}
+                />
+              </FormField>
+            )}
             <div className="text-sm text-HATaxService-orange-400 mt-2">
-              Deduction: ${((vh.businessMiles || 0) * 0.70).toLocaleString()}
+              Deduction: ${(detailed?.standardDeduction ?? 0).toLocaleString()}
+              {detailed?.mileageSplitNeeded && ' — every mile at the earlier rate until the miles from July 1 are entered'}
             </div>
           </div>
         )}

@@ -39,6 +39,11 @@ export function calculateScheduleD(
   taxYear: number = 2025,
   /** Form 6252 line 26 for capital assets: Schedule D lines 4 (short term) and 11 (long term). */
   form6252Gains?: { shortTerm: number; longTerm: number },
+  /**
+   * Schedule K-1 net short-term (box 8) and long-term (box 9a) gain or loss:
+   * Schedule D lines 5 and 12, netted with the rest and under the §1211(b) limit.
+   */
+  k1Gains?: { shortTerm: number; longTerm: number },
 ): ScheduleDResult {
   let shortTermGain = 0;
   let shortTermLoss = 0;
@@ -103,6 +108,13 @@ export function calculateScheduleD(
   // Schedule D lines 4 and 11: installment sale gain from Form 6252.
   shortTermGain += Math.max(0, form6252Gains?.shortTerm || 0);
   longTermGain += Math.max(0, form6252Gains?.longTerm || 0);
+
+  // Schedule D lines 5 and 12: K-1 net gain or loss from partnerships, S
+  // corporations, estates and trusts.
+  const k1ST = k1Gains?.shortTerm || 0;
+  const k1LT = k1Gains?.longTerm || 0;
+  if (k1ST >= 0) shortTermGain += k1ST; else shortTermLoss += -k1ST;
+  if (k1LT >= 0) longTermGain += k1LT; else longTermLoss += -k1LT;
 
   // Schedule D Line 13: Capital gain distributions from 1099-DIV Box 2a
   // These are always long-term (mutual fund distributions of realized LT gains)

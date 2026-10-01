@@ -374,6 +374,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 | `calculateHomeOfficeDeduction` | IRC | 280A | binding | Requirements for business use of home deduction: regular and exclusive use as principal place of business |
 | | Rev. Proc. | Rev. Proc. 2013-13 | binding | Simplified method allowing $5 per square foot, maximum 300 square feet ($1,500 max) |
 | | Form | Form 8829 | explanatory | |
+| | Form | Form 8829 instructions (2025), lines 8 and 41; Pub 587 (2025) | binding | Line 8 is Schedule C line 29 (after car expenses and depreciation); depreciation is 39-year nonresidential real property: 2.461%–0.107% in the first year by month, 2.564% after |
 | `compareHomeOfficeMethods` | IRC | 280A | binding | Regular method based on actual expenses allocated by business use percentage |
 | | Rev. Proc. | Rev. Proc. 2013-13 | binding | Simplified method at $5/sq ft up to 300 sq ft |
 
@@ -400,10 +401,11 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 | `calculateVehicleDeduction` | IRC | 162 | binding | Deduction for ordinary and necessary business expenses including vehicle expenses |
 | | IRC | 274(d) | binding | Substantiation requirements for listed property including vehicles |
 | | Treas. Reg. | 1.274-5T | binding | Temporary regulations on substantiation of vehicle expenses; adequate records requirement |
-| | Rev. Proc. | IRS Notice 2024-79 | binding | Standard mileage rate of $0.70 per mile for business use in 2025 |
+| | Rev. Proc. | Notice 2025-5 | binding | Standard mileage rate of $0.70 per mile for business use in 2025 |
+| | Rev. Proc. | Notice 2026-10; Announcement 2026-11 (2026-29 I.R.B.) | binding | 2026: $0.725 per mile; $0.76 per mile for business miles driven on or after July 1, 2026 |
 | | Form | Form 1040, Schedule C or Form 2106 | explanatory | |
 | `compareVehicleMethods` | IRC | 162 | binding | Business expense deduction for vehicle use |
-| | Rev. Proc. | IRS Notice 2024-79 | binding | Standard mileage rate for 2025: $0.70/mile |
+| | Rev. Proc. | Notice 2025-5; Notice 2026-10; Announcement 2026-11 | binding | Standard mileage rate for 2025: $0.70/mile; 2026: $0.725/mile, $0.76/mile from July 1 |
 
 **Scope:**
 - `calculateVehicleDeduction`: Computes vehicle deduction using either the standard mileage rate or actual expense method for business use of a personal vehicle.
@@ -772,6 +774,8 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Does not handle involuntary conversion (IRC 1033) deferral
 - Depreciation history must be provided as input per property
 - Installment sales reach Form 4797 from Form 6252 (engine/form6252.ts): line 26 on line 4 or 10, the year-of-sale recapture on line 13
+- Schedule K-1 box 8 and box 9a capital gain or loss are Schedule D lines 5 and 12 (Schedule D instructions), netted and limited with the other sales
+- California depreciation (engine/state/ca.ts `caDepreciationAdjustment`): FTB 3885A instructions (2025) — no IRC §168(k); IRC §179 $25,000, reduced over $200,000; California basis reduced by the California §179
 - Does not handle related-party sale rules under IRC 1239
 
 ---

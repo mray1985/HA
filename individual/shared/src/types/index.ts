@@ -453,6 +453,11 @@ export interface HomeOfficeResult {
 export interface VehicleInfo {
   method: 'standard_mileage' | 'actual' | null;
   businessMiles?: number;
+  /**
+   * Of the business miles, those driven on or after July 1 — needed in a year
+   * whose standard mileage rate changes mid-year (2026: Announcement 2026-11).
+   */
+  businessMilesFromJuly1?: number;
   totalMiles?: number;
   commuteMiles?: number;
   dateInService?: string;
@@ -493,7 +498,9 @@ export interface VehicleResult {
   businessUsePercentage: number;
 
   // Standard mileage
-  standardDeduction?: number;         // businessMiles * $0.70
+  standardDeduction?: number;         // businessMiles × the year's rate (2026: two rates, before and from July 1)
+  /** The year's rate changes on July 1 and the miles from July 1 are not entered: all miles are at the earlier rate. */
+  mileageSplitNeeded?: boolean;
 
   // Actual method breakdown
   totalActualExpenses?: number;       // Sum of all expense categories
@@ -2159,6 +2166,10 @@ export interface ScheduleAResult {
   otherDeduction: number;
   totalItemized: number;
   form8283?: Form8283Result;           // Per-item non-cash charitable detail (when nonCashDonations provided)
+  /** Prior-year charitable carryforward deducted this year (IRC §170(d)(1)). */
+  charitableCarryforwardUsed?: number;
+  /** This year's contributions over the AGI limits, carried to the next five years (IRC §170(d)(1)). */
+  charitableExcessCarryforward?: number;
 }
 
 export interface ScheduleDResult {

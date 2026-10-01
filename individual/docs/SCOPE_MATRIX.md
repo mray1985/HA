@@ -48,7 +48,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Social Security benefits | ✅ | SSA-1099 | Provisional income method for taxability; MFS "lived apart" exception handled |
 | Business income | ✅ | Schedule C | Multiple businesses supported; COGS; full Lines 1-42 |
 | Rental income | ✅ | Schedule E | Passive loss limitation ($25k allowance with AGI phase-out) |
-| Pass-through income | ✅ | Schedule K-1 | Partnership, S-Corp, and estate/trust; Box 13 deductions (charitable, investment interest, §1231 loss) and Box 15 credits (foreign tax, other credits) |
+| Pass-through income | ✅ | Schedule K-1 | Partnership, S-Corp, and estate/trust; box 8 and box 9a capital gain or loss on Schedule D lines 5 and 12 (netted, under the $3,000 loss limit and carryover); Box 13 deductions (charitable, investment interest, §1231 loss) and Box 15 credits (foreign tax, other credits). Boxes 9b (28% gain) and 9c (unrecaptured §1250 gain) are not entered |
 | Gambling winnings | ✅ | W-2G | Losses limited to winnings |
 | Alimony received (pre-2019 agreements) | ✅ | Line 2a | Divorce/separation agreements executed before 2019 |
 | Tips income | ✅ | Form 4137 | Unreported tip FICA computation with SS wage base coordination |
@@ -67,12 +67,12 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Standard deduction | ✅ | | All statuses; 65+/blind add-on; dependent standard deduction; OBBBA $15,750/$31,500 amounts |
 | SALT (state and local taxes) | ✅ | Schedule A | OBBBA $40,000 cap ($20,000 MFS); phase-down above $500k MAGI at 30% rate; $10,000/$5,000 floor |
 | Mortgage interest | ✅ | Schedule A | $750k/$375k acquisition debt limits; mortgage insurance premiums |
-| Charitable contributions | ✅ | Schedule A, Form 8283 | AGI percentage limits (cash 60%, property 30%, etc.); Form 8283 per-item non-cash detail with Section A/B classification, 5-year FIFO carryforward |
+| Charitable contributions | ✅ | Schedule A, Form 8283 | AGI percentage limits (cash 60%, property 30%, etc.); Form 8283 per-item non-cash detail with Section A/B classification; 5-year FIFO carryforward used and created for lump sums and per-item gifts alike (Schedule A result: carryforward used, excess carried) |
 | Medical and dental expenses | ✅ | Schedule A | 7.5% AGI floor |
 | Casualty and theft losses | ✅ | Schedule A, Form 4684 | $100/event floor, 10% AGI floor, FEMA disaster requirement; personal and business property |
 | Business expenses | ✅ | Schedule C | Full expense deduction support (Lines 8-27) |
-| Home office deduction | ✅ | Schedule C / Form 8829 | Simplified ($5/sqft) and regular (three-tier cascade) methods; MACRS depreciation on home; prior-year carryovers |
-| Vehicle expenses | ✅ | Schedule C / Form 4562 Part V | Standard mileage ($0.70/mi) and actual with Section 280F limits; MACRS 5-yr; GVW >6,000 lb exception |
+| Home office deduction | ✅ | Schedule C / Form 8829 | Simplified ($5/sqft) and regular (three-tier cascade) methods, limited by Schedule C line 29 (Form 8829 line 8); depreciation as 39-year nonresidential real property (line 41: 2.564% after the first year); prior-year carryovers. A home first used before May 13, 1993, or with no date first used, is held (FED.FORM8829.LINE41) |
+| Vehicle expenses | ✅ | Schedule C / Form 4562 Part V | Standard mileage (2025: $0.70/mi, Notice 2025-5; 2026: $0.725/mi, and $0.76/mi for miles from July 1, Announcement 2026-11 — held until the miles from July 1 are entered) and actual with Section 280F limits; MACRS 5-yr; GVW >6,000 lb exception |
 | HSA deduction | ✅ | Form 8889 | Self-only and family limits; employer offset; catch-up contributions |
 | Student loan interest | ✅ | | $2,500 max; MAGI phaseout |
 | Traditional IRA deduction | ✅ | | Active participant phaseout rules; spouse-covered phaseout |
@@ -302,8 +302,7 @@ These are edge cases within otherwise comprehensive modules:
 | Schedule CA (540) | Additions/subtractions calculated inline in engine; no separate Schedule CA PDF form mapping |
 | Multi-state credit cap | Uses general `allocation.ts` credit-for-other-states; no CA-specific credit limitation worksheet |
 | Advanced nonresident source tracing | 540NR uses ratio-based proration; no detailed income-source tracing by category |
-| Section 179 conformity | CA $25K limit correctly enforced, but no inventory-method special treatment |
-| Bonus depreciation phase-down | Assumes 100% bonus (2025); no 2023-2026 phase-down schedule tracking |
+| Depreciation (FTB 3885A) | California's depreciation of the Schedule C assets is the federal Form 4562 with no §168(k) special depreciation and §179 limited to $25,000 (reduced over $200,000), each earlier year at the table's rates on California's basis; the difference is a Schedule CA addition or subtraction. An earlier year's federal §179 beyond California's limits, a §179 limited by business income, earlier-year software and an actual-method vehicle hold the California return (CA.DEPRECIATION). No inventory-method special treatment |
 
 ---
 

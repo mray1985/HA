@@ -16,8 +16,12 @@ functions:
         description: "Temporary regulations on substantiation of vehicle expenses; adequate records requirement"
         weight: binding
       - type: rev_proc
-        reference: "IRS Notice 2024-79"
+        reference: "Notice 2025-5"
         description: "Standard mileage rate of $0.70 per mile for business use in 2025"
+        weight: binding
+      - type: rev_proc
+        reference: "Notice 2026-10; Announcement 2026-11 (2026-29 I.R.B.)"
+        description: "2026: $0.725 per mile; $0.76 per mile for business miles driven on or after July 1, 2026"
         weight: binding
       - type: form
         reference: "Form 1040, Schedule C or Form 2106"
@@ -35,8 +39,8 @@ functions:
         description: "Business expense deduction for vehicle use"
         weight: binding
       - type: rev_proc
-        reference: "IRS Notice 2024-79"
-        description: "Standard mileage rate for 2025: $0.70/mile"
+        reference: "Notice 2025-5; Notice 2026-10; Announcement 2026-11"
+        description: "Standard mileage rate for 2025: $0.70/mile; 2026: $0.725/mile, $0.76/mile from July 1"
         weight: binding
     scope: "Compares the standard mileage rate method to the actual expense method and returns the more beneficial deduction"
     limitations:

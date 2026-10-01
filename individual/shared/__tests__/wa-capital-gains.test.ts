@@ -166,6 +166,17 @@ describe('what the return does not settle is asked, or stops the return', () => 
     expect(run({ ...base, stateReturns: [confirmed({ waOtherGain: 250000 })] }).findings[0]!.message).toContain('is outside what these items can be');
   });
 
+  it('counts a capital asset installment gain once: asked with the other gains, not as a sale of securities', () => {
+    // Land sold on installments: $40,000 of gain this year reaches Schedule D line 11.
+    const land = { id: 'land', description: 'Land', dateAcquired: '2015-03-01', dateOfSale: '2025-06-15', propertyKind: 'capital_asset' as const, relatedParty: false,
+      sellingPrice: 400000, costOrBasis: 200000, paymentsReceivedThisYear: 80000 };
+    const base = { income1099B: [sale(300000)], installmentSales: [land] };
+    expect(run({ ...base, stateReturns: [confirmed()] }).findings.map((f) => f.question?.key)).toEqual(['waOtherGain']);
+    // Real estate is not Washington's: answered $0, only the $300,000 of securities.
+    // $300,000 − $278,000 = $22,000 × 7% = $1,540.
+    expect(run({ ...base, stateReturns: [confirmed({ waOtherGain: 0 })] })).toMatchObject({ findings: [], state: { stateAGI: 300000, totalStateTax: 1540 } });
+  });
+
   it('asks for donations to Washington charities when donations are over the threshold', () => {
     const base = {
       income1099B: [sale(1000000)], deductionMethod: 'itemized' as const,

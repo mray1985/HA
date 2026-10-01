@@ -14,6 +14,10 @@ functions:
       - type: form
         reference: "Form 8829"
         weight: explanatory
+      - type: form
+        reference: "Form 8829 instructions (2025), lines 8 and 41; Pub 587 (2025)"
+        description: "Line 8 is Schedule C line 29 (after car expenses and depreciation); depreciation is 39-year nonresidential real property: 2.461%-0.107% in the first year by month, 2.564% after"
+        weight: binding
     scope: "Computes the home office deduction using either the regular (actual expenses) method or the simplified method"
     limitations:
       - "Does not validate regular and exclusive use requirement"

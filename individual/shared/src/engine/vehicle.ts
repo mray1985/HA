@@ -48,13 +48,22 @@ export function calculateVehicleDetailed(vehicle: VehicleInfo, taxYear: number =
     const businessMiles = vehicle.businessMiles || 0;
     const totalMiles = vehicle.totalMiles || 0;
     const businessPct = totalMiles > 0 ? Math.min(1, businessMiles / totalMiles) : (businessMiles > 0 ? 1 : 0);
-    const deduction = round2(businessMiles * VEHICLE.STANDARD_MILEAGE_RATE);
+    // A rate that changes on July 1 (2026) applies to the miles driven from then;
+    // until those miles are known, every mile is at the earlier rate and the
+    // return is held (engine/unsupported.ts).
+    const laterRate = VEHICLE.STANDARD_MILEAGE_RATE_FROM_JULY_1 as number | undefined;
+    const fromJuly = vehicle.businessMilesFromJuly1;
+    const split = laterRate !== undefined && fromJuly !== undefined && fromJuly >= 0 && fromJuly <= businessMiles;
+    const deduction = split
+      ? round2((businessMiles - fromJuly!) * VEHICLE.STANDARD_MILEAGE_RATE + fromJuly! * laterRate!)
+      : round2(businessMiles * VEHICLE.STANDARD_MILEAGE_RATE);
     const warnings = buildWarnings(vehicle, businessPct);
     return {
       method: 'standard_mileage',
       businessUsePercentage: round4(businessPct),
       standardDeduction: deduction,
       totalDeduction: deduction,
+      ...(laterRate !== undefined && businessMiles > 0 && !split ? { mileageSplitNeeded: true } : {}),
       ...(totalMiles > 0 ? { form4562PartV: buildPartV(vehicle, businessMiles, totalMiles) } : {}),
       ...(warnings.length > 0 ? { warnings } : {}),
     };

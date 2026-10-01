@@ -101,7 +101,7 @@ describe('calculateHomeOfficeDeduction', () => {
         utilities: 3600,            // × 20% = $720 (tier 2)
         homeCostOrValue: 300000,    // depreciation (tier 3)
         landValue: 50000,
-        dateFirstUsedForBusiness: '2020-01-01', // prior year → 3.636%
+        dateFirstUsedForBusiness: '2020-01-01', // prior year → 2.564% (Form 8829 line 41)
       }, 50000);
 
       expect(result.method).toBe('actual');
@@ -115,13 +115,13 @@ describe('calculateHomeOfficeDeduction', () => {
       expect(result.tier2Total).toBe(1120);
       expect(result.tier2Allowed).toBe(1120);
 
-      // Tier 3: ($300,000 - $50,000) × 20% × 3.636% = $250,000 × 0.2 × 0.03636 = $1,818
-      expect(result.depreciationComputed).toBe(1818);
-      expect(result.tier3Total).toBe(1818);
-      expect(result.tier3Allowed).toBe(1818);
+      // Tier 3: ($300,000 - $50,000) × 20% × 2.564% = $250,000 × 0.2 × 0.02564 = $1,282
+      expect(result.depreciationComputed).toBe(1282);
+      expect(result.tier3Total).toBe(1282);
+      expect(result.tier3Allowed).toBe(1282);
 
-      // Total: $3,400 + $1,120 + $1,818 = $6,338
-      expect(result.totalDeduction).toBe(6338);
+      // Total: $3,400 + $1,120 + $1,282 = $5,802
+      expect(result.totalDeduction).toBe(5802);
 
       // No carryovers
       expect(result.operatingExpenseCarryover).toBeUndefined();
@@ -152,9 +152,9 @@ describe('calculateHomeOfficeDeduction', () => {
       expect(result.tier2Allowed).toBe(1120);
 
       // Remaining after Tier 2: $1,600 - $1,120 = $480
-      // Tier 3 total: $1,818 → limited to $480
+      // Tier 3 total: $1,282 → limited to $480
       expect(result.tier3Allowed).toBe(480);
-      expect(result.depreciationCarryover).toBe(1338); // 1818 - 480
+      expect(result.depreciationCarryover).toBe(802); // 1282 - 480
 
       // Total: $3,400 + $1,120 + $480 = $5,000 (matches gross income)
       expect(result.totalDeduction).toBe(5000);
@@ -186,7 +186,7 @@ describe('calculateHomeOfficeDeduction', () => {
 
       // No room for Tier 3
       expect(result.tier3Allowed).toBe(0);
-      expect(result.depreciationCarryover).toBe(1818);
+      expect(result.depreciationCarryover).toBe(1282);
 
       // Total: $3,400 + $600 + $0 = $4,000
       expect(result.totalDeduction).toBe(4000);
@@ -217,7 +217,7 @@ describe('calculateHomeOfficeDeduction', () => {
 
       // Everything else carries forward
       expect(result.operatingExpenseCarryover).toBe(1120);
-      expect(result.depreciationCarryover).toBe(1818);
+      expect(result.depreciationCarryover).toBe(1282);
     });
 
     it('prior-year carryovers included in tiers', () => {
@@ -257,9 +257,9 @@ describe('calculateHomeOfficeDeduction', () => {
 
       // Building basis: $400k - $100k = $300k
       // Business basis: $300k × 25% = $75,000
-      // January 2025 rate: 3.485%
-      // Depreciation: $75,000 × 0.03485 = $2,613.75
-      expect(result.depreciationComputed).toBe(2613.75);
+      // January rate (Form 8829 line 41): 2.461%
+      // Depreciation: $75,000 × 0.02461 = $1,845.75
+      expect(result.depreciationComputed).toBe(1845.75);
     });
 
     it('auto-calculates depreciation for 2025 first-year (July)', () => {
@@ -275,9 +275,9 @@ describe('calculateHomeOfficeDeduction', () => {
 
       // Building basis: $250,000
       // Business basis: $50,000
-      // July rate: 1.667%
-      // Depreciation: $50,000 × 0.01667 = $833.50
-      expect(result.depreciationComputed).toBe(833.5);
+      // July rate (Form 8829 line 41): 1.177%
+      // Depreciation: $50,000 × 0.01177 = $588.50
+      expect(result.depreciationComputed).toBe(588.5);
     });
 
     it('auto-calculates depreciation for prior year (subsequent year rate)', () => {
@@ -292,9 +292,9 @@ describe('calculateHomeOfficeDeduction', () => {
       }, 100000);
 
       // Business basis: $250,000 × 20% = $50,000
-      // Subsequent year rate: 3.636%
-      // Depreciation: $50,000 × 0.03636 = $1,818
-      expect(result.depreciationComputed).toBe(1818);
+      // Subsequent year rate (Form 8829 line 41): 2.564%
+      // Depreciation: $50,000 × 0.02564 = $1,282
+      expect(result.depreciationComputed).toBe(1282);
     });
 
     it('uses subsequent year rate when no date provided', () => {
@@ -307,8 +307,23 @@ describe('calculateHomeOfficeDeduction', () => {
         insurance: 100,
       }, 100000);
 
-      // No date → default to subsequent year rate
-      expect(result.depreciationComputed).toBe(1818);
+      // No date → the later-year rate, and the return is held until the date is
+      // entered (unsupported FED.FORM8829.LINE41)
+      expect(result.depreciationComputed).toBe(1282);
+    });
+
+    it("matches Publication 587's example: first used for business in May", () => {
+      // Pub 587 (2025), Frankie: depreciable basis $9,200 × 1.605% (May) = $147.66.
+      const result = calculateHomeOfficeDetailed({
+        method: 'actual',
+        squareFeet: 100,
+        totalHomeSquareFeet: 1000,        // 10%
+        homeCostOrValue: 102000,
+        landValue: 10000,                 // building $92,000 × 10% = $9,200
+        dateFirstUsedForBusiness: '2025-05-03',
+        insurance: 100,
+      }, 100000, 2025);
+      expect(result.depreciationComputed).toBe(147.66);
     });
 
     it('returns 0 depreciation when land value exceeds home value', () => {
@@ -407,7 +422,7 @@ describe('calculateHomeOfficeDeduction', () => {
         utilities: 2500,            // × 20% = $500
         homeCostOrValue: 250000,
         landValue: 30000,
-        dateFirstUsedForBusiness: '2020-01-01', // subsequent year rate: 3.636%
+        dateFirstUsedForBusiness: '2020-01-01', // subsequent year rate: 2.564%
       }, 6000);
 
       // Tier 1: $3,000
@@ -418,12 +433,12 @@ describe('calculateHomeOfficeDeduction', () => {
       expect(result.tier2Allowed).toBe(800);
 
       // Remaining: $3,000 - $800 = $2,200
-      // Tier 3: ($250k - $30k) × 20% × 3.636% = $220,000 × 0.2 × 0.03636 = $1,599.84
-      expect(result.depreciationComputed).toBe(1599.84);
-      expect(result.tier3Allowed).toBe(1599.84);
+      // Tier 3: ($250k - $30k) × 20% × 2.564% = $220,000 × 0.2 × 0.02564 = $1,128.16
+      expect(result.depreciationComputed).toBe(1128.16);
+      expect(result.tier3Allowed).toBe(1128.16);
 
-      // Total: $3,000 + $800 + $1,599.84 = $5,399.84
-      expect(result.totalDeduction).toBe(5399.84);
+      // Total: $3,000 + $800 + $1,128.16 = $4,928.16
+      expect(result.totalDeduction).toBe(4928.16);
 
       // No carryovers since everything fit
       expect(result.operatingExpenseCarryover).toBeUndefined();

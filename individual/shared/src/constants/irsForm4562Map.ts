@@ -68,16 +68,16 @@ const P2 = 'topmostSubform[0].Page2[0]';
 // Cache Form 4562 result to avoid redundant recalculation across ~70+ field mappings
 const form4562Cache = new WeakMap<TaxReturn, ReturnType<typeof calculateForm4562> | null>();
 
-// Helper: get the Form 4562 result from a tax return (cached)
-function getForm4562(tr: TaxReturn, _calc: CalculationResult) {
+// Helper: get the Form 4562 result from a tax return (cached): the return's own
+// (Schedule C's, for its tax year), or computed for that year when absent.
+function getForm4562(tr: TaxReturn, calc: CalculationResult) {
   if (form4562Cache.has(tr)) return form4562Cache.get(tr)!;
   const assets = tr.depreciationAssets?.filter(a => !a.disposed) || [];
   if (assets.length === 0) {
     form4562Cache.set(tr, null);
     return null;
   }
-  const schedC = calculateScheduleC(tr);
-  const result = calculateForm4562(assets, schedC.tentativeProfit);
+  const result = calc.form4562 ?? calculateForm4562(assets, calculateScheduleC(tr).tentativeProfit, tr.taxYear || 2025);
   form4562Cache.set(tr, result);
   return result;
 }
