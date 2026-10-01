@@ -99,6 +99,23 @@ export default function CaseDashboardPage() {
   }, [batchBusy, load]);
 
   // §14: a returning client's new year starts from last year's case.
+  // Every returning client at once, at the start of a season.
+  const returning = rows.filter((r) => r.nextYear === newYear);
+  const startSeason = () => {
+    const started: string[] = [];
+    const failed: string[] = [];
+    for (const row of returning) {
+      try {
+        startNextYear(row.id);
+        started.push(row.name);
+      } catch {
+        failed.push(row.name);
+      }
+    }
+    toast.success(`${started.length} ${newYear} case${started.length === 1 ? '' : 's'} started from ${newYear - 1}${failed.length ? `; not started: ${failed.join(', ')}` : ''}`);
+    load();
+  };
+
   const startFrom = (row: CaseRow) => {
     try {
       const created = startNextYear(row.id);
@@ -260,6 +277,18 @@ export default function CaseDashboardPage() {
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         </div>
+
+        {returning.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/30 bg-sky-500/5 px-5 py-3">
+            <p className="text-sm text-slate-200">
+              {returning.length} client{returning.length === 1 ? '' : 's'} from {newYear - 1} {returning.length === 1 ? 'has' : 'have'} no {newYear} case yet.
+              <span className="block text-xs text-slate-400">Each starts from last year’s case: identity, dependents and filing status to confirm, carryovers from approved cases.</span>
+            </p>
+            <button type="button" onClick={startSeason} className="inline-flex items-center gap-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-500 rounded-lg px-3 py-2">
+              <CalendarPlus className="w-4 h-4" /> Start {newYear} for {returning.length === 1 ? 'this client' : `all ${returning.length}`}
+            </button>
+          </div>
+        )}
 
         {rows.length === 0 ? (
           <div className="text-center py-16">

@@ -166,3 +166,23 @@ test('documents for several clients dropped on the dashboard go to a case each',
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible();
   await expect(page.getByText('w2-basic-single.pdf', { exact: true })).toBeVisible();
 });
+
+test('a new season starts every returning client at once', async ({ page }) => {
+  for (const [first, last, ssn] of [['Maya', 'Lee', '123-45-6789'], ['Sam', 'Ortiz', '987-65-4321']] as const) {
+    await newCase(page, '2025');
+    await page.getByRole('link', { name: /^Review/ }).click();
+    await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
+    await page.getByLabel("Taxpayer's first name").fill(first);
+    await page.getByLabel("Taxpayer's last name").fill(last);
+    await page.getByLabel("Taxpayer's SSN or ITIN").fill(ssn);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('heading', { name: `${first} ${last}` })).toBeVisible();
+    await page.getByRole('link', { name: 'Back to cases' }).click();
+  }
+  await page.getByLabel('Tax year for a new case').selectOption('2026');
+  await expect(page.getByText('2 clients from 2025 have no 2026 case yet.')).toBeVisible();
+  await page.getByRole('button', { name: 'Start 2026 for all 2' }).click();
+  await expect(page.getByRole('row', { name: /Maya Lee\s*2026/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Sam Ortiz\s*2026/ })).toBeVisible();
+  await expect(page.getByText(/have no 2026 case yet/)).toHaveCount(0);
+});
