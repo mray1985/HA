@@ -133,6 +133,10 @@ export interface Income1099DIV {
   ordinaryDividends: number;   // Box 1a
   qualifiedDividends: number;  // Box 1b
   capitalGainDistributions?: number; // Box 2a
+  /** Box 2b: unrecaptured section 1250 gain, part of box 2a (Unrecaptured Section 1250 Gain Worksheet line 11). */
+  unrecapturedSection1250Gain?: number;
+  /** Box 2d: collectibles (28%) gain, part of box 2a (28% Rate Gain Worksheet line 4). */
+  collectiblesGain?: number;
   federalTaxWithheld?: number; // Box 4
   foreignTaxPaid?: number;     // Box 7: Foreign tax paid
   foreignSourceIncome?: number; // Supplemental: foreign source income (from fund statement)
@@ -2493,6 +2497,8 @@ export interface Form1040Result {
   itemizedDeduction: number;
   deductionUsed: 'standard' | 'itemized';
   deductionAmount: number;
+  /** IRC §68 (2026+): the reduction of the itemized deductions (itemizedDeduction is after it). */
+  itemizedDeductionLimitation: number;
   /** IRC §170(p): charitable deduction for a return that does not itemize (2026+), within taxable income. */
   nonItemizerCharitableDeduction: number;
   qbiDeduction: number;

@@ -1291,6 +1291,8 @@ export function extract1099DIVFields(
     ordinaryDividends: box('ordinaryDividends', ['ordinary dividends', '1a ordinary', 'box 1a']),
     qualifiedDividends: box('qualifiedDividends', ['qualified dividends', '1b qualified', 'box 1b']),
     capitalGainDistributions: box('capitalGainDistributions', ['capital gain distributions', 'capital gain distr', '2a total capital', '2a capital', 'box 2a']),
+    unrecapturedSection1250Gain: box('unrecapturedSection1250Gain', ['unrecap. sec. 1250', 'unrecaptured sec. 1250', 'unrecaptured section 1250', '2b unrecap']),
+    collectiblesGain: box('collectiblesGain', ['collectibles (28%) gain', 'collectibles', '2d collectibles']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
     foreignTaxPaid: box('foreignTaxPaid', ['foreign tax paid', '7 foreign', 'box 7']),
   };
@@ -1967,6 +1969,8 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
     ordinaryDividends: 'Ordinary Dividends (Box 1a)',
     qualifiedDividends: 'Qualified Dividends (Box 1b)',
     capitalGainDistributions: 'Capital Gain Distributions (Box 2a)',
+    unrecapturedSection1250Gain: 'Unrecaptured Section 1250 Gain (Box 2b)',
+    collectiblesGain: 'Collectibles (28%) Gain (Box 2d)',
     federalTaxWithheld: 'Federal Tax Withheld (Box 4)',
     foreignTaxPaid: 'Foreign Tax Paid (Box 7)',
   },

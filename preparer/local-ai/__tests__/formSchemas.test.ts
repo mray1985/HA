@@ -202,6 +202,15 @@ describe('mapBoxesToTool', () => {
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['5']);
   });
 
+  it('maps 1099-DIV boxes 2b and 2d (Schedule D worksheets) and keeps 2c for review', () => {
+    const div = getFormExtractionSchema('1099-DIV')!;
+    const mapped = mapBoxesToTool(div, { 'payer.block': 'REIT FUND', '1a': '100.00', '2a': '900.00', '2b': '400.00', '2c': '50.00', '2d': '120.00' });
+    expect(extractStructuredFields('add_1099_div', mapped.bag, mapped.rawText).args).toMatchObject({
+      capitalGainDistributions: 900, unrecapturedSection1250Gain: 400, collectiblesGain: 120,
+    });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['2c']);
+  });
+
   it('maps an SSA-1099, keeping a negative net benefit as printed', () => {
     const ssa = getFormExtractionSchema('SSA-1099')!;
     const mapped = mapBoxesToTool(ssa, { '1': 'MAYA TESTPAYER', '3': '1,200.00', '4': '1,450.00', '5': '(250.00)', '6': '0.00' });

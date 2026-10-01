@@ -272,6 +272,8 @@ const Add1099DivFieldsSchema = z
     ordinaryDividends: optionalAmount,
     qualifiedDividends: optionalAmount,
     capitalGainDistributions: optionalAmount,
+    unrecapturedSection1250Gain: optionalAmount,
+    collectiblesGain: optionalAmount,
     federalTaxWithheld: optionalAmount,
     foreignTaxPaid: optionalAmount,
     foreignSourceIncome: optionalAmount,

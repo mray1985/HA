@@ -23,7 +23,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 | 9 | Additional Medicare | `additionalMedicare.ts` | 3101(b)(2) | 0.9% Additional Medicare Tax on high earners |
 | 10 | Kiddie Tax | `kiddieTax.ts` | 1(g) | Child's unearned income taxed at parent's rate |
 | 11 | Schedule SE | `scheduleSE.ts` | 1401(a)-(b), 1402(a) | Self-employment tax (Social Security + Medicare) |
-| 12 | Schedule A | `scheduleA.ts` | 164, 163(h), 170, 213, 11042 (TCJA) | Itemized deductions |
+| 12 | Schedule A | `scheduleA.ts` | 164, 163(h), 170, 213, 11042 (TCJA); 68 (P.L. 119-21 §70111, 2026+, `form1040Sections.ts`) | Itemized deductions |
 | 13 | QBI Deduction | `qbi.ts` | 199A | Section 199A qualified business income deduction |
 | 14 | Home Office | `homeOffice.ts` | 280A | Home office deduction (regular and simplified) |
 | 15 | Vehicle | `vehicle.ts` | 162, 274(d) | Vehicle expense deduction (mileage or actual) |
@@ -778,6 +778,8 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Schedule K-1 box 9b (1120-S 8b, 1041 4b) is 28% Rate Gain Worksheet line 4; box 9c (8c, 4c) is Unrecaptured Section 1250 Gain Worksheet line 5 (partnership, S corporation) or line 11 (estate, trust) — Schedule D instructions
 - California depreciation (engine/state/ca.ts `caDepreciationAdjustment`): FTB 3885A instructions (2025) — no IRC §168(k); IRC §179 $25,000, reduced over $200,000; California basis reduced by the California §179
 - California 2026 (constants/states/ca.ts `californiaTables`): FTB Tax News, October 2026, "2026 Indexing" (CCPI 3.4%; rate schedules; standard deduction $5,900/$11,800; exemption credits $158/$316, dependent $491; renter's credit AGI $55,830/$111,660). Holds for amounts not yet published (engine/state/ca.ts `assessCalifornia`): R&TC §17041(h), §17052(c)(4) (CalEITC amounts recomputed by the CCPI change), FTB CalEITC and YCTC pages (2025 limit $32,900; YCTC with no earned income from 2022). R&TC §17024.5 (specified date January 1, 2025): the federal 0.5% charitable floor is not California's
+- Form 1099-DIV boxes 2b and 2d: Schedule D instructions, line 13 (Unrecaptured Section 1250 Gain Worksheet line 11; 28% Rate Gain Worksheet line 4)
+- California adjustments (engine/state/ca.ts): 2025 Schedule CA (540) instructions (Part I lines 1h, 2, 2a, 5a/5b, 7, 7a, 8d, 11, 13, 19a; Part II lines 5a, 8, 9, 11–12, 16, 29 worksheet); R&TC §17024.5 (IRC as of January 1, 2025), §17132.9 and §17132.10 (military retirement and SBP exclusions), §17054(f) (a spouse's blind credit on a separate return); 2025 Form 540 instructions, California Standard Deduction Worksheet for Dependents
 - California credits (engine/state/ca.ts): 2025 Form 540 instructions (lines 6–10, line 32 AGI Limitation Worksheet; Special Credits codes 163 and 173) and R&TC §17054 (personal, blind and senior credits, the same indexed amount; none for another's dependent); FTB 3514 instructions and form (2025): Steps 1–9, Worksheets 1 and 3, the EITC Table (constants/states/caEitc2025.ts, transcribed), Part VII lines 23–28
 - Does not handle related-party sale rules under IRC 1239
 

@@ -33,6 +33,7 @@ import {
   CA_SENIOR_HOH_CREDIT_RATE, CA_DEPENDENT_PARENT_CREDIT_RATE,
   CA_ITEMIZED_LIMITATION_RATE, CA_ITEMIZED_LIMITATION_MAX_REDUCTION,
   CA_EXEMPTION_PHASEOUT_REDUCTION_PER_STEP, CA_EXEMPTION_PHASEOUT_STEP,
+  CA_CHARITABLE_AGI_LIMIT, CA_MILITARY_RETIREMENT,
   californiaTables, type CaliforniaYearTables, type CalEitcTables,
 } from '../../constants/states/ca.js';
 import { parseDateString } from '../utils.js';
@@ -41,24 +42,80 @@ import { TraceBuilder } from '../traceBuilder.js';
 import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import { round2 } from '../utils.js';
 import { calculateForm4562 } from '../form4562.js';
+import { getTaxConstants } from '../../constants/taxConstants.js';
 
 // ─── CA Additions / Subtractions ────────────────────────────────
 
+/** An agreement executed after 2018 and on or before 2025: its alimony is California's, not federal (2025 Schedule CA, Part I, line 2a, line 19a). */
+function californiaOnlyAlimony(date: string | undefined): boolean {
+  const d = date ? parseDateString(date) : null;
+  return d !== null && d.year >= 2019 && d.year <= 2025;
+}
+
+/** HSA activity on the return (California does not conform to IRC §223). */
+function hasHSA(taxReturn: TaxReturn, federalResult: CalculationResult): boolean {
+  return (federalResult.form1040.hsaDeduction || 0) > 0 || employerHSA(taxReturn) > 0
+    || taxReturn.hsaContribution !== undefined || (taxReturn.income1099SA || []).length > 0;
+}
+
+function employerHSA(taxReturn: TaxReturn): number {
+  return (taxReturn.w2Income || []).reduce((s, w) => s + (w.box12 || []).filter((b) => b.code === 'W').reduce((t, b) => t + (b.amount || 0), 0), 0);
+}
+
+/** Non-IRA pensions in federal income (1099-R lines 5a/5b). */
+function taxablePensions(taxReturn: TaxReturn): number {
+  return (taxReturn.income1099R || []).filter((r) => r.isIRA !== true).reduce((s, r) => s + Math.max(0, r.taxableAmount || 0), 0);
+}
+
+/** The military retirement and SBP exclusions apply this year and to this AGI (R&TC §17132.9, §17132.10). */
+function militaryRetirementApplies(taxReturn: TaxReturn, federalAGI: number): boolean {
+  const year = taxReturn.taxYear || 2025;
+  const joint = taxReturn.filingStatus === FilingStatus.MarriedFilingJointly || taxReturn.filingStatus === FilingStatus.QualifyingSurvivingSpouse;
+  return year >= CA_MILITARY_RETIREMENT.firstYear && year <= CA_MILITARY_RETIREMENT.lastYear
+    && federalAGI <= (joint ? CA_MILITARY_RETIREMENT.agiLimitJoint : CA_MILITARY_RETIREMENT.agiLimit);
+}
+
+function caAnswers(taxReturn: TaxReturn): Record<string, unknown> {
+  return (taxReturn.stateReturns || []).find((s) => s.stateCode.toUpperCase() === 'CA')?.stateSpecificData || {};
+}
+
+const amountAnswer = (answers: Record<string, unknown>, key: string): number =>
+  typeof answers[key] === 'number' && Number.isFinite(answers[key]) ? (answers[key] as number) : 0;
+
 /**
- * CA additions to federal AGI (items CA taxes but federal doesn't).
+ * CA additions to federal AGI (items CA taxes but federal doesn't): 2025
+ * Schedule CA (540) instructions, Part I column C.
  */
 function getAdditions(taxReturn: TaxReturn, federalResult: CalculationResult): number {
+  const f = federalResult.form1040;
+  const answers = caAnswers(taxReturn);
   let additions = 0;
 
-  // Out-of-state municipal bond interest (taxable in CA)
-  const stateData = (taxReturn.stateReturns || []).find(s => s.stateCode === 'CA')?.stateSpecificData || {};
-  const otherStateMuni = typeof stateData.otherStateMuniBondInterest === 'number'
-    ? stateData.otherStateMuniBondInterest : 0;
-  if (otherStateMuni > 0) additions += otherStateMuni;
+  // Line 2: tax-exempt interest from other states' bonds (the CA answer; asked when there is tax-exempt interest).
+  additions += Math.max(0, amountAnswer(answers, 'otherStateMuniBondInterest'));
 
   // Federal depreciation over California's (FTB 3885A): no §168(k) bonus, a smaller §179.
   const depreciation = caDepreciationAdjustment(taxReturn, federalResult);
   if (depreciation > 0) additions += depreciation;
+
+  // HSAs (California does not conform to IRC §223): line 1h, the employer
+  // contribution (W-2 box 12 code W); line 13, the HSA deduction; line 2, the
+  // HSA's earnings, taxable as earned (the CA answer).
+  additions += employerHSA(taxReturn) + Math.max(0, f.hsaDeduction || 0) + amountAnswer(answers, 'hsaEarnings');
+
+  // Line 11: educator expenses (California does not conform).
+  additions += Math.max(0, f.educatorExpenses || 0);
+
+  // Line 8d: the foreign earned income and housing exclusion (Form 2555).
+  additions += Math.max(0, f.feieExclusion || 0);
+
+  // Line 7a: California does not exclude gain on qualified small business stock (IRC §1202).
+  additions += Math.max(0, federalResult.scheduleD?.section1202ExcludedGain || 0);
+
+  // Line 2a: alimony received under an agreement executed in 2019–2025 (federal law excludes it).
+  if (taxReturn.alimonyReceived && californiaOnlyAlimony(taxReturn.alimonyReceived.divorceDate)) {
+    additions += Math.max(0, taxReturn.alimonyReceived.totalReceived || 0);
+  }
 
   return round2(additions);
 }
@@ -73,6 +130,28 @@ function getSubtractions(taxReturn: TaxReturn, federalResult: CalculationResult)
   const ssaBenefits = federalResult.socialSecurity?.taxableBenefits || 0;
   if (ssaBenefits > 0) {
     subtractions += ssaBenefits;
+  }
+
+  const f = federalResult.form1040;
+  // Line 7: California excludes unemployment compensation (including paid family leave).
+  subtractions += Math.max(0, f.totalUnemployment || 0);
+
+  // Line 2: interest on U.S. obligations (1099-INT box 3).
+  subtractions += (taxReturn.income1099INT || []).reduce((s, i) => s + Math.max(0, i.usBondInterest || 0), 0);
+
+  // Line 19a: alimony paid under an agreement executed in 2019–2025 (federal law allows no deduction).
+  if (taxReturn.alimony && californiaOnlyAlimony(taxReturn.alimony.divorceDate)) {
+    subtractions += Math.max(0, taxReturn.alimony.totalPaid || 0);
+  }
+
+  // Lines 5a/5b: uniformed-services retirement pay and DoD Survivor Benefit Plan
+  // annuity, each up to $20,000 (R&TC §17132.9, §17132.10; the CA answers).
+  const answers = caAnswers(taxReturn);
+  if (militaryRetirementApplies(taxReturn, f.agi) && answers.uniformedServicesRetirement === true) {
+    const pensions = taxablePensions(taxReturn);
+    const excluded = Math.min(Math.max(0, amountAnswer(answers, 'militaryRetirementPay')), CA_MILITARY_RETIREMENT.max)
+      + Math.min(Math.max(0, amountAnswer(answers, 'survivorBenefitPlanAnnuity')), CA_MILITARY_RETIREMENT.max);
+    subtractions += Math.min(excluded, pensions);
   }
 
   // CA lottery winnings — exempt from CA income tax
@@ -128,20 +207,27 @@ export function caDepreciationAdjustment(taxReturn: TaxReturn, federalResult: Ca
 // ─── CA Itemized Deductions ─────────────────────────────────────
 
 /**
- * Recalculate itemized deductions under CA rules (Schedule CA):
- * - No SALT cap (federal $40K OBBBA cap doesn't apply)
- * - CA state income tax is NOT deductible on CA return
- * - CA SDI is NOT deductible on CA return
- * - Mortgage interest: CA uses $1M limit (pre-TCJA), not federal $750K
- * - Medical, charitable: CA conforms to federal rules, except the 2026 federal
- *   0.5%-of-AGI charitable floor (IRC §170(b)(1)(I), P.L. 119-21, enacted after
+ * Recalculate itemized deductions under CA rules (2025 Schedule CA (540), Part II):
+ * - Line 5a: no state or local income tax (any state's), SDI or sales tax;
+ *   line 5e: no SALT cap — real estate and personal property tax in full
+ * - Line 8: mortgage interest on up to $1M (pre-TCJA), not federal $750K;
+ *   no mortgage insurance premiums (not California's in 2025, and the 2026
+ *   federal deduction is OBBBA, which California has not adopted)
+ * - Lines 11–12: charitable contributions limited to 50% of federal AGI,
+ *   without the 2026 federal 0.5%-of-AGI floor (IRC §170(b)(1)(I), enacted after
  *   California's specified date of January 1, 2025 — R&TC §17024.5)
+ * - Medical, investment interest (the federal amount; held by assessCalifornia
+ *   when the federal deduction is limited or an election is made), gambling
+ *   losses and other deductions as federal
+ * - Line 29: the Itemized Deductions Worksheet when federal AGI (Form 540
+ *   line 13) is over the threshold; medical, investment interest, casualty and
+ *   gambling losses are not reduced
  */
 function calculateCAItemizedDeductions(
   taxReturn: TaxReturn,
   federalResult: CalculationResult,
   filingKey: string,
-  caAGI: number,
+  federalAGI: number,
   threshold: number | undefined,
 ): number {
   const itemized = taxReturn.itemizedDeductions;
@@ -153,18 +239,10 @@ function calculateCAItemizedDeductions(
   // Medical: CA conforms — reuse federal calculation
   const medical = Math.max(0, sa.medicalDeduction);
 
-  // SALT: re-derive without federal cap, excluding CA state income tax and SDI
-  // Sum W-2 state tax withheld for non-CA states only (other states' taxes are deductible)
-  let otherStateTaxWithheld = 0;
-  for (const w2 of taxReturn.w2Income || []) {
-    if (w2.state && w2.state.toUpperCase() !== 'CA' && w2.stateTaxWithheld) {
-      otherStateTaxWithheld += w2.stateTaxWithheld;
-    }
-  }
-  // Real estate and personal property tax — no cap
+  // SALT: real estate and personal property tax, no cap; no income tax of any state (line 5a).
   const realEstateTax = itemized.realEstateTax || 0;
   const personalPropertyTax = itemized.personalPropertyTax || 0;
-  const caSALT = round2(otherStateTaxWithheld + realEstateTax + personalPropertyTax);
+  const caSALT = round2(realEstateTax + personalPropertyTax);
 
   // Mortgage interest: CA $1M/$500K limit vs federal $750K/$375K
   const caMortgageLimit = CA_MORTGAGE_LIMIT[filingKey] || 1000000;
@@ -179,10 +257,17 @@ function calculateCAItemizedDeductions(
     // If balance is between federal limit and CA limit, CA allows full deduction
     // (already handled — we only limit at CA threshold)
   }
-  const mortgageInsurance = itemized.mortgageInsurancePremiums || 0;
+  // Charitable: the federal deduction without the 0.5% floor, at most 50% of federal AGI (lines 11–12).
+  const charitable = Math.min(
+    Math.max(0, sa.charitableDeduction) + Math.max(0, sa.charitableFloorReduction ?? 0),
+    Math.max(0, federalAGI) * CA_CHARITABLE_AGI_LIMIT,
+  );
 
-  // Charitable: CA conforms — reuse federal calculation, without the federal 0.5% floor
-  const charitable = Math.max(0, sa.charitableDeduction) + Math.max(0, sa.charitableFloorReduction ?? 0);
+  // Investment interest (line 9) and gambling losses (line 16), as federal.
+  const f = federalResult.form1040;
+  const investmentInterest = Math.max(0, f.investmentInterestDeduction || 0);
+  const gambling = taxReturn.incomeDiscovery?.ded_gambling === 'no' ? 0
+    : Math.min(Math.max(0, taxReturn.gamblingLosses || 0), Math.max(0, f.totalGamblingIncome || 0));
 
   // Other deductions: pass through
   const otherDeductions = Math.max(0, sa.otherDeduction);
@@ -191,26 +276,28 @@ function calculateCAItemizedDeductions(
     medical +
     Math.max(0, caSALT) +
     Math.max(0, mortgageInterest) +
-    Math.max(0, mortgageInsurance) +
     charitable +
+    investmentInterest +
+    gambling +
     otherDeductions
   );
 
-  // ── CA Itemized Deduction Limitation (Pease-style phase-out) ──
-  // Medical expenses are exempt from the limitation.
-  // All other categories are subject to reduction.
+  // ── Line 29: Itemized Deductions Worksheet ──
+  // Federal AGI (Form 540 line 13) over the threshold. Medical, investment
+  // interest, casualty and gambling losses are not reduced (worksheet line 2).
   // A year whose threshold is not published: held when AGI is over last year's (assessCalifornia).
-  if (threshold === undefined || caAGI <= threshold) return totalBeforeLimitation;
+  const agi = Math.round(federalAGI);
+  if (threshold === undefined || agi <= threshold) return totalBeforeLimitation;
 
-  const subjectAmount = round2(totalBeforeLimitation - medical);
+  const notReduced = round2(medical + investmentInterest + gambling);
+  const subjectAmount = round2(totalBeforeLimitation - notReduced);
   if (subjectAmount <= 0) return totalBeforeLimitation;
 
-  const excess = caAGI - threshold;
-  const reductionFromRate = round2(excess * CA_ITEMIZED_LIMITATION_RATE);
+  const reductionFromRate = round2((agi - threshold) * CA_ITEMIZED_LIMITATION_RATE);
   const reductionFromCap = round2(subjectAmount * CA_ITEMIZED_LIMITATION_MAX_REDUCTION);
   const reduction = Math.min(reductionFromRate, reductionFromCap);
 
-  return round2(medical + Math.max(0, subjectAmount - reduction));
+  return round2(totalBeforeLimitation - reduction);
 }
 
 // ─── CA Credits ─────────────────────────────────────────────────
@@ -259,7 +346,10 @@ function exemptionCounts(taxReturn: TaxReturn, filingKey: string, year: number) 
   // Someone else can claim the taxpayer: no personal, blind or senior credit for them (line 6, R&TC §17054(h)).
   const dependentOfAnother = taxReturn.canBeClaimedAsDependent === true;
   const personal = filingKey === 'married_joint' ? (dependentOfAnother ? 1 : 2) : (dependentOfAnother ? 0 : 1);
-  const blind = (!dependentOfAnother && taxReturn.isLegallyBlind ? 1 : 0) + (joint && taxReturn.spouseIsLegallyBlind ? 1 : 0);
+  // A spouse's blind credit on a separate return: only for a spouse with no gross income who is not another's dependent (R&TC §17054(f); the CA answer).
+  const separateSpouseBlind = taxReturn.filingStatus === FilingStatus.MarriedFilingSeparately && taxReturn.spouseIsLegallyBlind === true
+    && caAnswers(taxReturn).spouseBlindNoIncome === true;
+  const blind = (!dependentOfAnother && taxReturn.isLegallyBlind ? 1 : 0) + ((joint && taxReturn.spouseIsLegallyBlind) || separateSpouseBlind ? 1 : 0);
   const senior = (!dependentOfAnother && age65(taxReturn.dateOfBirth, year) ? 1 : 0)
     + (joint && age65(taxReturn.spouseDateOfBirth, year) ? 1 : 0);
   return { personal, blind, senior, dependents: taxReturn.dependents?.length || 0 };
@@ -638,15 +728,59 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
     }
   }
 
+  // ── Schedule CA facts the return does not hold ──
+  const adjust = (q: Omit<StateQuestion, 'stateCode'>, message: string) => {
+    const question: StateQuestion = { stateCode: 'CA', ...q };
+    questions.push(question);
+    if (answers[q.key] === undefined) {
+      findings.push({ ruleId: 'CA.ADJUSTMENT.FACTS', jurisdiction: 'CA', section: 'state', itemId: q.key, message, question });
+    }
+  };
+  const taxExempt = (taxReturn.income1099INT || []).reduce((sum, i) => sum + Math.max(0, i.taxExemptInterest || 0), 0);
+  if (taxExempt > 0) {
+    adjust({ key: 'otherStateMuniBondInterest', kind: 'amount', prompt: `How much of the ${money(taxExempt)} of tax-exempt interest is from bonds of states other than California (and their cities and agencies)? (0 if none)` },
+      `California taxes tax-exempt interest from other states' bonds (Schedule CA line 2): enter how much of the ${money(taxExempt)} is from non-California bonds.`);
+  }
+  if (hasHSA(taxReturn, calculation)) {
+    adjust({ key: 'hsaEarnings', kind: 'amount', allowNegative: true, prompt: `HSA interest, dividends and gains earned in ${year} (California taxes them each year; 0 if none).` },
+      `California does not treat an HSA as tax-deferred: enter the HSA's ${year} earnings.`);
+  }
+  if ((taxReturn.incomeW2G || []).length > 0) {
+    adjust({ key: 'caLotteryWinnings', kind: 'amount', prompt: `California Lottery winnings included in the W-2G gambling winnings (0 if none).` },
+      `California does not tax California Lottery winnings: enter how much of the gambling winnings is from the California Lottery.`);
+  }
+  if (militaryRetirementApplies(taxReturn, federalAGI) && taxablePensions(taxReturn) > 0) {
+    adjust({ key: 'uniformedServicesRetirement', kind: 'yes_no', prompt: `Is any of the pension income uniformed-services retirement pay or a Department of Defense Survivor Benefit Plan annuity?` },
+      `California excludes up to $20,000 of uniformed-services retirement pay and up to $20,000 of DoD Survivor Benefit Plan annuity (R&TC §17132.9, §17132.10): say whether the pensions include either.`);
+    if (answers.uniformedServicesRetirement === true) {
+      adjust({ key: 'militaryRetirementPay', kind: 'amount', prompt: `Uniformed-services retirement pay included in the pensions (0 if none).` },
+        `California military retirement exclusion: enter the uniformed-services retirement pay.`);
+      adjust({ key: 'survivorBenefitPlanAnnuity', kind: 'amount', prompt: `Department of Defense Survivor Benefit Plan annuity included in the pensions (0 if none).` },
+        `California SBP exclusion: enter the Survivor Benefit Plan annuity.`);
+    }
+  }
+  if (taxReturn.filingStatus === FilingStatus.MarriedFilingSeparately && taxReturn.spouseIsLegallyBlind === true) {
+    adjust({ key: 'spouseBlindNoIncome', kind: 'yes_no', prompt: `Did the blind spouse have no gross income in ${year}, and is the spouse not someone else's dependent?` },
+      `California allows the blind exemption credit for a spouse on a separate return only if the spouse had no gross income and is not another's dependent (R&TC §17054(f)).`);
+  }
+
+  // Investment interest: the federal amount, unless the federal deduction is limited or an election made (FTB 3526).
+  const ii = taxReturn.investmentInterest;
+  if (taxReturn.deductionMethod === 'itemized' && ii && ((calculation.investmentInterest?.carryforward || 0) > 0
+      || ii.electToIncludeQualifiedDividends || ii.electToIncludeLTCG || (ii.priorYearDisallowed || 0) > 0)) {
+    findings.push({ ruleId: 'CA.ADJUSTMENT', jurisdiction: 'CA', section: 'state', itemId: 'investmentInterest',
+      message: `California investment interest (FTB 3526) is not figured when the federal deduction is limited, a carryover is used or an election is made. Prepare the California return outside HATax.` });
+  }
+
   // ── Amounts not published for the year ──
   const threshold = prior?.agiLimitationThreshold?.[filingKey];
-  if (!t.agiLimitationThreshold && threshold !== undefined) {
-    const over = [
-      federalAGI > threshold ? `federal AGI (${money(federalAGI)}) for the exemption credit phase-out` : '',
-      taxReturn.deductionMethod === 'itemized' && caAGI > threshold ? `California AGI (${money(caAGI)}) for the itemized deduction limitation` : '',
-    ].filter(Boolean);
-    if (over.length > 0) {
-      hold('agiThreshold', `California's ${year} AGI threshold for the exemption credit phase-out and the itemized deduction limitation is not published yet (the FTB publishes it in late December). This return's ${over.join(' and ')} is over the ${year - 1} threshold (${money(threshold)}), so the phase-out may apply.`);
+  if (!t.agiLimitationThreshold && threshold !== undefined && federalAGI > threshold) {
+    hold('agiThreshold', `California's ${year} AGI threshold for the exemption credit phase-out and the itemized deduction limitation is not published yet (the FTB publishes it in late December). This return's federal AGI (${money(federalAGI)}) is over the ${year - 1} threshold (${money(threshold)}), so the phase-out may apply.`);
+  }
+  if (t.dependentStandardMinimum === undefined && prior?.dependentStandardMinimum !== undefined && taxReturn.canBeClaimedAsDependent === true) {
+    const line2 = dependentWorksheetLine2(taxReturn, calculation);
+    if (line2 < upTo100(prior.dependentStandardMinimum * growth) && line2 < (t.standardDeduction[filingKey] ?? 0)) {
+      hold('dependentStandardDeduction', `California's ${year} standard deduction minimum for someone another taxpayer can claim is not published yet, and this return's earned income plus $450 (${money(line2)}) is under it.`);
     }
   }
   if (!t.calEitc && prior?.calEitc && inEitcRange && facts.earnedIncome > 0) {
@@ -668,6 +802,27 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
 /** Earned income for CalEITC and YCTC (FTB 3514 line 19), for this return. */
 export function caEarnedIncome(taxReturn: TaxReturn, federalResult: CalculationResult): number {
   return caEitcFacts(taxReturn, federalResult, federalResult.form1040.agi, 0).earnedIncome;
+}
+
+/** The federal Standard Deduction Worksheet for Dependents' line 2: earned income plus the year's amount. */
+function dependentWorksheetLine2(taxReturn: TaxReturn, federalResult: CalculationResult): number {
+  const f = federalResult.form1040;
+  const earned = (f.totalWages || 0) + Math.max(0, f.scheduleCNetProfit || 0) + Math.max(0, f.k1SEIncome || 0) + Math.max(0, f.scheduleFNetProfit || 0);
+  return round2(earned + getTaxConstants(taxReturn.taxYear || 2025).DEPENDENT_STANDARD_DEDUCTION.EARNED_INCOME_PLUS);
+}
+
+/**
+ * Form 540 line 18 standard deduction; for someone another taxpayer can claim,
+ * the California Standard Deduction Worksheet for Dependents: the larger of the
+ * federal worksheet's line 2 and the minimum, not more than the standard
+ * deduction. A year whose minimum is not published uses last year's and is held
+ * where it can matter (assessCalifornia).
+ */
+function caStandardDeduction(taxReturn: TaxReturn, federalResult: CalculationResult, filingKey: string, t: CaliforniaYearTables): number {
+  const full = t.standardDeduction[filingKey] ?? t.standardDeduction.single!;
+  if (taxReturn.canBeClaimedAsDependent !== true) return full;
+  const minimum = t.dependentStandardMinimum ?? californiaTables(t.taxYear - 1)?.dependentStandardMinimum ?? 0;
+  return Math.min(Math.max(dependentWorksheetLine2(taxReturn, federalResult), minimum), full);
 }
 
 // ─── Core Tax Computation (reusable for resident + 540NR) ───────
@@ -717,10 +872,10 @@ function computeCACoreTax(
   const rawCaAGI = round2(agi + additions - subtractions);
   const caAGI = Math.max(0, rawCaAGI);
 
-  const standardDeduction = t.standardDeduction[filingKey] ?? t.standardDeduction.single!;
+  const standardDeduction = caStandardDeduction(taxReturn, federalResult, filingKey, t);
   let caItemized = 0;
   if (taxReturn.deductionMethod === 'itemized' && federalResult.scheduleA) {
-    caItemized = calculateCAItemizedDeductions(taxReturn, federalResult, filingKey, caAGI, t.agiLimitationThreshold?.[filingKey]);
+    caItemized = calculateCAItemizedDeductions(taxReturn, federalResult, filingKey, agi, t.agiLimitationThreshold?.[filingKey]);
   }
   const deduction = Math.max(standardDeduction, caItemized);
   const taxableIncome = Math.max(0, caAGI - deduction);

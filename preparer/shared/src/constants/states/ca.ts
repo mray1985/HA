@@ -89,6 +89,30 @@ export const CA_MHST_RATE = 0.01;
 export const CA_SECTION_179_LIMIT = 25000;
 export const CA_SECTION_179_THRESHOLD = 200000;
 
+// ─── CA Charitable Contribution Limit ────────────────────────────
+// 2025 Schedule CA (540) instructions, Part II lines 11 and 12: California
+// limits the deduction to 50% of federal AGI.
+export const CA_CHARITABLE_AGI_LIMIT = 0.50;
+
+// ─── CA Standard Deduction for Dependents (2025) ─────────────────
+// 2025 Form 540 instructions, California Standard Deduction Worksheet for
+// Dependents: the larger of the federal worksheet's line 2 (earned income plus
+// $450) and $1,350, but not more than the standard deduction.
+export const CA_DEPENDENT_STANDARD_DEDUCTION_MIN = 1350;
+
+// ─── Military Retirement and SBP Exclusions (2025–2029) ──────────
+// R&TC §17132.9 (uniformed-services retirement pay) and §17132.10 (DoD Survivor
+// Benefit Plan annuity), taxable years beginning on or after January 1, 2025 and
+// before January 1, 2030: each up to $20,000, for a taxpayer whose federal AGI
+// is not over $125,000 ($250,000 joint or surviving spouse).
+export const CA_MILITARY_RETIREMENT = {
+  firstYear: 2025,
+  lastYear: 2029,
+  max: 20000,
+  agiLimit: 125000,
+  agiLimitJoint: 250000,
+};
+
 // ─── CA Itemized Deduction Limits ────────────────────────────────
 // CA mortgage interest deduction limit (pre-TCJA $1M, not the federal $750K TCJA limit)
 // MFS limit is half: $500K. R&TC §17220.
@@ -223,7 +247,8 @@ export const CA_SDI_RATE = 0.011;
 // base tax $4,109.92 is figured from $118,996.)
 // The FTB publishes the other 2026 amounts in late December: the AGI threshold
 // of the exemption credit phase-out and itemized deduction limitation,
-// CalEITC, YCTC, and the senior head of household and dependent parent credits.
+// CalEITC, YCTC, the senior head of household and dependent parent credits, and
+// the standard deduction minimum for dependents.
 // Until then they are left out, and a return they can affect is held
 // (engine/state/ca.ts `assessCalifornia`).
 
@@ -317,6 +342,8 @@ export interface CaliforniaYearTables {
   seniorHoH?: { credit: number; agiLimit: number };
   /** The dependent parent credit's maximum. */
   dependentParentMax?: number;
+  /** The California Standard Deduction Worksheet for Dependents minimum. */
+  dependentStandardMinimum?: number;
 }
 
 const CA_TABLES_2025: CaliforniaYearTables = {
@@ -331,6 +358,7 @@ const CA_TABLES_2025: CaliforniaYearTables = {
   yctc: CA_YCTC_2025,
   seniorHoH: { credit: CA_SENIOR_HOH_CREDIT, agiLimit: CA_SENIOR_HOH_AGI_LIMIT },
   dependentParentMax: CA_DEPENDENT_PARENT_CREDIT_MAX,
+  dependentStandardMinimum: CA_DEPENDENT_STANDARD_DEDUCTION_MIN,
 };
 
 const CA_TABLES_2026: CaliforniaYearTables = {

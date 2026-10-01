@@ -146,6 +146,7 @@ export default function ReviewForm1040Step() {
           <h3 className="font-medium text-slate-200 mb-3 text-sm uppercase tracking-wide">AGI & Deductions</h3>
           <Row label="Adjusted Gross Income (Line 11)" amount={f.agi} bold trace={findTrace('form1040.line11')} />
           <Row label={`${f.deductionUsed === 'standard' ? 'Standard' : 'Itemized'} Deduction (Line 12)`} amount={f.deductionAmount} />
+          {f.itemizedDeductionLimitation > 0 && <Row label="Itemized deductions reduced by (IRC §68)" amount={f.itemizedDeductionLimitation} />}
           {f.nonItemizerCharitableDeduction > 0 && <Row label="Charitable Deduction (Non-Itemizer)" amount={f.nonItemizerCharitableDeduction} />}
           {f.qbiDeduction > 0 && <Row label="QBI Deduction (Line 13)" amount={f.qbiDeduction} />}
           <div className="border-t border-slate-700 mt-1 pt-1">

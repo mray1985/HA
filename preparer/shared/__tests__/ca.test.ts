@@ -1833,3 +1833,143 @@ describe('CA — 540NR Review Fixes', () => {
     expect(ca.additionalLines!.originalFederalAGI).toBeGreaterThan(ca.allocatedAGI!);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 16. SCHEDULE CA (540) ADJUSTMENTS — 2025 instructions (IRC as of January 1, 2025)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('CA — Schedule CA (540) adjustments, 2025 instructions', () => {
+  const base = (o: Partial<TaxReturn> = {}, data?: Record<string, unknown>) => makeTaxReturn({
+    filingStatus: FilingStatus.Single, w2Income: [caW2(50000)], stateReturns: caResident(data), ...o,
+  });
+  const caAGI = (tr: TaxReturn) => getCAResult(tr).ca.stateAGI;
+  const keys = (tr: TaxReturn) => caFindings(tr).map((f) => f.question?.key ?? f.ruleId);
+
+  it('excludes unemployment compensation and U.S. obligation interest (lines 7 and 2, column B)', () => {
+    const tr = base({
+      income1099G: [{ id: 'g', payerName: 'EDD', unemploymentCompensation: 10000 }],
+      income1099INT: [{ id: 'i', payerName: 'TreasuryDirect', amount: 1000, usBondInterest: 1000 }],
+    });
+    expect(getCAResult(tr).federal.form1040.agi).toBe(61000);
+    expect(caAGI(tr)).toBe(50000);
+  });
+
+  it("asks how much tax-exempt interest is from other states' bonds, and taxes that (line 2, column C)", () => {
+    const tr = (data?: Record<string, unknown>) => base({ income1099INT: [{ id: 'i', payerName: 'Muni Fund', amount: 0, taxExemptInterest: 2000 }] }, data);
+    expect(keys(tr())).toContain('otherStateMuniBondInterest');
+    expect(caAGI(tr({ otherStateMuniBondInterest: 800 }))).toBe(50800);
+  });
+
+  it('adds back the HSA deduction, the employer contribution and the HSA earnings (lines 13, 1h and 2)', () => {
+    const w2 = { ...caW2(50000), box12: [{ code: 'W' as const, amount: 1500 }] };
+    const tr = (data?: Record<string, unknown>) => base({ w2Income: [w2], hsaDeduction: 2000 }, data);
+    expect(keys(tr())).toContain('hsaEarnings');
+    const { federal, ca } = getCAResult(tr({ hsaEarnings: 100 }));
+    expect(federal.form1040.hsaDeduction).toBe(2000);
+    expect(ca.stateAGI).toBe(round2(federal.form1040.agi + 1500 + 2000 + 100));
+  });
+
+  it('adds back educator expenses (line 11)', () => {
+    const { federal, ca } = getCAResult(base({ educatorExpenses: 300 }));
+    expect(federal.form1040.educatorExpenses).toBe(300);
+    expect(ca.stateAGI).toBe(50000);
+  });
+
+  it('taxes and deducts alimony under a 2019–2025 agreement (lines 2a and 19a); earlier agreements follow federal law', () => {
+    const received = getCAResult(base({ alimonyReceived: { totalReceived: 12000, divorceDate: '2020-06-01' } }));
+    expect(received.federal.form1040.alimonyReceivedIncome).toBe(0);
+    expect(received.ca.stateAGI).toBe(62000);
+    const paid = getCAResult(base({ alimony: { totalPaid: 6000, divorceDate: '2021-03-01' } }));
+    expect(paid.ca.stateAGI).toBe(round2(paid.federal.form1040.agi - 6000));
+    const old = getCAResult(base({ alimonyReceived: { totalReceived: 12000, divorceDate: '2017-06-01' } }));
+    expect(old.ca.stateAGI).toBe(old.federal.form1040.agi);
+  });
+
+  it('excludes up to $20,000 of uniformed-services retirement pay (R&TC §17132.9), asked when there is a pension', () => {
+    const pension = { income1099R: [{ id: 'r', payerName: 'DFAS', grossDistribution: 30000, taxableAmount: 30000, distributionCode: '7', isIRA: false }] };
+    expect(keys(base(pension))).toContain('uniformedServicesRetirement');
+    // $50,000 + $30,000 = $80,000 federal AGI; − $20,000.
+    expect(caAGI(base(pension, { uniformedServicesRetirement: true, militaryRetirementPay: 30000, survivorBenefitPlanAnnuity: 0 }))).toBe(60000);
+    expect(caAGI(base(pension, { uniformedServicesRetirement: false }))).toBe(80000);
+    // Federal AGI over $125,000: not asked.
+    expect(keys(base({ ...pension, w2Income: [caW2(100000)] }))).not.toContain('uniformedServicesRetirement');
+  });
+
+  it('asks how much of the gambling winnings is from the California Lottery', () => {
+    expect(keys(base({ incomeW2G: [{ id: 'g', payerName: 'California State Lottery', grossWinnings: 5000 }] }))).toContain('caLotteryWinnings');
+  });
+
+  it("itemizes without any state's income tax or mortgage insurance (lines 5a and 8)", () => {
+    // Real estate tax $4,000 + mortgage interest $12,000 + cash gifts $5,000 = $21,000. The CA and NY withholding and the $1,000 of mortgage insurance are not California deductions.
+    const tr = makeTaxReturn({
+      filingStatus: FilingStatus.Single, deductionMethod: 'itemized',
+      w2Income: [{ ...caW2(120000), stateTaxWithheld: 5000 }, { ...caW2(20000, 'NY'), id: 'ny', stateTaxWithheld: 1000 }],
+      itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 6000, realEstateTax: 4000, personalPropertyTax: 0, mortgageInterest: 12000, mortgageInsurancePremiums: 1000, charitableCash: 5000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 },
+      stateReturns: caResident(),
+    });
+    expect(getCAResult(tr).ca.stateDeduction).toBe(21000);
+  });
+
+  it('limits charitable contributions to 50% of federal AGI (lines 11 and 12)', () => {
+    // $15,000 of cash gifts on $20,000 of AGI: federal 60% = $12,000, California 50% = $10,000.
+    const tr = makeTaxReturn({
+      filingStatus: FilingStatus.Single, deductionMethod: 'itemized', w2Income: [caW2(20000)],
+      itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 15000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 },
+      stateReturns: caResident(),
+    });
+    expect(getCAResult(tr).federal.scheduleA?.charitableDeduction).toBe(12000);
+    expect(getCAResult(tr).ca.stateDeduction).toBe(10000);
+  });
+
+  it('limits itemized deductions on federal AGI, leaving gambling losses whole (line 29 worksheet)', () => {
+    // Federal AGI $1,005,000: ($1,005,000 − $252,203) × 6% = $45,167.82, over the 80% cap on the $30,000 of tax and interest ($24,000);
+    // the $5,000 of gambling losses is not reduced: $35,000 − $24,000 = $11,000 (it would be $7,000 if they were).
+    const tr = makeTaxReturn({
+      filingStatus: FilingStatus.Single, deductionMethod: 'itemized', w2Income: [caW2(1000000)],
+      incomeW2G: [{ id: 'g', payerName: 'Casino', grossWinnings: 5000 }], gamblingLosses: 5000,
+      itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 10000, personalPropertyTax: 0, mortgageInterest: 20000, mortgageInsurancePremiums: 0, charitableCash: 0, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 },
+      stateReturns: caResident({ caLotteryWinnings: 0 }),
+    });
+    expect(getCAResult(tr).federal.form1040.agi).toBe(1005000);
+    expect(getCAResult(tr).ca.stateDeduction).toBe(11000);
+  });
+
+  it('holds investment interest when the federal deduction is limited or an election is made (FTB 3526)', () => {
+    const tr = makeTaxReturn({
+      filingStatus: FilingStatus.Single, deductionMethod: 'itemized', w2Income: [caW2(80000)],
+      investmentInterest: { investmentInterestPaid: 1000, electToIncludeQualifiedDividends: true },
+      itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 10000, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 0, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 },
+      stateReturns: caResident(),
+    });
+    expect(caFindings(tr).map((f) => f.ruleId)).toContain('CA.ADJUSTMENT');
+  });
+});
+
+describe('CA — standard deduction for someone another taxpayer can claim', () => {
+  const dependent = (wages: number, taxYear = 2025) => makeTaxReturn({
+    taxYear, filingStatus: FilingStatus.Single, canBeClaimedAsDependent: true, w2Income: [caW2(wages)], stateReturns: caResident(),
+  });
+
+  it('is the larger of earned income plus $450 and $1,350, not more than $5,706 (2025 worksheet)', () => {
+    expect(getCAResult(dependent(3000)).ca.stateDeduction).toBe(3450);
+    expect(getCAResult(dependent(500)).ca.stateDeduction).toBe(1350);
+    expect(getCAResult(dependent(10000)).ca.stateDeduction).toBe(5706);
+  });
+
+  it('is held in 2026 only when the unpublished minimum can decide it', () => {
+    expect(caFindings(dependent(500, 2026)).map((f) => f.message)).toContainEqual(expect.stringContaining('standard deduction minimum'));
+    expect(caFindings(dependent(3000, 2026)).map((f) => f.message)).not.toContainEqual(expect.stringContaining('standard deduction minimum'));
+  });
+});
+
+describe("CA — a spouse's blind exemption on a separate return (R&TC §17054(f))", () => {
+  const mfs = (data?: Record<string, unknown>) => makeTaxReturn({
+    filingStatus: FilingStatus.MarriedFilingSeparately, spouseIsLegallyBlind: true, w2Income: [caW2(60000)], stateReturns: caResident(data),
+  });
+
+  it('asks whether the spouse had no gross income and is not a dependent; yes adds a $153 credit', () => {
+    expect(caFindings(mfs()).map((f) => f.question?.key)).toContain('spouseBlindNoIncome');
+    expect(getCAResult(mfs()).ca.additionalLines!.personalExemptionCredits).toBe(153);
+    expect(getCAResult(mfs({ spouseBlindNoIncome: true })).ca.additionalLines!.personalExemptionCredits).toBe(306);
+  });
+});

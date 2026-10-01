@@ -438,6 +438,17 @@ describe('extract1099DIVFields with phrase-level blocks', () => {
     const fields = extract1099DIVFields(make1099DIVBlocks());
     expect(fields.foreignTaxPaid).toBe(47.25);
   });
+
+  it('extracts boxes 2b and 2d, parts of box 2a', () => {
+    const fields = extract1099DIVFields([
+      ...make1099DIVBlocks(),
+      tb('2b Unrecap. Sec. 1250 gain', 340, 140, 100, 8),
+      tb('300.00', 450, 140, 25, 7),
+      tb('2d Collectibles (28%) gain', 340, 165, 100, 8),
+      tb('120.00', 450, 165, 25, 7),
+    ]);
+    expect(fields).toMatchObject({ capitalGainDistributions: 875, unrecapturedSection1250Gain: 300, collectiblesGain: 120 });
+  });
 });
 
 // ── findNearbyNumber pure-numeric guard ────────────────

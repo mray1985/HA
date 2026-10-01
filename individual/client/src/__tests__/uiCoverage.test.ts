@@ -37,6 +37,7 @@ const SYSTEM_FIELDS = new Set([
   'currentSection',
   'createdAt',
   'updatedAt',
+  'dismissedNudges',           // Set by the nudge cards' dismiss button (hooks/useNudges), not a step
 ]);
 
 /** Fields superseded by newer fields — kept for backward compat only. */

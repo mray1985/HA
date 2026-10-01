@@ -35,7 +35,7 @@ import {
   Solo401kResult, SEPIRAResult, HSAContributionInfo,
   ScholarshipCreditResult, Form8801Result, InstallmentSaleResult,
 } from '../types/index.js';
-import { getStandardDeduction, getTaxConstants } from '../constants/taxConstants.js';
+import { getStandardDeduction, getTaxBrackets, getTaxConstants } from '../constants/taxConstants.js';
 import { calculateScheduleC } from './scheduleC.js';
 import { calculateScheduleSE } from './scheduleSE.js';
 import { calculateScheduleA } from './scheduleA.js';
@@ -246,6 +246,8 @@ export interface Form1040Context {
   standardDeduction: number;
   scheduleA?: ScheduleAResult;
   itemizedDeduction: number;
+  /** IRC §68 (2026+): the reduction of the itemized deductions. */
+  itemizedDeductionLimitation: number;
   investmentInterestResult?: InvestmentInterestResult;
   investmentInterestDeduction: number;
   deductionUsed: 'standard' | 'itemized';
@@ -426,6 +428,7 @@ export function createForm1040Context(
     agi: 0,
     standardDeduction: 0,
     itemizedDeduction: 0,
+    itemizedDeductionLimitation: 0,
     investmentInterestDeduction: 0,
     deductionUsed: 'standard',
     nonItemizerCharitableDeduction: 0,
@@ -1013,7 +1016,12 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
         ctx.totalCapitalGainDistributions,
         _taxYear,
         { shortTerm: installmentShortTerm, longTerm: installmentLongTerm },
-        { shortTerm: ctx.k1ShortTermGain, longTerm: ctx.k1LongTermGain, collectibles: ctx.k1Routing?.collectiblesGain28 || 0 },
+        {
+          shortTerm: ctx.k1ShortTermGain, longTerm: ctx.k1LongTermGain,
+          // 28% Rate Gain Worksheet line 4: K-1 box 9b and Form 1099-DIV box 2d.
+          collectibles: round2((ctx.k1Routing?.collectiblesGain28 || 0)
+            + (taxReturn.income1099DIV || []).reduce((s, d) => s + Math.max(0, d.collectiblesGain || 0), 0)),
+        },
       )
     : undefined;
 
@@ -1599,99 +1607,122 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
       : 'standard';
   ctx.deductionAmount = ctx.deductionUsed === 'itemized' ? ctx.itemizedDeduction : ctx.standardDeduction;
 
-  // NOL Carryforward — computed BEFORE QBI per IRC §172/§199A ordering.
-  // The NOL deduction is limited to 80% of taxable income before QBI.
-  const nolCarryforward = !isDeclined('ded_nol') ? Math.max(0, safeNum(taxReturn.nolCarryforward)) : 0;
-  // IRC §170(p), §63(b)(4), from 2026: a return that does not itemize deducts
-  // cash given to public charities, up to $1,000 ($2,000 joint), within the
-  // 60% cash limit and without carryovers or the 0.5% floor.
-  const nonItemizer = getTaxConstants(_taxYear).NON_ITEMIZER_CHARITABLE as { MAX: number; MAX_JOINT: number } | undefined;
-  ctx.nonItemizerCharitableDeduction = nonItemizer && ctx.deductionUsed === 'standard' && !isDeclined('ded_charitable')
-    ? round2(Math.min(
-      Math.max(0, safeNum(taxReturn.nonItemizerCharitableCash)),
-      filingStatus === FilingStatus.MarriedFilingJointly ? nonItemizer.MAX_JOINT : nonItemizer.MAX,
-      Math.max(0, ctx.agi) * getTaxConstants(_taxYear).CHARITABLE_AGI_LIMITS.CASH_PUBLIC_RATE,
-    ))
-    : 0;
-  const taxableBeforeNOL = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction);
-  ctx.nolDeduction = nolCarryforward > 0
-    ? round2(Math.min(nolCarryforward, taxableBeforeNOL * getTaxConstants(taxReturn.taxYear || 2025).NOL.DEDUCTION_LIMIT_RATE))
-    : 0;
+  // Taxable income from the deduction: NOL, QBI and Schedule 1-A follow it, so
+  // the chain runs again when IRC §68 reduces the itemized deductions.
+  const figureTaxableIncome = () => {
+    // NOL Carryforward — computed BEFORE QBI per IRC §172/§199A ordering.
+    // The NOL deduction is limited to 80% of taxable income before QBI.
+    const nolCarryforward = !isDeclined('ded_nol') ? Math.max(0, safeNum(taxReturn.nolCarryforward)) : 0;
+    // IRC §170(p), §63(b)(4), from 2026: a return that does not itemize deducts
+    // cash given to public charities, up to $1,000 ($2,000 joint), within the
+    // 60% cash limit and without carryovers or the 0.5% floor.
+    const nonItemizer = getTaxConstants(_taxYear).NON_ITEMIZER_CHARITABLE as { MAX: number; MAX_JOINT: number } | undefined;
+    ctx.nonItemizerCharitableDeduction = nonItemizer && ctx.deductionUsed === 'standard' && !isDeclined('ded_charitable')
+      ? round2(Math.min(
+        Math.max(0, safeNum(taxReturn.nonItemizerCharitableCash)),
+        filingStatus === FilingStatus.MarriedFilingJointly ? nonItemizer.MAX_JOINT : nonItemizer.MAX,
+        Math.max(0, ctx.agi) * getTaxConstants(_taxYear).CHARITABLE_AGI_LIMITS.CASH_PUBLIC_RATE,
+      ))
+      : 0;
+    const taxableBeforeNOL = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction);
+    ctx.nolDeduction = nolCarryforward > 0
+      ? round2(Math.min(nolCarryforward, taxableBeforeNOL * getTaxConstants(taxReturn.taxYear || 2025).NOL.DEDUCTION_LIMIT_RATE))
+      : 0;
 
-  // QBI — per IRC §199A, QBI deduction is based on taxable income AFTER NOL.
-  // Farm income (Schedule F) is eligible for QBI per IRC §199A(c)(3)(A)(i).
-  const totalQBI = round2(ctx.scheduleCNetProfit + ctx.k1QBI + ctx.scheduleFNetProfit);
-  const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction - ctx.nolDeduction);
+    // QBI — per IRC §199A, QBI deduction is based on taxable income AFTER NOL.
+    // Farm income (Schedule F) is eligible for QBI per IRC §199A(c)(3)(A)(i).
+    const totalQBI = round2(ctx.scheduleCNetProfit + ctx.k1QBI + ctx.scheduleFNetProfit);
+    const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction - ctx.nolDeduction);
 
-  // IRC §199A(a)(2): taxable income limit reduced by net capital gain (IRC §1(h)).
-  // scheduleDLongTermGain already nets Schedule D, K-1, and section 1231 before
-  // the zero floor. Qualified dividends are added below.
-  const netLTCGForQBI = Math.max(0, ctx.scheduleDLongTermGain);
-  const netCapitalGainForQBI = round2(netLTCGForQBI + ctx.allQualifiedDividends);
+    // IRC §199A(a)(2): taxable income limit reduced by net capital gain (IRC §1(h)).
+    // scheduleDLongTermGain already nets Schedule D, K-1, and section 1231 before
+    // the zero floor. Qualified dividends are added below.
+    const netLTCGForQBI = Math.max(0, ctx.scheduleDLongTermGain);
+    const netCapitalGainForQBI = round2(netLTCGForQBI + ctx.allQualifiedDividends);
 
-  ctx.qbiDeduction = 0;
-  if (totalQBI > 0 && !taxReturn.qbiInfo?.isAgriculturalCooperativePatron) {
-    if (taxReturn.qbiInfo?.businesses && taxReturn.qbiInfo.businesses.length > 0) {
-      ctx.qbiDeduction = calculateMultiBusinessQBIDeduction(
-        taxReturn.qbiInfo.businesses,
-        taxableIncomeBeforeQBI,
-        filingStatus,
-        netCapitalGainForQBI,
+    ctx.qbiDeduction = 0;
+    if (totalQBI > 0 && !taxReturn.qbiInfo?.isAgriculturalCooperativePatron) {
+      if (taxReturn.qbiInfo?.businesses && taxReturn.qbiInfo.businesses.length > 0) {
+        ctx.qbiDeduction = calculateMultiBusinessQBIDeduction(
+          taxReturn.qbiInfo.businesses,
+          taxableIncomeBeforeQBI,
+          filingStatus,
+          netCapitalGainForQBI,
+          _taxYear,
+        );
+      } else {
+        ctx.qbiDeduction = calculateQBIDeduction(
+          totalQBI, taxableIncomeBeforeQBI, filingStatus,
+          taxReturn.qbiInfo?.isSSTB ?? true,
+          taxReturn.qbiInfo?.w2WagesPaidByBusiness ?? 0,
+          taxReturn.qbiInfo?.ubiaOfQualifiedProperty ?? 0,
+          netCapitalGainForQBI,
+          _taxYear,
+        );
+      }
+    }
+
+    // Schedule 1-A (OBBBA)
+    const schedule1AMAGI = round2(ctx.agi + ctx.feieExclusion);
+    const taxpayerIs65ForSenior = isAge65OrOlder(taxReturn.dateOfBirth, taxReturn.taxYear);
+    const spouseIs65ForSenior = isAge65OrOlder(taxReturn.spouseDateOfBirth, taxReturn.taxYear);
+
+    if (taxReturn.schedule1A) {
+      ctx.schedule1AResult = calculateSchedule1A(
+        taxReturn.schedule1A, schedule1AMAGI, filingStatus,
+        taxpayerIs65ForSenior, spouseIs65ForSenior,
         _taxYear,
       );
-    } else {
-      ctx.qbiDeduction = calculateQBIDeduction(
-        totalQBI, taxableIncomeBeforeQBI, filingStatus,
-        taxReturn.qbiInfo?.isSSTB ?? true,
-        taxReturn.qbiInfo?.w2WagesPaidByBusiness ?? 0,
-        taxReturn.qbiInfo?.ubiaOfQualifiedProperty ?? 0,
-        netCapitalGainForQBI,
+      ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
+    } else if (taxpayerIs65ForSenior || (filingStatus === FilingStatus.MarriedFilingJointly && spouseIs65ForSenior)) {
+      ctx.schedule1AResult = calculateSchedule1A(
+        {}, schedule1AMAGI, filingStatus,
+        taxpayerIs65ForSenior, spouseIs65ForSenior,
         _taxYear,
       );
+      ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
+    }
+
+    ctx.currentYearNOL = figureCurrentYearNOL({
+      agi: ctx.agi,
+      deductionAmount: ctx.deductionAmount,
+      schedule1ADeduction: ctx.schedule1ADeduction,
+      capitalLossDeduction: ctx.capitalLossDeduction,
+      nonbusinessIncome: round2(
+        // Wages are business income for the NOL (Pub. 536). They must not
+        // absorb the standard deduction before the nonbusiness-deduction addback.
+        ctx.allInterest + ctx.allOrdinaryDividends +
+        ctx.totalRetirementIncome + ctx.totalUnemployment + ctx.taxableSocialSecurity +
+        Math.max(0, ctx.scheduleDNetGain) + ctx.otherIncome + ctx.totalGamblingIncome +
+        ctx.alimonyReceivedIncome + ctx.taxable529Income + ctx.cancellationOfDebtIncome
+      ),
+      otherNonbusinessDeductions: round2(
+        ctx.studentLoanInterest + ctx.iraDeduction + ctx.educatorExpenses +
+        ctx.earlyWithdrawalPenalty + ctx.hsaDeduction + ctx.archerMSADeduction + ctx.movingExpenses
+      ),
+    });
+
+    ctx.taxableIncome = round2(Math.max(0, taxableBeforeNOL - ctx.nolDeduction - ctx.qbiDeduction - ctx.schedule1ADeduction));
+  };
+  figureTaxableIncome();
+
+  // IRC §68 (P.L. 119-21 §70111), from 2026: itemized deductions are reduced by
+  // 2/37 of the lesser of the itemized deductions or the taxable income (without
+  // §68, plus the itemized deductions) over the start of the 37% bracket — after
+  // every other limitation (§68(b)).
+  ctx.itemizedDeductionLimitation = 0;
+  const limitation = getTaxConstants(_taxYear).ITEMIZED_DEDUCTION_LIMITATION as { RATE: number } | undefined;
+  const bracket37 = getTaxBrackets(_taxYear)[filingStatus]?.find((b: { min: number; rate: number }) => b.rate === 0.37)?.min;
+  if (limitation && bracket37 !== undefined && ctx.deductionUsed === 'itemized') {
+    const over = Math.max(0, ctx.taxableIncome + ctx.itemizedDeduction - bracket37);
+    const reduction = round2(limitation.RATE * Math.min(ctx.itemizedDeduction, over));
+    if (reduction > 0) {
+      ctx.itemizedDeductionLimitation = reduction;
+      ctx.itemizedDeduction = round2(ctx.itemizedDeduction - reduction);
+      ctx.deductionAmount = ctx.itemizedDeduction;
+      figureTaxableIncome();
     }
   }
-
-  // Schedule 1-A (OBBBA)
-  const schedule1AMAGI = round2(ctx.agi + ctx.feieExclusion);
-  const taxpayerIs65ForSenior = isAge65OrOlder(taxReturn.dateOfBirth, taxReturn.taxYear);
-  const spouseIs65ForSenior = isAge65OrOlder(taxReturn.spouseDateOfBirth, taxReturn.taxYear);
-
-  if (taxReturn.schedule1A) {
-    ctx.schedule1AResult = calculateSchedule1A(
-      taxReturn.schedule1A, schedule1AMAGI, filingStatus,
-      taxpayerIs65ForSenior, spouseIs65ForSenior,
-      _taxYear,
-    );
-    ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
-  } else if (taxpayerIs65ForSenior || (filingStatus === FilingStatus.MarriedFilingJointly && spouseIs65ForSenior)) {
-    ctx.schedule1AResult = calculateSchedule1A(
-      {}, schedule1AMAGI, filingStatus,
-      taxpayerIs65ForSenior, spouseIs65ForSenior,
-      _taxYear,
-    );
-    ctx.schedule1ADeduction = ctx.schedule1AResult.totalDeduction;
-  }
-
-  ctx.currentYearNOL = figureCurrentYearNOL({
-    agi: ctx.agi,
-    deductionAmount: ctx.deductionAmount,
-    schedule1ADeduction: ctx.schedule1ADeduction,
-    capitalLossDeduction: ctx.capitalLossDeduction,
-    nonbusinessIncome: round2(
-      // Wages are business income for the NOL (Pub. 536). They must not
-      // absorb the standard deduction before the nonbusiness-deduction addback.
-      ctx.allInterest + ctx.allOrdinaryDividends +
-      ctx.totalRetirementIncome + ctx.totalUnemployment + ctx.taxableSocialSecurity +
-      Math.max(0, ctx.scheduleDNetGain) + ctx.otherIncome + ctx.totalGamblingIncome +
-      ctx.alimonyReceivedIncome + ctx.taxable529Income + ctx.cancellationOfDebtIncome
-    ),
-    otherNonbusinessDeductions: round2(
-      ctx.studentLoanInterest + ctx.iraDeduction + ctx.educatorExpenses +
-      ctx.earlyWithdrawalPenalty + ctx.hsaDeduction + ctx.archerMSADeduction + ctx.movingExpenses
-    ),
-  });
-
-  ctx.taxableIncome = round2(Math.max(0, taxableBeforeNOL - ctx.nolDeduction - ctx.qbiDeduction - ctx.schedule1ADeduction));
 
   // Trace: Deductions & Taxable Income
   ctx.tb.trace('form1040.line13', 'Deductions', ctx.deductionAmount, {
@@ -1700,7 +1731,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
     inputs: [],
     note: ctx.deductionUsed === 'standard'
       ? `Using standard deduction ($${ctx.deductionAmount.toLocaleString()})`
-      : `Using itemized deductions ($${ctx.deductionAmount.toLocaleString()})`,
+      : `Using itemized deductions ($${ctx.deductionAmount.toLocaleString()})${ctx.itemizedDeductionLimitation > 0 ? `, after the IRC §68 reduction of $${ctx.itemizedDeductionLimitation.toLocaleString()}` : ''}`,
   });
   ctx.tb.trace('form1040.line15', 'Taxable Income', ctx.taxableIncome, {
     authority: 'Form 1040, Line 15; IRC §63',
@@ -1733,7 +1764,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
   const totalPreferentialLTCG = preferentialLTCGBase;
   // Unrecaptured Section 1250 Gain Worksheet line 11: an estate's or trust's K-1 amount, directly.
   const unrecapturedSection1250Gain = round2(
-    safeNum(taxReturn.unrecapturedSection1250Gain) + ctx.form4797Unrecaptured1250 + (ctx.k1Routing?.unrecaptured1250EstateTrust || 0),
+    safeNum(taxReturn.unrecapturedSection1250Gain) + ctx.form4797Unrecaptured1250 + (ctx.k1Routing?.unrecaptured1250EstateTrust || 0)
+      // Line 11 also takes Form 1099-DIV box 2b.
+      + (taxReturn.income1099DIV || []).reduce((s, d) => s + Math.max(0, d.unrecapturedSection1250Gain || 0), 0),
   );
   // 28% rate gain from 1099-B collectibles. Capped at the LTCG that is
   // actually in the preferential computation so it is not also taxed at 15/20%.
@@ -2590,6 +2623,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     agi: ctx.agi,
     standardDeduction: ctx.standardDeduction,
     itemizedDeduction: ctx.itemizedDeduction,
+    itemizedDeductionLimitation: ctx.itemizedDeductionLimitation,
     deductionUsed: ctx.deductionUsed,
     nonItemizerCharitableDeduction: round2(ctx.nonItemizerCharitableDeduction),
     deductionAmount: ctx.deductionAmount,

@@ -68,6 +68,7 @@ const FIELD_LABELS: Record<string, string> = {
   ordinaryDividends: 'Ordinary Dividends (Box 1a)',
   qualifiedDividends: 'Qualified Dividends (Box 1b)',
   capitalGainDistributions: 'Capital Gains (Box 2a)',
+  collectiblesGain: 'Collectibles (28%) Gain (Box 2d)',
   foreignTaxPaid: 'Foreign Tax Paid',
   grossDistribution: 'Gross Distribution (Box 1)',
   taxableAmount: 'Taxable Amount (Box 2a)',
@@ -110,7 +111,7 @@ const FIELD_LABELS: Record<string, string> = {
   shortTermCapitalGain: 'Short-Term Capital Gain (Box 8)',
   longTermCapitalGain: 'Long-Term Capital Gain (Box 9a)',
   collectiblesGain28: 'Collectibles (28%) Gain (Box 9b)',
-  unrecapturedSection1250Gain: 'Unrecaptured Section 1250 Gain (Box 9c)',
+  unrecapturedSection1250Gain: 'Unrecaptured Section 1250 Gain (1099-DIV Box 2b, K-1 Box 9c)',
   netSection1231Gain: 'Net Section 1231 Gain (Box 10)',
   selfEmploymentIncome: 'Self-Employment Income (Box 14A)',
   // W-2G

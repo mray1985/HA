@@ -18,7 +18,7 @@ import { useItemWarnings } from '../../hooks/useWarnings';
 import { getAllStates } from '@hatax/engine';
 
 const stateOptions = getAllStates().map((s) => ({ code: s.code, name: s.name }));
-const emptyForm = { payerName: '', ordinaryDividends: 0, qualifiedDividends: 0, foreignTaxPaid: 0, foreignSourceIncome: 0, stateCode: '', stateTaxWithheld: 0 };
+const emptyForm = { payerName: '', ordinaryDividends: 0, qualifiedDividends: 0, capitalGainDistributions: 0, unrecapturedSection1250Gain: 0, collectiblesGain: 0, foreignTaxPaid: 0, foreignSourceIncome: 0, stateCode: '', stateTaxWithheld: 0 };
 
 export default function DIV1099Step() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();
@@ -38,13 +38,16 @@ export default function DIV1099Step() {
     setAdding(true);
   };
 
-  const startEdit = (item: { id: string; payerName: string; ordinaryDividends: number; qualifiedDividends: number; foreignTaxPaid?: number; foreignSourceIncome?: number; stateCode?: string; stateTaxWithheld?: number }) => {
+  const startEdit = (item: { id: string; payerName: string; ordinaryDividends: number; qualifiedDividends: number; capitalGainDistributions?: number; unrecapturedSection1250Gain?: number; collectiblesGain?: number; foreignTaxPaid?: number; foreignSourceIncome?: number; stateCode?: string; stateTaxWithheld?: number }) => {
     setAdding(false);
     setEditingId(item.id);
     setForm({
       payerName: item.payerName,
       ordinaryDividends: item.ordinaryDividends,
       qualifiedDividends: item.qualifiedDividends,
+      capitalGainDistributions: item.capitalGainDistributions || 0,
+      unrecapturedSection1250Gain: item.unrecapturedSection1250Gain || 0,
+      collectiblesGain: item.collectiblesGain || 0,
       foreignTaxPaid: item.foreignTaxPaid || 0,
       foreignSourceIncome: item.foreignSourceIncome || 0,
       stateCode: item.stateCode || '',
@@ -99,6 +102,19 @@ export default function DIV1099Step() {
       <FormField label="Qualified Dividends (Box 1b)" tooltip={help?.fields['Qualified Dividends (Box 1b)']?.tooltip} irsRef={help?.fields['Qualified Dividends (Box 1b)']?.irsRef}>
         <CurrencyInput value={form.qualifiedDividends} onChange={(v) => setForm({ ...form, qualifiedDividends: v })} />
       </FormField>
+      <FormField label="Total Capital Gain Distributions (Box 2a)" optional tooltip="Long-term capital gain paid out by a mutual fund or REIT. It goes on Schedule D, line 13.">
+        <CurrencyInput value={form.capitalGainDistributions} onChange={(v) => setForm({ ...form, capitalGainDistributions: v })} />
+      </FormField>
+      {(form.capitalGainDistributions || 0) > 0 && (
+        <>
+          <FormField label="Unrecaptured Section 1250 Gain (Box 2b)" optional tooltip="The part of box 2a from real estate depreciation, taxed at up to 25%.">
+            <CurrencyInput value={form.unrecapturedSection1250Gain} onChange={(v) => setForm({ ...form, unrecapturedSection1250Gain: v })} />
+          </FormField>
+          <FormField label="Collectibles (28%) Gain (Box 2d)" optional tooltip="The part of box 2a from collectibles such as precious metals, taxed at up to 28%.">
+            <CurrencyInput value={form.collectiblesGain} onChange={(v) => setForm({ ...form, collectiblesGain: v })} />
+          </FormField>
+        </>
+      )}
       <FormField label="Foreign Tax Paid (Box 7)" optional tooltip="Foreign tax paid or accrued on dividends from foreign-sourced investments. Claimed as a credit on Form 1116.">
         <CurrencyInput value={form.foreignTaxPaid} onChange={(v) => setForm({ ...form, foreignTaxPaid: v })} />
       </FormField>

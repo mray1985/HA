@@ -46,6 +46,8 @@ const NON_NEGATIVE_AMOUNT_FIELDS = new Set([
   'ordinaryDividends',
   'qualifiedDividends',
   'capitalGainDistributions',
+  'unrecapturedSection1250Gain',
+  'collectiblesGain',
   'foreignTaxPaid',
   'foreignSourceIncome',
   'earlyWithdrawalPenalty',

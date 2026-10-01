@@ -30,6 +30,13 @@ const help = HELP_CONTENT['form4797'];
 
 export default function Form4797Step() {
   const { taxReturn, returnId, updateField } = useTaxReturnStore();
+  const lookback = taxReturn?.section1231Lookback ?? [];
+  const lookbackYears = [5, 4, 3, 2, 1].map((n) => (taxReturn?.taxYear || 2025) - n);
+  const lookbackValue = (year: number) => lookback.find((y) => y.taxYear === year)?.netGainOrLoss ?? 0;
+  const setLookback = (year: number, value: number) => {
+    const others = lookback.filter((y) => y.taxYear !== year);
+    updateField('section1231Lookback', (value === 0 ? others : [...others, { taxYear: year, netGainOrLoss: value }]).sort((a, b) => a.taxYear - b.taxYear));
+  };
   if (!taxReturn || !returnId) return null;
 
   const items = taxReturn.form4797Properties || [];
@@ -173,6 +180,24 @@ export default function Form4797Step() {
       {!editingId && (
         adding ? renderForm(addItem, 'Save Property') : <AddButton onClick={() => setAdding(true)}>Add Business Property Sale</AddButton>
       )}
+
+      {/* IRC §1231(c): this year's net section 1231 gain is ordinary up to the
+          unrecaptured net section 1231 losses of the five preceding years. */}
+      <div className="card mt-6">
+        <h3 className="font-medium text-slate-200 mb-1 text-sm">Net section 1231 gain or loss, past five years</h3>
+        <p className="text-xs text-slate-400 mb-3">
+          A net section 1231 gain this year is ordinary income up to the net section 1231 losses of the five years before it
+          that a later gain has not used (IRC §1231(c), Form 4797 line 8). Enter each year's net amount from Form 4797 line 7,
+          a loss as a negative number; leave years with none at $0.
+        </p>
+        <div className="grid sm:grid-cols-5 gap-3">
+          {lookbackYears.map((year) => (
+            <FormField key={year} label={String(year)} optional>
+              <CurrencyInput allowNegative value={lookbackValue(year)} onChange={(v) => setLookback(year, v)} />
+            </FormField>
+          ))}
+        </div>
+      </div>
 
       <a
         href="https://www.irs.gov/forms-pubs/about-form-4797"

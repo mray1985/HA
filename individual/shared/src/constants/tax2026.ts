@@ -1224,3 +1224,16 @@ export const NON_ITEMIZER_CHARITABLE = {
   MAX: 1000,
   MAX_JOINT: 2000,
 };
+
+// ──────────────────────────────────────────────────
+// Limitation on itemized deductions from 2026 (P.L. 119-21 §70111, taxable
+// years beginning after December 31, 2025)
+// Authority: IRC §68(a) — itemized deductions are reduced by 2/37 of the lesser
+//   of the itemized deductions or the taxable income (determined without §68
+//   and increased by the itemized deductions) over the start of the 37% bracket;
+//   §68(b) — applied after every other limitation.
+// ──────────────────────────────────────────────────
+
+export const ITEMIZED_DEDUCTION_LIMITATION = {
+  RATE: 2 / 37,
+};

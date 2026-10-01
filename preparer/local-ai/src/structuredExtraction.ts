@@ -68,6 +68,8 @@ const DIV_FIELDS: Record<string, FieldKind> = {
   ordinaryDividends: 'money',
   qualifiedDividends: 'money',
   capitalGainDistributions: 'money',
+  unrecapturedSection1250Gain: 'money',
+  collectiblesGain: 'money',
   federalTaxWithheld: 'money',
   foreignTaxPaid: 'money',
   foreignSourceIncome: 'money',
