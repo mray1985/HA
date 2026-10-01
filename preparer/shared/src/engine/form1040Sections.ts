@@ -2439,15 +2439,23 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
     ?? (taxReturn.estimatedQuarterlyPayments
       ? taxReturn.estimatedQuarterlyPayments.map((amount, q) => ({ date: dueDates[q]!, amount: amount || 0 }))
       : dueDates.map((date) => ({ date, amount: round2(ctx.estimatedPayments / 4) })));
+  // Form 2210 line 6 counts excess social security tax withheld (Schedule 3,
+  // line 11) as withholding, not as a refundable credit (line 3): it goes back
+  // into the tax (line 4) and into the payments.
+  const excessSocialSecurity = ctx.credits.excessSSTaxCredit || 0;
+  // IRC §6654(d)(1)(C): the 110% prior-year test looks at the preceding year's
+  // AGI, when the case has it (last year's case or an imported return).
+  const prior = taxReturn.priorYearSummary;
+  const priorYearAgi = prior && prior.taxYear === penaltyYear - 1 ? prior.agi : ctx.agi;
   ctx.estimatedTaxPenaltyResult = calculateEstimatedTaxPenalty(
-    Math.max(0, ctx.taxAfterCredits),
-    ctx.totalPayments,
+    Math.max(0, round2(ctx.taxAfterCredits + excessSocialSecurity)),
+    round2(ctx.totalPayments + excessSocialSecurity),
     taxReturn.priorYearTax,
-    ctx.agi,
+    priorYearAgi,
     ctx.filingStatus,
     taxReturn.annualizedIncome,
     penaltyYear,
-    { withholding: ctx.totalWithholding, estimatedPayments: datedPayments },
+    { withholding: round2(ctx.totalWithholding + excessSocialSecurity), estimatedPayments: datedPayments },
   );
   ctx.estimatedTaxPenalty = ctx.estimatedTaxPenaltyResult.penalty;
 

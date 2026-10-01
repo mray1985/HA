@@ -41,7 +41,7 @@ export function calculateEstimatedTaxPenalty(
   currentYearTax: number,
   totalPayments: number,      // Withholding + estimated payments
   priorYearTax: number | undefined,  // undefined = unknown (no prior year safe harbor)
-  agi: number,
+  agi: number,                // The preceding year's AGI, for the 110% test (IRC §6654(d)(1)(C)); the current year's when unknown
   filingStatus: FilingStatus,
   annualizedIncome?: AnnualizedIncomeInfo,
   taxYear: number = 2025,
