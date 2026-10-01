@@ -674,10 +674,10 @@ describe('S7 — State EITC: California CalEITC', () => {
 
   it('CA applies CalEITC as state credit', () => {
     const ca = result.stateResults!.find(s => s.stateCode === 'CA')!;
-    // CalEITC + exemption credits produce meaningful state credits
-    // At $28K earned income for 1 child, CalEITC is in phase-out
-    // Exemption credits: $153 (HoH) + $475 (1 dependent) = $628
-    expect(ca.stateCredits).toBeCloseTo(628, 0);
+    // Exemption credits $153 (HoH) + $475 (1 dependent) = $628, and CalEITC: the 2025
+    // EITC Table's $27,951–$28,000 row, 1 child, is $148.
+    expect(ca.additionalLines!.calEITC).toBe(148);
+    expect(ca.stateCredits).toBeCloseTo(776, 0);
     // Credits fully offset the state income tax
     expect(ca.totalStateTax).toBe(0);
   });

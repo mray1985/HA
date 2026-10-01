@@ -88,6 +88,18 @@ function makeW2Return(
   });
 }
 
+// FTB 3514 and Form 540 (2025) cases: amounts read off the 2025 EITC Table row
+// for the amount looked up (whole dollars, $50 rows) and the 540 instructions.
+const caW2 = (wages: number, state = 'CA') => ({
+  id: `w${wages}`, employerName: 'Corp', wages, federalTaxWithheld: 0, state, stateTaxWithheld: 0,
+  socialSecurityWages: wages, socialSecurityTax: round2(wages * 0.062), medicareWages: wages, medicareTax: round2(wages * 0.0145),
+});
+const caKids = (n: number, dateOfBirth = '2015-06-15') => Array.from({ length: n }, (_, i) => ({
+  id: `k${i}`, firstName: 'Kid', lastName: String(i), relationship: 'child', monthsLivedWithYou: 12, dateOfBirth,
+}));
+const caResident = (stateSpecificData?: Record<string, unknown>) => [{ stateCode: 'CA', residencyType: 'resident' as const, ...(stateSpecificData ? { stateSpecificData } : {}) }];
+const caFindings = (tr: TaxReturn) => (calculateForm1040(tr).unsupported ?? []).filter((u) => u.jurisdiction === 'CA');
+
 function getCAResult(taxReturn: TaxReturn) {
   const federal = calculateForm1040(taxReturn);
   const results = calculateStateTaxes(taxReturn, federal);
@@ -313,155 +325,102 @@ describe('CA — Exemption Credits', () => {
     const { ca } = getCAResult(tr);
     expect(ca.additionalLines!.personalExemptionCredits).toBe(1256);
   });
+
+  it('adds a $153 credit for each blind and each senior exemption (lines 8 and 9)', () => {
+    // Single, 70 and blind: personal + blind + senior = 3 × $153.
+    const single = makeTaxReturn({ filingStatus: FilingStatus.Single, dateOfBirth: '1955-06-15', isLegallyBlind: true, w2Income: [caW2(75000)], stateReturns: caResident() });
+    expect(getCAResult(single).ca.additionalLines!.personalExemptionCredits).toBe(459);
+    // Joint, both 65 or older: 2 personal + 2 senior = 4 × $153.
+    const joint = makeTaxReturn({ filingStatus: FilingStatus.MarriedFilingJointly, dateOfBirth: '1955-06-15', spouseDateOfBirth: '1958-02-01', w2Income: [caW2(75000)], stateReturns: caResident() });
+    expect(getCAResult(joint).ca.additionalLines!.personalExemptionCredits).toBe(612);
+  });
+
+  it('counts a 65th birthday on January 1 of the next year as 65 by December 31', () => {
+    const born = (dateOfBirth: string) => getCAResult(makeTaxReturn({ filingStatus: FilingStatus.Single, dateOfBirth, w2Income: [caW2(75000)], stateReturns: caResident() })).ca.additionalLines!.personalExemptionCredits;
+    expect(born('1961-01-01')).toBe(306);
+    expect(born('1961-01-02')).toBe(153);
+  });
+
+  it('gives no personal, blind or senior credit to someone another taxpayer can claim (line 6)', () => {
+    const tr = makeTaxReturn({ filingStatus: FilingStatus.Single, canBeClaimedAsDependent: true, dateOfBirth: '1955-06-15', w2Income: [caW2(20000)], stateReturns: caResident() });
+    expect(getCAResult(tr).ca.additionalLines!.personalExemptionCredits).toBe(0);
+  });
+
+  it('phases out the senior credit with the personal one (AGI Limitation Worksheet)', () => {
+    // Single, 70, AGI $300,000: ($300,000 − $252,203) / $2,500 = 19.12 → 20 × $6 = $120 for each of 2 boxes: $306 − $240 = $66.
+    const tr = makeTaxReturn({ filingStatus: FilingStatus.Single, dateOfBirth: '1955-06-15', w2Income: [caW2(300000)], stateReturns: caResident() });
+    expect(getCAResult(tr).ca.additionalLines!.personalExemptionCredits).toBe(66);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. CalEITC (Full Form 3514)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('CA — CalEITC (Form 3514)', () => {
-  it('CalEITC credited for low-income filer with 0 children', () => {
-    const tr = makeW2Return(3000, 0);
-    const { ca } = getCAResult(tr);
-    // 0 children, $3000 earned → phase-in: $3000 × 7.65% = $229.50
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
-    expect(ca.additionalLines!.calEITC).toBeLessThanOrEqual(302); // max for 0 children
+describe('CA — CalEITC (FTB 3514, 2025 EITC Table)', () => {
+  const calEITC = (tr: TaxReturn) => getCAResult(tr).ca.additionalLines!.calEITC;
+  const single = (wages: number, kids = 0, o: Partial<TaxReturn> = {}) => makeTaxReturn({
+    filingStatus: FilingStatus.Single, w2Income: [caW2(wages)], dependents: caKids(kids), stateReturns: caResident(), ...o,
   });
 
-  it('CalEITC credited for filer with 1 child', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 10000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 10000, socialSecurityTax: 620,
-        medicareWages: 10000, medicareTax: 145,
-      }],
-      dependents: [{
-        id: 'd1', firstName: 'Child', lastName: 'One',
-        relationship: 'child', monthsLivedWithYou: 12,
-        dateOfBirth: '2015-06-15',
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
-    expect(ca.additionalLines!.calEITC).toBeLessThanOrEqual(2028); // max for 1 child
+  it('takes the table amount for California earned income', () => {
+    expect(calEITC(single(1000))).toBe(63);     // $951–$1,000, no children
+    expect(calEITC(single(2000))).toBe(128);    // $1,951–$2,000
+    expect(calEITC(single(3000))).toBe(193);    // $2,951–$3,000
+    expect(calEITC(single(4000))).toBe(259);    // $3,951–$4,000
+    expect(calEITC(single(6000))).toBe(248);    // $5,951–$6,000
+    expect(calEITC(single(10000, 1))).toBe(1162);
+    expect(calEITC(single(15000, 2))).toBe(1588);
+    expect(calEITC(single(12000, 3))).toBe(2934);
   });
 
-  it('CalEITC credited for filer with 2 children', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 15000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 15000, socialSecurityTax: 930,
-        medicareWages: 15000, medicareTax: 217.5,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2015-06-15' },
-        { id: 'd2', firstName: 'C', lastName: 'D', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2017-03-10' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
-    expect(ca.additionalLines!.calEITC).toBeLessThanOrEqual(3350); // max for 2 children
+  it('runs to $32,900 of earned income', () => {
+    expect(calEITC(single(28000, 1))).toBe(148);  // $27,951–$28,000
+    expect(calEITC(single(32900, 1))).toBe(1);    // $32,851–$32,900
+    expect(calEITC(single(32950, 1))).toBe(0);
+    expect(calEITC(single(50000))).toBe(0);
   });
 
-  it('CalEITC credited for filer with 3+ children', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 12000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 12000, socialSecurityTax: 744,
-        medicareWages: 12000, medicareTax: 174,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2012-01-01' },
-        { id: 'd2', firstName: 'C', lastName: 'D', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2014-06-15' },
-        { id: 'd3', firstName: 'E', lastName: 'F', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2016-09-20' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
-    expect(ca.additionalLines!.calEITC).toBeLessThanOrEqual(3768); // max for 3+ children
+  it('takes the smaller amount for federal AGI when it differs and is past Part II (worksheet line 5)', () => {
+    // Earned $10,000 ($1,162); federal AGI $13,000 with $3,000 interest, over $6,998: $12,951–$13,000 is $599.
+    expect(calEITC(single(10000, 1, { income1099INT: [{ id: 'i', payerName: 'Bank', amount: 3000 }] }))).toBe(599);
   });
 
-  it('CalEITC phase-in: credit increases with income', () => {
-    // 0 children: phase-in rate = 7.65%
-    const low = getCAResult(makeW2Return(1000, 0)).ca;
-    const mid = getCAResult(makeW2Return(2000, 0)).ca;
-    expect(mid.additionalLines!.calEITC).toBeGreaterThan(low.additionalLines!.calEITC);
+  it('is not allowed with investment income over $4,814 (Worksheet 1)', () => {
+    expect(calEITC(single(10000, 0, { income1099INT: [{ id: 'i', payerName: 'Bank', amount: 5000 }] }))).toBe(0);
   });
 
-  it('CalEITC phase-out: credit decreases at higher income', () => {
-    // 0 children: phase-out starts at $3948
-    const at4000 = getCAResult(makeW2Return(4000, 0)).ca;
-    const at6000 = getCAResult(makeW2Return(6000, 0)).ca;
-    // $6000 should have lower or zero CalEITC
-    expect(at6000.additionalLines!.calEITC).toBeLessThan(at4000.additionalLines!.calEITC);
-  });
-
-  it('no CalEITC when earned income over threshold', () => {
-    const { ca } = getCAResult(makeW2Return(50000));
-    expect(ca.additionalLines!.calEITC).toBe(0);
-  });
-
-  it('CalEITC disqualified by investment income > $3,750', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 10000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 10000, socialSecurityTax: 620,
-        medicareWages: 10000, medicareTax: 145,
-      }],
-      income1099INT: [{ id: 'int1', payerName: 'Bank', amount: 5000 }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    // Investment income $5000 > $3750 → disqualified
-    expect(ca.additionalLines!.calEITC).toBe(0);
-  });
-
-  it('CalEITC with self-employment income uses 92.35% factor', () => {
-    // $5,000 Schedule C net profit → SE earned income = $5,000 × 0.9235 = $4,617.50
+  it('counts business income less the deductible part of SE tax (Worksheet 3)', () => {
+    // $5,000 profit − $353.24 (half of $5,000 × 92.35% × 15.3%) = $4,646.76 → $4,647: $4,601–$4,650 is $301.
     const tr = makeTaxReturn({
       filingStatus: FilingStatus.Single,
       income1099NEC: [{ id: 'nec1', payerName: 'Client', amount: 5000 }],
-      businesses: [{
-        id: 'biz1', name: 'Freelance', activity: 'consulting',
-        naicsCode: '541611', income: 5000, expenses: [],
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
+      businesses: [{ id: 'biz1', name: 'Freelance', activity: 'consulting', naicsCode: '541611', income: 5000, expenses: [] }],
+      stateReturns: caResident(),
     });
-    const { ca } = getCAResult(tr);
-    // CalEITC should be positive (SE earned income of $4,617.50 is within 0-child limit of $7,891)
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
+    expect(calEITC(tr)).toBe(301);
   });
 
-  it('CalEITC SE income: lower credit than raw Schedule C profit would yield', () => {
-    // $3,948 Schedule C net → SE earned = $3,948 × 0.9235 = $3,645.98
-    // Without 92.35% factor, raw $3,948 would hit max CalEITC for 0 children ($302)
-    // With factor: $3,645.98 × 0.0765 = $278.92 (still in phase-in, less than max)
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      income1099NEC: [{ id: 'nec1', payerName: 'Client', amount: 3948 }],
-      businesses: [{
-        id: 'biz1', name: 'Freelance', activity: 'consulting',
-        naicsCode: '541611', income: 3948, expenses: [],
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
+  it('counts only California wages (W-2 box 16 of a California W-2)', () => {
+    const tr = makeTaxReturn({ filingStatus: FilingStatus.Single, w2Income: [caW2(3000), caW2(1000, 'NV')], stateReturns: caResident() });
+    // Earned $3,000 ($193); federal AGI $4,000 is under Part II's $4,661, so the earned income amount stands.
+    expect(calEITC(tr)).toBe(193);
+  });
+
+  it('is not allowed to someone another taxpayer can claim as a dependent', () => {
+    expect(calEITC(single(3000, 0, { canBeClaimedAsDependent: true }))).toBe(0);
+  });
+
+  it('allows married filing separately only with a qualifying child and living apart the last 6 months', () => {
+    const mfs = (data?: Record<string, unknown>, kids = 1) => makeTaxReturn({
+      filingStatus: FilingStatus.MarriedFilingSeparately, w2Income: [caW2(10000)], dependents: caKids(kids), stateReturns: caResident(data),
     });
-    const { ca } = getCAResult(tr);
-    // With 92.35%: earned = round2(3948 * 0.9235) = 3646.06
-    // phaseIn = round2(3646.06 * 0.0765) = 278.92
-    // This is less than max $302, so we're still in phase-in
-    expect(ca.additionalLines!.calEITC).toBeLessThan(302);
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
+    // Not answered: no credit, and the review asks.
+    expect(calEITC(mfs())).toBe(0);
+    expect(caFindings(mfs()).map((f) => f.question?.key)).toContain('livedApartLast6Months');
+    expect(calEITC(mfs({ livedApartLast6Months: true }))).toBe(1162);
+    expect(calEITC(mfs({ livedApartLast6Months: false }))).toBe(0);
+    expect(calEITC(mfs({ livedApartLast6Months: true }, 0))).toBe(0);
   });
 });
 
@@ -470,140 +429,60 @@ describe('CA — CalEITC (Form 3514)', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('CA — Young Child Tax Credit (YCTC)', () => {
-  it('YCTC for 1 child under 6', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 15000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 15000, socialSecurityTax: 930,
-        medicareWages: 15000, medicareTax: 217.5,
-      }],
-      dependents: [{
-        id: 'd1', firstName: 'Baby', lastName: 'Child',
-        relationship: 'child', monthsLivedWithYou: 12,
-        dateOfBirth: '2022-03-15', // Under 6 at end of 2025
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    // Should get CalEITC (low income) AND YCTC
-    expect(ca.additionalLines!.youngChildTaxCredit).toBe(1189);
+  const lines = (tr: TaxReturn) => getCAResult(tr).ca.additionalLines!;
+  const withYoung = (wages: number, n = 1, o: Partial<TaxReturn> = {}) => makeTaxReturn({
+    filingStatus: FilingStatus.Single, w2Income: wages > 0 ? [caW2(wages)] : [], dependents: caKids(n, '2022-03-15'), stateReturns: caResident(), ...o,
   });
 
-  it('YCTC for 2 children under 6', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 15000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 15000, socialSecurityTax: 930,
-        medicareWages: 15000, medicareTax: 217.5,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2022-03-15' },
-        { id: 'd2', firstName: 'C', lastName: 'D', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2023-07-20' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    // 2 × $1189 = $2378
-    expect(ca.additionalLines!.youngChildTaxCredit).toBe(2378);
+  it('is $1,189 a return, however many children are under 6 (line 24)', () => {
+    expect(lines(withYoung(15000, 1)).youngChildTaxCredit).toBe(1189);
+    expect(lines(withYoung(15000, 2)).youngChildTaxCredit).toBe(1189);
   });
 
-  it('no YCTC when no children under 6', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 15000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 15000, socialSecurityTax: 930,
-        medicareWages: 15000, medicareTax: 217.5,
-      }],
-      dependents: [{
-        id: 'd1', firstName: 'A', lastName: 'B',
-        relationship: 'child', monthsLivedWithYou: 12,
-        dateOfBirth: '2015-06-15', // Age 10 at end of 2025
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.youngChildTaxCredit).toBe(0);
+  it('needs a qualifying child under 6', () => {
+    const older = makeTaxReturn({ filingStatus: FilingStatus.Single, w2Income: [caW2(15000)], dependents: caKids(1, '2015-06-15'), stateReturns: caResident() });
+    expect(lines(older).youngChildTaxCredit).toBe(0);
   });
 
-  it('YCTC requires CalEITC eligibility', () => {
-    // High income → no CalEITC → no YCTC
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 100000,
-        federalTaxWithheld: 15000, state: 'CA', stateTaxWithheld: 5000,
-        socialSecurityWages: 100000, socialSecurityTax: 6200,
-        medicareWages: 100000, medicareTax: 1450,
-      }],
-      dependents: [{
-        id: 'd1', firstName: 'Baby', lastName: 'Child',
-        relationship: 'child', monthsLivedWithYou: 12,
-        dateOfBirth: '2022-03-15',
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.calEITC).toBe(0);
-    expect(ca.additionalLines!.youngChildTaxCredit).toBe(0);
+  it('is reduced by $21.71 for each $100 over $27,425, to two decimals, not rounded (lines 25–28)', () => {
+    // $30,000: $2,575 / 100 = 25.75 × $21.71 = $559.03; $1,189 − $559.03 = $629.97 → $630. CalEITC $88.
+    expect(lines(withYoung(30000))).toMatchObject({ youngChildTaxCredit: 630, calEITC: 88 });
+    // $32,900: 54.75 × $21.71 = $1,188.62; $0.38 is between $0 and $1 → $1.
+    expect(lines(withYoung(32900)).youngChildTaxCredit).toBe(1);
   });
 
-  it('YCTC phases out at higher earned income', () => {
-    // Earned income over $25K → YCTC phases out
-    const lowIncome = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 18000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 18000, socialSecurityTax: 1116,
-        medicareWages: 18000, medicareTax: 261,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2022-03-15' },
-        { id: 'd2', firstName: 'C', lastName: 'D', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2015-06-15' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca: caLow } = getCAResult(lowIncome);
-
-    // Check YCTC is present at $18K (under $25K threshold)
-    if (caLow.additionalLines!.calEITC > 0) {
-      expect(caLow.additionalLines!.youngChildTaxCredit).toBeGreaterThan(0);
-    }
+  it('needs CalEITC when there is earned income', () => {
+    expect(lines(withYoung(100000))).toMatchObject({ calEITC: 0, youngChildTaxCredit: 0 });
   });
 
-  it('combined CalEITC + YCTC as refundable credits', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 12000,
-        federalTaxWithheld: 0, state: 'CA', stateTaxWithheld: 0,
-        socialSecurityWages: 12000, socialSecurityTax: 744,
-        medicareWages: 12000, medicareTax: 174,
-      }],
-      dependents: [{
-        id: 'd1', firstName: 'Baby', lastName: 'Child',
-        relationship: 'child', monthsLivedWithYou: 12,
-        dateOfBirth: '2022-03-15',
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
+  it('is allowed with no earned income (FTB 3514 Step 8)', () => {
+    const tr = withYoung(0, 1, { income1099INT: [{ id: 'i', payerName: 'Bank', amount: 2000 }] });
+    expect(lines(tr)).toMatchObject({ calEITC: 0, youngChildTaxCredit: 1189 });
+  });
+
+  it('with no earned income, asks the total net loss when a loss is limited or carried in (line 23b)', () => {
+    const tr = (data?: Record<string, unknown>) => makeTaxReturn({
+      filingStatus: FilingStatus.Single, dependents: caKids(1, '2022-03-15'), capitalLossCarryforwardST: 10000,
+      income1099INT: [{ id: 'i', payerName: 'Bank', amount: 2000 }], stateReturns: caResident(data),
     });
-    const { ca } = getCAResult(tr);
+    expect(lines(tr()).youngChildTaxCredit).toBe(0);
+    expect(caFindings(tr()).map((f) => f.question?.key)).toContain('yctcTotalNetLoss');
+    expect(lines(tr({ yctcTotalNetLoss: 8000 })).youngChildTaxCredit).toBe(1189);
+    expect(lines(tr({ yctcTotalNetLoss: 40000 })).youngChildTaxCredit).toBe(0);
+  });
 
-    const calEITC = ca.additionalLines!.calEITC;
-    const yctc = ca.additionalLines!.youngChildTaxCredit;
-
-    // Both should be refundable → can result in a refund even with zero withholding
-    if (calEITC > 0 && yctc > 0) {
-      expect(ca.stateCredits).toBeGreaterThanOrEqual(calEITC + yctc);
-      // With $0 withholding, refund = refundable credits - tax
-      expect(ca.stateRefundOrOwed).toBeGreaterThan(-ca.totalStateTax);
-    }
+  it('with no earned income, is not allowed with wages over $35,640 (line 23a)', () => {
+    // A $40,000 business loss puts earned income below zero; the wages decide.
+    const tr = (wages: number) => makeTaxReturn({
+      filingStatus: FilingStatus.Single, w2Income: [caW2(wages)], dependents: caKids(1, '2022-03-15'),
+      businesses: [{ id: 'b', accountingMethod: 'cash', didStartThisYear: false }],
+      expenses: [{ id: 'e', scheduleCLine: 22, category: 'supplies', amount: 40000, businessId: 'b' }],
+      stateReturns: caResident(),
+    });
+    expect(lines(tr(36000)).earnedIncomeForCalEITC).toBe(-4000);
+    expect(lines(tr(36000)).youngChildTaxCredit).toBe(0);
+    // $35,000 of wages: total net loss $5,000 (California AGI), within $35,640.
+    expect(lines(tr(35000)).youngChildTaxCredit).toBe(1189);
   });
 });
 
@@ -1442,79 +1321,36 @@ describe('CA — Combined Nonrefundable Credit Ordering', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('CA — Senior Head of Household Credit', () => {
-  it('eligible: 65+ HoH filer under AGI limit', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.HeadOfHousehold,
-      dateOfBirth: '1955-06-15', // Age 70 at end of 2025
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 60000,
-        federalTaxWithheld: 9000, state: 'CA', stateTaxWithheld: 3000,
-        socialSecurityWages: 60000, socialSecurityTax: 3720,
-        medicareWages: 60000, medicareTax: 870,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2015-03-01' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    // 2% of taxable income ($60K - $11,412 HoH std ded = $48,588 → $971.76), capped at $1,860
-    expect(ca.additionalLines!.seniorHoHCredit).toBe(971.76);
+  const senior = (filingStatus: FilingStatus, wages: number, data?: Record<string, unknown>, dateOfBirth = '1955-06-15') => makeTaxReturn({
+    filingStatus, dateOfBirth, w2Income: [caW2(wages)],
+    dependents: filingStatus === FilingStatus.HeadOfHousehold ? caKids(1) : [],
+    stateReturns: caResident(data),
+  });
+  const credit = (tr: TaxReturn) => getCAResult(tr).ca.additionalLines!.seniorHoHCredit;
+
+  it('asks whether the taxpayer was head of household in 2023 or 2024 for a qualifying person who died then', () => {
+    const tr = senior(FilingStatus.HeadOfHousehold, 60000);
+    expect(credit(tr)).toBe(0);
+    expect(caFindings(tr).map((f) => f.question?.key)).toEqual(['seniorHohPriorYears']);
   });
 
-  it('wrong age — under 65', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.HeadOfHousehold,
-      dateOfBirth: '1965-06-15', // Age 60 at end of 2025
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 60000,
-        federalTaxWithheld: 9000, state: 'CA', stateTaxWithheld: 3000,
-        socialSecurityWages: 60000, socialSecurityTax: 3720,
-        medicareWages: 60000, medicareTax: 870,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2015-03-01' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.seniorHoHCredit).toBe(0);
+  it('is 2% of taxable income, up to $1,860, in whole dollars', () => {
+    // $60,000 − $11,412 = $48,588 × 2% = $971.76 → $972.
+    expect(credit(senior(FilingStatus.HeadOfHousehold, 60000, { seniorHohPriorYears: true }))).toBe(972);
+    expect(credit(senior(FilingStatus.HeadOfHousehold, 60000, { seniorHohPriorYears: false }))).toBe(0);
   });
 
-  it('wrong filing status — Single', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.Single,
-      dateOfBirth: '1955-06-15', // Age 70
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 60000,
-        federalTaxWithheld: 9000, state: 'CA', stateTaxWithheld: 3000,
-        socialSecurityWages: 60000, socialSecurityTax: 3720,
-        medicareWages: 60000, medicareTax: 870,
-      }],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.seniorHoHCredit).toBe(0);
+  it("does not depend on this year's filing status", () => {
+    // Single: $60,000 − $5,706 = $54,294 × 2% = $1,085.88 → $1,086.
+    expect(credit(senior(FilingStatus.Single, 60000, { seniorHohPriorYears: true }))).toBe(1086);
   });
 
-  it('AGI over limit — no credit', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.HeadOfHousehold,
-      dateOfBirth: '1955-06-15', // Age 70
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 100000,
-        federalTaxWithheld: 15000, state: 'CA', stateTaxWithheld: 5000,
-        socialSecurityWages: 100000, socialSecurityTax: 6200,
-        medicareWages: 100000, medicareTax: 1450,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'A', lastName: 'B', relationship: 'child', monthsLivedWithYou: 12, dateOfBirth: '2015-03-01' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    // AGI $100K > $96,377 limit
-    expect(ca.additionalLines!.seniorHoHCredit).toBe(0);
+  it('needs 65 or older and AGI not over $98,652 (not asked otherwise)', () => {
+    const young = senior(FilingStatus.HeadOfHousehold, 60000, undefined, '1965-06-15');
+    expect(credit(young)).toBe(0);
+    expect(caFindings(young)).toEqual([]);
+    const over = senior(FilingStatus.HeadOfHousehold, 100000, { seniorHohPriorYears: true });
+    expect(credit(over)).toBe(0);
   });
 });
 
@@ -1523,41 +1359,27 @@ describe('CA — Senior Head of Household Credit', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('CA — Dependent Parent Credit', () => {
-  it('1 parent dependent, MFS filer — $475 credit', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.MarriedFilingSeparately,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 75000,
-        federalTaxWithheld: 11250, state: 'CA', stateTaxWithheld: 3750,
-        socialSecurityWages: 75000, socialSecurityTax: 4650,
-        medicareWages: 75000, medicareTax: 1087.5,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'Mom', lastName: 'Smith', relationship: 'parent', monthsLivedWithYou: 12, dateOfBirth: '1960-01-01' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.dependentParentCredit).toBe(475);
+  const parentReturn = (parents: string[], data?: Record<string, unknown>, o: Partial<TaxReturn> = {}) => makeTaxReturn({
+    filingStatus: FilingStatus.MarriedFilingSeparately, w2Income: [caW2(75000)],
+    dependents: parents.map((relationship, i) => ({ id: `p${i}`, firstName: 'Parent', lastName: String(i), relationship, monthsLivedWithYou: 12, dateOfBirth: '1958-05-15' })),
+    stateReturns: caResident(data), ...o,
+  });
+  const both = { livedApartLast6Months: true, parentHomeExpenses: true };
+
+  it('is 30% of line 35, up to $610, once a return', () => {
+    // $75,000 − $5,706 = $69,294: tax $2,927.57; − $153 − $475 = $2,299.57 → $2,300 × 30% = $690 → $610.
+    expect(getCAResult(parentReturn(['Parent'], both)).ca.additionalLines!.dependentParentCredit).toBe(610);
+    // Two parents: − $153 − 2 × $475 = $1,824.57 → $1,825 × 30% = $547.50 → $548.
+    expect(getCAResult(parentReturn(['Mother', 'Father'], both)).ca.additionalLines!.dependentParentCredit).toBe(548);
   });
 
-  it('2 parent dependents, MFS filer — $950 credit', () => {
-    const tr = makeTaxReturn({
-      filingStatus: FilingStatus.MarriedFilingSeparately,
-      w2Income: [{
-        id: 'w1', employerName: 'Corp', wages: 75000,
-        federalTaxWithheld: 11250, state: 'CA', stateTaxWithheld: 3750,
-        socialSecurityWages: 75000, socialSecurityTax: 4650,
-        medicareWages: 75000, medicareTax: 1087.5,
-      }],
-      dependents: [
-        { id: 'd1', firstName: 'Mom', lastName: 'Smith', relationship: 'parent', monthsLivedWithYou: 12, dateOfBirth: '1960-01-01' },
-        { id: 'd2', firstName: 'Dad', lastName: 'Smith', relationship: 'parent', monthsLivedWithYou: 12, dateOfBirth: '1958-05-15' },
-      ],
-      stateReturns: [{ stateCode: 'CA', residencyType: 'resident' as const }],
-    });
-    const { ca } = getCAResult(tr);
-    expect(ca.additionalLines!.dependentParentCredit).toBe(950);
+  it('asks whether the spouse lived apart the last 6 months and who paid the parent\'s household expenses', () => {
+    const tr = parentReturn(['Parent']);
+    expect(getCAResult(tr).ca.additionalLines!.dependentParentCredit).toBe(0);
+    expect(caFindings(tr).map((f) => f.question?.key).sort()).toEqual(['livedApartLast6Months', 'parentHomeExpenses']);
+    // Living apart all year (the return's answer) settles the first.
+    expect(caFindings(parentReturn(['Parent'], undefined, { livedApartFromSpouse: true })).map((f) => f.question?.key)).toEqual(['parentHomeExpenses']);
+    expect(getCAResult(parentReturn(['Parent'], { livedApartLast6Months: true, parentHomeExpenses: false })).ca.additionalLines!.dependentParentCredit).toBe(0);
   });
 
   it('parent dependent, Single filer — no credit (MFS only)', () => {
@@ -1904,10 +1726,7 @@ describe('CA — 540NR Integration', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('CA — 540NR Review Fixes', () => {
-  it('nonresident CalEITC uses sourceBusinessIncome directly when provided', () => {
-    // Nonresident with $15K CA-source business income explicitly provided.
-    // CalEITC earned income should use $15K * 0.9235 = $13,852 (sourceBusinessIncome),
-    // NOT $15K * 0.9235 * 0.75 ratio (blanket proration fallback).
+  it('a nonresident of California for half the year or more cannot take CalEITC (FTB 3514)', () => {
     const tr = makeTaxReturn({
       filingStatus: FilingStatus.Single,
       w2Income: [{
@@ -1930,10 +1749,7 @@ describe('CA — 540NR Review Fixes', () => {
     });
     const { ca } = getCAResult(tr);
     expect(ca.residencyType).toBe('nonresident');
-    // CalEITC qualifies using sourceBusinessIncome → small tax fully offset by CalEITC
-    expect(ca.additionalLines!.calEITC).toBeGreaterThan(0);
-    // Verify refund includes CalEITC excess
-    expect(ca.stateRefundOrOwed).toBeGreaterThanOrEqual(0);
+    expect(ca.additionalLines!.calEITC).toBe(0);
   });
 
   it('nonresident CalEITC without sourceBusinessIncome uses proration fallback', () => {

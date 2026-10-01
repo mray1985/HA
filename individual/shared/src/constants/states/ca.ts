@@ -10,6 +10,7 @@
  */
 
 import { StateTaxBracket } from '../../types/index.js';
+import { CA_EITC_TABLE_2025 } from './caEitc2025.js';
 
 // ─── CA Income Tax Brackets (2025) ──────────────────────────────
 // 9 progressive brackets per filing status
@@ -69,15 +70,11 @@ export const CA_STANDARD_DEDUCTION: Record<string, number> = {
   head_of_household: 11412,
 };
 
-// ─── CA Personal Exemption Credits (2025) ───────────────────────
-// California uses exemption *credits* (reduce tax, not income)
-export const CA_PERSONAL_EXEMPTION_CREDIT: Record<string, number> = {
-  single: 153,
-  married_joint: 306,        // $153 per spouse
-  married_separate: 153,
-  head_of_household: 153,    // 1 personal exemption (Form 540 Line 7, box 4 → enter 1)
-};
-
+// ─── CA Exemption Credits (2025) ────────────────────────────────
+// California uses exemption *credits* (reduce tax, not income). Form 540
+// lines 7–9: one amount for each personal, blind and senior exemption
+// (R&TC §17054(a), (b), (c), (e): the same indexed base); line 10: each dependent.
+export const CA_EXEMPTION_CREDIT = 153;
 export const CA_DEPENDENT_EXEMPTION_CREDIT = 475;  // Per dependent
 
 // ─── Mental Health Services Tax (MHST) — Proposition 63 ────────
@@ -126,34 +123,46 @@ export const CA_EXEMPTION_PHASEOUT_STEP: Record<string, number> = {
   head_of_household: 2500,
 };
 
-// ─── CalEITC — Full Form 3514 Tables (2025) ─────────────────────
-// Source: FTB Form 3514 Instructions, CalEITC tables
-// Keyed by number of qualifying children (0, 1, 2, 3+)
-export interface CalEITCEntry {
-  phaseInRate: number;
-  maxCredit: number;
-  phaseOutStart: number;
-  phaseOutRate: number;
-  earnedIncomeLimit: number;
+// ─── CalEITC — FTB 3514 (2025) ──────────────────────────────────
+// Source: FTB 3514 instructions (2025). The credit is the EITC Table's amount
+// for California earned income; when federal AGI differs and is at least the
+// worksheet's Part II amount, the smaller of that and the table's amount for
+// federal AGI. Earned income and federal AGI must be $32,900 or less;
+// investment income $4,814 or less (Worksheet 1).
+export interface CalEitcTables {
+  /** Credit by $50 row (row k: $50k + 1 to $50(k + 1)), for 0, 1, 2, 3+ qualifying children. */
+  table: ReadonlyArray<readonly [number, number, number, number]>;
+  /** Earned income and federal AGI limit. */
+  limit: number;
+  /** Worksheet Part II: federal AGI from which its own table amount also applies, by qualifying children. */
+  agiTestStart: readonly [number, number, number, number];
+  investmentIncomeLimit: number;
 }
-export const CA_EITC_TABLE: Record<number, CalEITCEntry> = {
-  0: { phaseInRate: 0.0765, maxCredit: 302, phaseOutStart: 4661, phaseOutRate: 0.0765, earnedIncomeLimit: 8608 },
-  1: { phaseInRate: 0.34,   maxCredit: 2016, phaseOutStart: 6998, phaseOutRate: 0.2171, earnedIncomeLimit: 16283 },
-  2: { phaseInRate: 0.40,   maxCredit: 3339, phaseOutStart: 9823, phaseOutRate: 0.2171, earnedIncomeLimit: 25205 },
-  3: { phaseInRate: 0.45,   maxCredit: 3756, phaseOutStart: 9823, phaseOutRate: 0.2171, earnedIncomeLimit: 27125 },
+export const CA_EITC_2025: CalEitcTables = {
+  table: CA_EITC_TABLE_2025,
+  limit: 32900,
+  agiTestStart: [4661, 6998, 9823, 9823],
+  investmentIncomeLimit: 4814,
 };
-export const CA_EITC_INVESTMENT_INCOME_LIMIT = 4814;
 
-// ─── Young Child Tax Credit (YCTC) — Form 3514 Part IV ──────────
-// Source: FTB Form 3514 Instructions, YCTC section
-export const CA_YCTC_AMOUNT_PER_CHILD = 1189;
-export const CA_YCTC_PHASE_OUT_START: Record<string, number> = {
-  single: 27425,
-  married_joint: 27425,
-  married_separate: 13713,
-  head_of_household: 27425,
+// ─── Young Child Tax Credit (YCTC) — FTB 3514 Part VII (2025) ───
+// One credit per return (line 24), reduced by $21.71 for each $100 of earned
+// income over $27,425 (lines 25–28). With earned income of zero or less: no
+// total net loss or total wages over $35,640 (line 23a, 23b).
+export interface YctcTables {
+  credit: number;
+  phaseOutStart: number;
+  reductionPer100: number;
+  netLossLimit: number;
+  wagesLimit: number;
+}
+export const CA_YCTC_2025: YctcTables = {
+  credit: 1189,
+  phaseOutStart: 27425,
+  reductionPer100: 21.71,
+  netLossLimit: 35640,
+  wagesLimit: 35640,
 };
-export const CA_YCTC_PHASE_OUT_RATE = 0.2171; // $21.71 reduction per $100 over threshold
 
 // ─── CA Renter's Credit ──────────────────────────────────────────
 // Source: FTB Form 540 Instructions, Line 46
@@ -178,17 +187,25 @@ export const CA_DEPENDENT_CARE_TABLE: { maxAGI: number; rate: number }[] = [
 export const CA_DEPENDENT_CARE_EXPENSE_LIMIT_1 = 3000;  // 1 qualifying person
 export const CA_DEPENDENT_CARE_EXPENSE_LIMIT_2 = 6000;  // 2+ qualifying persons
 
-// ─── CA Senior Head of Household Credit ──────────────────────────
-// Nonrefundable credit for HoH filers aged 65+ with CA AGI below threshold.
-// Source: FTB Form 540 Instructions
+// ─── CA Senior Head of Household Credit (code 163) ───────────────
+// Source: 2025 Form 540 instructions, Special Credits: 65 or older by
+// December 31; qualified as head of household in either of the two prior years
+// by providing a household for a qualifying individual who died during one of
+// them; AGI not over $98,652. 2% of taxable income (line 19), at most $1,860.
+// This year's filing status does not matter.
 export const CA_SENIOR_HOH_CREDIT = 1860;
-export const CA_SENIOR_HOH_CREDIT_RATE = 0.02;  // 2% of taxable income, capped at $1,860
+export const CA_SENIOR_HOH_CREDIT_RATE = 0.02;
 export const CA_SENIOR_HOH_AGI_LIMIT = 98652;
 export const CA_SENIOR_HOH_MIN_AGE = 65;
 
-// ─── CA Dependent Parent Credit ──────────────────────────────────
-// $475 per dependent with relationship === 'parent'. Nonrefundable.
-export const CA_DEPENDENT_PARENT_CREDIT = 475;
+// ─── CA Dependent Parent Credit (code 173) ───────────────────────
+// Source: 2025 Form 540 instructions, Special Credits: married/RDP filing
+// separately; the spouse/RDP not a member of the household for the last six
+// months of the year; more than half the household expenses of a dependent
+// mother's or father's home paid. One credit per return: 30% of Form 540
+// line 35, at most $610.
+export const CA_DEPENDENT_PARENT_CREDIT_RATE = 0.30;
+export const CA_DEPENDENT_PARENT_CREDIT_MAX = 610;
 
 // ─── CA SDI (State Disability Insurance) ────────────────────────
 // Note: CA SDI is a payroll tax, not an income tax. It is withheld
@@ -196,12 +213,6 @@ export const CA_DEPENDENT_PARENT_CREDIT = 475;
 // Rate: 1.1% (2025) on all wages (no wage cap as of 2024+).
 // Included here for reference/informational purposes only.
 export const CA_SDI_RATE = 0.011;
-
-// ─── CalEITC / YCTC earned income limit (2025) ──────────────────
-// Source: FTB, "California Earned Income Tax Credit" and "Young Child Tax Credit"
-// (tax year 2025: earned income of $32,900 or less). Used to bound a year whose
-// tables are not published yet.
-export const CA_EITC_EARNED_INCOME_LIMIT_2025 = 32900;
 
 // ═══ Tax Year 2026 ═══════════════════════════════════════════════
 // Source: FTB Tax News, October 2026, "2026 Indexing": the CCPI change from
@@ -214,7 +225,7 @@ export const CA_EITC_EARNED_INCOME_LIMIT_2025 = 32900;
 // of the exemption credit phase-out and itemized deduction limitation,
 // CalEITC, YCTC, and the senior head of household and dependent parent credits.
 // Until then they are left out, and a return they can affect is held
-// (engine/state/ca.ts `californiaUnpublished`).
+// (engine/state/ca.ts `assessCalifornia`).
 
 export const CA_CCPI_CHANGE_2026 = 0.034;
 
@@ -272,12 +283,9 @@ export const CA_STANDARD_DEDUCTION_2026: Record<string, number> = {
   head_of_household: 11800,
 };
 
-export const CA_PERSONAL_EXEMPTION_CREDIT_2026: Record<string, number> = {
-  single: 158,
-  married_joint: 316,        // $158 per spouse
-  married_separate: 158,
-  head_of_household: 158,
-};
+// Personal, blind and senior exemption credit, each ($158; $316 for the two
+// personal or senior credits of a joint return).
+export const CA_EXEMPTION_CREDIT_2026 = 158;
 
 export const CA_DEPENDENT_EXEMPTION_CREDIT_2026 = 491;
 
@@ -296,38 +304,40 @@ export interface CaliforniaYearTables {
   taxYear: number;
   brackets: Record<string, StateTaxBracket[]>;
   standardDeduction: Record<string, number>;
-  personalExemptionCredit: Record<string, number>;
+  /** Each personal, blind and senior exemption credit (Form 540 lines 7–9). */
+  exemptionCredit: number;
   dependentExemptionCredit: number;
   rentersCredit: Record<string, { credit: number; agiLimit: number }>;
   /** The CCPI change the year's amounts were recomputed by (R&TC §17041(h)). */
   ccpiChange?: number;
   /** AGI threshold of the exemption credit phase-out and the itemized deduction limitation. */
   agiLimitationThreshold?: Record<string, number>;
-  calEitc?: { table: Record<number, CalEITCEntry>; investmentIncomeLimit: number };
-  yctc?: { amountPerChild: number; phaseOutStart: Record<string, number>; phaseOutRate: number };
+  calEitc?: CalEitcTables;
+  yctc?: YctcTables;
   seniorHoH?: { credit: number; agiLimit: number };
-  dependentParentCredit?: number;
+  /** The dependent parent credit's maximum. */
+  dependentParentMax?: number;
 }
 
 const CA_TABLES_2025: CaliforniaYearTables = {
   taxYear: 2025,
   brackets: CA_BRACKETS,
   standardDeduction: CA_STANDARD_DEDUCTION,
-  personalExemptionCredit: CA_PERSONAL_EXEMPTION_CREDIT,
+  exemptionCredit: CA_EXEMPTION_CREDIT,
   dependentExemptionCredit: CA_DEPENDENT_EXEMPTION_CREDIT,
   rentersCredit: CA_RENTERS_CREDIT,
   agiLimitationThreshold: CA_ITEMIZED_DEDUCTION_LIMITATION_THRESHOLD,
-  calEitc: { table: CA_EITC_TABLE, investmentIncomeLimit: CA_EITC_INVESTMENT_INCOME_LIMIT },
-  yctc: { amountPerChild: CA_YCTC_AMOUNT_PER_CHILD, phaseOutStart: CA_YCTC_PHASE_OUT_START, phaseOutRate: CA_YCTC_PHASE_OUT_RATE },
+  calEitc: CA_EITC_2025,
+  yctc: CA_YCTC_2025,
   seniorHoH: { credit: CA_SENIOR_HOH_CREDIT, agiLimit: CA_SENIOR_HOH_AGI_LIMIT },
-  dependentParentCredit: CA_DEPENDENT_PARENT_CREDIT,
+  dependentParentMax: CA_DEPENDENT_PARENT_CREDIT_MAX,
 };
 
 const CA_TABLES_2026: CaliforniaYearTables = {
   taxYear: 2026,
   brackets: CA_BRACKETS_2026,
   standardDeduction: CA_STANDARD_DEDUCTION_2026,
-  personalExemptionCredit: CA_PERSONAL_EXEMPTION_CREDIT_2026,
+  exemptionCredit: CA_EXEMPTION_CREDIT_2026,
   dependentExemptionCredit: CA_DEPENDENT_EXEMPTION_CREDIT_2026,
   rentersCredit: CA_RENTERS_CREDIT_2026,
   ccpiChange: CA_CCPI_CHANGE_2026,

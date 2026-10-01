@@ -19,7 +19,7 @@ import { NO_INCOME_TAX_STATES } from './state/stateRegistry.js';
 import { assessIowa } from './state/ia.js';
 import { assessIndiana } from './state/in.js';
 import { assessPennsylvania } from './state/pa.js';
-import { californiaUnpublished } from './state/ca.js';
+import { assessCalifornia } from './state/ca.js';
 import { assessWashingtonCapitalGains } from './state/wa.js';
 
 export type { UnsupportedPattern };
@@ -57,10 +57,8 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
       add('DC.ITEMIZED', code, 'state', `DC itemized deductions are not calculated (HATax applies DC's standard deduction). ${STATE_ONLY}`);
     }
     if (code === 'CA') {
-      // A year's California amounts the FTB has not published (2026: late December).
-      for (const message of californiaUnpublished(taxReturn, calculation)) {
-        add('CA.YEAR.UNPUBLISHED', code, 'state', `${message} Prepare the California return when the FTB publishes them, or outside HATax.`);
-      }
+      // California credits: what the return does not say, and amounts the FTB has not published for the year.
+      out.push(...assessCalifornia(taxReturn, calculation).findings);
       // FTB 3885A: California's depreciation is figured from this year's
       // Form 4562 with no special depreciation and California's §179 limits.
       // An earlier year's §179 is California's only within its limits that year
@@ -212,6 +210,7 @@ export function stateQuestions(taxReturn: TaxReturn, calculation?: CalculationRe
     ...assessIowa(taxReturn, calculation).questions,
     ...assessIndiana(taxReturn, calculation?.form1040.agi).questions,
     ...(calculation ? assessWashingtonCapitalGains(taxReturn, calculation).questions : []),
+    ...assessCalifornia(taxReturn, calculation).questions,
   ];
 }
 

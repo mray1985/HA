@@ -132,6 +132,7 @@ describe('engine findings one field settles', () => {
     // Answered (0 included), itemizing, or 2025: not asked.
     expect(asked(tr({ nonItemizerCharitableCash: 0 }))).toBeUndefined();
     expect(asked(tr({ taxYear: 2025 }))).toBeUndefined();
+    expect(asked(tr({ deductionMethod: 'itemized', itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 30000, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 3000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 } }))).toBeUndefined();
     // A K-1 with unrecaptured section 1250 gain and no kind: the review list asks for the kind.
     const k1 = tr({ incomeK1: [{ id: 'k', entityName: 'Fund LP', longTermCapitalGain: 5000, unrecapturedSection1250Gain: 5000 } as never] });
     const kind = buildCaseReview({ taxReturn: k1, calculation: calculateForm1040(k1), facts: [], documents: [] }).items
@@ -140,6 +141,19 @@ describe('engine findings one field settles', () => {
     expect(returnFieldSpec('incomeK1.0.entityType', k1)).toEqual({ label: 'Kind of K-1 (Fund LP)', kind: 'k1_entity' });
     expect(parseReturnField('k1_entity', 'trust')).toEqual({ ok: true, value: 'trust' });
     expect(parseReturnField('k1_entity', 'llc')).toMatchObject({ ok: false });
-    expect(asked(tr({ deductionMethod: 'itemized', itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 30000, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 3000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 } }))).toBeUndefined();
+  });
+
+  it('asks California credit facts the return does not hold, as state answers', () => {
+    // 2025, 70, AGI under $98,652: the senior head of household credit needs to know about 2023 and 2024.
+    const ca = {
+      id: 'c', taxYear: 2025, status: 'in_progress', currentStep: 0, currentSection: 'review', ...PERSON, dateOfBirth: '1955-06-15',
+      dependents: [], w2Income: [{ id: 'w', employerName: 'Acme', wages: 60000, federalTaxWithheld: 6000, state: 'CA', stateTaxWithheld: 2000 }],
+      income1099NEC: [], income1099K: [], income1099INT: [], income1099DIV: [], income1099R: [], income1099G: [], income1099MISC: [], income1099B: [],
+      incomeK1: [], income1099SA: [], rentalProperties: [], otherIncome: 0, expenses: [], deductionMethod: 'standard', educationCredits: [],
+      businesses: [], incomeDiscovery: {}, createdAt: '', updatedAt: '', stateReturns: [{ stateCode: 'CA', residencyType: 'resident' }],
+    } as unknown as TaxReturn;
+    const item = buildCaseReview({ taxReturn: ca, calculation: calculateForm1040(ca), facts: [], documents: [] }).items
+      .find((i) => i.action?.kind === 'state_answer' && i.action.question.key === 'seniorHohPriorYears');
+    expect(item).toMatchObject({ category: 'BLOCKING', action: { question: { stateCode: 'CA', kind: 'yes_no' } } });
   });
 });
