@@ -43,8 +43,8 @@ export default function VehicleExpensesStep() {
     : `$${rates.STANDARD_MILEAGE_RATE.toFixed(Number.isInteger(Math.round(rates.STANDARD_MILEAGE_RATE * 1000) / 10) ? 2 : 3)} a mile`;
   const MILEAGE_NEWS: Record<number, { title: string; description: string }[]> = {
     2024: [
-      { title: 'Standard Mileage Rate: $0.67/mile', description: 'Per Notice 2024-8. This rate covers gas, insurance, depreciation, and maintenance.' },
-      { title: 'Medical/Moving Mileage: $0.21/mile', description: 'Per Notice 2024-8.' },
+      { title: 'Standard Mileage Rate: $0.67/mile', description: 'Per IR-2023-239. This rate covers gas, insurance, depreciation, and maintenance.' },
+      { title: 'Medical/Moving Mileage: $0.21/mile', description: 'Per IR-2023-239.' },
     ],
     2025: [
       { title: 'Standard Mileage Rate: $0.70/mile', description: 'Up from $0.67/mile in 2024 (per Notice 2025-5). This rate covers gas, insurance, depreciation, and maintenance.' },
