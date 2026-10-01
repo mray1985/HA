@@ -1,0 +1,90 @@
+import { FilingStatus, HomeSaleInfo, HomeSaleResult } from '../types/index.js';
+import { getHomeSaleExclusion } from '../constants/taxConstants.js';
+import { round2 } from './utils.js';
+
+/**
+ * Calculate Sale of Home Exclusion (Section 121).
+ *
+ * Taxpayers who sell their primary residence may exclude up to $250,000
+ * ($500,000 MFJ) of gain if they meet the ownership and use tests:
+ *   - Owned the home for at least 24 months in the last 5 years
+ *   - Used as primary residence for at least 24 months in the last 5 years
+ *   - Haven't used the Section 121 exclusion within the past 2 years
+ *
+ * Any taxable gain after exclusion flows to Schedule D as a long-term capital gain.
+ * Losses on personal residence sales are not deductible.
+ *
+ * @authority
+ *   IRC: Section 121 — exclusion of gain from sale of principal residence
+ *   Pub: Publication 523 — Selling Your Home
+ * @scope Sale of home exclusion ($250k/$500k) with ownership/residence tests
+ * @limitations The reduced maximum requires a qualifying reason on the sale.
+ */
+export function calculateHomeSaleExclusion(
+  info: HomeSaleInfo,
+  filingStatus: FilingStatus,
+  taxYear: number = 2025,
+): HomeSaleResult {
+  const HOME_SALE_EXCLUSION = getHomeSaleExclusion(taxYear);
+  const sellingExpenses = Math.max(0, info.sellingExpenses || 0);
+  const netProceeds = round2(info.salePrice - sellingExpenses);
+  const gainOrLoss = round2(netProceeds - info.costBasis);
+
+  // If there's a loss, it's not deductible for personal residence
+  if (gainOrLoss <= 0) {
+    return {
+      gainOrLoss,
+      exclusionAmount: 0,
+      taxableGain: 0,
+      qualifiesForExclusion: false,
+      maxExclusion: 0,
+    };
+  }
+
+  // Determine max exclusion based on filing status
+  const isMFJ = filingStatus === FilingStatus.MarriedFilingJointly ||
+    filingStatus === FilingStatus.QualifyingSurvivingSpouse;
+  const maxExclusion = isMFJ ? HOME_SALE_EXCLUSION.MFJ_MAX : HOME_SALE_EXCLUSION.SINGLE_MAX;
+
+  // Check eligibility for exclusion
+  const monthsRequired = HOME_SALE_EXCLUSION.OWNERSHIP_MONTHS_REQUIRED;
+  const meetsOwnership = info.ownedMonths >= monthsRequired;
+  const meetsResidence = info.usedAsResidenceMonths >= monthsRequired;
+  const noPriorExclusion = !info.priorExclusionUsedWithin2Years;
+  const qualifiesForFullExclusion = meetsOwnership && meetsResidence && noPriorExclusion;
+  const qualifiesForReducedMaximum = !!info.reducedMaximumReason
+    && (!meetsOwnership || !meetsResidence || !noPriorExclusion);
+
+  let exclusionCap = maxExclusion;
+  let qualifiesForExclusion = qualifiesForFullExclusion;
+  if (qualifiesForReducedMaximum) {
+    // IRC §121(c): full exclusion × shortest qualifying period / 24 months.
+    const sincePrior = info.priorExclusionUsedWithin2Years
+      ? (info.monthsSincePriorExclusion ?? 0)
+      : monthsRequired;
+    const shortest = Math.min(info.ownedMonths, info.usedAsResidenceMonths, sincePrior);
+    exclusionCap = round2(maxExclusion * Math.max(0, Math.min(shortest, monthsRequired)) / monthsRequired);
+    qualifiesForExclusion = shortest > 0;
+  }
+
+  if (!qualifiesForExclusion) {
+    return {
+      gainOrLoss,
+      exclusionAmount: 0,
+      taxableGain: gainOrLoss,
+      qualifiesForExclusion: false,
+      maxExclusion: qualifiesForReducedMaximum ? exclusionCap : maxExclusion,
+    };
+  }
+
+  const exclusionAmount = round2(Math.min(gainOrLoss, exclusionCap));
+  const taxableGain = round2(Math.max(0, gainOrLoss - exclusionAmount));
+
+  return {
+    gainOrLoss,
+    exclusionAmount,
+    taxableGain,
+    qualifiesForExclusion: true,
+    maxExclusion: exclusionCap,
+  };
+}

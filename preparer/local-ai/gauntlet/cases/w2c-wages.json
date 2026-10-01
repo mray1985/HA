@@ -1,0 +1,81 @@
+{
+  "id": "w2c-wages",
+  "description": "W-2c Copy B (Rev. 1-2026) correcting box 1, 2 and 3 of the 2025 W-2 in w2-basic-single (same employer and EIN). Synthetic data.",
+  "form": "fw2c.pdf",
+  "formType": "W-2C",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "BoxesA-B_ReadOrder[0].f2_01[0]": "RIVERBEND LOGISTICS LLC\n400 LEVEE RD\nBATON ROUGE LA 70801",
+    "BoxesA-B_ReadOrder[0].f2_02[0]": "72-1234567",
+    "BoxC_ReadOrder[0].f2_03_Year[0]": "2025",
+    "f2_04[0]": "XXX-XX-3456",
+    "BoxH_First_ReadOrder[0].f2_07[0]": "MAYA",
+    "BoxH_Last_ReadOrder[0].f2_08[0]": "TESTPAYER",
+    "BoxI_ReadOrder[0].f2_10[0]": "815 MAGNOLIA AVE\nBATON ROUGE LA 70802",
+    "Box1_Prev_ReadOrder[0].f2_11[0]": "52,431.18",
+    "Box1_Correct_ReadOrder[0].f2_12[0]": "54,000.00",
+    "Box2_Prev_ReadOrder[0].f2_13[0]": "5,873.40",
+    "f2_14[0]": "6,120.00",
+    "Box3_Prev_ReadOrder[0].f2_15[0]": "54,931.18",
+    "Box3_Correct_ReadOrder[0].f2_16[0]": "56,500.00"
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 54000,
+      "field": "Box1_Correct_ReadOrder[0].f2_12[0]"
+    },
+    "2": {
+      "money": 6120,
+      "field": "f2_14[0]"
+    }
+  },
+  "expectedKeys": {
+    "a": {
+      "firstLine": "RIVERBEND LOGISTICS LLC"
+    },
+    "1.prev": {
+      "money": 52431.18
+    },
+    "1.correct": {
+      "money": 54000
+    },
+    "2.prev": {
+      "money": 5873.4
+    },
+    "2.correct": {
+      "money": 6120
+    },
+    "3.prev": {
+      "money": 54931.18
+    },
+    "3.correct": {
+      "money": 56500
+    }
+  },
+  "blankBoxes": [
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "10",
+    "11",
+    "16",
+    "17"
+  ],
+  "expected": {
+    "tool": "add_w2c",
+    "args": {
+      "employerName": "RIVERBEND LOGISTICS LLC",
+      "employerEin": "72-1234567",
+      "taxYearCorrected": 2025,
+      "previousWages": 52431.18,
+      "correctWages": 54000,
+      "previousFederalTaxWithheld": 5873.4,
+      "correctFederalTaxWithheld": 6120,
+      "previousSocialSecurityWages": 54931.18,
+      "correctSocialSecurityWages": 56500
+    }
+  }
+}

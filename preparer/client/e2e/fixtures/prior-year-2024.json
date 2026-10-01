@@ -1,0 +1,19 @@
+{
+  "id": "prior-2024-maya-testpayer",
+  "schemaVersion": 1,
+  "taxYear": 2024,
+  "firstName": "MAYA",
+  "lastName": "TESTPAYER",
+  "filingStatus": 1,
+  "createdAt": "2025-03-01T00:00:00.000Z",
+  "updatedAt": "2025-03-01T00:00:00.000Z",
+  "currentStep": 0,
+  "currentSection": "income",
+  "dependents": [],
+  "w2Income": [{ "id": "w2-1", "employerName": "RIVERBEND LOGISTICS LLC", "employerEin": "72-1234567", "wages": 50000, "federalTaxWithheld": 5600, "socialSecurityWages": 50000, "socialSecurityTax": 3100, "medicareWages": 50000, "medicareTax": 725 }],
+  "income1099NEC": [], "income1099K": [],
+  "income1099INT": [{ "id": "int-1", "payerName": "JPMORGAN CHASE BANK NA", "amount": 123.45 }],
+  "income1099DIV": [], "income1099R": [], "income1099G": [], "income1099MISC": [], "income1099B": [], "incomeK1": [],
+  "income1099SA": [], "incomeW2G": [], "income1099DA": [], "income1099C": [], "rentalProperties": [], "income1099Q": [],
+  "businesses": [], "expenses": [], "educationCredits": [], "otherIncome": 0, "deductionMethod": "standard"
+}

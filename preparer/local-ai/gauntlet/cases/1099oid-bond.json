@@ -1,0 +1,56 @@
+{
+  "id": "1099oid-bond",
+  "description": "1099-OID Copy B: original issue discount and withholding with the FATCA square checked. Synthetic data.",
+  "form": "f1099oid.pdf",
+  "formType": "1099-OID",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyHeader[0].CalendarYear[0].f2_1[0]": "2025",
+    "LeftCol[0].f2_2[0]": "CRESCENT SECURITIES\n1 SHELL SQ\nNEW ORLEANS LA 70139\n504-555-0133",
+    "LeftCol[0].f2_3[0]": "72-2223334",
+    "LeftCol[0].f2_4[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_5[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_6[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_7[0]": "BATON ROUGE LA 70802",
+    "LeftCol[0].c2_3[0]": true,
+    "RightCol[0].f2_9[0]": "142.10",
+    "RightCol[0].f2_12[0]": "14.21",
+    "RightCol[0].f2_15[0]": "ZERO COUPON NOTE 2031"
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 142.1,
+      "field": "RightCol[0].f2_9[0]"
+    },
+    "4": {
+      "money": 14.21,
+      "field": "RightCol[0].f2_12[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.block": {
+      "firstLine": "CRESCENT SECURITIES"
+    }
+  },
+  "blankBoxes": [
+    "2",
+    "3",
+    "5",
+    "6",
+    "8",
+    "9",
+    "10",
+    "11"
+  ],
+  "expected": {
+    "tool": "add_1099_oid",
+    "args": {
+      "payerName": "CRESCENT SECURITIES",
+      "originalIssueDiscount": 142.1,
+      "federalTaxWithheld": 14.21,
+      "description": "ZERO COUPON NOTE 2031"
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}

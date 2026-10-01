@@ -1,0 +1,30 @@
+# shared/authorities/form1040.yaml
+module: form1040.ts
+functions:
+  calculateForm1040:
+    authorities:
+      - type: IRC
+        section: "1"
+        description: "Imposition of individual income tax"
+        weight: binding
+      - type: IRC
+        section: "63"
+        description: "Taxable income defined as AGI minus deductions (standard or itemized)"
+        weight: binding
+      - type: IRC
+        section: "62"
+        description: "Adjusted Gross Income defined as gross income minus above-the-line deductions"
+        weight: binding
+      - type: form
+        reference: "Form 1040"
+        weight: explanatory
+    scope: "Main orchestrator that computes the complete Form 1040 from gross income through total tax, credits, payments, and refund/amount owed by invoking all subsidiary engine modules, including Form 6251 alternative minimum tax (IRC §§55–59) and the IRC §172 net operating loss deduction"
+    limitations:
+      - "Relies on all subsidiary modules being correctly implemented and producing valid outputs"
+      - "Filing status determination must be provided as input; Head of Household is validated but other statuses are not"
+      - "Standard deduction amounts must be updated annually per revenue procedure"
+      - "Does not handle amended return (1040-X) computations"
+      - "Alternative minimum tax is computed on Form 6251 from the return. The AMT foreign tax credit is applied when amtData.amtForeignTaxCredit is supplied, and regular foreign tax credit is reconciled afterward. AMT net operating loss (ATNOLD) is applied only when amtData.atnold is supplied."
+      - "Ordering of credits (nonrefundable before refundable) follows Form 1040 line sequence"
+      - "Net operating loss deduction is taken from a supplied nolCarryforward, limited to 80% of taxable income before the QBI deduction, and is applied before QBI. The orchestrator does not compute a new NOL from the current-year loss."
+      - "Prior year data (carryforwards, basis) must be supplied externally"

@@ -1,0 +1,34 @@
+# shared/authorities/capitalGains.yaml
+module: capitalGains.ts
+functions:
+  calculatePreferentialRateTax:
+    authorities:
+      - type: IRC
+        section: "1(h)"
+        description: "Maximum rates on adjusted net capital gain, including 0%/15%/20%, 25% unrecaptured section 1250 gain, and 28% collectibles gain"
+        weight: binding
+      - type: IRC
+        section: "1(h)(1)(E)"
+        description: "25% maximum rate on unrecaptured Section 1250 gain (depreciation on real property)"
+        weight: binding
+      - type: IRC
+        section: "1(h)(4)"
+        description: "28% maximum rate on collectibles gain"
+        weight: binding
+      - type: rev_proc
+        reference: "Rev. Proc. 2024-40, Section 3.12"
+        description: "Inflation-adjusted thresholds for 0%/15%/20% capital gains rate brackets"
+        weight: binding
+      - type: form
+        reference: "Form 1040, Qualified Dividends and Capital Gain Tax Worksheet"
+        weight: explanatory
+      - type: form
+        reference: "Schedule D Tax Worksheet"
+        description: "Used when unrecaptured Section 1250 gain is present; computes min(special, regular) tax"
+        weight: explanatory
+    scope: "Computes tax on net long-term capital gains and qualified dividends at preferential rates, including the 25% rate zone for unrecaptured Section 1250 gain and the 28% maximum on long-term collectibles gain flagged on Form 1099-B. Uses min(special, regular) comparison per IRC §1(h)."
+    limitations:
+      - "28% collectibles rate applies only to long-term gain flagged isCollectible on Form 1099-B, capped at net long-term gain. Section 1202 28% rate gain is not computed."
+      - "NIIT (3.8% surtax) computed separately in niit.ts"
+      - "Short-term gains taxed at ordinary rates are handled in brackets.ts"
+      - "Net capital loss deduction limited to $3,000 handled in scheduleD.ts"

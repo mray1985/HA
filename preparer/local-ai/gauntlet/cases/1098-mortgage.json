@@ -1,0 +1,68 @@
+{
+  "id": "1098-mortgage",
+  "description": "1098 Copy B mortgage interest statement with outstanding principal, origination date, points, box 7 checked and property count. Synthetic data.",
+  "form": "f1098.pdf",
+  "formType": "1098",
+  "pageIndex": 2,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyHeader[0].CalendarYear[0].f2_1[0]": "2026",
+    "LeftCol[0].f2_2[0]": "CRESCENT CITY MORTGAGE CO\n1500 POYDRAS ST\nNEW ORLEANS LA 70112\n504-555-0177",
+    "LeftCol[0].f2_3[0]": "72-3334445",
+    "LeftCol[0].f2_4[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_5[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_6[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_7[0]": "BATON ROUGE LA 70802",
+    "LeftCol[0].f2_10[0]": "8812004417",
+    "RightCol[0].f2_11[0]": "9,412.37",
+    "RightCol[0].f2_12[0]": "214,880.15",
+    "RightCol[0].f2_13[0]": "03/14/2021",
+    "RightCol[0].f2_16[0]": "1,200.00",
+    "RightCol[0].c2_3[0]": true,
+    "RightCol[0].TagCorrectingSubform[0].f2_8[0]": "1"
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 9412.37,
+      "field": "RightCol[0].f2_11[0]"
+    },
+    "2": {
+      "money": 214880.15,
+      "field": "RightCol[0].f2_12[0]"
+    },
+    "3": {
+      "text": "03/14/2021",
+      "field": "RightCol[0].f2_13[0]"
+    },
+    "6": {
+      "money": 1200,
+      "field": "RightCol[0].f2_16[0]"
+    },
+    "9": {
+      "text": "1",
+      "field": "RightCol[0].TagCorrectingSubform[0].f2_8[0]"
+    }
+  },
+  "expectedKeys": {"lender.block": {"firstLine": "CRESCENT CITY MORTGAGE CO"}},
+  "blankBoxes": [
+    "4",
+    "5",
+    "8",
+    "10",
+    "11"
+  ],
+  "expected": {
+    "tool": "add_mortgage_interest",
+    "args": {
+      "lenderName": "CRESCENT CITY MORTGAGE CO",
+      "lenderTin": "72-3334445",
+      "mortgageInterest": 9412.37,
+      "outstandingPrincipal": 214880.15,
+      "originationDate": "03/14/2021",
+      "points": 1200,
+      "propertyAddressSameAsBorrower": true,
+      "numberOfProperties": 1
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}

@@ -1,0 +1,37 @@
+{
+  "name": "hatax-preparer",
+  "private": true,
+  "description": "HATax preparer app: automated preparation with local AI, built on its own copy of the HATax engine.",
+  "workspaces": [
+    "shared",
+    "local-ai",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:shared": "npm run build -w shared",
+    "build": "npm run build -w client",
+    "start": "node scripts/start-site.mjs",
+    "test": "npm test -w shared && npm test -w local-ai && npm test -w server",
+    "test:engine": "npm test -w shared",
+    "test:local-ai": "npm test -w local-ai",
+    "gen:constants": "npx tsx scripts/gen-constants-doc.ts"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/d3-sankey": "^0.12.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "d3-sankey": "^0.12.3",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

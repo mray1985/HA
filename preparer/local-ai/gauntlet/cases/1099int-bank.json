@@ -1,0 +1,48 @@
+{
+  "id": "1099int-bank",
+  "description": "Bank 1099-INT Copy B with thousands separator, US bond interest, backup withholding, tax-exempt interest and Louisiana state withholding. Synthetic data.",
+  "form": "f1099int.pdf",
+  "formType": "1099-INT",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyBHeader[0].CalendarYear2_1[0]": "26",
+    "LeftColumn[0].f2_1[0]": "FIRST HARBOR BANK\n200 ST CHARLES AVE\nNEW ORLEANS LA 70130\n504-555-0142",
+    "LeftColumn[0].f2_2[0]": "72-7654321",
+    "LeftColumn[0].f2_3[0]": "XXX-XX-3456",
+    "LeftColumn[0].f2_4[0]": "MAYA TESTPAYER",
+    "LeftColumn[0].f2_5[0]": "815 MAGNOLIA AVE",
+    "LeftColumn[0].f2_6[0]": "BATON ROUGE LA 70802",
+    "LeftColumn[0].f2_7[0]": "XXXX1177",
+    "RghtColumn[0].Box1[0].f2_9[0]": "1,284.66",
+    "RghtColumn[0].Box3[0].f2_11[0]": "310.00",
+    "RghtColumn[0].Box4[0].f2_12[0]": "128.47",
+    "RghtColumn[0].Box8[0].f2_16[0]": "95.12",
+    "RghtColumn[0].Boxes15_16_17[0].f2_23[0]": "LA",
+    "RghtColumn[0].Boxes15_16_17[0].f2_25[0]": "1234567",
+    "RghtColumn[0].Boxes15_16_17[0].f2_27[0]": "12.85"
+  },
+  "expectedBoxes": {
+    "1": { "money": 1284.66, "field": "RghtColumn[0].Box1[0].f2_9[0]" },
+    "3": { "money": 310, "field": "RghtColumn[0].Box3[0].f2_11[0]" },
+    "4": { "money": 128.47, "field": "RghtColumn[0].Box4[0].f2_12[0]" },
+    "8": { "money": 95.12, "field": "RghtColumn[0].Box8[0].f2_16[0]" },
+    "15": { "contains": "LA", "field": "RghtColumn[0].Boxes15_16_17[0].f2_23[0]" },
+    "17": { "money": 12.85, "field": "RghtColumn[0].Boxes15_16_17[0].f2_27[0]" }
+  },
+  "expectedKeys": {"payer.block": {"firstLine": "FIRST HARBOR BANK"}, "15.1": {"text": "LA"}},
+  "blankBoxes": ["2", "5", "6", "7", "9", "10", "11", "12", "13", "14"],
+  "expected": {
+    "tool": "add_1099_int",
+    "args": {
+      "payerName": "FIRST HARBOR BANK",
+      "amount": 1284.66,
+      "usBondInterest": 310,
+      "federalTaxWithheld": 128.47,
+      "taxExemptInterest": 95.12,
+      "stateCode": "LA",
+      "stateTaxWithheld": 12.85
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}

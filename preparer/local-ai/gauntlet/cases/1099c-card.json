@@ -1,0 +1,58 @@
+{
+  "id": "1099c-card",
+  "description": "1099-C Copy B: credit card debt discharged by agreement-to-stop-collection (code G), with interest and personal liability. Synthetic data.",
+  "form": "f1099c.pdf",
+  "formType": "1099-C",
+  "pageIndex": 2,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "FormHeader[0].CalendarYear[0].f2_1[0]": "2025",
+    "LeftCol[0].f2_2[0]": "BAYOU CREDIT CARD SERVICES\n900 CANAL ST\nNEW ORLEANS LA 70112\n504-555-0166",
+    "LeftCol[0].f2_3[0]": "72-8889990",
+    "LeftCol[0].f2_4[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_5[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_6[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_7[0]": "BATON ROUGE LA 70802",
+    "RightCol[0].f2_9[0]": "08/15/2025",
+    "RightCol[0].f2_10[0]": "3,000.00",
+    "RightCol[0].f2_11[0]": "240.00",
+    "RightCol[0].f2_12[0]": "CREDIT CARD",
+    "RightCol[0].c2_2[0]": true,
+    "RightCol[0].f2_13[0]": "G"
+  },
+  "expectedBoxes": {
+    "2": {
+      "money": 3000,
+      "field": "RightCol[0].f2_10[0]"
+    },
+    "3": {
+      "money": 240,
+      "field": "RightCol[0].f2_11[0]"
+    },
+    "6": {
+      "text": "G",
+      "field": "RightCol[0].f2_13[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.block": {
+      "firstLine": "BAYOU CREDIT CARD SERVICES"
+    }
+  },
+  "blankBoxes": [
+    "7"
+  ],
+  "expected": {
+    "tool": "add_1099_c",
+    "args": {
+      "payerName": "BAYOU CREDIT CARD SERVICES",
+      "dateOfCancellation": "08/15/2025",
+      "amountCancelled": 3000,
+      "interestIncluded": 240,
+      "debtDescription": "CREDIT CARD",
+      "identifiableEventCode": "G",
+      "personallyLiable": true
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}

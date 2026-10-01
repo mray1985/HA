@@ -1,0 +1,49 @@
+{
+  "id": "1099sa-archer",
+  "description": "1099-SA Copy B: normal distribution (code 1) from an Archer MSA. Synthetic data.",
+  "form": "f1099sa.pdf",
+  "formType": "1099-SA",
+  "pageIndex": 1,
+  "fieldPrefix": "Form1099-SA[0].CopyB[0].",
+  "fields": {
+    "CopyBHeader[0].f1_1[0]": "2025",
+    "LeftCol[0].f1_2[0]": "HEALTH TRUST BANK\n12 MAIN ST\nLAFAYETTE LA 70501\n337-555-0111",
+    "LeftCol[0].f1_3[0]": "72-1112223",
+    "LeftCol[0].f1_4[0]": "XXX-XX-3456",
+    "LeftCol[0].f1_5[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f1_6[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f1_7[0]": "BATON ROUGE LA 70802",
+    "RightCol[0].f1_9[0]": "900.00",
+    "RightCol[0].f1_11[0]": "1",
+    "RightCol[0].c1_2[1]": true
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 900,
+      "field": "RightCol[0].f1_9[0]"
+    },
+    "3": {
+      "text": "1",
+      "field": "RightCol[0].f1_11[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.block": {
+      "firstLine": "HEALTH TRUST BANK"
+    }
+  },
+  "blankBoxes": [
+    "2",
+    "4"
+  ],
+  "expected": {
+    "tool": "add_1099_sa",
+    "args": {
+      "payerName": "HEALTH TRUST BANK",
+      "grossDistribution": 900,
+      "distributionCode": "1",
+      "accountType": "Archer MSA"
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}

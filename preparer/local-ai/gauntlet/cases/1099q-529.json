@@ -1,0 +1,56 @@
+{
+  "id": "1099q-529",
+  "description": "1099-Q Copy B: state 529 plan distribution to an account owner who is not the designated beneficiary. Synthetic data.",
+  "form": "f1099q.pdf",
+  "formType": "1099-Q",
+  "pageIndex": 1,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyBHeader[0].YEAR[0].f1_1[0]": "2025",
+    "LeftColumn[0].f1_2[0]": "LOUISIANA START SAVINGS PROGRAM\nPO BOX 91291\nBATON ROUGE LA 70821\n225-555-0140",
+    "LeftColumn[0].f1_3[0]": "72-6000800",
+    "LeftColumn[0].f1_4[0]": "XXX-XX-3456",
+    "LeftColumn[0].f1_5[0]": "MAYA TESTPAYER",
+    "LeftColumn[0].f1_6[0]": "815 MAGNOLIA AVE",
+    "LeftColumn[0].f1_7[0]": "BATON ROUGE LA 70802",
+    "RghtCol[0].f1_9[0]": "8,000.00",
+    "RghtCol[0].f1_10[0]": "1,200.00",
+    "RghtCol[0].Box3_ReadOrder[0].f1_11[0]": "6,800.00",
+    "RghtCol[0].Box5_ReadOrder[0].c1_3[1]": true,
+    "RghtCol[0].c1_4[0]": true
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 8000,
+      "field": "RghtCol[0].f1_9[0]"
+    },
+    "2": {
+      "money": 1200,
+      "field": "RghtCol[0].f1_10[0]"
+    },
+    "3": {
+      "money": 6800,
+      "field": "RghtCol[0].Box3_ReadOrder[0].f1_11[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.block": {
+      "firstLine": "LOUISIANA START SAVINGS PROGRAM"
+    }
+  },
+  "blankBoxes": [
+    "7"
+  ],
+  "expected": {
+    "tool": "add_1099_q",
+    "args": {
+      "payerName": "LOUISIANA START SAVINGS PROGRAM",
+      "grossDistribution": 8000,
+      "earnings": 1200,
+      "basisReturn": 6800,
+      "trusteeToTrusteeTransfer": false,
+      "qtpToRothIra": false,
+      "recipientNotDesignatedBeneficiary": true
+    }
+  }
+}

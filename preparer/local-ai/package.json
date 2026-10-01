@@ -1,0 +1,34 @@
+{
+  "name": "@hatax/local-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Preparer-only AI intake: TaxFacts, schema-validated tax tools, document classification and reading, two-reader verification, and the approved local model manifest. Not part of the individual app.",
+  "license": "MIT",
+  "author": "HATax",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./node": {
+      "import": "./src/node.ts",
+      "default": "./src/node.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "test": "npm run typecheck:tests && vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hatax/engine": "*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,234 @@
+/**
+ * Pre-export readiness checks.
+ *
+ * Distinguishes two severity levels:
+ *   BLOCKER  — Missing data that makes the return un-fileable (e.g., no name,
+ *              no filing status). Blocks PDF/IRS export until resolved.
+ *   WARNING  — Existing advisory warnings from warningService.ts.
+ *              Surfaced in the export gate but do NOT block download.
+ *
+ * The readiness check runs every time ExportPdfStep renders and feeds
+ * into a pre-export validation panel.
+ */
+
+import type { TaxReturn } from '../types/index.js';
+import { FilingStatus } from '../types/index.js';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface ReadinessIssue {
+  severity: 'blocker' | 'warning';
+  section: string;      // human-readable section name
+  sectionId: string;    // return section id, e.g. 'personal_info'
+  message: string;
+  /** The return field to fill, when one field settles it (e.g. 'addressZip', 'dependents.0.ssn'). */
+  field?: string;
+}
+
+export interface ReadinessResult {
+  ready: boolean;           // true when zero blockers
+  blockers: ReadinessIssue[];
+  blockerCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Required-field checks
+// ---------------------------------------------------------------------------
+
+export function checkExportReadiness(taxReturn: TaxReturn): ReadinessResult {
+  const blockers: ReadinessIssue[] = [];
+
+  // ── Personal Info ──────────────────────────────────────────────
+  if (!taxReturn.firstName?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'First name is required.',
+      field: 'firstName',
+    });
+  }
+
+  if (!taxReturn.lastName?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'Last name is required.',
+      field: 'lastName',
+    });
+  }
+
+  // ── Filing Status ──────────────────────────────────────────────
+  if (!taxReturn.filingStatus) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Filing Status',
+      sectionId: 'filing_status',
+      message: 'Filing status is required.',
+      field: 'filingStatus',
+    });
+  }
+
+  // ── MFJ: spouse name required ──────────────────────────────────
+  if (taxReturn.filingStatus === FilingStatus.MarriedFilingJointly) {
+    if (!taxReturn.spouseFirstName?.trim()) {
+      blockers.push({
+        severity: 'blocker',
+        section: 'Filing Status',
+        sectionId: 'filing_status',
+        message: 'Spouse first name is required for Married Filing Jointly.',
+      field: 'spouseFirstName',
+      });
+    }
+    if (!taxReturn.spouseLastName?.trim()) {
+      blockers.push({
+        severity: 'blocker',
+        section: 'Filing Status',
+        sectionId: 'filing_status',
+        message: 'Spouse last name is required for Married Filing Jointly.',
+      field: 'spouseLastName',
+      });
+    }
+  }
+
+  // ── Address ────────────────────────────────────────────────────
+  if (!taxReturn.addressStreet?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'Street address is required.',
+      field: 'addressStreet',
+    });
+  }
+
+  if (!taxReturn.addressCity?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'City is required.',
+      field: 'addressCity',
+    });
+  }
+
+  if (!taxReturn.addressState?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'State is required.',
+      field: 'addressState',
+    });
+  }
+
+  if (!taxReturn.addressZip?.trim()) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: 'ZIP code is required.',
+      field: 'addressZip',
+    });
+  }
+
+  // ── Taxpayer identification numbers ──────────────────────────
+  // A return cannot be filed, and a dependent cannot be claimed, without one.
+  const isTin = (value: string | undefined) => /^\d{9}$/.test((value ?? '').replace(/-/g, ''));
+  if (!isTin(taxReturn.ssn)) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Personal Info',
+      sectionId: 'personal_info',
+      message: taxReturn.ssn ? 'Social Security number must be 9 digits.' : 'Social Security number is required.',
+      field: 'ssn',
+    });
+  }
+  if (taxReturn.filingStatus === FilingStatus.MarriedFilingJointly && !isTin(taxReturn.spouseSsn)) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Filing Status',
+      sectionId: 'filing_status',
+      message: 'Spouse Social Security number is required for Married Filing Jointly.',
+      field: 'spouseSsn',
+    });
+  }
+  (taxReturn.dependents || []).forEach((dep, idx) => {
+    if (isTin(dep.ssn)) return;
+    const name = [dep.firstName, dep.lastName].filter(Boolean).join(' ') || `Dependent ${idx + 1}`;
+    blockers.push({
+      severity: 'blocker',
+      section: 'Dependents',
+      sectionId: 'dependents',
+      message: `${name}: a 9-digit SSN, ITIN or ATIN is required to claim this dependent.`,
+      field: `dependents.${idx}.ssn`,
+    });
+  });
+
+  // ── Income: at least one income source ─────────────────────────
+  const hasAnyIncome =
+    (taxReturn.w2Income?.length || 0) > 0 ||
+    (taxReturn.income1099NEC?.length || 0) > 0 ||
+    (taxReturn.income1099K?.length || 0) > 0 ||
+    (taxReturn.businessReceipts?.length || 0) > 0 ||
+    (taxReturn.income1099INT?.length || 0) > 0 ||
+    (taxReturn.income1099OID?.length || 0) > 0 ||
+    (taxReturn.income1099DIV?.length || 0) > 0 ||
+    (taxReturn.income1099R?.length || 0) > 0 ||
+    (taxReturn.income1099G?.length || 0) > 0 ||
+    (taxReturn.income1099MISC?.length || 0) > 0 ||
+    (taxReturn.income1099B?.length || 0) > 0 ||
+    (taxReturn.income1099C?.length || 0) > 0 ||
+    (taxReturn.income1099DA?.length || 0) > 0 ||
+    (taxReturn.incomeK1?.length || 0) > 0 ||
+    (taxReturn.incomeSSA1099 != null) ||
+    (taxReturn.incomeW2G?.length || 0) > 0 ||
+    (taxReturn.businesses?.length || 0) > 0 ||
+    (taxReturn.rentalProperties?.length || 0) > 0 ||
+    (taxReturn.royaltyProperties?.length || 0) > 0 ||
+    (taxReturn.alimonyReceived != null) ||
+    (taxReturn.otherIncome || 0) !== 0;
+
+  if (!hasAnyIncome) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Income',
+      sectionId: 'income_overview',
+      message: 'No income sources entered. Add at least one income item before exporting.',
+    });
+  }
+
+  // ── W-2: each W-2 must have wages ─────────────────────────────
+  (taxReturn.w2Income || []).forEach((w2, idx) => {
+    if (!w2.wages && w2.wages !== 0) {
+      blockers.push({
+        severity: 'blocker',
+        section: 'W-2 Income',
+        sectionId: 'w2_income',
+        message: `W-2 #${idx + 1}${w2.employerName ? ` (${w2.employerName})` : ''}: Wages amount is required.`,
+      });
+    }
+  });
+
+  // ── HoH: requires at least one dependent ──────────────────────
+  if (
+    taxReturn.filingStatus === FilingStatus.HeadOfHousehold &&
+    (taxReturn.dependents?.length || 0) === 0
+  ) {
+    blockers.push({
+      severity: 'blocker',
+      section: 'Dependents',
+      sectionId: 'dependents',
+      message: 'Head of Household requires at least one qualifying dependent.',
+    });
+  }
+
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    blockerCount: blockers.length,
+  };
+}

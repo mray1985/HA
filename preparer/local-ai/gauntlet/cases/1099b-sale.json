@@ -1,0 +1,77 @@
+{
+  "id": "1099b-sale",
+  "description": "1099-B Copy B: one long-term collectibles sale with basis reported to the IRS and gross proceeds checked. Synthetic data.",
+  "form": "f1099b.pdf",
+  "formType": "1099-B",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "LeftCol[0].f2_1[0]": "SUMMIT BROKERAGE LLC",
+    "LeftCol[0].f2_2[0]": "400 POYDRAS ST",
+    "LeftCol[0].f2_4[0]": "NEW ORLEANS",
+    "LeftCol[0].f2_5[0]": "504-555-0190",
+    "LeftCol[0].f2_6[0]": "LA",
+    "LeftCol[0].f2_8[0]": "70130",
+    "LeftCol[0].f2_9[0]": "72-4445556",
+    "LeftCol[0].f2_10[0]": "XXX-XX-3456",
+    "LeftCol[0].f2_11[0]": "MAYA TESTPAYER",
+    "LeftCol[0].f2_12[0]": "815 MAGNOLIA AVE",
+    "LeftCol[0].f2_14[0]": "BATON ROUGE",
+    "LeftCol[0].f2_15[0]": "LA",
+    "LeftCol[0].f2_17[0]": "70802",
+    "RightCol[0].f2_20[0]": "E",
+    "RightCol[0].f2_21[0]": "40 sh. ACME CORP",
+    "RightCol[0].f2_22[0]": "03/02/2019",
+    "RightCol[0].f2_23[0]": "11/03/2025",
+    "RightCol[0].Box1d[0].f2_24[0]": "12,500.00",
+    "RightCol[0].f2_25[0]": "9,100.50",
+    "RightCol[0].Box2[0].c2_4[1]": true,
+    "RightCol[0].c2_5[0]": true,
+    "RightCol[0].Box6[0].c2_7[0]": true,
+    "RightCol[0].Box12[0].c2_9[0]": true
+  },
+  "expectedBoxes": {
+    "1d": {
+      "money": 12500,
+      "field": "RightCol[0].Box1d[0].f2_24[0]"
+    },
+    "1e": {
+      "money": 9100.5,
+      "field": "RightCol[0].f2_25[0]"
+    },
+    "1c": {
+      "text": "11/03/2025",
+      "field": "RightCol[0].f2_23[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.name": {
+      "firstLine": "SUMMIT BROKERAGE LLC"
+    }
+  },
+  "blankBoxes": [
+    "1f",
+    "1g",
+    "4",
+    "8",
+    "9",
+    "10",
+    "11",
+    "13"
+  ],
+  "expected": {
+    "tool": "add_1099_b",
+    "args": {
+      "brokerName": "SUMMIT BROKERAGE LLC",
+      "description": "40 sh. ACME CORP",
+      "dateAcquired": "03/02/2019",
+      "dateSold": "11/03/2025",
+      "proceeds": 12500,
+      "costBasis": 9100.5,
+      "isLongTerm": true,
+      "basisReportedToIRS": true,
+      "isCollectible": true
+    }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
+}
