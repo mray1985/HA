@@ -82,6 +82,29 @@ describe('applyPageEvidence', () => {
   });
 });
 
+describe("a W-2's name read on into the address below it", () => {
+  it('checks the name columns on the name alone (stress run: CARA / OKAFOR / 1427 ASPEN CT / NAPERVILLE IL 60540)', () => {
+    const words = [
+      w('CARA', [40, 100, 76, 112]), w('OKAFOR', [180, 100, 234, 112]),
+      w('1427', [40, 130, 76, 142]), w('ASPEN', [80, 130, 125, 142]), w('CT', [129, 130, 147, 142]),
+      w('NAPERVILLE', [40, 145, 130, 157]), w('IL', [134, 145, 150, 157]), w('60540', [154, 145, 199, 157]),
+    ];
+    // As the model read it in the stress run: the address inside box e, box f not read.
+    const r = applyPageEvidence(W2, { e: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540' }, { words, raster: raster() });
+    expect(r.nameColumns).toEqual(['e']);
+    expect(r.values.e).toBe('CARA\nOKAFOR');
+    // The address lines are box f's reading, and the page shows them there.
+    expect(r.values.f).toBe('1427 ASPEN CT\nNAPERVILLE IL 60540');
+    expect(r.located.f).not.toBeNull();
+  });
+
+  it('keeps box f as read when the reader read it', () => {
+    const words = [w('CARA', [40, 100, 76, 112]), w('OKAFOR', [180, 100, 234, 112])];
+    const r = applyPageEvidence(W2, { e: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540', f: '99 OTHER RD\nNAPERVILLE IL 60540' }, { words, raster: raster() });
+    expect(r.values.f).toBe('99 OTHER RD\nNAPERVILLE IL 60540');
+  });
+});
+
 describe('phantom copies', () => {
   it('removes a value a model copied into a second box when the page prints it once', () => {
     const words = [

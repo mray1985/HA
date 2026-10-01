@@ -25,7 +25,7 @@
  */
 
 import type { FormBoxSchema, FormExtractionSchema } from './formSchemas.js';
-import { isIdentityKey, NAME_COLUMN_KEYS } from './identity.js';
+import { IDENTITY_KEYS, isIdentityKey, NAME_COLUMN_KEYS, withoutTrailingAddress } from './identity.js';
 import { parseMoneyToken } from './structuredExtraction.js';
 import {
   box12CodeAt,
@@ -130,7 +130,14 @@ export function applyPageEvidence(
   const nameColumns: string[] = [];
   const columnKey = NAME_COLUMN_KEYS[schema.formType];
   if (columnKey && values[columnKey] !== undefined) {
-    const parts = columnParts(values[columnKey]!, page.words);
+    // A reading that ran on into the address below (box f) is checked as the name alone;
+    // when box f was not read, those lines are its reading, located on the page like any other.
+    const lines = values[columnKey]!.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const nameLines = withoutTrailingAddress(lines);
+    const addressKey = IDENTITY_KEYS[schema.formType]?.address[0];
+    if (nameLines.length < lines.length && addressKey && !values[addressKey]?.trim()) values[addressKey] = lines.slice(nameLines.length).join('\n');
+    const name = nameLines.join('\n');
+    const parts = columnParts(name, page.words);
     if (parts) {
       values[columnKey] = parts.join('\n');
       nameColumns.push(columnKey);

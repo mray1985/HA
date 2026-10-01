@@ -179,7 +179,7 @@ export function parseUSAddress(lines: readonly string[]): USAddress | null {
 }
 
 /** The lines before a trailing US address ("CARA / OKAFOR / 1427 ASPEN CT / NAPERVILLE IL 60540" → the name lines). */
-function withoutTrailingAddress(lines: readonly string[]): string[] {
+export function withoutTrailingAddress(lines: readonly string[]): string[] {
   for (let cut = 1; cut < lines.length - 1; cut++) {
     if (parseUSAddress(lines.slice(cut))) return lines.slice(0, cut);
   }
