@@ -26,9 +26,39 @@ function cspPlugin(): Plugin {
   };
 }
 
+/**
+ * Record in dist/build-info.json whether the build carried the Syncfusion
+ * license key (never the key itself). The installer refuses a client built
+ * without it (desktop/scripts/check-client.mjs): without a key every page
+ * using Syncfusion shows its license banner.
+ */
+function buildInfoPlugin(): Plugin {
+  let licensed = false;
+  return {
+    name: 'hatax-build-info',
+    apply: 'build',
+    configResolved(config) {
+      licensed = Boolean(String(config.env.VITE_SYNCFUSION_LICENSE_KEY ?? '').trim());
+    },
+    buildStart() {
+      if (!licensed) {
+        this.warn('VITE_SYNCFUSION_LICENSE_KEY is not set: Syncfusion components will show a license banner, and the installer will refuse this build.');
+      }
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'build-info.json',
+        source: `${JSON.stringify({ syncfusionLicensed: licensed, builtAt: new Date().toISOString() }, null, 2)}\n`,
+      });
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     cspPlugin(),
+    buildInfoPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

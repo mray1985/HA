@@ -133,6 +133,24 @@ cd ../client && npx playwright test -c playwright.desktop.config.ts
 The program and installer icon is `desktop/build/icon.ico`, made from
 `client/public/icons/icon-512.png` by `npm run icon`.
 
+#### The Syncfusion license key
+
+The PDF viewer, the PDF text reader and the charts are Syncfusion Essential JS 2
+components. Without a license key every page using them shows Syncfusion's
+license banner. Get a key for version 32 (the version in `client/package.json`)
+at https://www.syncfusion.com/account/claim-license-key and, on the build
+machine, put it in `client/.env.local` (never committed):
+
+```
+VITE_SYNCFUSION_LICENSE_KEY=<the key>
+```
+
+or set `VITE_SYNCFUSION_LICENSE_KEY` in the build environment (a CI secret).
+The client build records whether it had the key in `client/dist/build-info.json`
+(never the key itself); `npm run dist` refuses to package a client built
+without it, and `npm run pack` warns. A new Syncfusion major version needs a
+new key.
+
 #### Signing the installer
 
 An unsigned installer shows Windows SmartScreen's "Unknown publisher" warning,
