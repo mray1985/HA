@@ -64,7 +64,7 @@ import { calculateHSADeduction } from './hsaForm8889.js';
 import { calculateForm8606, Form8606Result } from './form8606.js';
 import type { Form8606Info } from '../types/index.js';
 import { calculateEstimatedTaxPenalty, installmentDueDates } from './estimatedTaxPenalty.js';
-import { calculateKiddieTax, KiddieTaxResult } from './kiddieTax.js';
+import { figureForm8615 } from './form8615.js';
 import { calculateFEIE, FEIEResult } from './feie.js';
 import { calculateScheduleH } from './scheduleH.js';
 import { calculateAdoptionCredit, limitAdoptionCredit } from './adoptionCredit.js';
@@ -89,7 +89,7 @@ import { calculateSolo401kLimits, calculateSEPIRALimits } from './solo401k.js';
 import { calculateForm7206, legacyToForm7206Input } from './form7206.js';
 import { calculateAMT, adjustAMTForRegularFTC, AMTResult } from './amt.js';
 import { calculateForm8582 } from './form8582.js';
-import type { Form8582Result } from '../types/index.js';
+import type { Form8582Result, Form8615Outcome } from '../types/index.js';
 import { hasRetirementPlanCoverage, totalSalaryDeferrals, totalEmployerHSAContributions } from './w2Helpers.js';
 import type { TraceOptions, CalculationTrace } from '../types/index.js';
 import type { TraceBuilder } from './traceBuilder.js';
@@ -267,14 +267,14 @@ export interface Form1040Context {
   marginalTaxRate: number;
   amtResult?: AMTResult;
   amtAmount: number;
+  /** Form 8615 on a child's return: line 18 is line 16 when it is figured. */
+  form8615?: Form8615Outcome;
 
   // ── Section 8: Additional Taxes ───────────────────
   seTax: number;
   niitTax: number;
   additionalMedicareTaxW2: number;
   earlyDistributionPenalty: number;
-  kiddieTaxResults: KiddieTaxResult[];
-  kiddieTaxAmount: number;
   scheduleHResult?: ScheduleHResult;
   scheduleHTax: number;
   form5329Result?: Form5329Result;
@@ -446,8 +446,6 @@ export function createForm1040Context(
     niitTax: 0,
     additionalMedicareTaxW2: 0,
     earlyDistributionPenalty: 0,
-    kiddieTaxResults: [],
-    kiddieTaxAmount: 0,
     scheduleHTax: 0,
     excessContributionPenalty: 0,
     form4137Tax: 0,
@@ -1822,6 +1820,32 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     ctx.preferentialTax = 0;
   }
 
+  // Form 8615: a child's net unearned income taxed at the parent's rate; line 18 is line 16.
+  ctx.form8615 = figureForm8615({
+    info: taxReturn.form8615,
+    taxYear: _taxYear,
+    childFilingStatus: filingStatus,
+    totalIncome: ctx.totalIncome,
+    agi: ctx.agi,
+    taxableIncome: ctx.taxableIncome,
+    deduction: ctx.deductionAmount,
+    itemizes: ctx.deductionUsed === 'itemized',
+    // Earned income: Form 1040 line 1z (line 1a and line 1e's taxable dependent care benefits), Schedule 1 lines 3 and 6.
+    wages: round2(ctx.totalWages + ctx.dcFSATaxableExcess),
+    businessIncome: ctx.scheduleCNetProfit,
+    farmIncome: ctx.scheduleFNetProfit,
+    earlyWithdrawalPenalty: ctx.earlyWithdrawalPenalty,
+    nolDeduction: ctx.nolDeduction,
+    qualifiedDividends: preferentialQD,
+    netCapitalGain: totalPreferentialLTCG,
+    has28RateOr1250Gain: unrecapturedSection1250Gain > 0 || collectiblesGain > 0,
+    filesForm2555: feieStack > 0,
+    age: getAgeAtEndOfYear(taxReturn.dateOfBirth, _taxYear),
+    canBeClaimedAsDependent: taxReturn.canBeClaimedAsDependent,
+  });
+  const form8615Line18 = ctx.form8615?.status === 'figured' && ctx.form8615.result.applies ? ctx.form8615.result.line18 : undefined;
+  if (form8615Line18 !== undefined) ctx.incomeTax = form8615Line18;
+
   // AMT (Form 6251) — pass QD/LTCG/§1250 for Part III preferential rates
   ctx.amtResult = calculateAMT(
     taxReturn, ctx.incomeTax, ctx.scheduleA, ctx.taxableIncome, filingStatus,
@@ -1850,8 +1874,10 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
       ? ` (§911(f) stacked: rates applied as if $${feieStack.toLocaleString()} excluded income were included)`
       : '';
     ctx.tb.trace('form1040.line16', 'Income Tax', ctx.incomeTax, {
-      authority: 'Form 1040, Line 16; IRC §1' + (feieStack > 0 ? '; IRC §911(f)' : ''),
-      formula: feieStack > 0
+      authority: 'Form 1040, Line 16; IRC §1' + (feieStack > 0 ? '; IRC §911(f)' : '') + (form8615Line18 !== undefined ? '; IRC §1(g); Form 8615' : ''),
+      formula: form8615Line18 !== undefined
+        ? "Form 8615 line 18: the larger of the tax at the parent's rate on net unearned income plus the child's tax on the rest (line 16) and the child's tax on all taxable income (line 17)"
+        : feieStack > 0
         ? '§911(f): tax(taxableIncome + exclusion) − tax(exclusion)'
         : hasPreferentialIncome
           ? (collectiblesGain > 0
@@ -1951,19 +1977,9 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     }
   }
 
-  // Kiddie Tax — iterate over all entries (backward compat: migrate legacy single field)
-  const kiddieTaxEntries = taxReturn.kiddieTaxEntries?.length
-    ? taxReturn.kiddieTaxEntries
-    : taxReturn.kiddieTax && taxReturn.kiddieTax.childUnearnedIncome > 0
-      ? [{ id: 'legacy', ...taxReturn.kiddieTax }]
-      : [];
-  for (const entry of kiddieTaxEntries) {
-    if (entry.childUnearnedIncome > 0) {
-      const result = calculateKiddieTax(entry, _taxYear);
-      ctx.kiddieTaxResults.push(result);
-      ctx.kiddieTaxAmount = round2(ctx.kiddieTaxAmount + result.additionalTax);
-    }
-  }
+  // Kiddie tax entries (a child's unearned income listed on this return) are not
+  // figured: a child's Form 8615 is on the child's own return (calculateIncomeTaxSection),
+  // and Form 8814 is not supported. engine/unsupported.ts reports them; nothing is added.
 
   // Schedule H
   if (taxReturn.householdEmployees && taxReturn.householdEmployees.totalCashWages > 0) {
@@ -2039,7 +2055,7 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
     ctx.form4137Tax = ctx.form4137Result.totalTax;
   }
 
-  ctx.totalTaxBeforeCredits = round2(ctx.incomeTax + ctx.amtAmount + ctx.seTax + ctx.niitTax + ctx.additionalMedicareTaxW2 + ctx.earlyDistributionPenalty + ctx.hsaDistributionPenalty + ctx.kiddieTaxAmount + ctx.scheduleHTax + ctx.excessContributionPenalty + ctx.penalty529 + ctx.form4137Tax);
+  ctx.totalTaxBeforeCredits = round2(ctx.incomeTax + ctx.amtAmount + ctx.seTax + ctx.niitTax + ctx.additionalMedicareTaxW2 + ctx.earlyDistributionPenalty + ctx.hsaDistributionPenalty + ctx.scheduleHTax + ctx.excessContributionPenalty + ctx.penalty529 + ctx.form4137Tax);
 
   // Trace: Total Tax Before Credits (intermediate — not Line 24)
   ctx.tb.trace('form1040.totalTaxBeforeCredits', 'Total Tax Before Credits', ctx.totalTaxBeforeCredits, {
@@ -2396,7 +2412,7 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
   ctx.taxAfterNonRefundable = round2(
     Math.max(0, ctx.incomeTax + ctx.amtAmount + ctx.excessAPTCRepayment - ctx.credits.totalNonRefundable) +
     ctx.seTax + ctx.niitTax + ctx.additionalMedicareTaxW2 + ctx.earlyDistributionPenalty + ctx.hsaDistributionPenalty +
-    ctx.kiddieTaxAmount + ctx.scheduleHTax + ctx.excessContributionPenalty + ctx.penalty529 + ctx.form4137Tax,
+    ctx.scheduleHTax + ctx.excessContributionPenalty + ctx.penalty529 + ctx.form4137Tax,
   );
 
   // Clean Energy Credit carryforward — IRC §25D(c)
@@ -2654,7 +2670,8 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     niitTax: ctx.niitTax,
     additionalMedicareTaxW2: ctx.additionalMedicareTaxW2,
     earlyDistributionPenalty: ctx.earlyDistributionPenalty,
-    kiddieTaxAmount: round2(ctx.kiddieTaxAmount),
+    // Form 8615 is line 16 itself (form8615); kiddie tax is never added on top of it.
+    kiddieTaxAmount: 0,
     householdEmploymentTax: round2(ctx.scheduleHTax),
     estimatedTaxPenalty: round2(ctx.estimatedTaxPenalty),
     totalTax: ctx.totalTax,
@@ -2749,15 +2766,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     hsaDistributions: ctx.hsaDistResult ? { totalTaxable: ctx.hsaDistResult.totalTaxable, totalPenalty: ctx.hsaDistResult.totalPenalty } : undefined,
     form8606: ctx.form8606Result ? { taxableConversion: ctx.form8606Result.taxableConversion, nonTaxableDistributions: ctx.form8606Result.nonTaxableDistributions, taxableDistributions: ctx.form8606Result.taxableDistributions, regularDistributions: ctx.form8606Result.regularDistributions, remainingBasis: ctx.form8606Result.remainingBasis } : undefined,
     estimatedTaxPenalty: ctx.estimatedTaxPenaltyResult,
-    kiddieTax: ctx.kiddieTaxAmount > 0 ? { additionalTax: ctx.kiddieTaxAmount, childTaxableUnearned: ctx.kiddieTaxResults.reduce((s, r) => s + r.unearnedIncomeAboveThreshold, 0) } : undefined,
-    kiddieTaxEntries: ctx.kiddieTaxResults.filter(r => r.applies).map((r, i) => {
-      const sourceEntries = taxReturn.kiddieTaxEntries?.length ? taxReturn.kiddieTaxEntries : [];
-      return {
-        childName: sourceEntries[i]?.childName,
-        additionalTax: r.additionalTax,
-        childTaxableUnearned: r.unearnedIncomeAboveThreshold,
-      };
-    }),
+    form8615: ctx.form8615,
     feie: ctx.feieResult ? { incomeExclusion: ctx.feieResult.incomeExclusion, housingExclusion: ctx.feieResult.housingExclusion } : undefined,
     scheduleH: ctx.scheduleHResult,
     adoptionCredit: ctx.adoptionCreditResult,

@@ -21,7 +21,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 | 7 | Capital Gains | `capitalGains.ts` | 1(h), 1(h)(1)(E) | Preferential rate tax on LTCG and qualified dividends; 25% unrecaptured §1250 rate zone |
 | 8 | NIIT | `niit.ts` | 1411 | 3.8% Net Investment Income Tax |
 | 9 | Additional Medicare | `additionalMedicare.ts` | 3101(b)(2) | 0.9% Additional Medicare Tax on high earners |
-| 10 | Kiddie Tax | `kiddieTax.ts` | 1(g) | Child's unearned income taxed at parent's rate |
+| 10 | Form 8615 | `form8615.ts` | 1(g) | A child's net unearned income taxed at the parent's rate, line by line |
 | 11 | Schedule SE | `scheduleSE.ts` | 1401(a)-(b), 1402(a) | Self-employment tax (Social Security + Medicare) |
 | 12 | Schedule A | `scheduleA.ts` | 164, 163(h), 170, 213, 11042 (TCJA); 68 (P.L. 119-21 §70111, 2026+, `form1040Sections.ts`) | Itemized deductions |
 | 13 | QBI Deduction | `qbi.ts` | 199A | Section 199A qualified business income deduction |
@@ -275,24 +275,23 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 
 ---
 
-#### 10. Kiddie Tax -- `kiddieTax.ts`
+#### 10. Form 8615 -- `form8615.ts`
 
-**Source:** `shared/authorities/kiddieTax.yaml`
+**Source:** `shared/authorities/form8615.yaml`
 
 | Function | Authority | Reference | Weight | Description |
 |----------|-----------|-----------|--------|-------------|
-| `calculateKiddieTax` | IRC | 1(g) | binding | Kiddie tax: unearned income of certain children taxed at parent's marginal rate; applies to children under 19 (or under 24 if full-time student) |
-| | Rev. Proc. | Rev. Proc. 2024-40, Section 3 | binding | Inflation-adjusted kiddie tax thresholds for 2025 |
-| | Form | Form 8615 | explanatory | |
+| `calculateForm8615` | IRC | 1(g) | binding | Certain unearned income of a child taxed as if it were the parent's income |
+| | Rev. Proc. | Rev. Proc. 2024-40, Section 3 | binding | Inflation-adjusted Form 8615 amounts for 2025 ($1,350 and $2,700) |
+| | Form | Form 8615 (2025) and its instructions | binding | Lines 1-18, the Line 1 worksheets, Line 5 Worksheets #1 and #3, and the line 9, 15 and 17 tax computations |
 
-**Scope:** Computes the kiddie tax on a child's unearned income exceeding the threshold, taxed at the parent's marginal rate.
+**Scope:** The child's tax on Form 8615, line by line; line 18 is the child's Form 1040 line 16.
 
 **Limitations:**
-- Requires parent's taxable income as input for marginal rate computation
-- Does not handle parent's election to include child's income on parent's return (Form 8814)
-- Does not validate age and student status requirements
-- Net unearned income computation assumes accurate investment income inputs
-- TCJA restored parent-rate method (was briefly estate/trust rates in 2018-2019)
+- Whether the form applies (age, support, a living parent, no joint return) is the preparer's answer
+- The Schedule D Tax Worksheet, Schedule J and the Foreign Earned Income Tax Worksheet are reported unsupported
+- Itemized deductions directly connected with dividends or capital gain (Line 5 Worksheets #2 and #3) are reported unsupported
+- Form 8814 (the parent reporting the child's interest and dividends) is not supported
 
 ---
 

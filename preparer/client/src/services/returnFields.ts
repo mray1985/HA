@@ -5,13 +5,14 @@
  * fact an engine finding needs (the business miles from July 1 in a year whose
  * mileage rate changes, the date a home was first used for business, the cash
  * a client who does not itemize gave to public charities from 2026, the kind of
- * a K-1 that reports unrecaptured section 1250 gain). Each
- * value is validated before it is written; the case store audits the change.
+ * a K-1 that reports unrecaptured section 1250 gain, whether Form 8615 applies
+ * to a child and the parent's figures it takes). Each value is validated
+ * before it is written; the case store audits the change.
  */
 
 import { FilingStatus, type TaxReturn } from '@hatax/engine';
 
-export type ReturnFieldKind = 'text' | 'tin' | 'zip' | 'state' | 'filing_status' | 'count' | 'date' | 'amount' | 'k1_entity';
+export type ReturnFieldKind = 'text' | 'tin' | 'zip' | 'state' | 'filing_status' | 'count' | 'date' | 'amount' | 'k1_entity' | 'yes_no';
 
 export interface ReturnFieldSpec {
   label: string;
@@ -35,7 +36,25 @@ const FIELDS: Record<string, ReturnFieldSpec> = {
   'vehicle.businessMilesFromJuly1': { label: 'Business miles driven on or after July 1', kind: 'count' },
   'homeOffice.dateFirstUsedForBusiness': { label: 'Date the home was first used for business', kind: 'date' },
   nonItemizerCharitableCash: { label: 'Cash given to public charities', kind: 'amount' },
+  'form8615.applies': { label: 'Does Form 8615 apply to this child?', kind: 'yes_no' },
+  'form8615.parentName': { label: "Form 8615 line A: parent's name", kind: 'text' },
+  'form8615.parentSsn': { label: "Form 8615 line B: parent's SSN", kind: 'tin' },
+  'form8615.parentFilingStatus': { label: "Form 8615 line C: parent's filing status", kind: 'filing_status' },
+  'form8615.parentTaxableIncome': { label: "Parent's taxable income (parent's Form 1040 line 15; 0 if zero or less)", kind: 'amount' },
+  'form8615.parentTax': { label: "Parent's tax (parent's Form 1040 line 16, without Form 4972 or 8814 tax or education credit recapture)", kind: 'amount' },
+  'form8615.parentQualifiedDividends': { label: "Parent's qualified dividends (parent's Form 1040 line 3a; 0 if none)", kind: 'amount' },
+  'form8615.parentNetCapitalGain': { label: "Parent's net capital gain (0 if none)", kind: 'amount' },
+  'form8615.otherChildrenNetUnearnedIncome': { label: "Line 5 of the parent's other children's Forms 8615, in total (0 if none)", kind: 'amount' },
+  'form8615.otherChildrenQualifiedDividends': { label: "Qualified dividends included on the other children's line 5", kind: 'amount' },
+  'form8615.otherChildrenNetCapitalGain': { label: "Net capital gain included on the other children's line 5", kind: 'amount' },
+  'form8615.childDirectlyConnectedDeductions': { label: "The child's itemized deductions directly connected with the unearned income (0 if none)", kind: 'amount' },
+  'form8615.parentSpecialComputation': { label: "Did the parent's tax use the Schedule D Tax Worksheet, Schedule J or the Foreign Earned Income Tax Worksheet (or does another child have 28% rate or unrecaptured section 1250 gain)?", kind: 'yes_no' },
 };
+
+export const YES_NO_OPTIONS: ReadonlyArray<{ value: 'yes' | 'no'; label: string }> = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'no', label: 'No' },
+];
 
 export const FILING_STATUS_OPTIONS: ReadonlyArray<{ value: FilingStatus; label: string }> = [
   { value: FilingStatus.Single, label: 'Single' },
@@ -76,7 +95,7 @@ export function returnFieldSpec(path: string, taxReturn?: TaxReturn | null): Ret
  * The value to write for what the preparer typed, or an error. Blank is an
  * error, never an empty value written over the field.
  */
-export function parseReturnField(kind: ReturnFieldKind, input: string): { ok: true; value: string | number | FilingStatus } | { ok: false; error: string } {
+export function parseReturnField(kind: ReturnFieldKind, input: string): { ok: true; value: string | number | boolean | FilingStatus } | { ok: false; error: string } {
   const text = input.trim();
   if (!text) return { ok: false, error: 'Enter a value.' };
   switch (kind) {
@@ -94,6 +113,8 @@ export function parseReturnField(kind: ReturnFieldKind, input: string): { ok: tr
     }
     case 'count':
       return /^\d{1,7}$/.test(text.replace(/,/g, '')) ? { ok: true, value: Number(text.replace(/,/g, '')) } : { ok: false, error: 'Enter a whole number.' };
+    case 'yes_no':
+      return text === 'yes' || text === 'no' ? { ok: true, value: text === 'yes' } : { ok: false, error: 'Choose yes or no.' };
     case 'k1_entity':
       return K1_ENTITY_OPTIONS.some((o) => o.value === text) ? { ok: true, value: text } : { ok: false, error: 'Choose the kind of K-1.' };
     case 'amount': {

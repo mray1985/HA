@@ -436,6 +436,12 @@ const FIELD_FINDINGS: Record<string, string> = {
   'unsupported:FED.170P.NON_ITEMIZER:charitable': 'nonItemizerCharitableCash',
 };
 
+/** The Form 8615 answer or parent's figure a FED.8615 finding asks for, as a return field path. */
+function form8615Field(id: string): string | undefined {
+  const match = /^unsupported:FED\.8615\.(?:APPLIES|PARENT):(\w+)$/.exec(id);
+  return match ? `form8615.${match[1]}` : undefined;
+}
+
 /** The K-1 whose kind a FED.K1.ENTITY_TYPE finding asks for, as a return field path. */
 function k1EntityField(id: string, taxReturn: TaxReturn): string | undefined {
   const prefix = 'unsupported:FED.K1.ENTITY_TYPE:';
@@ -471,6 +477,7 @@ export function buildCaseReview(input: {
     ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
     ...(FIELD_FINDINGS[d.id] ? { action: { kind: 'return_field' as const, field: FIELD_FINDINGS[d.id]! } } : {}),
     ...(k1EntityField(d.id, input.taxReturn) ? { action: { kind: 'return_field' as const, field: k1EntityField(d.id, input.taxReturn)! } } : {}),
+    ...(form8615Field(d.id) ? { action: { kind: 'return_field' as const, field: form8615Field(d.id)! } } : {}),
   }));
   // No date of birth reads as under 65: an older client would lose the additional
   // standard deduction and the senior deduction without anyone deciding it.

@@ -143,6 +143,43 @@ describe('engine findings one field settles', () => {
     expect(parseReturnField('k1_entity', 'llc')).toMatchObject({ ok: false });
   });
 
+  it("asks whether Form 8615 applies to a child, then each of the parent's figures it takes", () => {
+    const child = (form8615?: TaxReturn['form8615']) => ({
+      id: 'c', taxYear: 2025, status: 'in_progress', currentStep: 0, currentSection: 'review', ...PERSON, dateOfBirth: '2010-05-01',
+      canBeClaimedAsDependent: true, dependents: [], w2Income: [], income1099NEC: [], income1099K: [],
+      income1099INT: [{ id: 'i', payerName: 'Bank', amount: 10000 }], income1099DIV: [], income1099R: [], income1099G: [], income1099MISC: [],
+      income1099B: [], incomeK1: [], income1099SA: [], rentalProperties: [], otherIncome: 0, expenses: [], deductionMethod: 'standard',
+      educationCredits: [], businesses: [], incomeDiscovery: {}, createdAt: '', updatedAt: '', ...(form8615 ? { form8615 } : {}),
+    } as unknown as TaxReturn);
+    const fieldsOf = (r: TaxReturn) => buildCaseReview({ taxReturn: r, calculation: calculateForm1040(r), facts: [], documents: [] }).items
+      .filter((i) => i.id.startsWith('unsupported:FED.8615.')).map((i) => [i.category, i.action?.kind === 'return_field' ? i.action.field : undefined]);
+
+    expect(fieldsOf(child())).toEqual([['BLOCKING', 'form8615.applies']]);
+    expect(returnFieldSpec('form8615.applies')).toMatchObject({ kind: 'yes_no' });
+    expect(parseReturnField('yes_no', 'yes')).toEqual({ ok: true, value: true });
+    expect(parseReturnField('yes_no', 'no')).toEqual({ ok: true, value: false });
+    expect(parseReturnField('yes_no', 'maybe')).toMatchObject({ ok: false });
+
+    // It applies: each figure is its own field, so the group's "enter all at once" form takes them together.
+    const asked = fieldsOf(child({ applies: true })).map(([, field]) => field);
+    expect(asked).toEqual([
+      'form8615.parentName', 'form8615.parentSsn', 'form8615.parentFilingStatus', 'form8615.parentTaxableIncome', 'form8615.parentTax',
+      'form8615.parentQualifiedDividends', 'form8615.parentNetCapitalGain', 'form8615.otherChildrenNetUnearnedIncome', 'form8615.parentSpecialComputation',
+    ]);
+    for (const field of asked) expect(returnFieldSpec(field!)).not.toBeNull();
+
+    // Every figure entered: nothing is asked, and line 16 is Form 8615 line 18.
+    const done = child({
+      applies: true, parentName: 'Sam Testpayer', parentSsn: '000987654', parentFilingStatus: FilingStatus.MarriedFilingJointly,
+      parentTaxableIncome: 80000, parentTax: 9126, parentQualifiedDividends: 0, parentNetCapitalGain: 0, otherChildrenNetUnearnedIncome: 0,
+      parentSpecialComputation: false,
+    });
+    expect(fieldsOf(done)).toEqual([]);
+    expect(calculateForm1040(done).form1040.incomeTax).toBe(1012);
+    // It does not apply: nothing is asked and the child's own tax stands.
+    expect(fieldsOf(child({ applies: false }))).toEqual([]);
+  });
+
   it('asks California credit facts the return does not hold, as state answers', () => {
     // 2025, 70, AGI under $98,652: the senior head of household credit needs to know about 2023 and 2024.
     const ca = {

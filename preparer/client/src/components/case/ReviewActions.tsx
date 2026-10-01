@@ -8,7 +8,7 @@
 import { useState, type ReactNode } from 'react';
 import { getAllStates } from '@hatax/engine';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
-import { FILING_STATUS_OPTIONS, K1_ENTITY_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
+import { FILING_STATUS_OPTIONS, K1_ENTITY_OPTIONS, YES_NO_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
 import { applyLastYearsAccount } from '../../services/caseRollover';
 import { applyAddress, applyIdentityReading, setPersonOnReturn } from '../../services/caseIdentity';
 import { loadDocuments } from '../../services/documentIngestion';
@@ -423,10 +423,10 @@ export function ReturnFieldsForm({ fields, onDone }: { fields: string[]; onDone:
                 <option value="">Choose…</option>
                 {FILING_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-            ) : spec.kind === 'k1_entity' ? (
+            ) : spec.kind === 'k1_entity' || spec.kind === 'yes_no' ? (
               <select aria-label={spec.label} autoFocus={i === 0} className={inputClass} value={values[field] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}>
                 <option value="">Choose…</option>
-                {K1_ENTITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {(spec.kind === 'yes_no' ? YES_NO_OPTIONS : K1_ENTITY_OPTIONS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             ) : (
               <input
