@@ -5,10 +5,14 @@
  */
 
 import { create } from 'zustand';
+import { SUPPORTED_TAX_YEARS } from '@hatax/engine';
 import { toast } from 'sonner';
 import type { BatchResult, FileRead } from '../services/caseIntake';
 
 interface BatchState {
+  /** The tax year new cases and dropped documents go to; kept when the dashboard closes (a lock, another page). */
+  taxYear: number;
+  setTaxYear: (taxYear: number) => void;
   busy: string | null;
   result: BatchResult | null;
   /** Read a batch for any clients into `taxYear` cases; one batch at a time. */
@@ -31,6 +35,8 @@ function notifyDone(text: string) {
 }
 
 export const useBatchStore = create<BatchState>((set, get) => ({
+  taxYear: SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!,
+  setTaxYear: (taxYear) => set({ taxYear }),
   busy: null,
   result: null,
 

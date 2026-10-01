@@ -56,7 +56,8 @@ export default function CaseDashboardPage() {
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
-  const [newYear, setNewYear] = useState<number>(SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!);
+  const newYear = useBatchStore((s) => s.taxYear);
+  const setNewYear = useBatchStore((s) => s.setTaxYear);
   const [downloadPassword, setDownloadPassword] = useState('');
   const batchBusy = useBatchStore((s) => s.busy);
   const batch = useBatchStore((s) => s.result);
