@@ -341,12 +341,27 @@ is offered to the preparer, who adds or dismisses each one.
 npx tsx local-ai/gauntlet/run-notes.ts
 ```
 
-Qwen3.5-0.8B Q4_K_M, 1.6 s per call, 2.6 calls per note:
+Qwen3.5-0.8B Q4_K_M, 2.0 s per call, 2.7 calls per note (after the 2026-10-01
+changes below; the tuned and held-out sets give the same proposals as before):
 
 | Notes | Proposals right (every field) | Wrong | Missed | Rejected by the words |
 |---|---|---|---|---|
-| Tuned on (13 notes) | 11 (9) | 0 | 3 | 24 |
-| Held out (10 notes, run once) | 7 (7) | 0 | 1 | 14 |
+| Tuned on (13 notes) | 11 (9) | 0 | 3 | 26 |
+| Held out (10 notes, run once) | 7 (7) | 0 | 1 | 19 |
+| Stress run (6 replies, 2026-10-01) | 7 (7) | 0 | 1 | 24 |
+
+The stress-run replies are a new client's family (two children with their birth
+dates and SSNs, a spouse who wrote the reply), a head of household's son, a
+freelancer's business expense, a newlywed's spouse, an unnamed wife and a
+personal purchase. The reader is told whose return it is ("The return is Ben
+Okafor's"), lists people who live with the client (not only new ones), the
+spouse, and business expenses with an amount; each value is still checked
+against the words (a birth date or SSN only when no one else is named between
+the person and it). The 0.8B reader repeats one of several people in a
+sentence and gave no spouse for "Ben and I (Cara Okafor, …) are married", so
+people written "Noah Okafor (born …" and a spouse the words tie to the writer
+come from the words too, through the same checks. The miss: "a Texas
+resident" is not read as all-year residency.
 
 The reader gave an empty list for every state when asked to list states from
 51 codes ("I moved from Texas to Louisiana" gave none), so states are asked

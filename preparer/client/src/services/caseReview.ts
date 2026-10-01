@@ -118,7 +118,9 @@ export type ReviewAction =
   /** Last year's refund account, put on the return once the preparer confirms it. */
   | { kind: 'use_bank'; label: string }
   /** The taxpayer's identity from the documents: a reading to use, a person to place, an address to choose. */
-  | NonNullable<IdentityItem['action']>;
+  | NonNullable<IdentityItem['action']>
+  /** The spouse's own case (services/spouseCases), joined to this one as a joint return. */
+  | { kind: 'join_spouse_case'; returnId: string; name: string; documents: number };
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -450,6 +452,8 @@ export function buildCaseReview(input: {
   record?: CaseReviewRecord;
   /** Last year's documents this case does not have (§23), from services/missingDocuments. */
   missingDocuments?: readonly MissingDocument[];
+  /** Other cases of the year that may be this return's spouse (services/spouseCases). */
+  spouseCases?: ReadonlyArray<{ returnId: string; name: string; documents: number; why: 'spouse_ssn' | 'household' }>;
 }): CaseReview {
   const record = input.record ?? { resolutions: {} };
   const engineItems: ReviewItem[] = runReturnDiagnostics(input.taxReturn, input.calculation).map((d) => ({
@@ -478,11 +482,19 @@ export function buildCaseReview(input: {
     message: `${who}'s date of birth is not entered: the return treats them as under 65 (no additional standard deduction for 65 or older, no senior deduction).`,
     action: { kind: 'return_field' as const, field },
   }));
+  // The spouse's documents in a case of their own: joined to this return when the preparer says so.
+  const spouseCases: ReviewItem[] = (input.spouseCases ?? []).map((c) => ({
+    id: `case:spouse-case:${c.returnId}`, category: 'REVIEW', group: 'personal', source: 'readiness',
+    message: c.why === 'spouse_ssn'
+      ? `${c.name}, the spouse on this return, has a ${input.taxReturn.taxYear} case of their own with ${c.documents} document${c.documents === 1 ? '' : 's'}: join it to this joint return.`
+      : `${c.name}'s ${input.taxReturn.taxYear} case has the same last name and address. If they are the spouse, join that case to this return as a joint return — the documents come with it.`,
+    action: { kind: 'join_spouse_case' as const, returnId: c.returnId, name: c.name, documents: c.documents },
+  }));
   const identity: ReviewItem[] = planIdentity(input.taxReturn, input.documents).items.map((i) => ({
     id: i.id, category: 'REVIEW', group: 'personal', source: 'document', message: i.message,
     ...(i.documentId ? { documentId: i.documentId } : {}), ...(i.action ? { action: i.action } : {}),
   }));
-  const items = [...rolloverItems(record, input.taxReturn), ...identity, ...birthDates, ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
+  const items = [...rolloverItems(record, input.taxReturn), ...identity, ...spouseCases, ...birthDates, ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

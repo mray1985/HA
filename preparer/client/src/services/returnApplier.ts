@@ -42,6 +42,7 @@ import {
   buildChoiceItem,
   choiceForms,
   dependentLabel,
+  factPrefixOf,
   formKeyOf,
   resolveDependents,
   resolveEstimatedPayments,
@@ -56,6 +57,7 @@ import {
   type ChoiceTool,
   type PreparerChoiceTarget,
   type DocumentPieceOutcome,
+  type PartyIdentity,
   type ResolvedDependent,
   type TaxFact,
   type TaxToolApplication,
@@ -82,7 +84,10 @@ export type ApplyOutcome =
   | { kind: 'correction'; applied: true; w2FormKey: string }
   | { kind: 'correction'; applied: false; reason: string }
   | { kind: 'held'; reason: string }
-  | { kind: 'recorded' };
+  | { kind: 'recorded' }
+  /** The spouse on the return, from a client's statement. */
+  | { kind: 'spouse'; applied: true }
+  | { kind: 'spouse'; applied: false; reason: string };
 
 /** What the applier needs from a tool result: where it goes and its validated fields. */
 export type ApplicableResult = Pick<TaxToolSuccess, 'application' | 'fields'>;
@@ -128,7 +133,98 @@ export function applyToolResult(
       return applyChoiceForm(returnId, CHOICE_TOOL[app.target], formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex }));
     case 'candidate_fact':
       return { kind: 'recorded' };
+    case 'spouse':
+      return applySpouse(returnId, formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex }));
+    case 'business_expense': {
+      const formKey = formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex });
+      if (heldForms(returnId).has(formKey)) return { kind: 'held', reason: 'Validation holds this expense until a preparer reviews it.' };
+      const { amount, description, scheduleCLine, category } = result.fields;
+      // The line and category are a tax decision: the preparer's, never assumed.
+      if (typeof scheduleCLine !== 'number' || typeof category !== 'string' || typeof amount !== 'number') {
+        return { kind: 'held', reason: 'The expense waits for its Schedule C line and category.' };
+      }
+      return putIncomeItem(returnId, 'expenses', formKey, { scheduleCLine, category, amount, ...(typeof description === 'string' ? { description } : {}) });
+    }
   }
+}
+
+const digitsOf = (s: string | undefined) => (s ?? '').replace(/\D/g, '');
+
+/** Whose form it is on this return: the taxpayer's, the spouse's, or not known from its identity. */
+export function personOfForm(taxReturn: TaxReturn, identity: PartyIdentity | null | undefined): 'taxpayer' | 'spouse' | null {
+  if (!identity) return null;
+  const tin = identity.tin?.confirmed ? identity.tin.value : undefined;
+  const last = identity.name?.confirmed && identity.name.value ? identity.name.value.last.trim().toLowerCase() : undefined;
+  const is = (ssn: string | undefined, lastFour: string | undefined, lastName: string | undefined) => {
+    if (tin) return digitsOf(ssn) === tin;
+    const four = digitsOf(ssn).slice(5) || lastFour;
+    return Boolean(identity.tinLastFour && four === identity.tinLastFour && last && (lastName ?? '').trim().toLowerCase() === last);
+  };
+  if (is(taxReturn.ssn, taxReturn.ssnLastFour, taxReturn.lastName)) return 'taxpayer';
+  if ((taxReturn.spouseSsn || taxReturn.spouseSsnLastFour) && is(taxReturn.spouseSsn, taxReturn.spouseSsnLastFour, taxReturn.spouseLastName ?? taxReturn.lastName)) return 'spouse';
+  return null;
+}
+
+function identityOfForm(returnId: string, formKey: string): PartyIdentity | null {
+  const [documentId, index] = formKey.split('#');
+  return loadDocuments(returnId).find((d) => d.documentId === documentId)?.identities?.[Number(index) || 0] ?? null;
+}
+
+/** Items whose owner matters on a joint return (the Social Security wage base, retirement distributions). */
+const SPOUSE_ITEM_FIELDS = ['w2Income', 'income1099R'] as const;
+
+/**
+ * Mark each W-2 and 1099-R on the return as the taxpayer's or the spouse's,
+ * by the person its form names. A form whose person is not known keeps its mark.
+ */
+export function markSpouseItems(returnId: string): void {
+  const tr = getReturn(returnId);
+  const patch: Partial<TaxReturn> = {};
+  for (const field of SPOUSE_ITEM_FIELDS) {
+    const items = (tr[field] as unknown as Array<Record<string, unknown>> | undefined) ?? [];
+    let changed = false;
+    const next = items.map((item) => {
+      const key = item[SOURCE_FORM_KEY];
+      if (typeof key !== 'string') return item;
+      const who = personOfForm(tr, identityOfForm(returnId, key));
+      if (who === null || Boolean(item.isSpouse) === (who === 'spouse')) return item;
+      changed = true;
+      return { ...item, isSpouse: who === 'spouse' };
+    });
+    if (changed) (patch as Record<string, unknown>)[field] = next;
+  }
+  if (Object.keys(patch).length) updateReturn(returnId, patch);
+}
+
+/**
+ * The spouse a client's statement gives (name, SSN, date of birth). Never
+ * replaces a different spouse already on the return: that waits for the preparer.
+ */
+function applySpouse(returnId: string, formKey: string): ApplyOutcome {
+  const values = new Map<string, unknown>();
+  for (const f of loadTaxFacts(returnId)) {
+    if (formKeyOf(f) === formKey && f.factType.startsWith(factPrefixOf('set_spouse')) && f.status === 'extracted') values.set(f.sourceField, f.value);
+  }
+  const text = (k: string) => (typeof values.get(k) === 'string' ? String(values.get(k)).trim() : undefined);
+  const firstName = text('firstName');
+  const lastName = text('lastName');
+  const ssn = text('ssn') ? digitsOf(text('ssn')) : undefined;
+  const dateOfBirth = text('dateOfBirth');
+  const tr = getReturn(returnId);
+  if (ssn && tr.spouseSsn && digitsOf(tr.spouseSsn) !== ssn) {
+    return { kind: 'spouse', applied: false, reason: 'The return already has a spouse with another SSN.' };
+  }
+  if (firstName && tr.spouseFirstName && tr.spouseFirstName.trim().toLowerCase() !== firstName.toLowerCase()) {
+    return { kind: 'spouse', applied: false, reason: `The return already has ${tr.spouseFirstName} as the spouse.` };
+  }
+  updateReturn(returnId, {
+    ...(firstName ? { spouseFirstName: firstName } : {}),
+    ...(lastName ? { spouseLastName: lastName } : {}),
+    ...(ssn ? { spouseSsn: ssn } : {}),
+    ...(dateOfBirth ? { spouseDateOfBirth: dateOfBirth } : {}),
+  });
+  markSpouseItems(returnId);
+  return { kind: 'spouse', applied: true };
 }
 
 /** Where one extracted form goes: its tool's application, or a return item when HATax reads the type deterministically. */
@@ -148,6 +244,7 @@ export function outcomeOfApply(outcome: ApplyOutcome): DocumentPieceOutcome {
     case 'correction': return outcome.applied ? 'correction' : 'correction_waiting';
     case 'held': return 'held';
     case 'recorded': return 'recorded';
+    case 'spouse': return outcome.applied ? 'recorded' : 'held';
   }
 }
 
@@ -221,7 +318,12 @@ function putIncomeItem(returnId: string, itemType: string, formKey: string, fiel
   const index = items.findIndex((i) => i[SOURCE_FORM_KEY] === formKey);
   // The whole item is rewritten: a box read before but unknown now must not linger.
   const id = index >= 0 ? String(items[index]!.id) : crypto.randomUUID();
-  const item = { ...engineItemFields(itemType, fields), [SOURCE_FORM_KEY]: formKey, id };
+  const item: Record<string, unknown> = { ...engineItemFields(itemType, fields), [SOURCE_FORM_KEY]: formKey, id };
+  // On a joint return, a W-2 or 1099-R is the person's its form names.
+  if (itemType === 'w2' || itemType === '1099r') {
+    const who = personOfForm(tr, identityOfForm(returnId, formKey));
+    if (who !== null) item.isSpouse = who === 'spouse';
+  }
   const next = index >= 0 ? items.map((existing, i) => (i === index ? item : existing)) : [...items, item];
   updateReturn(returnId, { [field]: next });
   return { kind: 'income_item', itemType, itemId: id, replaced: index >= 0 };

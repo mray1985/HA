@@ -32,6 +32,7 @@ import type { IntakeResult } from '../services/caseIntake';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
 import { applyReleasedForm, type DecisionResult } from '../services/preparerDecisions';
 import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
+import { spouseCaseCandidates } from '../services/spouseCases';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
 export type CaseTab = 'review' | 'documents' | 'client' | 'return' | 'explain' | 'scenarios' | 'approve';
@@ -155,7 +156,8 @@ export const useCaseStore = create<CaseState>((set, get) => {
     const { facts, documents, reviewRecord } = { ...get(), ...patch };
     const calculation = calculate(taxReturn);
     const missingDocuments = caseMissingDocuments(taxReturn, facts, documents);
-    const review = buildCaseReview({ taxReturn, calculation, facts, documents, record: reviewRecord, missingDocuments });
+    const spouseCases = get().returnId ? spouseCaseCandidates(get().returnId!) : [];
+    const review = buildCaseReview({ taxReturn, calculation, facts, documents, record: reviewRecord, missingDocuments, spouseCases });
     set({ ...patch, taxReturn, calculation, review, missingDocuments });
   };
 

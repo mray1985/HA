@@ -69,7 +69,7 @@ function noteDocumentOutcome(returnId: string, formKey: string, outcome: ApplyOu
 }
 
 /** Re-apply one form from its facts (after a decision or a correction). */
-function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
+export function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
   const facts = formFacts(returnId, formKey);
   const tool = formToolOfFacts(facts);
   if (!tool) return null;

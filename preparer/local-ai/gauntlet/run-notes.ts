@@ -32,6 +32,8 @@ type Expected = Record<string, unknown>;
 interface NoteCase {
   id: string;
   note: string;
+  /** Whose return the note is on, when the case knows. */
+  client?: string;
   expect: Partial<Record<NoteKind, Expected[]>>;
 }
 
@@ -73,8 +75,43 @@ const HELD_OUT: NoteCase[] = [
   },
 ];
 
+/** Replies from the 2026-10-01 stress run and their neighbours: a new client's family, a spouse, a business expense. */
+const STRESS_RUN: NoteCase[] = [
+  {
+    id: 'okafor',
+    client: 'Ben Okafor',
+    note: 'Ben and I (Cara Okafor, SSN 000-31-5502, born July 19, 1988) are married and file jointly. Ben was born March 2, 1986. Our kids Noah Okafor (born April 12, 2016, SSN 000-55-1201) and Lily Okafor (born September 30, 2019, SSN 000-55-1202) lived with us all year. We all live in Illinois.',
+    expect: {
+      dependents: [
+        { firstName: 'Noah', lastName: 'Okafor', dateOfBirth: '2016-04-12', ssn: '000-55-1201' },
+        { firstName: 'Lily', lastName: 'Okafor', dateOfBirth: '2019-09-30', ssn: '000-55-1202', monthsLivedWithYou: 12 },
+      ],
+      spouse: [{ firstName: 'Cara', lastName: 'Okafor', dateOfBirth: '1988-07-19', ssn: '000-31-5502' }],
+      states: [{ stateCode: 'IL', residencyType: 'resident' }],
+    },
+  },
+  {
+    id: 'whitfield',
+    client: 'Dana Whitfield',
+    note: "I'm filing as head of household. My son Marcus Whitfield (born February 3, 2014, SSN 000-66-3001) lived with me all year and I paid all the household costs.",
+    expect: { dependents: [{ firstName: 'Marcus', lastName: 'Whitfield', relationship: 'Son', dateOfBirth: '2014-02-03', ssn: '000-66-3001', monthsLivedWithYou: 12 }] },
+  },
+  {
+    id: 'moreno',
+    client: 'Fay Moreno',
+    note: "I'm single with no dependents, a Texas resident. I'm a freelance designer; my business expenses were $3,200 for software and equipment.",
+    expect: { expenses: [{ amount: 3200, description: 'software and equipment' }], states: [{ stateCode: 'TX', residencyType: 'resident' }] },
+  },
+  { id: 'married-no-name', note: 'My wife and I are filing jointly again this year.', expect: {} },
+  { id: 'new-roof', note: 'We spent $4,000 on a new roof for the house.', expect: {} },
+  { id: 'newlywed', note: 'I got married in June to Priya Shah, born February 14, 1990.', expect: { spouse: [{ firstName: 'Priya', lastName: 'Shah', dateOfBirth: '1990-02-14' }] } },
+];
+
 const keyOf = (kind: NoteKind, v: Record<string, unknown>) =>
-  kind === 'dependents' ? String(v.firstName).toLowerCase() : kind === 'states' ? String(v.stateCode) : `${v.jurisdiction}|${v.amount}`;
+  kind === 'dependents' || kind === 'spouse' ? String(v.firstName).toLowerCase()
+    : kind === 'states' ? String(v.stateCode)
+    : kind === 'expenses' ? String(v.amount)
+    : `${v.jurisdiction}|${v.amount}`;
 
 function argOf(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -95,16 +132,17 @@ async function main(): Promise<void> {
   const tallies = {
     tuned: { right: 0, full: 0, wrong: 0, missed: 0, rejected: 0 },
     heldOut: { right: 0, full: 0, wrong: 0, missed: 0, rejected: 0 },
+    stressRun: { right: 0, full: 0, wrong: 0, missed: 0, rejected: 0 },
   };
   const rows: unknown[] = [];
   let ms = 0;
   let calls = 0;
   try {
-    for (const [set, c] of [...CASES.map((c) => ['tuned', c] as const), ...HELD_OUT.map((c) => ['heldOut', c] as const)]) {
+    for (const [set, c] of [...CASES.map((c) => ['tuned', c] as const), ...HELD_OUT.map((c) => ['heldOut', c] as const), ...STRESS_RUN.map((c) => ['stressRun', c] as const)]) {
       const tally = tallies[set];
       // Every call for the note, pooled by kind (one per named state for states).
       const byKind = new Map<NoteKind, { reading: NoteReading; models: string[] }>();
-      for (const call of noteCalls(c.note, YEAR)) {
+      for (const call of noteCalls(c.note, YEAR, c.client)) {
         const { content, run } = await runtime.read('reader', { prompt: call.prompt, name: call.name, jsonSchema: call.schema as Record<string, unknown> });
         ms += run.ms;
         calls += 1;
@@ -115,14 +153,15 @@ async function main(): Promise<void> {
         pooled.models.push(content);
         byKind.set(call.kind, pooled);
       }
-      for (const kind of ['dependents', 'states', 'payments'] as const) {
+      for (const kind of ['dependents', 'states', 'payments', 'spouse', 'expenses'] as const) {
         const { reading, models: content } = byKind.get(kind) ?? { reading: { proposals: [], rejected: [] }, models: [] };
         const expected = c.expect[kind] ?? [];
         const verdicts: string[] = [];
         const seen = new Set<string>();
         for (const p of reading.proposals as NoteProposal[]) {
           const want = expected.find((e) => keyOf(kind, e) === keyOf(kind, p.args));
-          const sameValues = want !== undefined && Object.entries(p.args).every(([k, v]) => want[k] === v);
+          // An expense's description is the client's own words, not a value to match.
+          const sameValues = want !== undefined && Object.entries(p.args).every(([k, v]) => (kind === 'expenses' && k === 'description') || want[k] === v);
           if (sameValues) {
             tally.right += 1;
             seen.add(keyOf(kind, p.args));
@@ -142,7 +181,7 @@ async function main(): Promise<void> {
         }
         tally.rejected += reading.rejected.length;
         rows.push({ set, case: c.id, kind, model: content, reading, verdicts });
-        const tag = set === 'heldOut' ? '[held out] ' : '';
+        const tag = set === 'heldOut' ? '[held out] ' : set === 'stressRun' ? '[stress run] ' : '';
         for (const v of verdicts) console.log(`${tag}${c.id} / ${kind}: ${v}`);
         for (const r of reading.rejected) console.log(`${tag}${c.id} / ${kind}: rejected — ${r.reason}${r.quote ? ` ("${r.quote}")` : ''}`);
       }
@@ -154,7 +193,7 @@ async function main(): Promise<void> {
   for (const [set, t] of Object.entries(tallies)) {
     console.log(`${set}: PROPOSALS right ${t.right} (all fields ${t.full}) | WRONG ${t.wrong} | missed ${t.missed} | rejected by the words ${t.rejected}`);
   }
-  console.log(`${(ms / calls / 1000).toFixed(1)}s per call, ${(calls / (CASES.length + HELD_OUT.length)).toFixed(1)} calls per note`);
+  console.log(`${(ms / calls / 1000).toFixed(1)}s per call, ${(calls / (CASES.length + HELD_OUT.length + STRESS_RUN.length)).toFixed(1)} calls per note`);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify({ model: 'Qwen3.5-0.8B (reader)', tallies, secondsPerCall: ms / calls / 1000, rows }, null, 2));
 }

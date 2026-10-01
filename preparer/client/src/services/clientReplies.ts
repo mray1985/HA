@@ -160,7 +160,8 @@ async function readClientReplyNow(
     }
 
     // New facts the text states, offered to the preparer — not ones the answers above just recorded.
-    const calls = noteCalls(text, tr.taxYear);
+    const client = [tr.firstName, tr.lastName].filter(Boolean).join(' ').trim();
+    const calls = noteCalls(text, tr.taxYear, client || undefined);
     for (const [i, call] of calls.entries()) {
       onProgress?.(`Reading the reply for new facts (${i + 1} of ${calls.length})…`);
       const { content, run } = await askLocalModel({ prompt: call.prompt, name: call.name, jsonSchema: call.schema as Record<string, unknown> }, runs);
@@ -197,13 +198,46 @@ async function readClientReplyNow(
 }
 
 /**
+ * Schedule C lines a business expense from a client's words can go on, chosen
+ * by the preparer. Equipment is not among them: it is depreciated or expensed
+ * as an asset (Form 4562), entered with its date placed in service.
+ */
+export const SCHEDULE_C_EXPENSE_LINES: ReadonlyArray<{ line: number; category: string; label: string }> = [
+  { line: 8, category: 'advertising', label: 'Line 8 — Advertising' },
+  { line: 9, category: 'car_and_truck', label: 'Line 9 — Car and truck expenses' },
+  { line: 10, category: 'commissions', label: 'Line 10 — Commissions and fees' },
+  { line: 11, category: 'contract_labor', label: 'Line 11 — Contract labor' },
+  { line: 15, category: 'insurance', label: 'Line 15 — Insurance (other than health)' },
+  { line: 16, category: 'interest_other', label: 'Line 16b — Interest (other)' },
+  { line: 17, category: 'legal_professional', label: 'Line 17 — Legal and professional services' },
+  { line: 18, category: 'office_expense', label: 'Line 18 — Office expense' },
+  { line: 20, category: 'rent_property', label: 'Line 20b — Rent or lease (other business property)' },
+  { line: 21, category: 'repairs_maintenance', label: 'Line 21 — Repairs and maintenance' },
+  { line: 22, category: 'supplies', label: 'Line 22 — Supplies' },
+  { line: 23, category: 'taxes_licenses', label: 'Line 23 — Taxes and licenses' },
+  { line: 24, category: 'travel', label: 'Line 24a — Travel' },
+  { line: 24, category: 'meals', label: 'Line 24b — Deductible meals' },
+  { line: 25, category: 'utilities', label: 'Line 25 — Utilities' },
+  { line: 26, category: 'wages', label: 'Line 26 — Wages' },
+  { line: 27, category: 'other', label: 'Line 27a — Other expenses' },
+];
+
+/**
  * The preparer accepts a fact the reply stated: recorded by its record tool
  * as a verified client response (the words give every value it holds), with
- * the client's words as its source text.
+ * the client's words as its source text. `decided` holds what only the
+ * preparer gives (a business expense's Schedule C line and category).
  */
-export function acceptNoteOffer(returnId: string, reply: Pick<ReadReplyResult, 'replyId' | 'label'>, offer: NoteOffer, index: number): { ok: true; detail: string } | { ok: false; error: string } {
+export function acceptNoteOffer(
+  returnId: string,
+  reply: Pick<ReadReplyResult, 'replyId' | 'label'>,
+  offer: NoteOffer,
+  index: number,
+  decided: Record<string, unknown> = {},
+): { ok: true; detail: string } | { ok: false; error: string } {
   const { proposal } = offer;
-  const { result, outcome } = recordEvidence(returnId, proposal.tool, proposal.args, {
+  const args = { ...proposal.args, ...decided };
+  const { result, outcome } = recordEvidence(returnId, proposal.tool, args, {
     documentId: `${reply.replyId}:note`,
     index,
     label: reply.label,

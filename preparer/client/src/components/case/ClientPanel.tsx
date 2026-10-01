@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleHelp, Copy, MessageSquareText } from 'lucide-react';
 import { clientQuestionLetter, generateClientQuestions } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
-import { acceptNoteOffer, answerLabel, dismissNoteOffer, readClientReply, type NoteOffer, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
+import { acceptNoteOffer, answerLabel, dismissNoteOffer, readClientReply, SCHEDULE_C_EXPENSE_LINES, type NoteOffer, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
 import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 
 function AnswerLine({ answer }: { answer: ReplyAnswer }) {
@@ -40,8 +40,12 @@ function AnswerLine({ answer }: { answer: ReplyAnswer }) {
 
 type OfferState = { kind: 'accepted'; detail: string } | { kind: 'dismissed' } | { kind: 'error'; error: string };
 
-function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; state?: OfferState; onAccept: () => void; onDismiss: () => void }) {
+function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; state?: OfferState; onAccept: (decided?: Record<string, unknown>) => void; onDismiss: () => void }) {
   const dropped = offer.proposal.dropped;
+  // A business expense's Schedule C line is the preparer's to give.
+  const isExpense = offer.proposal.tool === 'add_business_expense';
+  const [lineChoice, setLineChoice] = useState('');
+  const chosen = SCHEDULE_C_EXPENSE_LINES.find((l) => `${l.line}:${l.category}` === lineChoice);
   return (
     <li className="text-sm rounded-lg border border-slate-700 bg-surface-900 p-3">
       <p className="text-white">{offer.description}</p>
@@ -51,9 +55,30 @@ function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; st
       {state?.kind === 'dismissed' && <p className="text-xs text-slate-400 mt-1">Dismissed.</p>}
       {state?.kind === 'error' && <p role="alert" className="text-xs text-red-300 mt-1">{state.error}</p>}
       {(!state || state.kind === 'error') && (
-        <div className="mt-2 flex gap-2 justify-end">
+        <div className="mt-2 flex flex-wrap gap-2 justify-end items-center">
+          {isExpense && (
+            <>
+              <select
+                aria-label="Schedule C line for this expense"
+                value={lineChoice}
+                onChange={(e) => setLineChoice(e.target.value)}
+                className="bg-surface-800 border border-slate-600 text-white text-sm rounded px-2 py-1"
+              >
+                <option value="">Choose the Schedule C line…</option>
+                {SCHEDULE_C_EXPENSE_LINES.map((l) => <option key={`${l.line}:${l.category}`} value={`${l.line}:${l.category}`}>{l.label}</option>)}
+              </select>
+              <span className="text-xs text-slate-500 w-full text-right">Equipment is an asset: enter it with its date placed in service.</span>
+            </>
+          )}
           <button type="button" onClick={onDismiss} className="text-sm text-slate-400 hover:text-white px-3 py-1">Dismiss</button>
-          <button type="button" onClick={onAccept} className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1">Add</button>
+          <button
+            type="button"
+            disabled={isExpense && !chosen}
+            onClick={() => onAccept(chosen ? { scheduleCLine: chosen.line, category: chosen.category } : undefined)}
+            className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 disabled:opacity-40 text-white rounded px-3 py-1"
+          >
+            Add
+          </button>
         </div>
       )}
     </li>
@@ -184,10 +209,10 @@ export default function ClientPanel() {
                       key={offer.id}
                       offer={offer}
                       state={offerStates[offer.id]}
-                      onAccept={() => {
+                      onAccept={(decided) => {
                         let outcome: OfferState = { kind: 'error', error: 'The case is not open.' };
                         act((id) => {
-                          const r = acceptNoteOffer(id, result, offer, i);
+                          const r = acceptNoteOffer(id, result, offer, i, decided);
                           outcome = r.ok ? { kind: 'accepted', detail: r.detail } : { kind: 'error', error: r.error };
                           return r.ok ? { ok: true, outcome: { kind: 'recorded' } } : r;
                         });

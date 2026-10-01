@@ -75,8 +75,8 @@ describe("a client's reply on a case (§24, §25)", () => {
     expect(getReturn(returnId).dependents).toEqual([expect.objectContaining({ firstName: 'Maya', lastName: 'Lee', monthsLivedWithYou: 12 })]);
     const months = loadTaxFacts(returnId).find((f) => f.factType === 'DEPENDENT_monthsLivedWithYou' && f.sourceKind === 'client_response');
     expect(months).toMatchObject({ value: 12, verified: true, rawText: 'Maya lived with us all year', modelRunId: 'run-2' });
-    // Two questions, then the reply read as a note (dependents and payments; it names no state).
-    expect(loadModelRuns(returnId).map((r) => r.runId)).toEqual(['run-1', 'run-2', 'run-3', 'run-4']);
+    // Two questions, then the reply read as a note: dependents, payments, and a spouse ("jointly"); it names no state.
+    expect(loadModelRuns(returnId).map((r) => r.runId)).toEqual(['run-1', 'run-2', 'run-3', 'run-4', 'run-5']);
     expect(result.offers).toEqual([]);
 
     // The stated filing status waits for the preparer.
