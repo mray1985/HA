@@ -177,13 +177,14 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
     // A form for another tax year: its amounts belong on that year's return.
     (doc.taxYearsPrinted ?? []).forEach((year, index) => {
       if (!year || year === String(taxReturn.taxYear)) return;
-      const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
+      // classifications are one per piece, like the years; formTypes leaves out pieces that are not forms.
+      const form = doc.classifications?.[index]?.formType ?? doc.formTypes?.[index] ?? 'form';
       items.push({ id: `document:year:${doc.documentId}#${index}`, category: 'WARNING', group: 'documents', source: 'document', documentId: doc.documentId,
-        message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. It is held and not on the return: its amounts belong on the ${year} return — move it to that case, or record why it belongs here and it is added.` });
+        message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. It is held and not on the return: its amounts belong on the ${year} return — move it to that case, or mark it checked and correct with why it belongs here and it is added. Not applicable keeps it off.` });
     });
     (doc.appliedAs ?? []).forEach((outcome, index) => {
       if (outcome !== 'not_applied') return;
-      const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
+      const form = doc.classifications?.[index]?.formType ?? doc.formTypes?.[index] ?? 'form';
       items.push({ id: `document:not-applied:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
         message: `${doc.fileName}: the ${form} was read but is not entered automatically — enter it on the return.` });
     });

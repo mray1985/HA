@@ -691,6 +691,8 @@ const AddBusinessExpenseFieldsSchema = z
     scheduleCLine: z.preprocess(asMissing, z.number().int().min(8).max(27).optional()),
     /** The expense category on that line (meals and travel share line 24). */
     category: optionalString,
+    /** The Schedule C business it belongs to (the return's business id), when the return has more than one. */
+    businessId: optionalString,
   })
   .strict();
 

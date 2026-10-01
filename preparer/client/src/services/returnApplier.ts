@@ -63,7 +63,7 @@ import {
   type TaxToolApplication,
   type TaxToolSuccess,
 } from '@hatax/local-ai';
-import { ARRAY_FIELD_MAP, getReturn, updateReturn, upsertItemized, upsertSSA1099 } from '../api/client';
+import { ARRAY_FIELD_MAP, deleteSSA1099, getReturn, updateReturn, upsertItemized, upsertSSA1099 } from '../api/client';
 import { loadReviewRecord } from './caseAudit';
 import { loadDocuments, upsertDocument, type ApplyExtractionResult } from './documentIngestion';
 import { INCOME_DISCOVERY_KEYS } from './pdfExtractHelpers';
@@ -114,16 +114,22 @@ export function applyToolResult(
       markDiscovered(returnId, INCOME_DISCOVERY_KEYS[app.itemType]);
       const fields = app.itemType === 'business-receipts' ? businessReceiptItem(returnId, result.fields)
         // A W-2 read again keeps the corrections its W-2cs make.
-        : app.itemType === 'w2' ? applyW2Corrections(formKey, result.fields, resolveW2Corrections(loadTaxFacts(returnId), getReturn(returnId).taxYear))
+        : app.itemType === 'w2' ? applyW2Corrections(formKey, result.fields, w2CorrectionsInForce(returnId))
         : result.fields;
       return putIncomeItem(returnId, app.itemType, formKey, fields);
     }
     case 'aggregate': {
-      markDiscovered(returnId, AGGREGATE_DISCOVERY[app.target]);
       const formKey = formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex });
-      if (app.target === 'estimatedPayments') return recomputeEstimatedPayments(returnId, formKey);
+      if (app.target === 'estimatedPayments') {
+        markDiscovered(returnId, AGGREGATE_DISCOVERY[app.target]);
+        return recomputeEstimatedPayments(returnId, formKey);
+      }
       if (app.target === 'stateResidency') return syncStateReturns(returnId).get(formKey) ?? { kind: 'recorded' };
-      return recomputeAggregate(returnId, app.target);
+      // A form for another tax year is not in this year's total (factsByForm), and waits for the preparer.
+      const otherYear = formsForAnotherYear(returnId).has(formKey);
+      if (!otherYear) markDiscovered(returnId, AGGREGATE_DISCOVERY[app.target]);
+      const outcome = recomputeAggregate(returnId, app.target);
+      return otherYear ? { kind: 'held', reason: 'The form is for another tax year; it waits for the preparer.' } : outcome;
     }
     case 'dependent':
       return recomputeDependents(returnId).get(formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex })) ?? { kind: 'recorded' };
@@ -138,12 +144,21 @@ export function applyToolResult(
     case 'business_expense': {
       const formKey = formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex });
       if (heldForms(returnId).has(formKey)) return { kind: 'held', reason: 'Validation holds this expense until a preparer reviews it.' };
-      const { amount, description, scheduleCLine, category } = result.fields;
+      const { amount, description, scheduleCLine, category, businessId } = result.fields;
       // The line and category are a tax decision: the preparer's, never assumed.
       if (typeof scheduleCLine !== 'number' || typeof category !== 'string' || typeof amount !== 'number') {
         return { kind: 'held', reason: 'The expense waits for its Schedule C line and category.' };
       }
-      return putIncomeItem(returnId, 'expenses', formKey, { scheduleCLine, category, amount, ...(typeof description === 'string' ? { description } : {}) });
+      // So is the business, when there is more than one: an expense of no business is in
+      // Schedule C's total but in no business's profit, and on a joint return that
+      // splits self-employment tax between the spouses (Schedule C per business).
+      const businesses = getReturn(returnId).businesses ?? [];
+      const business = typeof businessId === 'string' ? businesses.find((b) => b.id === businessId) : businesses.length === 1 ? businesses[0] : undefined;
+      if (!business && (businesses.length > 1 || typeof businessId === 'string')) {
+        removeFormItems(returnId, formKey);
+        return { kind: 'held', reason: typeof businessId === 'string' ? 'The business this expense was given is no longer on the return; choose its business.' : 'The return has more than one business: the expense waits for the business it belongs to.' };
+      }
+      return putIncomeItem(returnId, 'expenses', formKey, { scheduleCLine, category, amount, ...(typeof description === 'string' ? { description } : {}), ...(business ? { businessId: business.id } : {}) });
     }
   }
 }
@@ -271,8 +286,8 @@ export const YEAR_ITEM_PREFIX = 'document:year:';
 
 /**
  * Forms printed for another tax year than the case's: held off the return —
- * their amounts belong on that year's return — until the preparer records why
- * one belongs here.
+ * their amounts belong on that year's return — until the preparer accepts one
+ * as belonging here (checked and correct). "Not applicable" keeps it held.
  */
 function formsForAnotherYear(returnId: string): Set<string> {
   const year = String(getReturn(returnId).taxYear);
@@ -281,7 +296,7 @@ function formsForAnotherYear(returnId: string): Set<string> {
   for (const doc of loadDocuments(returnId)) {
     (doc.taxYearsPrinted ?? []).forEach((printed, index) => {
       const formKey = `${doc.documentId}#${index}`;
-      if (printed && printed !== year && !decided[`${YEAR_ITEM_PREFIX}${formKey}`]) held.add(formKey);
+      if (printed && printed !== year && decided[`${YEAR_ITEM_PREFIX}${formKey}`]?.decision !== 'accepted') held.add(formKey);
     });
   }
   return held;
@@ -329,14 +344,20 @@ function putIncomeItem(returnId: string, itemType: string, formKey: string, fiel
   return { kind: 'income_item', itemType, itemId: id, replaced: index >= 0 };
 }
 
-/** Facts of one kind, by form, as field → fact, and which of those forms validation holds. */
+/**
+ * Facts of one kind, by form, as field → fact, and which of those forms
+ * validation holds. A form for another tax year is left out: its amounts
+ * belong on that year's return, not in this year's total.
+ */
 function factsByForm(returnId: string, factPrefix: string): { forms: Map<string, Map<string, TaxFact>>; held: string[] } {
   const facts = loadTaxFacts(returnId);
-  const heldForms = new Set([...validateImportedFacts(facts).heldForms, ...formsForAnotherYear(returnId)]);
+  const heldForms = new Set(validateImportedFacts(facts).heldForms);
+  const otherYear = formsForAnotherYear(returnId);
   const forms = new Map<string, Map<string, TaxFact>>();
   for (const fact of facts) {
     if (!fact.factType.startsWith(factPrefix)) continue;
     const key = formKeyOf(fact);
+    if (otherYear.has(key)) continue;
     const fields = forms.get(key) ?? new Map<string, TaxFact>();
     fields.set(fact.factType.slice(factPrefix.length), fact);
     forms.set(key, fields);
@@ -355,6 +376,20 @@ function sumPresent(forms: Iterable<Map<string, TaxFact>>, field: string): numbe
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * A total the preparer took back (a released form's decision reopened): when
+ * no form of this year is left to give it, it comes off the return. Only
+ * called on that path — a hand-entered total is never cleared by a form.
+ */
+export function clearAggregateWithoutForms(returnId: string, target: 'socialSecurityBenefits' | 'mortgageInterest'): void {
+  if (factsByForm(returnId, target === 'socialSecurityBenefits' ? 'SSA1099_' : '1098_').forms.size > 0) return;
+  if (target === 'socialSecurityBenefits') {
+    if (getReturn(returnId).incomeSSA1099) deleteSSA1099(returnId);
+  } else if (getReturn(returnId).itemizedDeductions) {
+    upsertItemized(returnId, { mortgageInterest: 0, mortgageInsurancePremiums: 0, mortgageBalance: undefined });
+  }
+}
 
 function recomputeAggregate(returnId: string, target: 'socialSecurityBenefits' | 'mortgageInterest'): ApplyOutcome {
   if (target === 'socialSecurityBenefits') {
@@ -680,16 +715,23 @@ export function applyChoiceForm(returnId: string, tool: ChoiceTool, formKey: str
 
 // ─── W-2c corrections ────────────────────────────────────────
 
+/** The W-2cs that correct the return's W-2s: a held W-2c corrects nothing until it is released. */
+function w2CorrectionsInForce(returnId: string) {
+  const held = heldForms(returnId);
+  return resolveW2Corrections(loadTaxFacts(returnId), getReturn(returnId).taxYear).filter((c) => !held.has(c.formKey));
+}
+
 /**
  * Rewrite every W-2 on the return from its own facts and the W-2cs that
- * correct it (a correction that no longer resolves drops out). Returns the
- * outcome for each W-2c, by form key.
+ * correct it (a correction that no longer resolves, or is held, drops out).
+ * Returns the outcome for each W-2c, by form key.
  */
 export function recomputeW2Corrections(returnId: string): Map<string, ApplyOutcome> {
   const facts = loadTaxFacts(returnId);
   const tr = getReturn(returnId);
   const corrections = resolveW2Corrections(facts, tr.taxYear);
   const held = heldForms(returnId);
+  const inForce = corrections.filter((c) => !held.has(c.formKey));
   const onReturn = new Set((tr.w2Income ?? []).map((w) => ownerKey(w)).filter((k): k is string => Boolean(k)));
   const w2Facts = new Map<string, TaxFact[]>();
   for (const f of facts) {
@@ -698,7 +740,7 @@ export function recomputeW2Corrections(returnId: string): Map<string, ApplyOutco
   }
   for (const [key, fs] of w2Facts) {
     if (!onReturn.has(key) || held.has(key)) continue;
-    putIncomeItem(returnId, 'w2', key, applyW2Corrections(key, toolFieldsFromFacts('add_w2', fs), corrections));
+    putIncomeItem(returnId, 'w2', key, applyW2Corrections(key, toolFieldsFromFacts('add_w2', fs), inForce));
   }
 
   const outcomes = new Map<string, ApplyOutcome>();

@@ -16,6 +16,7 @@ import { lock, setActiveKey, setupEncryption } from '../services/crypto';
 import { saveReviewRecord } from '../services/caseAudit';
 import { applyReleasedForm } from '../services/preparerDecisions';
 import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
+import { useCaseStore } from '../store/caseStore';
 
 function installMemoryLocalStorage() {
   const store = new Map<string, string>();
@@ -151,6 +152,29 @@ describe('a batch for any clients', () => {
     saveReviewRecord(maya, { resolutions: {} });
     removeFormItems(maya, formKey);
     expect(getReturn(maya).w2Income).toEqual([]);
+  });
+
+  it('keeps a form for another year off the return when the preparer marks it not applicable, and takes back one reopened', async () => {
+    const maya = createReturn(2026).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    await ingestBatch([pdf('w2-basic-single.pdf')], 2026);
+    const itemId = `${YEAR_ITEM_PREFIX}${loadDocuments(maya)[0]!.documentId}#0`;
+    const store = useCaseStore.getState();
+    store.openCase(maya);
+    const item = () => useCaseStore.getState().review!.items.find((i) => i.id === itemId)!;
+
+    // Not applicable to this client: the item closes and the W-2 stays off.
+    useCaseStore.getState().resolve(item(), 'not_applicable', 'Not applicable to this client.');
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+    useCaseStore.getState().reopen(itemId);
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+
+    // Checked and correct: it goes on; reopened, it comes off.
+    useCaseStore.getState().resolve(item(), 'accepted', 'Corrected copy issued in 2026 for this year');
+    expect(getReturn(maya).w2Income).toEqual([expect.objectContaining({ employerName: 'RIVERBEND LOGISTICS LLC' })]);
+    useCaseStore.getState().reopen(itemId);
+    expect(getReturn(maya).w2Income).toEqual([]);
+    useCaseStore.getState().closeCase();
   });
 
   it('says the vault locked rather than losing the documents it could not save', async () => {

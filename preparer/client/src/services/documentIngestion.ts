@@ -323,12 +323,10 @@ export function applyExtractionToDocument(input: {
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
   const classificationRecords = classifications.map(classificationRecord);
-  const identities = pieces
-    .filter((p) => classificationAllowsIncomeWrite(p.classification))
-    .map((p) => p.extracted?.identity ?? null);
-  const taxYearsPrinted = pieces
-    .filter((p) => classificationAllowsIncomeWrite(p.classification))
-    .map((p) => p.extracted?.taxYearPrinted ?? null);
+  // One entry per piece, in the pieces' order: a form's key (document#index) is
+  // its piece index, so a piece that is not a form keeps its place with null.
+  const identities = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.identity ?? null : null));
+  const taxYearsPrinted = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.taxYearPrinted ?? null : null));
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',

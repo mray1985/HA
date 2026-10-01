@@ -1247,6 +1247,34 @@ describe('documentIngestion client pipeline', () => {
     expect(applied.unclassified).toBeUndefined();
   });
 
+  it('keeps each piece\'s printed year and identity at the piece\'s own place when a piece before it is not a form', () => {
+    saveTaxFacts('ret-1', []);
+    const junk: PDFExtractResult = {
+      formType: null, extractedData: { amount: 999 }, incomeType: null, payerName: '', confidence: 'low',
+      warnings: [], errors: [], textBlockCount: 1, ocrUsed: false, ocrAvailable: false,
+      rawOCRText: 'Cover letter. Please find enclosed forms.',
+    };
+    const w2For2024: PDFExtractResult = {
+      formType: 'W-2', extractedData: { employerName: 'Acme', wages: 100 }, incomeType: 'w2', payerName: 'Acme', confidence: 'high',
+      warnings: [], errors: [], textBlockCount: 6, ocrUsed: false, ocrAvailable: false, taxYearPrinted: '2024',
+      rawOCRText: 'Form W-2 Wage and Tax Statement Employer Wages Federal income tax withheld Social security',
+      trace: {
+        formDetection: { detectedType: 'W-2', confidence: 'high', matchedKeywords: ['wage and tax statement', 'employer', 'wages', 'federal income tax withheld'], reasoning: 'Matched W-2' },
+        fields: [], summary: 'w2', textBlockCount: 6, pagesScanned: 1,
+      },
+    };
+
+    const applied = applyExtractionToDocument({
+      returnId: 'ret-1', taxYear: 2025, document: baseDoc({ fileName: 'packet.pdf' }),
+      extracted: { ...junk, additionalResults: [w2For2024] },
+    });
+
+    // The W-2 is piece 1: its facts are form ret#1, and so are its year and identity.
+    expect(new Set(applied.facts.map((f) => f.sourceFormIndex ?? 0))).toEqual(new Set([1]));
+    expect(applied.document.taxYearsPrinted).toEqual([null, '2024']);
+    expect(applied.document.identities).toBeUndefined();
+  });
+
   it('drops stale source box when an AI override changes the value', () => {
     saveTaxFacts('ret-1', []);
     saveDocuments('ret-1', [baseDoc()]);

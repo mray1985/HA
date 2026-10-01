@@ -118,7 +118,7 @@ const DESCRIPTIONS: Record<TaxToolName | ReturnToolName, string> = {
   set_state_residency: `Record the taxpayer's residency in one state for the tax year, as the evidence states it. ${NO_GUESSING}`,
   set_document_expected: `Record whether the client received a tax document they received last year (the payer's form this year), as the client states it. ${NO_GUESSING}`,
   set_spouse: `Record the client's spouse on a joint return (name, SSN, date of birth) as the evidence states them. ${NO_GUESSING}`,
-  add_business_expense: `Record one business (Schedule C) expense the evidence states, with its amount and what it was for; the preparer gives its Schedule C line and category. ${NO_GUESSING}`,
+  add_business_expense: `Record one business (Schedule C) expense the evidence states, with its amount and what it was for; the preparer gives its Schedule C line and category, and its business when the return has more than one. ${NO_GUESSING}`,
   calculate_return: 'Calculate the return with the tax engine and report its totals. Takes no arguments and changes nothing.',
   run_diagnostics: "Run the return's diagnostics and the evidence checks, and report what needs attention. Takes no arguments and changes nothing.",
 };

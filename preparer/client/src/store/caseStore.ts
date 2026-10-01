@@ -30,8 +30,8 @@ import {
 import { loadDocuments } from '../services/documentIngestion';
 import type { IntakeResult } from '../services/caseIntake';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
-import { applyReleasedForm, type DecisionResult } from '../services/preparerDecisions';
-import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
+import { applyReleasedForm, withdrawReleasedForm, type DecisionResult } from '../services/preparerDecisions';
+import { YEAR_ITEM_PREFIX } from '../services/returnApplier';
 import { spouseCaseCandidates } from '../services/spouseCases';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
@@ -279,14 +279,16 @@ export const useCaseStore = create<CaseState>((set, get) => {
     resolve: (item, decision, note) => {
       saveRecord(resolveItem(get().reviewRecord, item, decision, note));
       record({ kind: 'resolution', itemId: item.id, note, decision, message: item.message });
-      // A form for another tax year the preparer keeps here goes on the return now.
-      if (item.id.startsWith(YEAR_ITEM_PREFIX)) get().act((id) => ({ ok: true, outcome: applyReleasedForm(id, item.id.slice(YEAR_ITEM_PREFIX.length), note) ?? { kind: 'recorded' } }));
+      // A form for another tax year the preparer accepts as this return's goes on it now;
+      // "not applicable" closes the item and the form stays off.
+      if (item.id.startsWith(YEAR_ITEM_PREFIX) && decision === 'accepted') get().act((id) => ({ ok: true, outcome: applyReleasedForm(id, item.id.slice(YEAR_ITEM_PREFIX.length), note) ?? { kind: 'recorded' } }));
     },
     reopen: (itemId) => {
+      const released = get().reviewRecord.resolutions[itemId]?.decision === 'accepted';
       saveRecord(reopenItem(get().reviewRecord, itemId));
       record({ kind: 'reopened', itemId });
-      // ...and comes off it again when that decision is reopened.
-      if (itemId.startsWith(YEAR_ITEM_PREFIX)) get().act((id) => { removeFormItems(id, itemId.slice(YEAR_ITEM_PREFIX.length)); return { ok: true, outcome: { kind: 'recorded' } }; });
+      // ...and comes off it again, every way it reached the return, when that decision is reopened.
+      if (itemId.startsWith(YEAR_ITEM_PREFIX) && released) get().act((id) => ({ ok: true, outcome: withdrawReleasedForm(id, itemId.slice(YEAR_ITEM_PREFIX.length)) ?? { kind: 'recorded' } }));
     },
     approve: () => {
       const { review, taxReturn, reviewRecord } = get();
