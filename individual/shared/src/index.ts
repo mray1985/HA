@@ -35,7 +35,7 @@ export * from './engine/energyEfficiency.js';
 export * from './engine/hsaForm8889.js';
 export * from './engine/form8606.js';
 export * from './engine/estimatedTaxPenalty.js';
-export * from './engine/kiddieTax.js';
+export * from './engine/form8615.js';
 export * from './engine/feie.js';
 export * from './engine/scheduleH.js';
 export * from './engine/adoptionCredit.js';

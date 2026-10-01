@@ -129,6 +129,7 @@ const STEP_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentT
   form8582_data: lazy(() => import('./Form8582DataStep')),
   form8582_review: lazy(() => import('./Form8582Step')),
   review_schedule_c: lazy(() => import('./ReviewScheduleCStep')),
+  form_8615: lazy(() => import('./Form8615Step')),
   review_form_1040: lazy(() => import('./ReviewForm1040Step')),
   tax_summary: lazy(() => import('./TaxSummaryStep')),
   explain_taxes: lazy(() => import('./ExplainTaxesStep')),

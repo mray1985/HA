@@ -1,0 +1,23 @@
+# shared/authorities/form8615.yaml
+module: form8615.ts
+functions:
+  calculateForm8615:
+    authorities:
+      - type: IRC
+        section: "1(g)"
+        description: "Certain unearned income of a child taxed as if it were the parent's income"
+        weight: binding
+      - type: rev_proc
+        reference: "Rev. Proc. 2024-40, Section 3"
+        description: "Inflation-adjusted Form 8615 amounts for 2025 ($1,350 and $2,700)"
+        weight: binding
+      - type: form
+        reference: "Form 8615 (2025) and its instructions"
+        description: "Lines 1-18, the Line 1 worksheets, Line 5 Worksheets #1 and #3, and the line 9, 15 and 17 tax computations"
+        weight: binding
+    scope: "The child's tax on Form 8615, line by line; line 18 is the child's Form 1040 line 16"
+    limitations:
+      - "Whether the form applies (age, support, a living parent, no joint return) is the preparer's answer"
+      - "The Schedule D Tax Worksheet, Schedule J and the Foreign Earned Income Tax Worksheet are reported unsupported"
+      - "Itemized deductions directly connected with dividends or capital gain (Line 5 Worksheets #2 and #3) are reported unsupported"
+      - "Form 8814 (the parent reporting the child's interest and dividends) is not supported"

@@ -9,7 +9,8 @@
  * the engine implements that rule from its official source.
  */
 
-import type { CalculationResult, StateQuestion, TaxReturn, UnsupportedPattern } from '../types/index.js';
+import type { CalculationResult, Form8615Field, StateQuestion, TaxReturn, UnsupportedPattern } from '../types/index.js';
+import { getTaxConstants } from '../constants/taxConstants.js';
 import { calculateForm6252 } from './form6252.js';
 import { specialDepreciationRate } from './form4562.js';
 import { flatTaxConfigFor } from './state/flatTax.js';
@@ -24,6 +25,22 @@ import { assessWashingtonCapitalGains } from './state/wa.js';
 export type { UnsupportedPattern };
 
 const STATE_ONLY = 'Prepare this return outside HATax, or remove the state, until it is supported.';
+
+/** What each figure Form 8615 needs is, for the finding that asks for it. */
+const FORM_8615_FIELDS: Record<Form8615Field, string> = {
+  parentName: "the parent's name (line A)",
+  parentSsn: "the parent's SSN (line B)",
+  parentFilingStatus: "the parent's filing status (line C)",
+  parentTaxableIncome: "the parent's taxable income, Form 1040 line 15 (line 6)",
+  parentTax: "the parent's tax, Form 1040 line 16 without Form 4972 or 8814 tax or education credit recapture (line 10)",
+  parentQualifiedDividends: "the parent's qualified dividends, Form 1040 line 3a (0 if none)",
+  parentNetCapitalGain: "the parent's net capital gain (0 if none)",
+  otherChildrenNetUnearnedIncome: "the total of line 5 of the parent's other children's Forms 8615 (line 7; 0 if none)",
+  otherChildrenQualifiedDividends: "the qualified dividends included on line 7",
+  otherChildrenNetCapitalGain: "the net capital gain included on line 7",
+  childDirectlyConnectedDeductions: "the child's itemized deductions directly connected with the unearned income (line 2; 0 if none)",
+  parentSpecialComputation: "whether the parent's tax used the Schedule D Tax Worksheet, Schedule J or the Foreign Earned Income Tax Worksheet",
+};
 
 export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: CalculationResult | null): UnsupportedPattern[] {
   const out: UnsupportedPattern[] = [];
@@ -168,6 +185,28 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
   const outstanding = installment.filter(({ sale }) => sale.sellingPrice > 150000).reduce((s, { result }) => s + result.outstandingAtYearEnd, 0);
   if (outstanding > 5000000) {
     add('FED.453A', 'US', 'federal', `Installment sales: $${outstanding.toLocaleString('en-US')} is still owed on sales over $150,000, more than $5,000,000, so interest is due on the deferred tax (IRC §453A). HATax does not figure it.`);
+  }
+
+  // Form 8615 (engine/form8615.ts): whether it applies, the parent's figures it takes, what it cannot figure.
+  const form8615 = calculation?.form8615;
+  if (form8615?.status === 'ask') {
+    const kiddie = getTaxConstants(year).KIDDIE_TAX;
+    out.push({
+      ruleId: 'FED.8615.APPLIES', jurisdiction: 'US', section: 'federal', itemId: 'applies',
+      message: `${form8615.age !== undefined ? `The taxpayer is ${form8615.age} at the end of ${year}` : 'The taxpayer can be claimed as a dependent'} and has $${form8615.unearnedIncome.toLocaleString('en-US')} of unearned income, more than $${kiddie.UNEARNED_INCOME_THRESHOLD.toLocaleString('en-US')}. Form 8615 taxes it at the parent's rate when the child was under 18, or was 18 or a full-time student under 24 whose earned income was not more than half of their support, at least one parent was alive at the end of the year, and the child does not file a joint return. Say whether Form 8615 applies.`,
+    });
+  } else if (form8615?.status === 'missing') {
+    for (const field of form8615.missing) {
+      out.push({ ruleId: 'FED.8615.PARENT', jurisdiction: 'US', section: 'federal', itemId: field, message: `Form 8615: ${FORM_8615_FIELDS[field]} is not entered.` });
+    }
+  } else if (form8615?.status === 'figured') {
+    for (const u of form8615.result.unsupported) out.push({ ruleId: u.ruleId, jurisdiction: 'US', section: 'federal', message: u.message });
+  }
+  // A child's unearned income listed on this return was once estimated at a guessed
+  // parent rate; that is Form 8814's job, which HATax does not do.
+  const kiddieEntries = taxReturn.kiddieTaxEntries?.length ? taxReturn.kiddieTaxEntries : taxReturn.kiddieTax ? [taxReturn.kiddieTax] : [];
+  if (kiddieEntries.some((e) => (e.childUnearnedIncome ?? 0) > 0)) {
+    add('FED.8814', 'US', 'federal', 'This return lists a child\'s unearned income for the kiddie tax. A child\'s Form 8615 is figured on the child\'s own return, and reporting the child\'s interest and dividends on the parent\'s return (Form 8814) is not supported, so nothing is added here. Prepare Form 8814 outside HATax, or remove the entry and figure Form 8615 on the child\'s return.');
   }
 
   // TAX-002: Pennsylvania's eight income classes (state/pa.ts) — what the return does not settle.

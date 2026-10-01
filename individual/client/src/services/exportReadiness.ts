@@ -45,7 +45,10 @@ export function checkExportReadiness(taxReturn: TaxReturn, calculation?: Calcula
       section: u.section === 'state' ? 'State Taxes' : u.section === 'depreciation' ? 'Depreciation' : 'Federal',
       // A Washington address with no Washington state return: the state is added on the overview step.
       stepId: u.section === 'state' ? (u.itemId === 'state-return' ? 'state_overview' : 'state_details')
-        : u.section === 'depreciation' ? 'depreciation_assets' : 'review_form_1040',
+        : u.section === 'depreciation' ? 'depreciation_assets'
+        // Form 8615 is answered on its own step; a kiddie tax entry is removed on Dependents.
+        : u.ruleId.startsWith('FED.8615.') ? 'form_8615'
+        : u.ruleId === 'FED.8814' ? 'dependents' : 'review_form_1040',
       message: u.message,
     });
   }
