@@ -96,6 +96,10 @@ const DEDUCTION_QUESTIONS: DeductionQuestion[] = [
     description: 'Did you make donations to qualified charities?',
     icon: <HandHeart className="w-5 h-5" />, group: 'charitable',
     getSummary: (tr) => {
+      if (tr.deductionMethod !== 'itemized' && (tr.taxYear || 2025) >= 2026) {
+        const given = tr.nonItemizerCharitableCash || 0;
+        return given > 0 ? `$${given.toLocaleString()} in cash gifts` : '';
+      }
       const cash = tr.itemizedDeductions?.charitableCash || 0;
       const nonCash = tr.itemizedDeductions?.charitableNonCash || 0;
       const total = cash + nonCash;

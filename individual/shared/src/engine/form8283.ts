@@ -1,5 +1,5 @@
 import { NonCashDonation, CharitableCarryforward, Form8283Result } from '../types/index.js';
-import { getCharitableAgiLimits, getForm8283 } from '../constants/taxConstants.js';
+import { getCharitableAgiLimits, getForm8283, getTaxConstants } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 
 /**
@@ -97,6 +97,15 @@ export function calculateForm8283(
     allowableNonCashFinal = round2((allowableNonCashOrdinary + allowableNonCashCapGain) * ratio);
   }
 
+  // This year's allowed amounts by category, for the 0.5% floor's ordering
+  // and the per-category excess (§170(d)(1)(C)).
+  const currentCash = allowableCashFinal;
+  const currentOrdinary = subtotalBeforeOverall > overallLimit
+    ? round2(allowableNonCashOrdinary * (overallLimit / subtotalBeforeOverall))
+    : allowableNonCashOrdinary;
+  const currentCapGain = round2(allowableNonCashFinal - currentOrdinary);
+  const used = { cash: 0, non_cash_50: 0, non_cash_30: 0 };
+
   // ── Step 4: Process carryforwards (FIFO — oldest first) ──
   let carryforwardUsed = 0;
   const currentYear = taxYear;
@@ -134,15 +143,43 @@ export function calculateForm8283(
         } else {
           allowableNonCashFinal = round2(allowableNonCashFinal + usable);
         }
+        const key = cf.category === 'non_cash_30' || cf.category === 'non_cash_50' ? cf.category : 'cash';
+        used[key] = round2(used[key] + usable);
       }
     }
   }
 
   // ── Step 5: Calculate excess → new carryforward ──
-  const totalDonated = round2(Math.max(0, cashDonations) + totalNonCashFMV);
-  const totalAllowed = round2(allowableCashFinal + allowableNonCashFinal);
-  const totalAllowedBeforeCarryforward = round2(totalAllowed - carryforwardUsed);
-  const excessCarryforward = round2(Math.max(0, totalDonated - totalAllowedBeforeCarryforward));
+  const excessCash = round2(Math.max(0, Math.max(0, cashDonations) - currentCash));
+  const excessOrdinary = round2(Math.max(0, nonCashOrdinaryFMV - currentOrdinary));
+  const excessCapGain = round2(Math.max(0, nonCashCapitalGainFMV - currentCapGain));
+  let excessCarryforward = round2(excessCash + excessOrdinary + excessCapGain);
+
+  // ── Step 6 (from 2026): the 0.5% floor, IRC §170(b)(1)(I) ──
+  // Allowed only above 0.5% of AGI, taken first from capital gain property
+  // (30%), then ordinary income property (50%), then cash. What the floor
+  // disallows carries forward only in a category with an excess this year
+  // (§170(d)(1)(C)); otherwise it is lost.
+  let floorReduction = 0;
+  const floorRate = (getTaxConstants(taxYear).CHARITABLE_FLOOR as { RATE: number } | undefined)?.RATE;
+  if (floorRate !== undefined) {
+    let floorLeft = round2(Math.max(0, agi) * floorRate);
+    const take = (available: number) => {
+      const t = round2(Math.min(Math.max(0, available), floorLeft));
+      floorLeft = round2(floorLeft - t);
+      return t;
+    };
+    const fromCapGain = take(currentCapGain + used.non_cash_30);
+    const fromOrdinary = take(currentOrdinary + used.non_cash_50);
+    const fromCash = take(allowableCashFinal);
+    allowableNonCashFinal = round2(allowableNonCashFinal - fromCapGain - fromOrdinary);
+    allowableCashFinal = round2(allowableCashFinal - fromCash);
+    floorReduction = round2(fromCapGain + fromOrdinary + fromCash);
+    excessCarryforward = round2(excessCarryforward
+      + (excessCapGain > 0 ? fromCapGain : 0)
+      + (excessOrdinary > 0 ? fromOrdinary : 0)
+      + (excessCash > 0 ? fromCash : 0));
+  }
 
   return {
     sectionAItems,
@@ -152,5 +189,6 @@ export function calculateForm8283(
     allowableCashDeduction: allowableCashFinal,
     excessCarryforward,
     carryforwardUsed,
+    ...(floorReduction > 0 ? { floorReduction } : {}),
   };
 }

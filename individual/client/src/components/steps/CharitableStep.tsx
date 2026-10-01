@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTaxReturnStore } from '../../store/taxReturnStore';
-import { upsertItemized } from '../../api/client';
+import { upsertItemized, updateReturn } from '../../api/client';
 import { deleteItemWithUndo } from '../../utils/deleteWithUndo';
 import FormField from '../common/FormField';
 import CurrencyInput from '../common/CurrencyInput';
@@ -16,6 +16,7 @@ import DonationValuationPanel from './DonationValuationPanel';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import { useItemWarnings } from '../../hooks/useWarnings';
 import { validateContributionDate, validateAcquiredDate } from '../../utils/dateValidation';
+import { FilingStatus } from '@hatax/engine';
 import type { NonCashDonation, ItemizedDeductions, CharitableCarryforward } from '@hatax/engine';
 
 const emptyItemized: ItemizedDeductions = {
@@ -217,6 +218,43 @@ export default function CharitableStep() {
     </div>
   );
 
+  const taxYear = taxReturn.taxYear || 2025;
+
+  // From 2026, a return that does not itemize deducts cash given to public
+  // charities, up to $1,000 ($2,000 joint): IRC §170(p), §63(b)(4).
+  if (taxYear >= 2026 && taxReturn.deductionMethod !== 'itemized') {
+    const cap = taxReturn.filingStatus === FilingStatus.MarriedFilingJointly ? 2000 : 1000;
+    return (
+      <div>
+        <StepWarningsBanner stepId="charitable_deduction" />
+
+        <SectionIntro
+          icon={<HandHeart className="w-8 h-8" />}
+          title="Charitable Donations"
+          description={`You're taking the standard deduction. You can still deduct cash you gave to charity, up to $${cap.toLocaleString()}.`}
+        />
+
+        <CalloutCard variant="info" title="What counts">
+          Cash, checks, and card or electronic payments to public charities (churches, schools, hospitals and other
+          charities that get their support from the public). Gifts to a donor advised fund, a supporting organization or
+          a private foundation don't count, and neither do donated items. Keep the bank record or the charity's written
+          receipt for each gift.
+        </CalloutCard>
+
+        <div className="card">
+          <FormField label="Cash given to public charities" irsRef="IRC §170(p)" helpText={`Up to $${cap.toLocaleString()} is deducted, after your standard deduction.`}>
+            <CurrencyInput
+              value={taxReturn.nonItemizerCharitableCash || 0}
+              onChange={(v) => updateField('nonItemizerCharitableCash', v)}
+            />
+          </FormField>
+        </div>
+
+        <StepNavigation onContinue={async () => { await updateReturn(returnId, { nonItemizerCharitableCash: taxReturn.nonItemizerCharitableCash || 0 }); }} />
+      </div>
+    );
+  }
+
   return (
     <div>
       <StepWarningsBanner stepId="charitable_deduction" />
@@ -227,7 +265,10 @@ export default function CharitableStep() {
         description="Enter cash and non-cash donations to qualified charities."
       />
 
-      <WhatsNewCard items={[
+      <WhatsNewCard items={taxYear >= 2026 ? [
+        { title: 'Donations Count Above 0.5% of AGI', description: 'From 2026, itemized donations are deductible only to the extent they are more than 0.5% of your AGI. The amount under the floor is lost unless your donations are over the AGI limits this year.' },
+        { title: 'Non-Itemizers Can Deduct Cash Gifts', description: 'If you take the standard deduction instead, you can deduct up to $1,000 ($2,000 married filing jointly) of cash given to public charities.' },
+      ] : [
         { title: 'No More $300 Non-Itemizer Deduction', description: 'The above-the-line deduction for charitable donations (up to $300 for non-itemizers) is no longer available. You must itemize to deduct donations.' },
         { title: 'Cash Donation Limit Unchanged', description: 'Cash donations remain deductible up to 60% of AGI to public charities.' },
       ]} />

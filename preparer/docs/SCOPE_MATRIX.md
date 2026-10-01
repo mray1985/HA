@@ -48,7 +48,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Social Security benefits | ✅ | SSA-1099 | Provisional income method for taxability; MFS "lived apart" exception handled |
 | Business income | ✅ | Schedule C | Multiple businesses supported; COGS; full Lines 1-42 |
 | Rental income | ✅ | Schedule E | Passive loss limitation ($25k allowance with AGI phase-out) |
-| Pass-through income | ✅ | Schedule K-1 | Partnership, S-Corp, and estate/trust; box 8 and box 9a capital gain or loss on Schedule D lines 5 and 12 (netted, under the $3,000 loss limit and carryover); Box 13 deductions (charitable, investment interest, §1231 loss) and Box 15 credits (foreign tax, other credits). Boxes 9b (28% gain) and 9c (unrecaptured §1250 gain) are not entered |
+| Pass-through income | ✅ | Schedule K-1 | Partnership, S-Corp, and estate/trust; box 8 and box 9a capital gain or loss on Schedule D lines 5 and 12 (netted, under the $3,000 loss limit and carryover); Box 13 deductions (charitable, investment interest, §1231 loss) and Box 15 credits (foreign tax, other credits). Box 9b collectibles gain at 28% (28% Rate Gain Worksheet line 4); box 9c unrecaptured §1250 gain at 25% (Unrecaptured Section 1250 Gain Worksheet line 5 for a partnership or S corporation, limited by the net section 1231 gain; line 11 for an estate or trust). A box 9c amount on a K-1 of unknown kind is BLOCKING (FED.K1.ENTITY_TYPE) |
 | Gambling winnings | ✅ | W-2G | Losses limited to winnings |
 | Alimony received (pre-2019 agreements) | ✅ | Line 2a | Divorce/separation agreements executed before 2019 |
 | Tips income | ✅ | Form 4137 | Unreported tip FICA computation with SS wage base coordination |
@@ -67,7 +67,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Standard deduction | ✅ | | All statuses; 65+/blind add-on; dependent standard deduction; OBBBA $15,750/$31,500 amounts |
 | SALT (state and local taxes) | ✅ | Schedule A | OBBBA $40,000 cap ($20,000 MFS); phase-down above $500k MAGI at 30% rate; $10,000/$5,000 floor |
 | Mortgage interest | ✅ | Schedule A | $750k/$375k acquisition debt limits; mortgage insurance premiums |
-| Charitable contributions | ✅ | Schedule A, Form 8283 | AGI percentage limits (cash 60%, property 30%, etc.); Form 8283 per-item non-cash detail with Section A/B classification; 5-year FIFO carryforward used and created for lump sums and per-item gifts alike (Schedule A result: carryforward used, excess carried) |
+| Charitable contributions | ✅ | Schedule A, Form 8283 | AGI percentage limits (cash 60%, property 30%, etc.); Form 8283 per-item non-cash detail with Section A/B classification; 5-year FIFO carryforward used and created for lump sums and per-item gifts alike (Schedule A result: carryforward used, excess carried). From 2026 (P.L. 119-21): the 0.5%-of-AGI floor (IRC §170(b)(1)(I)), taken from capital gain property, then ordinary income property, then cash, carried forward only from a category over its limit (§170(d)(1)(C)); and for a return that does not itemize, cash to public charities up to $1,000 ($2,000 joint) deducted from taxable income (IRC §170(p), §63(b)(4)) |
 | Medical and dental expenses | ✅ | Schedule A | 7.5% AGI floor |
 | Casualty and theft losses | ✅ | Schedule A, Form 4684 | $100/event floor, 10% AGI floor, FEMA disaster requirement; personal and business property |
 | Business expenses | ✅ | Schedule C | Full expense deduction support (Lines 8-27) |

@@ -42,8 +42,10 @@ export function calculateScheduleD(
   /**
    * Schedule K-1 net short-term (box 8) and long-term (box 9a) gain or loss:
    * Schedule D lines 5 and 12, netted with the rest and under the §1211(b) limit.
+   * `collectibles` is the K-1 collectibles (28%) gain or loss (box 9b), part of
+   * the long-term amount: 28% Rate Gain Worksheet line 4.
    */
-  k1Gains?: { shortTerm: number; longTerm: number },
+  k1Gains?: { shortTerm: number; longTerm: number; collectibles?: number },
 ): ScheduleDResult {
   let shortTermGain = 0;
   let shortTermLoss = 0;
@@ -134,7 +136,7 @@ export function calculateScheduleD(
   // Combine collectibles with non-excluded §1202 gain, then apply the
   // short-term loss and long-term carryover to that combined 28% amount.
   const collectiblesRateGain = collectibles28RateGain(
-    round2(netCollectibles + section1202.rateGain),
+    round2(netCollectibles + section1202.rateGain + (k1Gains?.collectibles || 0)),
     netShortTerm,
     cfLT,
   );

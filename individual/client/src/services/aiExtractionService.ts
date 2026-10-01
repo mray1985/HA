@@ -109,6 +109,9 @@ const FIELD_LABELS: Record<string, string> = {
   interestIncome: 'Interest Income (Box 5)',
   shortTermCapitalGain: 'Short-Term Capital Gain (Box 8)',
   longTermCapitalGain: 'Long-Term Capital Gain (Box 9a)',
+  collectiblesGain28: 'Collectibles (28%) Gain (Box 9b)',
+  unrecapturedSection1250Gain: 'Unrecaptured Section 1250 Gain (Box 9c)',
+  netSection1231Gain: 'Net Section 1231 Gain (Box 10)',
   selfEmploymentIncome: 'Self-Employment Income (Box 14A)',
   // W-2G
   grossWinnings: 'Gross Winnings (Box 1)',

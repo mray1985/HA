@@ -3,13 +3,15 @@
  * taxpayer's and spouse's name, SSN, address and filing status, and a
  * dependent's SSN — what the readiness check reports missing — and the one
  * fact an engine finding needs (the business miles from July 1 in a year whose
- * mileage rate changes, the date a home was first used for business). Each
+ * mileage rate changes, the date a home was first used for business, the cash
+ * a client who does not itemize gave to public charities from 2026, the kind of
+ * a K-1 that reports unrecaptured section 1250 gain). Each
  * value is validated before it is written; the case store audits the change.
  */
 
 import { FilingStatus, type TaxReturn } from '@hatax/engine';
 
-export type ReturnFieldKind = 'text' | 'tin' | 'zip' | 'state' | 'filing_status' | 'count' | 'date';
+export type ReturnFieldKind = 'text' | 'tin' | 'zip' | 'state' | 'filing_status' | 'count' | 'date' | 'amount' | 'k1_entity';
 
 export interface ReturnFieldSpec {
   label: string;
@@ -30,6 +32,7 @@ const FIELDS: Record<string, ReturnFieldSpec> = {
   filingStatus: { label: 'Filing status', kind: 'filing_status' },
   'vehicle.businessMilesFromJuly1': { label: 'Business miles driven on or after July 1', kind: 'count' },
   'homeOffice.dateFirstUsedForBusiness': { label: 'Date the home was first used for business', kind: 'date' },
+  nonItemizerCharitableCash: { label: 'Cash given to public charities', kind: 'amount' },
 };
 
 export const FILING_STATUS_OPTIONS: ReadonlyArray<{ value: FilingStatus; label: string }> = [
@@ -40,7 +43,15 @@ export const FILING_STATUS_OPTIONS: ReadonlyArray<{ value: FilingStatus; label: 
   { value: FilingStatus.QualifyingSurvivingSpouse, label: 'Qualifying surviving spouse' },
 ];
 
+export const K1_ENTITY_OPTIONS: ReadonlyArray<{ value: 'partnership' | 's_corp' | 'estate' | 'trust'; label: string }> = [
+  { value: 'partnership', label: 'Partnership (Form 1065)' },
+  { value: 's_corp', label: 'S corporation (Form 1120-S)' },
+  { value: 'estate', label: 'Estate (Form 1041)' },
+  { value: 'trust', label: 'Trust (Form 1041)' },
+];
+
 const DEPENDENT_TIN = /^dependents\.(\d+)\.ssn$/;
+const K1_ENTITY = /^incomeK1\.(\d+)\.entityType$/;
 
 /** How a field is asked for, or null when it is not one the review list fills. */
 export function returnFieldSpec(path: string, taxReturn?: TaxReturn | null): ReturnFieldSpec | null {
@@ -50,6 +61,11 @@ export function returnFieldSpec(path: string, taxReturn?: TaxReturn | null): Ret
     const d = taxReturn?.dependents?.[Number(dependent[1])];
     const name = d ? [d.firstName, d.lastName].filter(Boolean).join(' ') : '';
     return { label: `${name || `Dependent ${Number(dependent[1]) + 1}`}'s SSN, ITIN or ATIN`, kind: 'tin' };
+  }
+  const k1 = K1_ENTITY.exec(path);
+  if (k1) {
+    const name = taxReturn?.incomeK1?.[Number(k1[1])]?.entityName?.trim();
+    return { label: `Kind of K-1${name ? ` (${name})` : ''}`, kind: 'k1_entity' };
   }
   return null;
 }
@@ -76,6 +92,12 @@ export function parseReturnField(kind: ReturnFieldKind, input: string): { ok: tr
     }
     case 'count':
       return /^\d{1,7}$/.test(text.replace(/,/g, '')) ? { ok: true, value: Number(text.replace(/,/g, '')) } : { ok: false, error: 'Enter a whole number.' };
+    case 'k1_entity':
+      return K1_ENTITY_OPTIONS.some((o) => o.value === text) ? { ok: true, value: text } : { ok: false, error: 'Choose the kind of K-1.' };
+    case 'amount': {
+      const amount = text.replace(/^\$/, '').replace(/,/g, '');
+      return /^\d{1,9}(\.\d{1,2})?$/.test(amount) ? { ok: true, value: Number(amount) } : { ok: false, error: 'Enter a dollar amount.' };
+    }
     case 'date':
       return /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(new Date(`${text}T00:00:00Z`).getTime()) ? { ok: true, value: text } : { ok: false, error: 'Enter the date.' };
     case 'text':

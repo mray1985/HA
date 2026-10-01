@@ -775,6 +775,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Depreciation history must be provided as input per property
 - Installment sales reach Form 4797 from Form 6252 (engine/form6252.ts): line 26 on line 4 or 10, the year-of-sale recapture on line 13
 - Schedule K-1 box 8 and box 9a capital gain or loss are Schedule D lines 5 and 12 (Schedule D instructions), netted and limited with the other sales
+- Schedule K-1 box 9b (1120-S 8b, 1041 4b) is 28% Rate Gain Worksheet line 4; box 9c (8c, 4c) is Unrecaptured Section 1250 Gain Worksheet line 5 (partnership, S corporation) or line 11 (estate, trust) — Schedule D instructions
 - California depreciation (engine/state/ca.ts `caDepreciationAdjustment`): FTB 3885A instructions (2025) — no IRC §168(k); IRC §179 $25,000, reduced over $200,000; California basis reduced by the California §179
 - Does not handle related-party sale rules under IRC 1239
 
@@ -1167,6 +1168,8 @@ The constants file contains inline citation comments referencing the underlying 
 | `SCHEDULE_1A` | OBBBA 101-104 | -- |
 | `HOME_SALE_EXCLUSION` | IRC 121 | -- |
 | `CHARITABLE_AGI_LIMITS` | IRC 170(b)(1) | -- |
+| `CHARITABLE_FLOOR` (2026) | IRC 170(b)(1)(I), 170(d)(1)(C) (P.L. 119-21 §70425) | -- |
+| `NON_ITEMIZER_CHARITABLE` (2026) | IRC 170(p), 63(b)(4) (P.L. 119-21 §70424) | -- |
 | `CANCELLATION_OF_DEBT` | IRC 61(a)(11), 108, 6050P | -- |
 | `EXCESS_CONTRIBUTION` | IRC 4973(a), (g) | -- |
 | `DISTRIBUTION_529` | IRC 529(c)(3), (c)(6) | -- |

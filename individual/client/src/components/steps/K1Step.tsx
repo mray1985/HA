@@ -29,6 +29,8 @@ const EMPTY_K1 = {
   royalties: 0,
   shortTermCapitalGain: 0,
   longTermCapitalGain: 0,
+  collectiblesGain28: 0,
+  unrecapturedSection1250Gain: 0,
   netSection1231Gain: 0,
   otherIncome: 0,
   section199AQBI: 0,
@@ -86,6 +88,8 @@ export default function K1Step() {
       royalties: item.royalties || 0,
       shortTermCapitalGain: item.shortTermCapitalGain || 0,
       longTermCapitalGain: item.longTermCapitalGain || 0,
+      collectiblesGain28: item.collectiblesGain28 || 0,
+      unrecapturedSection1250Gain: item.unrecapturedSection1250Gain || 0,
       netSection1231Gain: item.netSection1231Gain || 0,
       otherIncome: item.otherIncome || 0,
       section199AQBI: item.section199AQBI || 0,
@@ -167,6 +171,12 @@ export default function K1Step() {
       </FormField>
       <FormField label="Long-Term Capital Gain (Box 9a)" optional>
         <CurrencyInput value={form.longTermCapitalGain} onChange={(v) => setForm({ ...form, longTermCapitalGain: v })} />
+      </FormField>
+      <FormField label="Collectibles (28%) Gain (Box 9b)" helpText="The part of box 9a from collectibles; Form 1120-S box 8b, Form 1041 box 4b" optional>
+        <CurrencyInput value={form.collectiblesGain28} onChange={(v) => setForm({ ...form, collectiblesGain28: v })} />
+      </FormField>
+      <FormField label="Unrecaptured Section 1250 Gain (Box 9c)" helpText="Form 1120-S box 8c, Form 1041 box 4c" optional>
+        <CurrencyInput value={form.unrecapturedSection1250Gain} onChange={(v) => setForm({ ...form, unrecapturedSection1250Gain: v })} />
       </FormField>
       <FormField label="Net Section 1231 Gain (Box 10)" optional>
         <CurrencyInput value={form.netSection1231Gain} onChange={(v) => setForm({ ...form, netSection1231Gain: v })} />

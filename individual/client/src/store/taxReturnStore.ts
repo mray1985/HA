@@ -187,7 +187,8 @@ export const WIZARD_STEPS: WizardStep[] = [
   { id: 'medical_expenses', label: 'Medical Expenses', section: 'deductions', condition: (tr) => tr.deductionMethod === 'itemized' && tr.incomeDiscovery['ded_medical'] === 'yes' },
   { id: 'salt_deduction', label: 'State & Local Taxes', section: 'deductions', condition: (tr) => tr.deductionMethod === 'itemized' && tr.incomeDiscovery['ded_property_tax'] === 'yes' },
   { id: 'mortgage_interest_ded', label: 'Mortgage Interest', section: 'deductions', condition: (tr) => tr.deductionMethod === 'itemized' && tr.incomeDiscovery['ded_mortgage'] === 'yes' },
-  { id: 'charitable_deduction', label: 'Charitable Donations', section: 'deductions', condition: (tr) => tr.deductionMethod === 'itemized' && tr.incomeDiscovery['ded_charitable'] === 'yes' },
+  // From 2026 a return that does not itemize deducts cash gifts too (IRC §170(p)).
+  { id: 'charitable_deduction', label: 'Charitable Donations', section: 'deductions', condition: (tr) => (tr.deductionMethod === 'itemized' || (tr.taxYear || 2025) >= 2026) && tr.incomeDiscovery['ded_charitable'] === 'yes' },
   { id: 'gambling_losses_ded', label: 'Gambling Losses', section: 'deductions', condition: (tr) => tr.deductionMethod === 'itemized' && tr.incomeDiscovery['ded_gambling'] === 'yes' },
   { id: 'itemized_deductions', label: 'Itemized Summary', section: 'deductions', condition: wantsItemized, declarativeCondition: { type: 'field_equals', field: 'deductionMethod', value: 'itemized' } },
   // Individual above-the-line adjustment steps

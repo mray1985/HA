@@ -82,6 +82,7 @@ export function calculateScheduleA(
   let form8283Result: Form8283Result | undefined;
   let charitableCarryforwardUsed = 0;
   let charitableExcessCarryforward = 0;
+  let charitableFloorReduction = 0;
 
   if (deductions.nonCashDonations && deductions.nonCashDonations.length > 0) {
     // Per-item Form 8283 path: category-specific AGI limits + carryforward
@@ -95,6 +96,7 @@ export function calculateScheduleA(
     charitableDeduction = round2(form8283Result.allowableCashDeduction + form8283Result.allowableNonCashDeduction);
     charitableCarryforwardUsed = form8283Result.carryforwardUsed;
     charitableExcessCarryforward = form8283Result.excessCarryforward;
+    charitableFloorReduction = form8283Result.floorReduction ?? 0;
   } else {
     // Lump sums: the same AGI limits, prior-year carryforwards and excess
     // carryforward as the per-item path (IRC §170(b), §170(d)(1)). The non-cash
@@ -111,6 +113,7 @@ export function calculateScheduleA(
     charitableDeduction = round2(lump.allowableCashDeduction + lump.allowableNonCashDeduction);
     charitableCarryforwardUsed = lump.carryforwardUsed;
     charitableExcessCarryforward = lump.excessCarryforward;
+    charitableFloorReduction = lump.floorReduction ?? 0;
   }
 
   // Casualty loss: only federally-declared disaster losses deductible (since 2018 TCJA).
@@ -139,5 +142,6 @@ export function calculateScheduleA(
     form8283: form8283Result,
     ...(charitableCarryforwardUsed > 0 ? { charitableCarryforwardUsed } : {}),
     ...(charitableExcessCarryforward > 0 ? { charitableExcessCarryforward } : {}),
+    ...(charitableFloorReduction > 0 ? { charitableFloorReduction } : {}),
   };
 }

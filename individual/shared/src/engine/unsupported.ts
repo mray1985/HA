@@ -139,6 +139,18 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
+  // K-1 box 9c: the Unrecaptured Section 1250 Gain Worksheet takes a partnership's
+  // or S corporation's amount with its section 1231 gain (line 5) and an estate's
+  // or trust's directly (line 11), so the kind of K-1 decides where it goes.
+  for (const k1 of taxReturn.incomeK1 ?? []) {
+    if ((k1.unrecapturedSection1250Gain ?? 0) > 0 && !(['partnership', 's_corp', 'estate', 'trust'] as const).includes(k1.entityType)) {
+      out.push({
+        ruleId: 'FED.K1.ENTITY_TYPE', jurisdiction: 'US', section: 'federal', itemId: k1.id,
+        message: `K-1${k1.entityName ? ` from ${k1.entityName}` : ''}: it reports unrecaptured section 1250 gain, but not whether it is from a partnership, S corporation, estate or trust, which decides how Schedule D takes the gain. Enter the kind of K-1.`,
+      });
+    }
+  }
+
   // Form 6252: an installment sale whose facts do not settle where its gain goes.
   const installment = (taxReturn.installmentSales ?? []).map((sale) => ({ sale, result: calculateForm6252(sale, year) }));
   for (const { sale, result } of installment) {

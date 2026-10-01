@@ -424,7 +424,16 @@ const BONUS_RULE = 'FED.BONUS_DEPRECIATION.168K';
 const FIELD_FINDINGS: Record<string, string> = {
   'unsupported:FED.VEHICLE.STANDARD_MILEAGE_SPLIT:vehicle': 'vehicle.businessMilesFromJuly1',
   'unsupported:FED.FORM8829.LINE41:homeOffice': 'homeOffice.dateFirstUsedForBusiness',
+  'unsupported:FED.170P.NON_ITEMIZER:charitable': 'nonItemizerCharitableCash',
 };
+
+/** The K-1 whose kind a FED.K1.ENTITY_TYPE finding asks for, as a return field path. */
+function k1EntityField(id: string, taxReturn: TaxReturn): string | undefined {
+  const prefix = 'unsupported:FED.K1.ENTITY_TYPE:';
+  if (!id.startsWith(prefix)) return undefined;
+  const index = (taxReturn.incomeK1 ?? []).findIndex((k) => k.id === id.slice(prefix.length));
+  return index >= 0 ? `incomeK1.${index}.entityType` : undefined;
+}
 
 export function buildCaseReview(input: {
   taxReturn: TaxReturn;
@@ -450,6 +459,7 @@ export function buildCaseReview(input: {
     ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
     ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
     ...(FIELD_FINDINGS[d.id] ? { action: { kind: 'return_field' as const, field: FIELD_FINDINGS[d.id]! } } : {}),
+    ...(k1EntityField(d.id, input.taxReturn) ? { action: { kind: 'return_field' as const, field: k1EntityField(d.id, input.taxReturn)! } } : {}),
   }));
   const identity: ReviewItem[] = planIdentity(input.taxReturn, input.documents).items.map((i) => ({
     id: i.id, category: 'REVIEW', group: 'personal', source: 'document', message: i.message,

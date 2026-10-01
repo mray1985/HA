@@ -300,6 +300,10 @@ export interface IncomeK1 {
   royalties?: number;                   // Box 7: Royalties
   shortTermCapitalGain?: number;        // Box 8: Short-term capital gain
   longTermCapitalGain?: number;         // Box 9a: Long-term capital gain
+  /** Box 9b (Form 1065) / 8b (1120-S) / 4b (1041): collectibles (28%) gain or loss, part of box 9a. */
+  collectiblesGain28?: number;
+  /** Box 9c (Form 1065) / 8c (1120-S) / 4c (1041): unrecaptured section 1250 gain. */
+  unrecapturedSection1250Gain?: number;
   netSection1231Gain?: number;          // Box 10: Net Section 1231 gain
   otherIncome?: number;                 // Box 11: Other income
   section199AQBI?: number;              // Box 20, Code Z: Section 199A QBI
@@ -734,6 +738,8 @@ export interface Form8283Result {
   allowableCashDeduction: number;     // After AGI limits (for total charitable calc)
   excessCarryforward: number;         // Amount carried forward to next year
   carryforwardUsed: number;           // Prior-year carryforward applied this year
+  /** From 2026: the part disallowed by the 0.5%-of-AGI floor (IRC §170(b)(1)(I)). */
+  floorReduction?: number;
 }
 
 // Credits
@@ -1962,6 +1968,12 @@ export interface TaxReturn {
 
   // Income discovery answers
   incomeDiscovery: Record<string, 'yes' | 'no' | 'later'>;
+  /**
+   * From 2026, for a return that does not itemize (IRC §170(p)): cash given this
+   * year to public charities (§170(b)(1)(A) organizations), not to a supporting
+   * organization or a donor advised fund. Up to $1,000 ($2,000 joint) is deducted.
+   */
+  nonItemizerCharitableCash?: number;
 
   // Proactive nudge dismissals
   dismissedNudges?: string[];
@@ -2170,6 +2182,8 @@ export interface ScheduleAResult {
   charitableCarryforwardUsed?: number;
   /** This year's contributions over the AGI limits, carried to the next five years (IRC §170(d)(1)). */
   charitableExcessCarryforward?: number;
+  /** From 2026: contributions disallowed by the 0.5%-of-AGI floor (IRC §170(b)(1)(I)). */
+  charitableFloorReduction?: number;
 }
 
 export interface ScheduleDResult {
@@ -2479,6 +2493,8 @@ export interface Form1040Result {
   itemizedDeduction: number;
   deductionUsed: 'standard' | 'itemized';
   deductionAmount: number;
+  /** IRC §170(p): charitable deduction for a return that does not itemize (2026+), within taxable income. */
+  nonItemizerCharitableDeduction: number;
   qbiDeduction: number;
   schedule1ADeduction: number;             // Schedule 1-A total (tips + overtime + car loan + senior)
   homeSaleExclusion: number;               // Section 121 home sale exclusion

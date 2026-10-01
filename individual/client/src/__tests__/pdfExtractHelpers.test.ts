@@ -719,6 +719,32 @@ describe('extractK1Fields', () => {
     const fields = extractK1Fields(makeK1Blocks());
     expect(fields.interestIncome).toBe(825);
   });
+
+  it('takes the kind of K-1 from the one form it names', () => {
+    expect(extractK1Fields([tb('Schedule K-1 (Form 1120-S)', 36, 20, 120, 10), ...makeK1Blocks()]).entityType).toBe('s_corp');
+    // Form 1041: an estate's or a trust's — not settled by the form.
+    expect(extractK1Fields([tb('Schedule K-1 (Form 1041)', 36, 20, 120, 10), ...makeK1Blocks()]).entityType).toBeUndefined();
+    expect(extractK1Fields(makeK1Blocks()).entityType).toBeUndefined();
+  });
+
+  it('extracts boxes 9b, 9c and 10, which set the 28% and 25% rates', () => {
+    const fields = extractK1Fields([
+      tb('Schedule K-1 (Form 1065)', 36, 20, 120, 10),
+      tb("Partnership's Name", 36, 159, 70, 8),
+      tb('ABC Investment Partners LP', 36, 175, 100, 7),
+      tb('9a Net long-term capital gain (loss)', 318, 73, 120, 8),
+      tb('12000.00', 440, 87, 35, 7),
+      tb('9b Collectibles (28%) gain (loss)', 318, 97, 120, 8),
+      tb('4000.00', 440, 111, 30, 7),
+      tb('9c Unrecaptured section 1250 gain', 318, 121, 120, 8),
+      tb('2500.00', 440, 135, 30, 7),
+      tb('10 Net section 1231 gain (loss)', 318, 145, 120, 8),
+      tb('6000.00', 440, 159, 30, 7),
+    ]);
+    expect(fields).toMatchObject({ entityType: 'partnership', longTermCapitalGain: 12000, collectiblesGain28: 4000, unrecapturedSection1250Gain: 2500, netSection1231Gain: 6000 });
+    // Not on the form: nothing read (this extractor reports 0, which the engine treats as blank).
+    expect(extractK1Fields(makeK1Blocks()).collectiblesGain28).toBeFalsy();
+  });
 });
 
 // ── detectFormPages (per-page form scanning) ──────────────

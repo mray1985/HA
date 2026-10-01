@@ -249,6 +249,8 @@ export interface Form1040Context {
   investmentInterestResult?: InvestmentInterestResult;
   investmentInterestDeduction: number;
   deductionUsed: 'standard' | 'itemized';
+  /** IRC §170(p) deduction for a return that does not itemize (2026+). */
+  nonItemizerCharitableDeduction: number;
   deductionAmount: number;
   qbiDeduction: number;
   nolDeduction: number;
@@ -426,6 +428,7 @@ export function createForm1040Context(
     itemizedDeduction: 0,
     investmentInterestDeduction: 0,
     deductionUsed: 'standard',
+    nonItemizerCharitableDeduction: 0,
     deductionAmount: 0,
     qbiDeduction: 0,
     nolDeduction: 0,
@@ -1010,7 +1013,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
         ctx.totalCapitalGainDistributions,
         _taxYear,
         { shortTerm: installmentShortTerm, longTerm: installmentLongTerm },
-        { shortTerm: ctx.k1ShortTermGain, longTerm: ctx.k1LongTermGain },
+        { shortTerm: ctx.k1ShortTermGain, longTerm: ctx.k1LongTermGain, collectibles: ctx.k1Routing?.collectiblesGain28 || 0 },
       )
     : undefined;
 
@@ -1032,7 +1035,10 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   // Form 4797 line 4: installment gain on trade or business property held more than 1 year.
   // Line 10 (held 1 year or less) and the year-of-sale recapture (line 13) are ordinary.
   ctx.form4797OrdinaryIncome = round2(ctx.form4797OrdinaryIncome + installmentOrdinary);
-  ctx.form4797Unrecaptured1250 = round2(ctx.form4797Unrecaptured1250 + installmentUnrecaptured1250);
+  // Unrecaptured Section 1250 Gain Worksheet lines 4 and 5: installment sales and
+  // a partnership's or S corporation's K-1 amount join the section 1231 part,
+  // which is limited by the net section 1231 gain (lines 6-9).
+  ctx.form4797Unrecaptured1250 = round2(ctx.form4797Unrecaptured1250 + installmentUnrecaptured1250 + (ctx.k1Routing?.unrecaptured1250PassThrough || 0));
   const combinedSection1231 = round2(k1Section1231 + (ctx.form4797Section1231GainOrLoss || 0) + installmentSection1231);
   const lookback = applySection1231Lookback(combinedSection1231, taxReturn.section1231Lookback, _taxYear);
   ctx.section1231LookbackOrdinary = lookback.ordinaryFromGain;
@@ -1596,7 +1602,18 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
   // NOL Carryforward — computed BEFORE QBI per IRC §172/§199A ordering.
   // The NOL deduction is limited to 80% of taxable income before QBI.
   const nolCarryforward = !isDeclined('ded_nol') ? Math.max(0, safeNum(taxReturn.nolCarryforward)) : 0;
-  const taxableBeforeNOL = Math.max(0, ctx.agi - ctx.deductionAmount);
+  // IRC §170(p), §63(b)(4), from 2026: a return that does not itemize deducts
+  // cash given to public charities, up to $1,000 ($2,000 joint), within the
+  // 60% cash limit and without carryovers or the 0.5% floor.
+  const nonItemizer = getTaxConstants(_taxYear).NON_ITEMIZER_CHARITABLE as { MAX: number; MAX_JOINT: number } | undefined;
+  ctx.nonItemizerCharitableDeduction = nonItemizer && ctx.deductionUsed === 'standard' && !isDeclined('ded_charitable')
+    ? round2(Math.min(
+      Math.max(0, safeNum(taxReturn.nonItemizerCharitableCash)),
+      filingStatus === FilingStatus.MarriedFilingJointly ? nonItemizer.MAX_JOINT : nonItemizer.MAX,
+      Math.max(0, ctx.agi) * getTaxConstants(_taxYear).CHARITABLE_AGI_LIMITS.CASH_PUBLIC_RATE,
+    ))
+    : 0;
+  const taxableBeforeNOL = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction);
   ctx.nolDeduction = nolCarryforward > 0
     ? round2(Math.min(nolCarryforward, taxableBeforeNOL * getTaxConstants(taxReturn.taxYear || 2025).NOL.DEDUCTION_LIMIT_RATE))
     : 0;
@@ -1604,7 +1621,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
   // QBI — per IRC §199A, QBI deduction is based on taxable income AFTER NOL.
   // Farm income (Schedule F) is eligible for QBI per IRC §199A(c)(3)(A)(i).
   const totalQBI = round2(ctx.scheduleCNetProfit + ctx.k1QBI + ctx.scheduleFNetProfit);
-  const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nolDeduction);
+  const taxableIncomeBeforeQBI = Math.max(0, ctx.agi - ctx.deductionAmount - ctx.nonItemizerCharitableDeduction - ctx.nolDeduction);
 
   // IRC §199A(a)(2): taxable income limit reduced by net capital gain (IRC §1(h)).
   // scheduleDLongTermGain already nets Schedule D, K-1, and section 1231 before
@@ -1691,6 +1708,7 @@ export function calculateDeductionsSection(ctx: Form1040Context): void {
     inputs: [
       { lineId: 'form1040.line11', label: 'AGI', value: ctx.agi },
       { lineId: 'form1040.line13', label: 'Deductions', value: ctx.deductionAmount },
+      ...(ctx.nonItemizerCharitableDeduction > 0 ? [{ lineId: 'form1040.nonItemizerCharitable', label: 'Charitable Deduction for Non-Itemizers (IRC §170(p))', value: ctx.nonItemizerCharitableDeduction }] : []),
       ...(ctx.qbiDeduction > 0 ? [{ lineId: 'form1040.line13a', label: 'QBI Deduction', value: ctx.qbiDeduction }] : []),
       ...(ctx.schedule1ADeduction > 0 ? [{ lineId: 'schedule1A', label: 'Schedule 1-A Deduction', value: ctx.schedule1ADeduction }] : []),
     ],
@@ -1713,8 +1731,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
     preferentialLTCGBase = 0;
   }
   const totalPreferentialLTCG = preferentialLTCGBase;
+  // Unrecaptured Section 1250 Gain Worksheet line 11: an estate's or trust's K-1 amount, directly.
   const unrecapturedSection1250Gain = round2(
-    safeNum(taxReturn.unrecapturedSection1250Gain) + ctx.form4797Unrecaptured1250,
+    safeNum(taxReturn.unrecapturedSection1250Gain) + ctx.form4797Unrecaptured1250 + (ctx.k1Routing?.unrecaptured1250EstateTrust || 0),
   );
   // 28% rate gain from 1099-B collectibles. Capped at the LTCG that is
   // actually in the preferential computation so it is not also taxed at 15/20%.
@@ -2572,6 +2591,7 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
     standardDeduction: ctx.standardDeduction,
     itemizedDeduction: ctx.itemizedDeduction,
     deductionUsed: ctx.deductionUsed,
+    nonItemizerCharitableDeduction: round2(ctx.nonItemizerCharitableDeduction),
     deductionAmount: ctx.deductionAmount,
     qbiDeduction: ctx.qbiDeduction,
     schedule1ADeduction: round2(ctx.schedule1ADeduction),

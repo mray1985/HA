@@ -330,7 +330,7 @@ function processTextBlocks(
   } else if (type === '1095-A') {
     warnings.push('Monthly values may need manual entry. Annual totals are more reliable from OCR.');
   } else if (type === 'K-1') {
-    warnings.push('K-1 import captures the 10 most common boxes. Verify for additional entries.');
+    warnings.push('K-1 import captures 13 common boxes (1, 2, 4, 5, 6a, 7, 8, 9a, 9b, 9c, 10, 14A and the name). Verify for additional entries.');
   }
 
   // Add warnings for missing important fields

@@ -35,6 +35,12 @@ export interface K1RoutingResult {
   qualifiedDividends: number;       // Box 6b — qualified dividends
   shortTermCapitalGain: number;     // Box 8 — short-term capital gain
   longTermCapitalGain: number;      // Box 9a — long-term capital gain
+  /** Box 9b — collectibles (28%) gain or loss (Schedule D 28% Rate Gain Worksheet line 4). */
+  collectiblesGain28: number;
+  /** Box 9c from a partnership or S corporation (Unrecaptured Section 1250 Gain Worksheet line 5). */
+  unrecaptured1250PassThrough: number;
+  /** Box 4c from an estate or trust (Unrecaptured Section 1250 Gain Worksheet line 11). */
+  unrecaptured1250EstateTrust: number;
   netSection1231Gain: number;       // Box 10 — section 1231 gain (treated as LTCG if net gain)
   otherIncome: number;              // Box 11 — other income
   section199AQBI: number;           // Box 20, Code Z — QBI for Section 199A deduction
@@ -158,6 +164,11 @@ export function routeK1Income(k1: IncomeK1): K1RoutingResult {
     qualifiedDividends,
     shortTermCapitalGain,
     longTermCapitalGain,
+    collectiblesGain28: k1.collectiblesGain28 || 0,
+    // The worksheet takes a partnership's or S corporation's amount with the
+    // section 1231 gain (line 5), an estate's or trust's directly (line 11).
+    unrecaptured1250PassThrough: k1.entityType === 'partnership' || k1.entityType === 's_corp' ? Math.max(0, k1.unrecapturedSection1250Gain || 0) : 0,
+    unrecaptured1250EstateTrust: k1.entityType === 'estate' || k1.entityType === 'trust' ? Math.max(0, k1.unrecapturedSection1250Gain || 0) : 0,
     netSection1231Gain,
     otherIncome,
     section199AQBI,
@@ -200,6 +211,9 @@ export function aggregateK1Income(k1s: IncomeK1[]): K1RoutingResult {
       qualifiedDividends: 0,
       shortTermCapitalGain: 0,
       longTermCapitalGain: 0,
+      collectiblesGain28: 0,
+      unrecaptured1250PassThrough: 0,
+      unrecaptured1250EstateTrust: 0,
       netSection1231Gain: 0,
       otherIncome: 0,
       section199AQBI: 0,
@@ -234,6 +248,9 @@ export function aggregateK1Income(k1s: IncomeK1[]): K1RoutingResult {
     qualifiedDividends: sumField('qualifiedDividends'),
     shortTermCapitalGain: sumField('shortTermCapitalGain'),
     longTermCapitalGain: sumField('longTermCapitalGain'),
+    collectiblesGain28: sumField('collectiblesGain28'),
+    unrecaptured1250PassThrough: sumField('unrecaptured1250PassThrough'),
+    unrecaptured1250EstateTrust: sumField('unrecaptured1250EstateTrust'),
     netSection1231Gain: sumField('netSection1231Gain'),
     otherIncome: sumField('otherIncome'),
     section199AQBI: sumField('section199AQBI'),

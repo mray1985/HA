@@ -112,4 +112,34 @@ describe('engine findings one field settles', () => {
       .flatMap((i) => (i.action?.kind === 'return_field' ? [i.action.field] : []));
     expect(fields).toEqual(expect.arrayContaining(['vehicle.businessMilesFromJuly1', 'homeOffice.dateFirstUsedForBusiness']));
   });
+
+  it('asks a 2026 client who does not itemize for the cash given to public charities (IRC §170(p))', () => {
+    expect(parseReturnField('amount', '$1,250.50')).toEqual({ ok: true, value: 1250.5 });
+    expect(parseReturnField('amount', '0')).toEqual({ ok: true, value: 0 });
+    expect(parseReturnField('amount', 'about 500')).toMatchObject({ ok: false });
+    const tr = (o: Partial<TaxReturn>) => ({
+      id: 'c', taxYear: 2026, status: 'in_progress', currentStep: 0, currentSection: 'review', ...PERSON,
+      dependents: [], w2Income: [{ id: 'w', employerName: 'Acme', wages: 60000, federalTaxWithheld: 6000 }], income1099NEC: [], income1099K: [],
+      income1099INT: [], income1099DIV: [], income1099R: [], income1099G: [], income1099MISC: [], income1099B: [], incomeK1: [], income1099SA: [],
+      rentalProperties: [], otherIncome: 0, expenses: [], deductionMethod: 'standard', educationCredits: [], businesses: [],
+      incomeDiscovery: {}, createdAt: '', updatedAt: '',
+      itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 0, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 3000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 },
+      ...o,
+    } as unknown as TaxReturn);
+    const asked = (r: TaxReturn) => buildCaseReview({ taxReturn: r, calculation: calculateForm1040(r), facts: [], documents: [] }).items
+      .find((i) => i.action?.kind === 'return_field' && i.action.field === 'nonItemizerCharitableCash');
+    expect(asked(tr({}))).toMatchObject({ category: 'BLOCKING' });
+    // Answered (0 included), itemizing, or 2025: not asked.
+    expect(asked(tr({ nonItemizerCharitableCash: 0 }))).toBeUndefined();
+    expect(asked(tr({ taxYear: 2025 }))).toBeUndefined();
+    // A K-1 with unrecaptured section 1250 gain and no kind: the review list asks for the kind.
+    const k1 = tr({ incomeK1: [{ id: 'k', entityName: 'Fund LP', longTermCapitalGain: 5000, unrecapturedSection1250Gain: 5000 } as never] });
+    const kind = buildCaseReview({ taxReturn: k1, calculation: calculateForm1040(k1), facts: [], documents: [] }).items
+      .find((i) => i.action?.kind === 'return_field' && i.action.field === 'incomeK1.0.entityType');
+    expect(kind).toMatchObject({ category: 'BLOCKING' });
+    expect(returnFieldSpec('incomeK1.0.entityType', k1)).toEqual({ label: 'Kind of K-1 (Fund LP)', kind: 'k1_entity' });
+    expect(parseReturnField('k1_entity', 'trust')).toEqual({ ok: true, value: 'trust' });
+    expect(parseReturnField('k1_entity', 'llc')).toMatchObject({ ok: false });
+    expect(asked(tr({ deductionMethod: 'itemized', itemizedDeductions: { medicalExpenses: 0, stateLocalIncomeTax: 30000, realEstateTax: 0, personalPropertyTax: 0, mortgageInterest: 0, mortgageInsurancePremiums: 0, charitableCash: 3000, charitableNonCash: 0, casualtyLoss: 0, otherDeductions: 0 } }))).toBeUndefined();
+  });
 });

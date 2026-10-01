@@ -1202,3 +1202,25 @@ export const PLAUSIBILITY = {
 
   VEHICLE_BUSINESS_MILES_HIGH: 40_000,
 };
+
+// ──────────────────────────────────────────────────
+// Charitable contributions from 2026 (P.L. 119-21, taxable years beginning
+// after December 31, 2025)
+// Authority: IRC §170(b)(1)(I) (§70425) — itemized charitable contributions are
+//   allowed only to the extent they exceed 0.5% of the contribution base (AGI),
+//   taken first from 30% capital gain property, then 50% property, then cash;
+//   IRC §170(d)(1)(C) — the amount the floor disallows carries forward only from
+//   a year with an excess under the percentage limits;
+//   IRC §170(p) (§70424), §63(b)(4) — an individual who does not itemize deducts
+//   cash given to §170(b)(1)(A) organizations (not supporting organizations or
+//   donor advised funds), up to $1,000 ($2,000 on a joint return).
+// ──────────────────────────────────────────────────
+
+export const CHARITABLE_FLOOR = {
+  RATE: 0.005,
+};
+
+export const NON_ITEMIZER_CHARITABLE = {
+  MAX: 1000,
+  MAX_JOINT: 2000,
+};

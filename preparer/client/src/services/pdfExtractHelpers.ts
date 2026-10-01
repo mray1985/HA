@@ -1694,6 +1694,14 @@ export function extract1095AFields(
   return fields;
 }
 
+/** The kind of K-1 from the one form it names (Form 1065 or 1120-S); a Form 1041 K-1 may be an estate's or a trust's. */
+function k1EntityType(textBlocks: TextBlock[]): 'partnership' | 's_corp' | undefined {
+  const text = textBlocks.map((b) => b.text.toLowerCase()).join(' ');
+  const named = [/form\s*1065\b/.test(text), /form\s*1120-?s\b/.test(text), /form\s*1041\b/.test(text)];
+  if (named.filter(Boolean).length !== 1) return undefined;
+  return named[0] ? 'partnership' : named[1] ? 's_corp' : undefined;
+}
+
 export function extractK1Fields(
   textBlocks: TextBlock[],
   fieldRawTokens?: Record<string, string>,
@@ -1701,8 +1709,10 @@ export function extractK1Fields(
 ): Record<string, unknown> {
   const box = (key: string, keywords: string[]) =>
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
+  const entityType = k1EntityType(textBlocks);
   return {
     entityName: extractPayerName(textBlocks, ["partnership's name", "corporation's name", "estate's name", "trust's name", 'entity name'], fieldRawTokens, 'entityName', fieldSourceLocations),
+    ...(entityType ? { entityType } : {}),
     ordinaryBusinessIncome: box('ordinaryBusinessIncome', ['ordinary business income', '1 ordinary business', 'box 1']),
     rentalIncome: box('rentalIncome', ['net rental real estate', '2 net rental', 'box 2']),
     guaranteedPayments: box('guaranteedPayments', ['guaranteed payments', '4 guaranteed', 'box 4']),
@@ -1711,6 +1721,9 @@ export function extractK1Fields(
     royalties: box('royalties', ['royalties', '7 royalties', 'box 7']),
     shortTermCapitalGain: box('shortTermCapitalGain', ['short-term capital gain', '8 net short-term', 'box 8']),
     longTermCapitalGain: box('longTermCapitalGain', ['long-term capital gain', '9a net long-term', 'box 9a']),
+    collectiblesGain28: box('collectiblesGain28', ['collectibles (28%) gain', 'collectibles', '28% rate gain', '9b collectibles']),
+    unrecapturedSection1250Gain: box('unrecapturedSection1250Gain', ['unrecaptured section 1250 gain', 'unrecaptured section 1250', '9c unrecaptured']),
+    netSection1231Gain: box('netSection1231Gain', ['net section 1231 gain', 'section 1231 gain', '10 net section 1231']),
     selfEmploymentIncome: box('selfEmploymentIncome', ['self-employment', '14a self-employment', '14 code a']),
   };
 }
@@ -2052,6 +2065,9 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
     royalties: 'Royalties (Box 7)',
     shortTermCapitalGain: 'Short-Term Capital Gain (Box 8)',
     longTermCapitalGain: 'Long-Term Capital Gain (Box 9a)',
+    collectiblesGain28: 'Collectibles (28%) Gain (Box 9b)',
+    unrecapturedSection1250Gain: 'Unrecaptured Section 1250 Gain (Box 9c)',
+    netSection1231Gain: 'Net Section 1231 Gain (Box 10)',
     selfEmploymentIncome: 'Self-Employment Income (Box 14A)',
   },
   'W-2G': {
