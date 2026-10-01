@@ -32,7 +32,62 @@ function model(formNumber: string, reader: Record<string, string>, second: Recor
   };
 }
 
+/**
+ * A scanned W-2 whose box 12a prints "W  1,200.00" that the OCR could not read
+ * (stress run: it came out as "HEE"): the label is there, the cell has ink.
+ */
+function scannedW2(): ReaderPage {
+  const w = (text: string, x: number, y: number): PageWord => ({ text, source: 'ocr', box: [x, y, x + text.length * 9, y + 14] });
+  const words = [
+    w('Form', 40, 360), w('W-2', 90, 360), w('Wage', 140, 360), w('and', 190, 360), w('Tax', 230, 360), w('Statement', 270, 360),
+    w('1', 300, 20), w('Wages,', 315, 20), w('tips,', 380, 20), w('51,200.00', 330, 40),
+    w('12a', 500, 100), w('See', 540, 100), w('instructions', 580, 100), w('HEE', 700, 130),
+  ];
+  const raster = { width: 800, height: 400, gray: new Uint8Array(800 * 400).fill(255) };
+  // "W" and "1,200.00": marks a text line high in the cell under the label.
+  for (const x0 of [530, 600, 612, 624, 636, 648, 660]) {
+    for (let y = 126; y < 138; y++) for (let x = x0; x < x0 + 8; x++) raster.gray[y * 800 + x] = 20;
+  }
+  return { pageNumber: 1, words, raster, imagePng: 'iVBORw0KGgo=' };
+}
+
 describe('documentReader', () => {
+  it("asks the second reader for a W-2 box 12 the page prints but no one read, and holds the form when it cannot", async () => {
+    const p = scannedW2();
+    const read = model('W-2', { '1 Wages': '51,200.00' }, { '12a Code': 'W', '12a Amount': '1,200.00' });
+    const primary = await readPagePrimary(p, read);
+    expect(primary.evidence!.printedUnread).toEqual(['12a.code', '12a.amount']);
+    expect(primary.secondReaderKeys).toEqual(expect.arrayContaining(['12a.code', '12a.amount']));
+    const reading = finishReading(primary, p, await readPageSecond(primary, p, read));
+    // One reader read it: on the return, for the preparer to review.
+    expect(reading.args.box12).toEqual([{ code: 'W', amount: 1200 }]);
+    expect(reading.confidence.box12).toBe(0.5);
+
+    const blind = model('W-2', { '1 Wages': '51,200.00' }, {});
+    const unread = await readPagePrimary(p, blind);
+    const held = finishReading(unread, p, await readPageSecond(unread, p, blind));
+    expect(held.args).toHaveProperty('box12', undefined);
+    expect(held.rawText.box12).toMatch(/box 12a is printed in but no reader read it/);
+    expect(held.confidence.box12).toBe(0);
+    // The W-2 is held, not applied without its box 12.
+    const facts = invokeTaxTool({
+      tool: 'add_w2',
+      args: held.args,
+      context: { returnId: 'R1', taxYear: 2025, sourceDocumentId: 'DOC', sourceFileName: 'w2.png', extractor: 'qwen3.5-0.8b', modelRunId: 'run-reader', ...factSourcesOf(held, 'GLM-OCR') },
+    });
+    if (!facts.ok) throw new Error(facts.error);
+    expect(validateImportedFacts(facts.facts).heldForms).toEqual(['DOC#0']);
+  });
+
+  it('does not ask about an empty box 12 slot', async () => {
+    const p = scannedW2();
+    p.raster.gray.fill(255);
+    // A ruled line across the cell is not printing.
+    for (let x = 510; x < 790; x++) p.raster.gray[150 * 800 + x] = 0;
+    const primary = await readPagePrimary(p, model('W-2', { '1 Wages': '51,200.00' }));
+    expect(primary.evidence!.printedUnread).toEqual([]);
+  });
+
   it('reads a page, confirms each value against the page, and maps it to the form tool', async () => {
     const p = page();
     const m = model('1099-INT', { "PAYER'S name": 'FIRST HARBOR BANK', '1 Interest income': '1,284.66', '4 Federal income tax withheld': '128.47' });

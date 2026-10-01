@@ -274,6 +274,15 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
     }
   }
 
+  // A box 12 slot printed in that no reader read: box 12 stays unknown, so the form is held.
+  const unread = readings.filter((r) => r.status === 'missed' && !r.page && (primary.evidence!.printedUnread ?? []).includes(r.key));
+  if (unread.length > 0 && schema.formType === 'W-2') {
+    const slots = [...new Set(unread.map((r) => r.key.split('.')[0]))];
+    args.box12 = undefined;
+    rawText.box12 = `box ${slots.join(', ')} is printed in but no reader read it`;
+    confidence.box12 = 0;
+  }
+
   const confirmedBox = (key: string) => {
     const status = byKey.get(key)?.status;
     return status === 'confirmed' || status === 'recovered';

@@ -34,7 +34,7 @@ export interface FieldReading {
   confirmedBy?: 'page' | 'model';
 }
 
-type Evidence = Pick<FormEvidenceResult, 'values' | 'located' | 'box12FromPage'> & Partial<Pick<FormEvidenceResult, 'missed'>>;
+type Evidence = Pick<FormEvidenceResult, 'values' | 'located' | 'box12FromPage'> & Partial<Pick<FormEvidenceResult, 'missed' | 'printedUnread'>>;
 
 /**
  * Boxes whose values must be confirmed: tool-feeding, transcribed by the
@@ -87,12 +87,18 @@ export function verifyReadings(
     Object.keys(evidence.box12FromPage ?? {}).flatMap((slot) => [`${slot}.code`, `${slot}.amount`]),
   );
   const missed = new Map((evidence.missed ?? []).map((m) => [m.key, m.pageText]));
+  const printedUnread = new Set(evidence.printedUnread ?? []);
   for (const b of verifiableBoxes(schema)) {
     const primary = evidence.values[b.key];
     const second = secondModel?.[b.key];
     if (primary === undefined) {
       const page = missed.get(b.key);
-      if (page === undefined) continue;
+      if (page === undefined) {
+        // Printed in, no text read from the page: the second reader's reading alone is unconfirmed (reviewed).
+        if (!printedUnread.has(b.key)) continue;
+        out.push(second !== undefined && second.trim() ? { key: b.key, status: 'unconfirmed', second } : { key: b.key, status: 'missed' });
+        continue;
+      }
       if (second !== undefined && readingsAgree(second, page, b.kind)) {
         out.push({ key: b.key, status: 'recovered', second, page, confirmedBy: 'model' });
       } else {
@@ -139,6 +145,10 @@ export function valuesAfterVerification(
   readings: readonly FieldReading[],
 ): Record<string, string> {
   const out = { ...values };
-  for (const r of readings) if (r.status === 'recovered') out[r.key] = r.second!;
+  for (const r of readings) {
+    if (r.status === 'recovered') out[r.key] = r.second!;
+    // A printed box only the second reader read: its reading, for review.
+    else if (r.status === 'unconfirmed' && r.primary === undefined && r.second !== undefined) out[r.key] = r.second;
+  }
   return out;
 }
