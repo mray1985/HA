@@ -311,8 +311,8 @@ describe('ADV-04 — FEIE Stacking Rule (§911(f))', () => {
       }],
     });
 
-    // Without stacking: tax($34,250) = $3,871.50
-    expect(noFEIE.form1040.incomeTax).toBe(3871.5);
+    // Without stacking: Tax Table row 34,250–34,300 = $3,875 (the schedule: $3,871.50)
+    expect(noFEIE.form1040.incomeTax).toBe(3875);
   });
 
   it('partial-year FEIE uses prorated exclusion for stacking', () => {
@@ -386,8 +386,8 @@ describe('ADV-04 — FEIE Stacking Rule (§911(f))', () => {
 
     expect(r.form1040.feieExclusion).toBe(0);
     // taxable = 80000 - 15750 = 64250
-    // tax = 1192.50 + 4386.00 + (64250-48475)*0.22 = 1192.50 + 4386.00 + 3470.50 = 9049.00
-    expect(r.form1040.incomeTax).toBe(9049);
+    // Tax Table row 64,250–64,300 = $9,055 (the schedule: 1192.50 + 4386.00 + 3470.50 = 9049.00)
+    expect(r.form1040.incomeTax).toBe(9055);
   });
 });
 

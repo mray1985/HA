@@ -88,8 +88,9 @@ describe('E2E: Single W-2 Employee ($75k)', () => {
     // 10%: 11925 * 0.10 = 1192.50
     // 12%: (48475 - 11925) * 0.12 = 36550 * 0.12 = 4386.00
     // 22%: (59250 - 48475) * 0.22 = 10775 * 0.22 = 2370.50
-    // Total = 1192.50 + 4386.00 + 2370.50 = 7949.00
-    expect(f.incomeTax).toBe(7949);
+    // Schedule total = 1192.50 + 4386.00 + 2370.50 = 7949.00; line 16 is the
+    // Tax Table row 59,250–59,300: $7,955
+    expect(f.incomeTax).toBe(7955);
 
     // ── No additional taxes ──
     expect(f.seTax).toBe(0);
@@ -100,14 +101,14 @@ describe('E2E: Single W-2 Employee ($75k)', () => {
     expect(f.totalWithholding).toBe(9500);
     expect(f.totalPayments).toBe(9500);
 
-    // ── Refund ── 9500 - 7949 = 1551
-    expect(f.refundAmount).toBe(1551);
+    // ── Refund ── 9500 - 7955 = 1545
+    expect(f.refundAmount).toBe(1545);
     expect(f.amountOwed).toBe(0);
   });
 
   it('has correct effective tax rate', () => {
     const result = calculateForm1040(taxReturn);
-    // 7949 / 75000 = ~10.6%
+    // 7955 / 75000 = ~10.6%
     expect(result.form1040.effectiveTaxRate).toBeCloseTo(0.106, 2);
   });
 });
@@ -168,8 +169,8 @@ describe('E2E: MFJ Family ($120k, 2 children, AOTC)', () => {
     // ── Tax ── (MFJ brackets)
     // 10%: 23850 * 0.10 = 2385.00
     // 12%: (88500 - 23850) * 0.12 = 64650 * 0.12 = 7758.00
-    // Total = 2385 + 7758 = 10143
-    expect(f.incomeTax).toBe(10143);
+    // Schedule total = 2385 + 7758 = 10143; Tax Table row 88,500–88,550: $10,146
+    expect(f.incomeTax).toBe(10146);
 
     // ── Credits ──
     // CTC: 2 × $2,200 = $4,400 (below $400k MFJ threshold)
@@ -184,7 +185,7 @@ describe('E2E: MFJ Family ($120k, 2 children, AOTC)', () => {
     expect(result.credits.totalNonRefundable).toBe(5900);
 
     // ── Tax After Credits ──
-    // Income tax (10143) - non-refundable credits (5900) = 4243 (floor at 0)
+    // Income tax (10146) - non-refundable credits (5900) = 4246 (floor at 0)
     // No SE tax, NIIT, etc.
     expect(f.taxAfterCredits).toBeLessThan(f.incomeTax);
 
@@ -389,15 +390,15 @@ describe('E2E: Head of Household ($28k, 2 children, EITC)', () => {
     // ── Taxable Income ── 28000 - 23625 = 4375
     expect(f.taxableIncome).toBe(4375);
 
-    // ── Tax ── 10%: 4375 * 0.10 = 437.50
-    expect(f.incomeTax).toBeCloseTo(437.50, 0);
+    // ── Tax ── Tax Table row 4,350–4,400: $438 (the schedule: 437.50)
+    expect(f.incomeTax).toBe(438);
 
     // ── CTC ── 2 × $2,200 = $4,400 (below $200k threshold)
     expect(result.credits.childTaxCredit).toBe(4400);
 
-    // CTC ($4,400) exceeds tax ($437.50) → excess → ACTC
+    // CTC ($4,400) exceeds tax ($438) → excess → ACTC
     // ACTC = min(excess, $1700*2, 15%*(28000-2500))
-    //      = min(3962.50, 3400, 3825) = $3,400
+    //      = min(3962, 3400, 3825) = $3,400
     expect(result.credits.actcCredit).toBeGreaterThan(0);
 
     // ── EITC ──
@@ -713,8 +714,8 @@ describe('E2E: MFS — Restricted Rules ($80k)', () => {
     // 10%: 11925 * 0.10 = 1192.50
     // 12%: (48475 - 11925) * 0.12 = 4386
     // 22%: (64250 - 48475) * 0.22 = 3470.50
-    // Total = 1192.50 + 4386 + 3470.50 = 9049
-    expect(f.incomeTax).toBe(9049);
+    // Schedule total = 1192.50 + 4386 + 3470.50 = 9049; Tax Table row 64,250–64,300: $9,055
+    expect(f.incomeTax).toBe(9055);
 
     // ── Education credits = $0 (MFS ineligible per IRC §25A(g)(6)) ──
     expect(result.credits.educationCredit).toBe(0);

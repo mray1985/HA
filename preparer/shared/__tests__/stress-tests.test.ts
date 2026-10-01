@@ -309,9 +309,10 @@ describe('S5 — Credit Stacking Gauntlet (HOH, $30k, 2 kids + 6 credits)', () =
     expect(result.form1040.taxableIncome).toBe(6375);
   });
 
-  it('income tax ≈ $637.50 (10% bracket for HOH)', () => {
-    // HOH 10% bracket is $0-$17,000, so $6,375 × 10% = $637.50
-    expect(result.form1040.incomeTax).toBe(637.50);
+  it('income tax $638 (Tax Table, HOH 10% bracket)', () => {
+    // HOH 10% bracket is $0-$17,000: the schedule gives $6,375 × 10% = $637.50;
+    // line 16 is the Tax Table row $6,350–$6,400: $638
+    expect(result.form1040.incomeTax).toBe(638);
   });
 
   it('tax after credits = $0 (credits exceed tax)', () => {
@@ -682,8 +683,8 @@ describe('S11 — Dependent Standard Deduction Limitation (Single, $4.5k)', () =
     expect(result.form1040.taxableIncome).toBe(50);
   });
 
-  it('tax = $50 × 10% = $5', () => {
-    expect(result.form1040.incomeTax).toBe(5);
+  it('tax = $6 (Tax Table row $50–$75; the schedule: $50 × 10% = $5)', () => {
+    expect(result.form1040.incomeTax).toBe(6);
   });
 });
 

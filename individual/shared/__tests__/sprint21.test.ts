@@ -428,9 +428,9 @@ describe('21C: Form 8911 (EV Refueling Property Credit)', () => {
         },
       }));
       // AGI = 31,620, Standard deduction = 31,500, Taxable = 120
-      // Tax at 10% = $12, Credit available = $162 but limited to tax → $12
+      // Tax Table row $100–$125 = $11, Credit available = $162 but limited to tax → $11
       expect(result.credits.evRefuelingCredit).toBeLessThanOrEqual(162);
-      expect(result.form1040.incomeTax).toBe(12);
+      expect(result.form1040.incomeTax).toBe(11);
       // Non-refundable credit reduces income tax portion to 0
       // taxAfterCredits corresponds to IRS Form 1040 Line 24 "Total Tax"
       expect(result.form1040.taxAfterCredits).toBe(0);

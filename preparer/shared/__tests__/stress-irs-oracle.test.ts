@@ -27,6 +27,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateForm1040 } from '../src/engine/form1040.js';
 import { TaxReturn, FilingStatus } from '../src/types/index.js';
+import { taxTable2025 } from './irsTaxTable2025.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Helpers
@@ -236,6 +237,12 @@ function computeBracketTax(taxableIncome: number, status: StatusKey): number {
     tax += taxable * b.rate;
   }
   return round2(tax);
+}
+
+/** 1b. Form 1040 line 16: the IRS's 2025 Tax Table below $100,000, else the brackets */
+function computeLine16Tax(taxableIncome: number, status: StatusKey): number {
+  if (taxableIncome <= 0) return 0;
+  return taxableIncome < 100000 ? taxTable2025(taxableIncome, status) : computeBracketTax(taxableIncome, status);
 }
 
 /** 2. Compute standard deduction with age 65+ additions */
@@ -934,7 +941,8 @@ describe('IRS Oracle — Stress Test Cross-Validation', () => {
     });
 
     it('Oracle: incomeTax matches bracket computation', () => {
-      const oracleTax = computeBracketTax(92150, 'Single');
+      const oracleTax = computeLine16Tax(92150, 'Single');
+      expect(oracleTax).toBe(15193); // Tax Table row $92,150–$92,200 (the brackets: $15,187)
       expect(result.form1040.incomeTax).toBe(oracleTax);
     });
   });
@@ -965,9 +973,10 @@ describe('IRS Oracle — Stress Test Cross-Validation', () => {
       expect(result.form1040.taxableIncome).toBe(30000 - oracleStdDed);
     });
 
-    it('Oracle: incomeTax = $637.50', () => {
-      const oracleTax = computeBracketTax(6375, 'HOH');
-      expect(oracleTax).toBe(637.50);
+    it('Oracle: incomeTax = $638 (Tax Table; the brackets: $637.50)', () => {
+      expect(computeBracketTax(6375, 'HOH')).toBe(637.50);
+      const oracleTax = computeLine16Tax(6375, 'HOH');
+      expect(oracleTax).toBe(638);
       expect(result.form1040.incomeTax).toBe(oracleTax);
     });
 
@@ -1224,9 +1233,10 @@ describe('IRS Oracle — Stress Test Cross-Validation', () => {
       expect(result.form1040.taxableIncome).toBe(50);
     });
 
-    it('Oracle: tax = $5 (10%)', () => {
-      const oracleTax = computeBracketTax(50, 'Single');
-      expect(oracleTax).toBe(5);
+    it('Oracle: tax = $6 (Tax Table row $50–$75; the brackets: $5)', () => {
+      expect(computeBracketTax(50, 'Single')).toBe(5);
+      const oracleTax = computeLine16Tax(50, 'Single');
+      expect(oracleTax).toBe(6);
       expect(result.form1040.incomeTax).toBe(oracleTax);
     });
   });

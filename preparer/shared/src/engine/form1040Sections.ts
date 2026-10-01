@@ -39,7 +39,7 @@ import { getStandardDeduction, getTaxBrackets, getTaxConstants } from '../consta
 import { calculateScheduleC } from './scheduleC.js';
 import { calculateScheduleSE } from './scheduleSE.js';
 import { calculateScheduleA } from './scheduleA.js';
-import { calculateProgressiveTax, traceProgressiveTax, getMarginalRate } from './brackets.js';
+import { calculateTaxTableTax, TAX_TABLE_LIMIT, traceProgressiveTax, getMarginalRate } from './brackets.js';
 import { calculatePreferentialRateTax } from './capitalGains.js';
 import { calculateCredits } from './credits.js';
 import { calculateQBIDeduction, calculateMultiBusinessQBIDeduction } from './qbi.js';
@@ -1789,7 +1789,8 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
         ctx.taxableIncome + feieStack, preferentialQD, totalPreferentialLTCG, filingStatus,
         unrecapturedSection1250Gain, _taxYear, collectiblesGain,
       );
-      const excludedResult = calculateProgressiveTax(feieStack, filingStatus, _taxYear);
+      // Foreign Earned Income Tax Worksheet line 5: the Tax Table below $100,000.
+      const excludedResult = calculateTaxTableTax(feieStack, filingStatus, _taxYear);
       ctx.incomeTax = round2(Math.max(0, fullResult.totalTax - excludedResult.tax));
       ctx.preferentialTax = fullResult.preferentialTax;
       ctx.section1250Tax = fullResult.section1250Tax;
@@ -1807,12 +1808,14 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
   } else {
     if (feieStack > 0) {
       // §911(f): tax = tax(taxableIncome + exclusion) - tax(exclusion)
-      const fullResult = calculateProgressiveTax(ctx.taxableIncome + feieStack, filingStatus, _taxYear);
-      const excludedResult = calculateProgressiveTax(feieStack, filingStatus, _taxYear);
+      // Foreign Earned Income Tax Worksheet lines 4 and 5, each by the Tax Table below $100,000.
+      const fullResult = calculateTaxTableTax(ctx.taxableIncome + feieStack, filingStatus, _taxYear);
+      const excludedResult = calculateTaxTableTax(feieStack, filingStatus, _taxYear);
       ctx.incomeTax = round2(Math.max(0, fullResult.tax - excludedResult.tax));
       ctx.marginalTaxRate = fullResult.marginalRate;
     } else {
-      const result = calculateProgressiveTax(ctx.taxableIncome, filingStatus, _taxYear);
+      // Line 16: the Tax Table below $100,000, the Tax Computation Worksheet from $100,000.
+      const result = calculateTaxTableTax(ctx.taxableIncome, filingStatus, _taxYear);
       ctx.incomeTax = result.tax;
       ctx.marginalTaxRate = result.marginalRate;
     }
@@ -1854,7 +1857,9 @@ export function calculateIncomeTaxSection(ctx: Form1040Context): void {
           ? (collectiblesGain > 0
             ? 'Preferential rate tax (0%/15%/20%, 25% §1250, 28% collectibles)'
             : 'Preferential rate tax (qualified dividends/LTCG at 0%/15%/20%)')
-          : 'Progressive tax on taxable income',
+          : ctx.taxableIncome < TAX_TABLE_LIMIT
+            ? 'Tax Table: tax at the middle of the taxable income row, to the dollar'
+            : 'Tax Computation Worksheet: progressive tax on taxable income',
       inputs: [
         { lineId: 'form1040.line15', label: 'Taxable Income', value: ctx.taxableIncome },
         ...(feieStack > 0 ? [{ lineId: 'form2555', label: 'FEIE Exclusion (stacked)', value: feieStack }] : []),

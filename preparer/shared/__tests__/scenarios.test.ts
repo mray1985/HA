@@ -107,9 +107,8 @@ describe('Scenario 1 — Single W-2 Employee, $55k', () => {
   });
 
   it('calculates correct income tax via brackets', () => {
-    // 10% × 11925 = 1192.50
-    // 12% × (39250 − 11925) = 12% × 27325 = 3279
-    expect(f.incomeTax).toBe(4471.50);
+    // The schedule: 1192.50 + 12% × 27325 = 4471.50; line 16 is the Tax Table row 39,250–39,300: 4475
+    expect(f.incomeTax).toBe(4475);
   });
 
   it('has no SE tax', () => {
@@ -123,8 +122,8 @@ describe('Scenario 1 — Single W-2 Employee, $55k', () => {
 
   it('calculates correct refund', () => {
     expect(f.totalWithholding).toBe(6800);
-    expect(f.taxAfterCredits).toBe(4471.50);
-    expect(f.refundAmount).toBe(2328.50);
+    expect(f.taxAfterCredits).toBe(4475);
+    expect(f.refundAmount).toBe(2325);
     expect(f.amountOwed).toBe(0);
   });
 
@@ -297,8 +296,8 @@ describe('Scenario 2 — MFJ, W-2 + Freelancer, 2 Kids, Itemized', () => {
     // MFJ brackets on ~84104.58:
     // 10% × 23850 = 2385
     // 12% × (84104.58 − 23850) = 12% × 60254.58 = 7230.55
-    // Total ≈ 9615.55
-    expect(f.incomeTax).toBeCloseTo(9615.55, 0);
+    // Schedule total ≈ 9615.55; line 16 is the Tax Table row 84,100–84,150 (MFJ): 9618
+    expect(f.incomeTax).toBe(9618);
   });
 
   it('has correct credits', () => {
@@ -308,13 +307,13 @@ describe('Scenario 2 — MFJ, W-2 + Freelancer, 2 Kids, Itemized', () => {
   });
 
   it('calculates correct final balance', () => {
-    // Tax after non-refundable: max(0, 9615.55 − 4400) + 6782.18 ≈ 11997.73
+    // Tax after non-refundable: max(0, 9618 − 4400) + 6782.18 ≈ 12000.18
     // EITC = 0 (too much income)
     expect(result.credits.eitcCredit).toBe(0);
-    // Tax after credits ≈ 11997.73
-    expect(f.taxAfterCredits).toBeCloseTo(11997.73, 0);
-    // Refund = 14000 − 11997.73 ≈ 2002.27
-    expect(f.refundAmount).toBeCloseTo(2002.27, 0);
+    // Tax after credits ≈ 12000.18
+    expect(f.taxAfterCredits).toBeCloseTo(12000.18, 2);
+    // Refund = 14000 − 12000.18 ≈ 1999.82
+    expect(f.refundAmount).toBeCloseTo(1999.82, 2);
     expect(f.amountOwed).toBe(0);
   });
 });
@@ -330,8 +329,8 @@ describe('Scenario 2 — MFJ, W-2 + Freelancer, 2 Kids, Itemized', () => {
 //   Taxable income            = 4,375
 //
 //   Tax (HOH brackets):
-//     10% on 0–4,375          = 437.50
-//     Total income tax        = 437.50
+//     10% on 0–4,375          = 437.50 by the schedule
+//     Total income tax        = 438 (Tax Table row 4,350–4,400)
 //
 //   Credits:
 //     CTC = 1 × $2,200 = $2,200 (AGI under $200k threshold)
@@ -392,8 +391,8 @@ describe('Scenario 3 — HOH Single Parent, EITC-Eligible', () => {
   });
 
   it('calculates correct income tax', () => {
-    // HOH: 10% on 0–4,375 = 437.50
-    expect(f.incomeTax).toBe(437.50);
+    // HOH: Tax Table row 4,350–4,400 = 438 (the schedule: 437.50)
+    expect(f.incomeTax).toBe(438);
   });
 
   it('applies CTC correctly', () => {
@@ -409,7 +408,7 @@ describe('Scenario 3 — HOH Single Parent, EITC-Eligible', () => {
   });
 
   it('gets a substantial refund from EITC + withholding', () => {
-    // Income tax (437.50) fully wiped by CTC (2200).
+    // Income tax (438) fully wiped by CTC (2200).
     // Remaining CTC doesn't reduce further (non-refundable in this engine).
     // EITC is refundable and creates negative tax.
     // Refund = withholding + EITC benefit
@@ -644,8 +643,9 @@ describe('Scenario 5 — MFS, $110k, SALT Cap $20k, No EITC', () => {
     // MFS brackets (same as Single):
     // 10% × 11925 = 1192.50
     // 12% × 36550 = 4386
-    // 22% × 45525 = 10015.50
-    expect(f.incomeTax).toBe(15594);
+    // 22% × 45525 = 10015.50 → 15594 by the schedule;
+    // line 16 is the Tax Table row 94,000–94,050 (MFS): 15600
+    expect(f.incomeTax).toBe(15600);
   });
 
   it('has no EITC (MFS disqualified)', () => {
@@ -653,7 +653,7 @@ describe('Scenario 5 — MFS, $110k, SALT Cap $20k, No EITC', () => {
   });
 
   it('calculates correct refund', () => {
-    expect(f.refundAmount).toBe(1906);
+    expect(f.refundAmount).toBe(1900);
     expect(f.amountOwed).toBe(0);
   });
 });
@@ -822,8 +822,8 @@ describe('Scenario 6 — Full Self-Employment, Home Office, HSA, SE Health Insur
     // 10% × 11925 = 1192.50
     // 12% × 36550 = 4386
     // 22% × (60170.42 − 48475) = 22% × 11695.42 = 2572.99
-    // Total ≈ 8151.49
-    expect(f.incomeTax).toBeCloseTo(8151.49, 0);
+    // Schedule total ≈ 8151.49; line 16 is the Tax Table row 60,150–60,200: 8153
+    expect(f.incomeTax).toBe(8153);
   });
 
   it('has no credits', () => {
@@ -831,11 +831,12 @@ describe('Scenario 6 — Full Self-Employment, Home Office, HSA, SE Health Insur
   });
 
   it('calculates correct amount owed', () => {
-    // Tax after credits = 8151.49 + 15591.96 = 23743.45
-    expect(f.taxAfterCredits).toBeCloseTo(23743.45, 0);
-    // Owed = 23743.45 − 20000 estimated = 3743.45 base + ~64 estimated tax penalty ≈ 3807
+    // Tax after credits = 8153 + 15591.96 = 23744.96
+    expect(f.taxAfterCredits).toBeCloseTo(23744.96, 2);
+    // Owed = 23744.96 − 20000 estimated = 3744.96 base + the estimated tax penalty (~$63.73)
     expect(f.estimatedPayments).toBe(20000);
-    expect(f.amountOwed).toBeCloseTo(3807, 0);
+    expect(f.amountOwed).toBeCloseTo(3744.96 + f.estimatedTaxPenalty, 2);
+    expect(f.estimatedTaxPenalty).toBeCloseTo(64, -1);
     expect(f.refundAmount).toBe(0);
   });
 
@@ -845,8 +846,8 @@ describe('Scenario 6 — Full Self-Employment, Home Office, HSA, SE Health Insur
 
   it('calculates estimated quarterly for next year', () => {
     // Quarterly = max(0, taxAfterCredits − withholding) / 4
-    // = max(0, 23743.45 − 0) / 4 = 5935.86 approximately
-    expect(f.estimatedQuarterlyPayment).toBeCloseTo(5935.86, 0);
+    // = max(0, 23744.96 − 0) / 4 = 5936.24 approximately
+    expect(f.estimatedQuarterlyPayment).toBeCloseTo(5936.24, 0);
   });
 });
 
@@ -973,10 +974,11 @@ describe('Scenario — Single W-2, $60,000 withheld $5,000 (TY2025)', () => {
     expect(f.standardDeduction).toBe(15750);
     expect(f.agi).toBe(60000);
     expect(f.taxableIncome).toBe(44250);
-    expect(f.incomeTax).toBe(5071.5);
-    expect(f.taxAfterCredits).toBe(5071.5);
+    // Tax Table row 44,250–44,300: 5075 (the schedule: 5071.50)
+    expect(f.incomeTax).toBe(5075);
+    expect(f.taxAfterCredits).toBe(5075);
     expect(f.totalWithholding).toBe(5000);
-    expect(f.amountOwed).toBe(71.5);
+    expect(f.amountOwed).toBe(75);
     expect(f.refundAmount).toBe(0);
     expect(f.marginalTaxRate).toBe(0.12);
     expect((f.effectiveTaxRate * 100).toFixed(1)).toBe('8.5');
@@ -1008,9 +1010,11 @@ describe('Tax year 2026 — single W-2, $60,000', () => {
   it('applies the 2026 ordinary brackets', () => {
     // 10% × $12,400 = $1,240
     // 12% × ($43,900 − $12,400) = 12% × $31,500 = $3,780
-    // Total = $5,020
-    expect(f.incomeTax).toBe(5020);
+    // Total = $5,020 by the schedule. Line 16: the 2026 Tax Table, built as every year's
+    // (the tax at the middle of the $43,900–$43,950 row, $43,925, to the dollar): $5,023.
+    // The IRS has not published the 2026 table yet.
+    expect(f.incomeTax).toBe(5023);
     expect(f.marginalTaxRate).toBe(0.12);
-    expect(f.amountOwed).toBe(20);
+    expect(f.amountOwed).toBe(23);
   });
 });

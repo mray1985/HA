@@ -96,9 +96,10 @@ describe('22A: 25% Unrecaptured Section 1250 Rate Zone', () => {
       );
       // Effective 1250 = $10k (capped to LTCG)
       // When all LTCG is 1250 and no QD, special = ordinary($90k) + 25%×$10k
-      // Regular = progressiveTax($100k). Since 25% > 22% bracket, regular wins
-      // section1250Tax adjusted: regularTax - ordinaryTax = tax on the $10k at ordinary rates
-      expect(result.section1250Tax).toBe(2200); // effective 22% bracket rate
+      // Regular = progressiveTax($100k) = $16,914 (from $100,000, the Tax Computation Worksheet).
+      // Ordinary $90k by the Tax Table (row $90,000–$90,050) = $14,720. Since 25% > 22%, regular wins:
+      // section1250Tax adjusted = regularTax - ordinaryTax = 16,914 - 14,720
+      expect(result.section1250Tax).toBe(2194);
       expect(result.preferentialTax).toBe(0); // no remaining LTCG
     });
 
@@ -107,10 +108,10 @@ describe('22A: 25% Unrecaptured Section 1250 Rate Zone', () => {
         5000, 0, 10000, FilingStatus.Single, 10000,
       );
       // Taxable income only $5k, effective 1250 = $5k
-      // Special = 0 + 25%×5k = $1250. Regular = progressiveTax(5k) = $500
-      // min(1250, 500) = 500 → regular wins
-      expect(result.section1250Tax).toBe(500);
-      expect(result.totalTax).toBe(500);
+      // Special = 0 + 25%×5k = $1250. Regular = Tax Table on $5k (row $5,000–$5,050) = $503
+      // min(1250, 503) = 503 → regular wins
+      expect(result.section1250Tax).toBe(503);
+      expect(result.totalTax).toBe(503);
     });
 
     it('all LTCG is section 1250, no other preferential — adjusts to ordinary rate', () => {
@@ -118,9 +119,9 @@ describe('22A: 25% Unrecaptured Section 1250 Rate Zone', () => {
         100000, 0, 20000, FilingStatus.Single, 20000,
       );
       // All $20k LTCG is 1250, no QD. Ordinary = $80k (22% bracket)
-      // Special = progressiveTax($80k) + 25%×$20k. Regular = progressiveTax($100k)
-      // Since 25% > 22%, regular is cheaper → section1250Tax adjusted
-      expect(result.section1250Tax).toBe(4400); // $20k at effective 22%
+      // Special = Tax Table on $80k ($12,520, row $80,000–$80,050) + 25%×$20k. Regular = $16,914
+      // Since 25% > 22%, regular is cheaper → section1250Tax adjusted = 16,914 - 12,520
+      expect(result.section1250Tax).toBe(4394);
       expect(result.preferentialTax).toBe(0); // nothing left for 0/15/20
     });
 
@@ -231,15 +232,15 @@ describe('22A: 25% Unrecaptured Section 1250 Rate Zone', () => {
       // This happens when ordinary portion is very low bracket and 25% is too high
       // E.g. $10k taxable, all LTCG, $10k is 1250
       // Special: ordinary(0) + 25%×10k = $2500
-      // Regular: progressiveTax(10k) = $1000 (10% bracket)
-      // min(2500, 1000) = 1000 → regular wins
+      // Regular: Tax Table on $10k (row $10,000–$10,050) = $1,003 (the schedule: $1,000)
+      // min(2500, 1003) = 1003 → regular wins
       const result = calculatePreferentialRateTax(
         10000, 0, 10000, FilingStatus.Single, 10000,
       );
-      expect(result.totalTax).toBe(1000); // regular tax wins
+      expect(result.totalTax).toBe(1003); // regular tax wins
       // section1250Tax adjusted down from $2500
       expect(result.section1250Tax).toBeLessThan(2500);
-      expect(result.section1250Tax).toBe(1000); // all tax attributed to 1250
+      expect(result.section1250Tax).toBe(1003); // all tax attributed to 1250
     });
 
     it('special tax equals regular tax — no adjustment needed', () => {

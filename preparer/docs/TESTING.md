@@ -141,7 +141,7 @@ Independent verification that the engine computes correct results.
 cd shared && npx vitest run __tests__/irs-tax-table.test.ts
 ```
 
-An independent tax calculator with hard-coded brackets and standard deductions (NOT imported from the engine). Feeds W-2 returns through both and checks every field matches.
+An independent tax calculator (NOT imported from the engine): below $100,000 of taxable income, the IRS's printed 2025 Tax Table (`__tests__/fixtures/irs-tax-table-2025.json`, from Publication 1040 (2025)); from $100,000, hard-coded brackets. Feeds W-2 returns through both and checks every field matches. `tax-table-2025.test.ts` checks the engine against all 8,248 values of the table, the $100,000 cutover, and the Qualified Dividends and Capital Gain Tax Worksheet lines 22 and 24.
 
 | Section | Tests | What |
 |---------|-------|------|
@@ -331,7 +331,7 @@ cd server && npx vitest run
 
 | Source | File | Method |
 |--------|------|--------|
-| Independent Oracle | `irs-tax-table.test.ts` | Hard-coded brackets, 588 tests |
+| Independent Oracle | `irs-tax-table.test.ts` | The IRS's 2025 Tax Table below $100,000, hard-coded brackets above, 588 tests |
 | IRS Constants | `rev-proc-2024-40.test.ts` | 700+ constants from Rev. Proc. 2024-40 |
 
 ### Adversarial Testing
