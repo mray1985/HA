@@ -178,6 +178,14 @@ export function parseUSAddress(lines: readonly string[]): USAddress | null {
   return { street: streetLines.join(' '), city: last[1]!.replace(/,$/, '').trim(), state: last[2]!.toUpperCase(), zip: last[3]! };
 }
 
+/** The lines before a trailing US address ("CARA / OKAFOR / 1427 ASPEN CT / NAPERVILLE IL 60540" → the name lines). */
+function withoutTrailingAddress(lines: readonly string[]): string[] {
+  for (let cut = 1; cut < lines.length - 1; cut++) {
+    if (parseUSAddress(lines.slice(cut))) return lines.slice(0, cut);
+  }
+  return [...lines];
+}
+
 /** A printed TIN: nine digits, or a masked one showing only the last four. */
 export function parseTin(text: string): { full?: string; lastFour?: string } {
   const t = text.trim();
@@ -212,10 +220,13 @@ export function identityFromValues(
   }
   const nameText = values[keys.name]?.trim();
   if (nameText) {
-    const columns = options.nameColumns && NAME_COLUMN_KEYS[formType] === keys.name ? nameText.split(/\r?\n/).map((p) => p.trim()) : null;
+    // A reading of the name box that ran on into the address below it (W-2 box e into f):
+    // the address lines are not part of the name (the address is read from its own box).
+    const nameLines = withoutTrailingAddress(nameText.split(/\r?\n/).map((p) => p.trim()).filter(Boolean));
+    const columns = options.nameColumns && NAME_COLUMN_KEYS[formType] === keys.name ? nameLines : null;
     const value = columns && (columns.length === 2 || columns.length === 3)
       ? parseNameColumns(columns[0]!, columns[1]!, columns[2] ?? '')
-      : parsePersonName(nameText);
+      : parsePersonName(nameLines.join('\n'));
     out.name = { raw: nameText, confirmed: confirmed(keys.name), value };
   }
   const addressKeys = keys.address.filter((k) => values[k]?.trim());

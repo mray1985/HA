@@ -129,4 +129,12 @@ describe("a W-2's name by its printed columns", () => {
     // Without the page's columns, a two-line name is not split.
     expect(identityFromValues('W-2', { e: 'JORDAN\nTESTPAYER' }, () => true)?.name?.value).toBeNull();
   });
+
+  it('reads the name when the reading ran on into the address below it (stress run)', () => {
+    const id = identityFromValues('W-2', { a: '000-31-5502', e: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540', f: '1427 ASPEN CT\nNAPERVILLE IL 60540' }, () => true, { nameColumns: true });
+    expect(id?.name).toMatchObject({ raw: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540', value: { first: 'Cara', last: 'Okafor' } });
+    expect(id?.address?.value).toEqual({ street: '1427 ASPEN CT', city: 'NAPERVILLE', state: 'IL', zip: '60540' });
+    // A third line that is not an address (nor a suffix) still leaves the name unread.
+    expect(identityFromValues('W-2', { e: 'CARA\nOKAFOR\nSOMETHING ELSE' }, () => true, { nameColumns: true })?.name?.value).toBeNull();
+  });
 });
