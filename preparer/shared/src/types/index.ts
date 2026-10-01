@@ -467,6 +467,11 @@ export interface HomeOfficeResult {
 export interface VehicleInfo {
   method: 'standard_mileage' | 'actual' | null;
   businessMiles?: number;
+  /**
+   * Of the business miles, those driven on or after July 1 — needed in a year
+   * whose standard mileage rate changes mid-year (2026: Announcement 2026-11).
+   */
+  businessMilesFromJuly1?: number;
   totalMiles?: number;
   commuteMiles?: number;
   dateInService?: string;
@@ -507,7 +512,9 @@ export interface VehicleResult {
   businessUsePercentage: number;
 
   // Standard mileage
-  standardDeduction?: number;         // businessMiles * $0.70
+  standardDeduction?: number;         // businessMiles × the year's rate (2026: two rates, before and from July 1)
+  /** The year's rate changes on July 1 and the miles from July 1 are not entered: all miles are at the earlier rate. */
+  mileageSplitNeeded?: boolean;
 
   // Actual method breakdown
   totalActualExpenses?: number;       // Sum of all expense categories

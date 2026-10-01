@@ -89,6 +89,7 @@ export function calculateScheduleA(
       deductions.nonCashDonations,
       agi,
       deductions.charitableCarryforward,
+      taxYear,
     );
     charitableDeduction = round2(form8283Result.allowableCashDeduction + form8283Result.allowableNonCashDeduction);
   } else {

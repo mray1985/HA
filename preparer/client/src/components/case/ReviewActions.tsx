@@ -404,7 +404,8 @@ export function ReturnFieldsForm({ fields, onDone }: { fields: string[]; onDone:
                 aria-label={spec.label}
                 autoFocus={i === 0}
                 className={inputClass}
-                inputMode={spec.kind === 'tin' || spec.kind === 'zip' ? 'numeric' : undefined}
+                type={spec.kind === 'date' ? 'date' : 'text'}
+                inputMode={spec.kind === 'tin' || spec.kind === 'zip' || spec.kind === 'count' ? 'numeric' : undefined}
                 autoComplete="off"
                 value={values[field] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}

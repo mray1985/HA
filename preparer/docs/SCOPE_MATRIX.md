@@ -71,8 +71,8 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Medical and dental expenses | ✅ | Schedule A | 7.5% AGI floor |
 | Casualty and theft losses | ✅ | Schedule A, Form 4684 | $100/event floor, 10% AGI floor, FEMA disaster requirement; personal and business property |
 | Business expenses | ✅ | Schedule C | Full expense deduction support (Lines 8-27) |
-| Home office deduction | ✅ | Schedule C / Form 8829 | Simplified ($5/sqft) and regular (three-tier cascade) methods; MACRS depreciation on home; prior-year carryovers |
-| Vehicle expenses | ✅ | Schedule C / Form 4562 Part V | Standard mileage ($0.70/mi) and actual with Section 280F limits; MACRS 5-yr; GVW >6,000 lb exception |
+| Home office deduction | ✅ | Schedule C / Form 8829 | Simplified ($5/sqft) and regular (three-tier cascade) methods, limited by Schedule C line 29 (Form 8829 line 8); depreciation as 39-year nonresidential real property (line 41: 2.564% after the first year); prior-year carryovers. A home first used before May 13, 1993, or with no date first used, is held (FED.FORM8829.LINE41) |
+| Vehicle expenses | ✅ | Schedule C / Form 4562 Part V | Standard mileage (2025: $0.70/mi, Notice 2025-5; 2026: $0.725/mi, and $0.76/mi for miles from July 1, Announcement 2026-11 — held until the miles from July 1 are entered) and actual with Section 280F limits; MACRS 5-yr; GVW >6,000 lb exception |
 | HSA deduction | ✅ | Form 8889 | Self-only and family limits; employer offset; catch-up contributions |
 | Student loan interest | ✅ | | $2,500 max; MAGI phaseout |
 | Traditional IRA deduction | ✅ | | Active participant phaseout rules; spouse-covered phaseout |

@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FilingStatus, type TaxReturn } from '@hatax/engine';
+import { calculateForm1040, FilingStatus, type TaxReturn } from '@hatax/engine';
 import { clearReturnCache, createReturn, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
 import { buildCaseReview } from '../services/caseReview';
@@ -90,5 +90,26 @@ describe('the case queue', () => {
     updateReturn(attention, { ...PERSON });
     expect(nextCase(ready)?.id).toBe(attention);
     expect(nextCase(null)?.id).toBeDefined();
+  });
+});
+
+describe('engine findings one field settles', () => {
+  it('asks for the business miles from July 1, and the date a home was first used for business', () => {
+    expect(parseReturnField('count', '4,000')).toEqual({ ok: true, value: 4000 });
+    expect(parseReturnField('count', '12.5')).toMatchObject({ ok: false });
+    expect(parseReturnField('date', '2025-07-01')).toEqual({ ok: true, value: '2025-07-01' });
+    expect(parseReturnField('date', 'July 1')).toMatchObject({ ok: false });
+    const tr = {
+      id: 'c', taxYear: 2026, status: 'in_progress', currentStep: 0, currentSection: 'review', ...PERSON,
+      dependents: [], w2Income: [], income1099NEC: [{ id: 'n', payerName: 'Client', amount: 60000 }], income1099K: [], income1099INT: [], income1099DIV: [],
+      income1099R: [], income1099G: [], income1099MISC: [], income1099B: [], incomeK1: [], income1099SA: [],
+      rentalProperties: [], otherIncome: 0, expenses: [], deductionMethod: 'standard', educationCredits: [], businesses: [],
+      incomeDiscovery: {}, createdAt: '', updatedAt: '',
+      vehicle: { method: 'standard_mileage', businessMiles: 10000 },
+      homeOffice: { method: 'actual', squareFeet: 200, totalHomeSquareFeet: 1000, homeCostOrValue: 300000, landValue: 50000, insurance: 100 },
+    } as unknown as TaxReturn;
+    const fields = buildCaseReview({ taxReturn: tr, calculation: calculateForm1040(tr), facts: [], documents: [] }).items
+      .flatMap((i) => (i.action?.kind === 'return_field' ? [i.action.field] : []));
+    expect(fields).toEqual(expect.arrayContaining(['vehicle.businessMilesFromJuly1', 'homeOffice.dateFirstUsedForBusiness']));
   });
 });

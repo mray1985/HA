@@ -420,6 +420,12 @@ function answeredStateItems(taxReturn: TaxReturn, calculation: CalculationResult
 /** The engine's finding for special depreciation it cannot figure without the date acquired. */
 const BONUS_RULE = 'FED.BONUS_DEPRECIATION.168K';
 
+/** Engine findings one return field settles, filled from the review item. */
+const FIELD_FINDINGS: Record<string, string> = {
+  'unsupported:FED.VEHICLE.STANDARD_MILEAGE_SPLIT:vehicle': 'vehicle.businessMilesFromJuly1',
+  'unsupported:FED.FORM8829.LINE41:homeOffice': 'homeOffice.dateFirstUsedForBusiness',
+};
+
 export function buildCaseReview(input: {
   taxReturn: TaxReturn;
   calculation?: CalculationResult | null;
@@ -443,6 +449,7 @@ export function buildCaseReview(input: {
       : {}),
     ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
     ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
+    ...(FIELD_FINDINGS[d.id] ? { action: { kind: 'return_field' as const, field: FIELD_FINDINGS[d.id]! } } : {}),
   }));
   const identity: ReviewItem[] = planIdentity(input.taxReturn, input.documents).items.map((i) => ({
     id: i.id, category: 'REVIEW', group: 'personal', source: 'document', message: i.message,

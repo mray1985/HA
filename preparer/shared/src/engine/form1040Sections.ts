@@ -1264,6 +1264,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
       !!taxReturn.livedApartFromSpouse,
       taxReturn.form8582Data,
       ctx.misc1099Rents,
+      taxReturn.taxYear || 2025,
     );
     // Form 8582 determines the allowed loss; compute final scheduleEIncome
     const rawRentalNet = ctx.scheduleEResult.netRentalIncome;

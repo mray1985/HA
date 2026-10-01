@@ -175,17 +175,20 @@ export function calculateScheduleC(taxReturn: TaxReturn): ScheduleCResult {
     : undefined;
   const depreciationDeduction = form4562Result?.totalDepreciation || 0;
 
-  // ─── Home office deduction (Form 8829) ──────────────────
-  const homeOfficeResult = taxReturn.homeOffice
-    ? calculateHomeOfficeDetailed(taxReturn.homeOffice, tentativeProfit)
-    : undefined;
-  const homeOfficeDeduction = homeOfficeResult?.totalDeduction || 0;
-
   // ─── Vehicle deduction (Schedule C Line 9 / Form 4562) ──
   const vehicleResult = taxReturn.vehicle
-    ? calculateVehicleDetailed(taxReturn.vehicle)
+    ? calculateVehicleDetailed(taxReturn.vehicle, taxReturn.taxYear || 2025)
     : undefined;
   const vehicleDeduction = vehicleResult?.totalDeduction || 0;
+
+  // ─── Home office deduction (Form 8829) ──────────────────
+  // Form 8829 line 8 is Schedule C line 29: the tentative profit after every
+  // line 28 expense, car expenses (line 9) and depreciation (line 13) included.
+  const scheduleCLine29 = round2(tentativeProfit - depreciationDeduction - vehicleDeduction);
+  const homeOfficeResult = taxReturn.homeOffice
+    ? calculateHomeOfficeDetailed(taxReturn.homeOffice, scheduleCLine29, taxReturn.taxYear || 2025)
+    : undefined;
+  const homeOfficeDeduction = homeOfficeResult?.totalDeduction || 0;
 
   // ─── Net profit (loss) — Line 31 ───────────────────────
   const netProfit = round2(tentativeProfit - depreciationDeduction - homeOfficeDeduction - vehicleDeduction);

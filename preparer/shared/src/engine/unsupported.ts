@@ -82,6 +82,33 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     });
   }
 
+  // Form 8829 line 41: the depreciation percentage depends on when the home was
+  // first used for business; before May 13, 1993 other rules apply (Pub 946).
+  const home = taxReturn.homeOffice;
+  if (home?.method === 'actual' && (home.homeCostOrValue ?? 0) > 0) {
+    const first = home.dateFirstUsedForBusiness;
+    if (!first) {
+      out.push({ ruleId: 'FED.FORM8829.LINE41', jurisdiction: 'US', section: 'federal', itemId: 'homeOffice',
+        message: 'Home office depreciation: enter the date the home was first used for business (Form 8829 line 41 depends on it).' });
+    } else if (first < '1993-05-13') {
+      out.push({ ruleId: 'FED.FORM8829.LINE41', jurisdiction: 'US', section: 'federal', itemId: 'homeOffice',
+        message: `Home office first used for business ${first}, before May 13, 1993: its depreciation percentage (Pub 946) is not figured by HATax.` });
+    }
+  }
+
+  // A standard mileage rate that changes on July 1 (2026: Notice 2026-10 and
+  // Announcement 2026-11) needs the business miles driven from July 1.
+  const mileage = calculation?.scheduleC?.vehicleResult;
+  if (vehicle?.method === 'standard_mileage' && mileage?.mileageSplitNeeded) {
+    const over = vehicle.businessMilesFromJuly1 !== undefined && vehicle.businessMilesFromJuly1 > (vehicle.businessMiles ?? 0);
+    out.push({
+      ruleId: 'FED.VEHICLE.STANDARD_MILEAGE_SPLIT', jurisdiction: 'US', section: 'federal', itemId: 'vehicle',
+      message: over
+        ? `The business miles from July 1 (${vehicle.businessMilesFromJuly1}) are more than the year's business miles (${vehicle.businessMiles ?? 0}).`
+        : `The ${year} standard mileage rate is 72.5 cents a mile before July 1 and 76 cents from July 1 (Notice 2026-10, Announcement 2026-11): enter the business miles driven on or after July 1. Until then every mile is at 72.5 cents.`,
+    });
+  }
+
   // Form 6252: an installment sale whose facts do not settle where its gain goes.
   const installment = (taxReturn.installmentSales ?? []).map((sale) => ({ sale, result: calculateForm6252(sale, year) }));
   for (const { sale, result } of installment) {

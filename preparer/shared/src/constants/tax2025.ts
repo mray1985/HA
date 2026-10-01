@@ -137,46 +137,43 @@ export const HOME_OFFICE = {
 };
 
 // ──────────────────────────────────────────────────
-// Home Office Depreciation (MACRS — Residential Property)
-// Authority: IRC §168 — Accelerated cost recovery system
-// Constants: IRS Pub 946, Table A-6 — Residential Rental Property (27.5-year)
-// Mid-month convention per IRC §168(d)(2)
+// Home Office Depreciation (MACRS — Nonresidential Real Property)
+// Authority: IRC §168(c) — 39-year nonresidential real property, mid-month convention
+// Constants: Form 8829 instructions, line 41 (the business part of a home first
+//            used for business after May 12, 1993); Pub 946, Table A-7a
 // ──────────────────────────────────────────────────
 
 export const HOME_OFFICE_DEPRECIATION = {
-  RECOVERY_YEARS: 27.5,  // Residential property, 27.5-year class
+  RECOVERY_YEARS: 39,
 
-  // First-year depreciation percentage by month placed in service (2025)
-  // Source: IRS Pub 946, Table A-6 (27.5-year, mid-month convention)
-  // Each value = (remaining months + 0.5) / (27.5 × 12)
+  // First year, by the month the home was first used for business.
   FIRST_YEAR_RATE_BY_MONTH: {
-    1:  0.03485,   // January   (11.5 months / 330)
-    2:  0.03182,   // February  (10.5 / 330)
-    3:  0.02879,   // March     (9.5 / 330)
-    4:  0.02576,   // April     (8.5 / 330)
-    5:  0.02273,   // May       (7.5 / 330)
-    6:  0.01970,   // June      (6.5 / 330)
-    7:  0.01667,   // July      (5.5 / 330)
-    8:  0.01364,   // August    (4.5 / 330)
-    9:  0.01061,   // September (3.5 / 330)
-    10: 0.00758,   // October   (2.5 / 330)
-    11: 0.00455,   // November  (1.5 / 330)
-    12: 0.00152,   // December  (0.5 / 330)
+    1:  0.02461,
+    2:  0.02247,
+    3:  0.02033,
+    4:  0.01819,
+    5:  0.01605,
+    6:  0.01391,
+    7:  0.01177,
+    8:  0.00963,
+    9:  0.00749,
+    10: 0.00535,
+    11: 0.00321,
+    12: 0.00107,
   } as Record<number, number>,
 
-  // Subsequent-year rate (years 2 through 27.5)
-  // Full 12 months / (27.5 × 12) = 12/330 = 0.03636
-  SUBSEQUENT_YEAR_RATE: 0.03636,
+  // Later years: 2.564%.
+  SUBSEQUENT_YEAR_RATE: 0.02564,
 };
 
 // ──────────────────────────────────────────────────
 // Vehicle / Standard Mileage
 // Authority: IRC §162 — Business expenses; IRC §274(d) — Substantiation requirements
-// Constants: IRS Notice 2024-79 — Standard mileage rate for 2025
+// Constants: Notice 2025-5 — Standard mileage rate for 2025
 // ──────────────────────────────────────────────────
 
 export const VEHICLE = {
-  STANDARD_MILEAGE_RATE: 0.70,    // IRS Notice 2024-79 — $0.70/mile for 2025
+  STANDARD_MILEAGE_RATE: 0.70,    // Notice 2025-5 — $0.70/mile for 2025
 };
 
 // ──────────────────────────────────────────────────
