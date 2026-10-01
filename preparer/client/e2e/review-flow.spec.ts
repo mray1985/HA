@@ -36,7 +36,7 @@ async function newCase(page: Page, year: string) {
   await expect(page).toHaveURL(/\/documents$/);
 }
 
-test('a W-2 dropped on the Review tab is read, and the missing details are filled in place', async ({ page }) => {
+test('a W-2 dropped on the Review tab is read, and names the taxpayer', async ({ page }) => {
   await newCase(page, '2025');
   await page.getByRole('link', { name: /^Review/ }).click();
 
@@ -44,25 +44,18 @@ test('a W-2 dropped on the Review tab is read, and the missing details are fille
   const summary = page.getByRole('region', { name: 'Return summary' });
   await expect(summary).toContainText('1 of 1 read', { timeout: 30000 });
 
-  // Every missing taxpayer detail in one form.
-  await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
-  await page.getByLabel("Taxpayer's first name").fill('Maya');
-  await page.getByLabel("Taxpayer's last name").fill('Testpayer');
-  await page.getByLabel("Taxpayer's SSN or ITIN").fill('000-12-345');
-  await page.getByLabel('Street address').fill('815 Magnolia Ave');
-  await page.getByLabel('City').fill('Baton Rouge');
-  await page.getByLabel('State', { exact: true }).selectOption('LA');
-  await page.getByLabel('ZIP code').fill('70802');
-  await page.getByLabel('Filing status').selectOption({ label: 'Single' });
-  await page.getByRole('button', { name: 'Save' }).click();
-  // An SSN with 8 digits is refused, and nothing is saved until it is right.
-  await expect(page.getByRole('alert').filter({ hasText: 'An SSN, ITIN or ATIN is 9 digits.' })).toBeVisible();
-  await page.getByLabel("Taxpayer's SSN or ITIN").fill('000-12-3456');
-  await page.getByRole('button', { name: 'Save' }).click();
-
+  // The employee's SSN, name and address come from the W-2's text layer.
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' })).toBeVisible();
   await expect(page.getByText('First name is required.')).toHaveCount(0);
   await expect(page.getByText('Social Security number is required.')).toHaveCount(0);
+  await expect(page.getByText('ZIP code is required.')).toHaveCount(0);
+
+  // The filing status is the one thing left to enter.
+  const status = page.getByRole('listitem').filter({ hasText: 'Filing status is required.' });
+  await status.getByRole('button', { name: 'Enter it' }).click();
+  await status.getByLabel('Filing status').selectOption({ label: 'Single' });
+  await status.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Filing status is required.')).toHaveCount(0);
 
   // Decide what is left with one click each, then approve from the summary.
   for (let i = 0; i < 10; i++) {
@@ -76,13 +69,14 @@ test('a W-2 dropped on the Review tab is read, and the missing details are fille
 
   // The audit trail keeps each value entered, and each decision's note.
   await page.getByRole('link', { name: 'Approve' }).click();
-  await expect(page.getByText(/Changed addressZip/)).toBeVisible();
+  await expect(page.getByText(/Decided for Taxpayer identity: filled from confirmed readings: SSN \(w2-basic-single\.pdf\); name/)).toBeVisible();
+  await expect(page.getByText(/Changed filingStatus/)).toBeVisible();
 });
 
 test('next case goes to the case that needs the preparer', async ({ page }) => {
   await newCase(page, '2025');
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
-  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
   const first = page.url().match(/case\/([^/]+)/)![1];
 
   await page.getByRole('link', { name: 'Back to cases' }).click();
@@ -98,7 +92,7 @@ test('next case goes to the case that needs the preparer', async ({ page }) => {
 test('a review item opens its own document', async ({ page }) => {
   await newCase(page, '2025');
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
-  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Review/ }).click();
   const item = page.getByRole('listitem').filter({ hasText: 'enter the qualified education expenses' });
@@ -114,12 +108,16 @@ test("a returning client's next year starts from last year's case", async ({ pag
   await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
   await page.getByLabel("Taxpayer's first name").fill('Maya');
   await page.getByLabel("Taxpayer's last name").fill('Lee');
-  await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-6789');
+  await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-678');
   await page.getByLabel('Street address').fill('815 Magnolia Ave');
   await page.getByLabel('City').fill('Baton Rouge');
   await page.getByLabel('State', { exact: true }).selectOption('LA');
   await page.getByLabel('ZIP code').fill('70802');
   await page.getByLabel('Filing status').selectOption({ label: 'Head of household' });
+  await page.getByRole('button', { name: 'Save' }).click();
+  // An SSN with 8 digits is refused, and nothing is saved until it is right.
+  await expect(page.getByRole('alert').filter({ hasText: 'An SSN, ITIN or ATIN is 9 digits.' })).toBeVisible();
+  await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-6789');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
 
@@ -142,4 +140,29 @@ test("a returning client's next year starts from last year's case", async ({ pag
   // The dashboard no longer offers 2026 for this client.
   await page.getByRole('link', { name: 'Back to cases' }).click();
   await expect(page.getByRole('button', { name: 'Start 2026' })).toHaveCount(0);
+});
+
+test('documents for several clients dropped on the dashboard go to a case each', async ({ page }) => {
+  await page.getByLabel('Tax year for a new case').selectOption('2025');
+  await dropFiles(page, 'section[aria-label="Add documents"]', [
+    { path: 'e2e/fixtures/w2-basic-single.pdf', name: 'w2-basic-single.pdf' },
+    { path: 'e2e/fixtures/w2-indiana-local.pdf', name: 'w2-indiana-local.pdf' },
+    { path: 'e2e/fixtures/1099q-529.pdf', name: '1099q-529.pdf' },
+  ]);
+  const placed = page.getByRole('list', { name: 'Documents placed' });
+  await expect(placed).toContainText('Maya Testpayer — new case: w2-basic-single.pdf', { timeout: 60000 });
+  await expect(placed).toContainText('Jordan Testpayer — new case: w2-indiana-local.pdf');
+
+  // The 1099-Q names its recipient, who may be the student: the preparer places it.
+  const held = page.getByRole('list', { name: 'Documents not placed' });
+  await held.getByLabel('Case for 1099q-529.pdf').selectOption({ label: 'Maya Testpayer' });
+  await held.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('list', { name: 'Documents not placed' })).toHaveCount(0);
+
+  await expect(page.getByRole('row', { name: /Maya Testpayer.*2025/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Jordan Testpayer.*2025/ })).toBeVisible();
+  await page.getByRole('link', { name: 'Maya Testpayer', exact: true }).first().click();
+  await page.getByRole('link', { name: 'Documents' }).click();
+  await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible();
+  await expect(page.getByText('w2-basic-single.pdf', { exact: true })).toBeVisible();
 });

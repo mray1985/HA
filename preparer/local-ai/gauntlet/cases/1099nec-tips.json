@@ -38,5 +38,6 @@
       "amount": 8750
     },
     "notYetInToolSchema": { "cashTips": 1120, "ttoc": "102" }
-  }
+  },
+  "expectedIdentity": {"tinLastFour": "3456", "name": {"first": "Maya", "last": "Testpayer"}, "address": {"street": "815 MAGNOLIA AVE", "city": "BATON ROUGE", "state": "LA", "zip": "70802"}}
 }

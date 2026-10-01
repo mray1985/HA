@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Upload } from 'lucide-react';
 import { useCaseStore, type CaseTab } from '../../store/caseStore';
 import { StatusChip, refundOrOwed } from '../../components/case/caseBadges';
 import ReviewPanel from '../../components/case/ReviewPanel';
@@ -20,6 +20,8 @@ import SaveIndicator from '../../components/common/SaveIndicator';
 import ErrorBoundary from '../../components/common/ErrorBoundary';
 import { listReturns } from '../../api/client';
 import { isIntakeFile } from '../../services/caseIntake';
+import { nextCase } from '../../services/caseQueue';
+import { useBatchStore } from '../../store/batchStore';
 
 const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
 
@@ -45,6 +47,7 @@ export default function CasePage() {
   const requestTab = useCaseStore((s) => s.requestTab);
   const ingest = useCaseStore((s) => s.ingest);
   const intakeBusy = useCaseStore((s) => s.intakeBusy);
+  const batchBusy = useBatchStore((s) => s.busy);
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const exists = Boolean(id && listReturns().some((r) => r.id === id));
@@ -119,8 +122,28 @@ export default function CasePage() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> {intakeBusy}
                 </button>
               )}
+              {batchBusy && !intakeBusy && (
+                <Link to="/preparer" className="hidden md:inline-flex items-center gap-1.5 text-xs text-slate-400 max-w-xs truncate" title={`Batch: ${batchBusy}`}>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> Batch: {batchBusy}
+                </Link>
+              )}
               <SaveIndicator state={saveState} />
               <span className={`text-sm font-medium ${result.className}`}>{result.text}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = nextCase(id);
+                  if (next) navigate(`/preparer/case/${next.id}`);
+                  else {
+                    toast.success('No other case needs you right now');
+                    navigate('/preparer');
+                  }
+                }}
+                className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white"
+                title="The most urgent case that needs you"
+              >
+                Next case <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
           <nav className="flex gap-1 -mb-px overflow-x-auto" aria-label="Case sections">

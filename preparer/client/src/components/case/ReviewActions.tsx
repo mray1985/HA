@@ -10,6 +10,8 @@ import { getAllStates } from '@hatax/engine';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
 import { FILING_STATUS_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
 import { applyLastYearsAccount } from '../../services/caseRollover';
+import { applyAddress, applyIdentityReading, setPersonOnReturn } from '../../services/caseIdentity';
+import { loadDocuments } from '../../services/documentIngestion';
 import type { ReviewAction } from '../../services/caseReview';
 import { completeDependent, correctFormField, recordAcquisition, recordChoice, recordStateAnswer, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
 import { useCaseStore } from '../../store/caseStore';
@@ -209,6 +211,9 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   state_answer: 'Answer for the state return',
   return_field: 'Enter the value',
   use_bank: "Use last year's account",
+  use_identity: 'Use the reading',
+  identity_person: 'Put the person on the return',
+  choose_address: 'Use an address',
 };
 
 export function actionLabel(action: ReviewAction): string {
@@ -216,7 +221,9 @@ export function actionLabel(action: ReviewAction): string {
     : action.kind === 'acquisition_date' ? 'Enter the date acquired'
     : action.kind === 'state_answer' ? (action.current === undefined ? 'Answer' : 'Change the answer')
     : action.kind === 'return_field' ? 'Enter it'
-    : action.kind === 'use_bank' ? 'Use it' : 'Complete';
+    : action.kind === 'use_bank' || action.kind === 'use_identity' ? 'Use it'
+    : action.kind === 'identity_person' ? (action.purpose === 'taxpayer' ? 'Choose the taxpayer' : 'Enter as the spouse')
+    : action.kind === 'choose_address' ? 'Choose' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
@@ -267,6 +274,21 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
           const used = applyLastYearsAccount(returnId);
           return used.ok ? { ok: true, outcome: { kind: 'recorded' } } : used;
         }
+        case 'use_identity': {
+          const used = applyIdentityReading(returnId, loadDocuments(returnId), action.documentId, action.index, action.part, action.role);
+          return used.ok ? { ok: true, outcome: { kind: 'recorded' } } : used;
+        }
+        case 'identity_person': {
+          const key = (answer.value as string | undefined) ?? (action.options.length === 1 ? action.options[0]!.key : undefined);
+          if (!key) return { ok: false, error: 'Choose the person.' };
+          const placed = setPersonOnReturn(returnId, loadDocuments(returnId), key, action.purpose);
+          return placed.ok ? { ok: true, outcome: { kind: 'recorded' } } : placed;
+        }
+        case 'choose_address': {
+          if (typeof answer.value !== 'string') return { ok: false, error: 'Choose the address.' };
+          const used = applyAddress(returnId, loadDocuments(returnId), answer.value);
+          return used.ok ? { ok: true, outcome: { kind: 'recorded' } } : used;
+        }
       }
     });
     if (result.ok) onDone();
@@ -309,6 +331,16 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
           )}
         </Field>
       )}
+      {action.kind === 'use_identity' && <p className="text-sm text-slate-300">Put {action.shown} on the return as the {action.role}'s {action.part === 'tin' ? 'SSN' : action.part}. Use it only after checking it against the document.</p>}
+      {((action.kind === 'identity_person' && action.options.length > 1) || action.kind === 'choose_address') && (
+        <Field label={action.kind === 'choose_address' ? 'Address' : 'Taxpayer'}>
+          <select aria-label={action.kind === 'choose_address' ? 'Address' : 'Taxpayer'} className={inputClass} value={(answer.value as string) ?? ''} onChange={(e) => set('value', e.target.value || undefined)}>
+            <option value="">Choose…</option>
+            {action.options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </Field>
+      )}
+      {action.kind === 'identity_person' && action.options.length === 1 && <p className="text-sm text-slate-300">Enter {action.options[0]!.label.split(' — ')[0]} as the {action.purpose}.</p>}
       {action.kind === 'use_bank' && <p className="text-sm text-slate-300">Put the {action.label} on the return for the refund. Use it only after the client confirms the account.</p>}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}

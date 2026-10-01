@@ -99,6 +99,7 @@ import {
 } from './pdfExtractHelpers';
 
 export type { OCRStage } from './ocrService';
+import { w2EmployeeFromTextLayer } from './w2EmployeeText';
 
 // ─── Shared Processing Logic ──────────────────────
 
@@ -320,6 +321,8 @@ function processTextBlocks(
 
   // Extract fields based on form type — using effectiveBlocks (scoped to form pages)
   const { extractedData, payerName, fieldRawTokens, fieldSourceLocations } = extractFormData(type, effectiveBlocks);
+  // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
+  const identity = type === 'W-2' ? w2EmployeeFromTextLayer(effectiveBlocks, !ocrUsed) : null;
 
   // Add form-specific warnings
   if (type === '1099-B') {
@@ -353,6 +356,7 @@ function processTextBlocks(
         b => b.page >= span.startPage && b.page <= span.endPage,
       );
       const spanData = extractFormData(span.type, spanBlocks);
+      const spanIdentity = span.type === 'W-2' ? w2EmployeeFromTextLayer(spanBlocks, !ocrUsed) : null;
       const spanNumericFields = Object.entries(spanData.extractedData).filter(
         ([, v]) => typeof v === 'number' && v > 0,
       );
@@ -388,6 +392,7 @@ function processTextBlocks(
         ocrUsed,
         ocrEngine,
         rawOCRText: spanRawOCRText,
+        ...(spanIdentity ? { identity: spanIdentity } : {}),
       });
     }
     // Filter out results with zero extracted values (non-form pages)
@@ -416,6 +421,7 @@ function processTextBlocks(
     ocrEngine,
     rawOCRText,
     additionalResults,
+    ...(identity ? { identity } : {}),
   };
 }
 

@@ -9,7 +9,18 @@ The preparer drops in a client's documents; the app does the data work and
 routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
 
 - **Cases, not forms.** The dashboard shows every case by status — waiting for
-  documents, needs attention, needs review, ready to approve, approved.
+  documents, needs attention, needs review, ready to approve, approved — most
+  urgent first, and "Next case" (on every case) goes to the next one that
+  needs the preparer.
+- **Documents for any client.** Documents dropped on the dashboard are read,
+  then each goes to the case of the person it names: a confirmed SSN (the
+  taxpayer's or the spouse's), or a confirmed last four digits with the last
+  name, on exactly one case of that year. People no case has get a new case,
+  one per household (the same confirmed address). A document that names no
+  one with confidence — a 1098-T or 1099-Q, whose person may be a dependent —
+  waits on the dashboard for the preparer to place it. A batch keeps reading
+  while the preparer works in a case, and says when it is done. On a case,
+  files can be dropped on any tab.
 - **Documents in, return out.** Each file is hashed and kept with its source,
   then read on this machine by the local models: Qwen3.5-0.8B identifies the
   form and fills its template, the page itself confirms each value (text layer
@@ -19,6 +30,21 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   reader read, hold the form for the preparer; a value that cannot be read
   stays unknown — never zero. Without the models (a web deployment) documents
   are read from the PDF text layer and with OCR.
+- **The taxpayer from the documents.** The person each form is about (the
+  W-2 employee, a 1099 recipient, the 1098 borrower) is read with the same
+  two-reader check as the amounts. The return's empty SSN, name and address
+  are filled from confirmed readings only — never over what the preparer
+  entered. Two people with SSNs and no taxpayer yet, a document for someone
+  who is not on the return, a different last name for the same SSN,
+  differing addresses, and readings no second reader confirmed are review
+  items with a one-click answer.
+- **Last year's case starts this year's.** A returning client's next year
+  starts from last year's case: identity and address carried; the filing
+  status, dependents (who wait for this year's months at home), residency and
+  refund account to confirm; carryovers carried only from an approved case
+  and only where the engine gives next year's amount (capital loss, Form 2210
+  prior-year tax, IRA basis, clean energy credit); the rest listed with last
+  year's figures.
 - **Missing documents.** Last year's documents — from last year's case for
   the same client (same SSN, or name and date of birth), or from an imported
   prior-year return — are compared with this year's by form and payer (EIN, or
@@ -41,9 +67,14 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   trail.
 - **Review.** Every deterministic check of the return (the diagnostics engine
   in `shared/src/diagnostics`) and every piece of document evidence that needs
-  a person — held forms, unread documents, credit choices — in one checklist.
-  Errors and blockers clear only by fixing the return; warnings can be decided
-  with a note. Every correction and decision is in the case's audit trail.
+  a person — held forms, unread documents, credit choices — in one checklist,
+  under a summary of the case (documents read, federal and state results, what
+  is open, the change from last year) with Approve and Next case. A missing
+  name, SSN, address or filing status is entered in the item itself (or all at
+  once); an item opens its own document. Errors and blockers clear only by
+  fixing the return; warnings can be decided with a note, or with one click
+  ("Checked against the source document", "Confirmed with the client"). Every
+  correction and decision is in the case's audit trail.
 - **Approve.** Approval is refused while anything is open and is withdrawn by
   any later change to the return. The approved return produces the federal
   filing packet and state forms.

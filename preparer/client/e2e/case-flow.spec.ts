@@ -58,7 +58,7 @@ test('a 1099-Q waits for the qualified expenses, and the review list takes the d
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
-  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Review/ }).click();
   const item = page.getByRole('listitem').filter({ hasText: 'enter the qualified education expenses' });
@@ -81,7 +81,7 @@ test('a W-2c read from its text layer corrects the W-2 it names', async ({ page 
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   await page.locator('input[type="file"]').first().setInputFiles(['e2e/fixtures/w2-basic-single.pdf', 'e2e/fixtures/w2c-wages.pdf']);
-  await expect(page.getByText('w2c-wages.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('w2c-wages.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Corrected the W-2')).toBeVisible({ timeout: 30000 });
 
   // The W-2c raises box 1 from 52,431.18 to 54,000.00 on the W-2 with the same EIN.
@@ -95,7 +95,7 @@ test('the Client tab asks only what the case cannot settle, and says when the lo
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
-  await expect(page.getByText('1099q-529.pdf')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: 'Client' }).click();
   const message = page.getByLabel('Message to the client');

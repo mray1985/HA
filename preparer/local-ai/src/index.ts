@@ -25,4 +25,5 @@ export * from './clientQuestions.js';
 export * from './clientAnswers.js';
 export * from './clientNotes.js';
 export * from './missingDocuments.js';
+export * from './identity.js';
 export * from './modelManifest.js';

@@ -6,6 +6,7 @@
  * Scans and photos are read with Tesseract (documentOcr).
  */
 
+import type { PartyIdentity } from './identity.js';
 import type { TaxFact } from './taxFact.js';
 import type {
   ClassifiableFormType,
@@ -84,6 +85,8 @@ export interface IngestedDocument {
   classifications?: DocumentClassificationRecord[];
   /** Outcome per form in the file, in extraction order, once applied to the return. */
   appliedAs?: DocumentPieceOutcome[];
+  /** The person each form in the file is about (employee, recipient, borrower), in extraction order. */
+  identities?: Array<PartyIdentity | null>;
 }
 
 export interface DocumentFileMeta {

@@ -73,5 +73,6 @@
       "box13": { "statutoryEmployee": false, "retirementPlan": true, "thirdPartySickPay": false }
     },
     "absent": ["box7", "box8", "box10", "box11"]
-  }
+  },
+  "expectedIdentity": {"tin": "000456789", "tinLastFour": "6789", "name": {"first": "Jordan", "last": "Testpayer"}, "address": {"street": "1450 N MERIDIAN ST", "city": "INDIANAPOLIS", "state": "IN", "zip": "46202"}}
 }

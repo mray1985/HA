@@ -25,9 +25,11 @@
  */
 
 import type { FormBoxSchema, FormExtractionSchema } from './formSchemas.js';
+import { isIdentityKey, NAME_COLUMN_KEYS } from './identity.js';
 import { parseMoneyToken } from './structuredExtraction.js';
 import {
   box12CodeAt,
+  columnParts,
   distanceToRegion,
   findPhrase,
   findValueCandidates,
@@ -69,6 +71,8 @@ export interface FormEvidenceResult {
   phantoms: string[];
   /** Text boxes whose line breaks were restored from the page. */
   relined: string[];
+  /** Name boxes whose printed columns (first name and initial, last name, suffix) were read from the page, one per line. */
+  nameColumns: string[];
   /**
    * Tool boxes the model left blank although the page shows an amount under
    * their label. Never filled in automatically: the page's reading is a
@@ -118,6 +122,18 @@ export function applyPageEvidence(
     if (restored) {
       values[b.key] = restored;
       relined.push(b.key);
+    }
+  }
+
+  // A W-2's box e prints first name and initial, last name and suffix in
+  // columns: the page's own gaps say where each ends, not the reader's commas.
+  const nameColumns: string[] = [];
+  const columnKey = NAME_COLUMN_KEYS[schema.formType];
+  if (columnKey && values[columnKey] !== undefined) {
+    const parts = columnParts(values[columnKey]!, page.words);
+    if (parts) {
+      values[columnKey] = parts.join('\n');
+      nameColumns.push(columnKey);
     }
   }
 
@@ -208,6 +224,15 @@ export function applyPageEvidence(
     }
   }
 
+  // An identity address (a person's street and "City, ST ZIP") is backed by the
+  // page only when every printed line of it is on the page, not its first line.
+  for (const b of schema.boxes) {
+    const text = values[b.key];
+    if (!located[b.key] || text === undefined || !isIdentityKey(schema.formType, b.key)) continue;
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length > 1 && lines.slice(1).some((line) => findPhrase(page.words, line).length === 0)) located[b.key] = null;
+  }
+
   // 3. Checkboxes: deterministic reading replaces model text.
   const checkboxes: Record<string, CheckboxReading> = {};
   for (const b of schema.boxes) {
@@ -264,7 +289,7 @@ export function applyPageEvidence(
 
   const missed = region ? findMissedValues(schema, values, located, page.words, region) : [];
 
-  return { values, located, checkboxes, box12Codes, box12FromPage, phantoms, relined, missed, region };
+  return { values, located, checkboxes, box12Codes, box12FromPage, phantoms, relined, nameColumns, missed, region };
 }
 
 /**

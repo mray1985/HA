@@ -46,6 +46,7 @@ import {
   verifyReadings,
   type FieldReading,
 } from './secondReading.js';
+import { identityFromValues, type PartyIdentity } from './identity.js';
 import { extractStructuredFields } from './structuredExtraction.js';
 import type { TaxFactSecondReading, TaxFactSourceLocation } from './taxFact.js';
 import type { DocumentToolName } from './taxTools.js';
@@ -122,6 +123,8 @@ export interface PageReading extends PrimaryReading {
    * confirmed it, 0.5 when only the reader read it, 0 when readers disagree.
    */
   confidence: Record<string, number>;
+  /** The person the form is about (employee, recipient, borrower), with what an independent reader confirmed. */
+  identity: PartyIdentity | null;
 }
 
 const FORM_NUMBER = 'Form number';
@@ -222,7 +225,7 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
   const schema = schemaOf(primary);
   const runs = second ? [...primary.runs, second.run] : primary.runs;
   if (!schema || !primary.evidence) {
-    return { ...primary, runs, readings: [], values: {}, mapping: null, tool: null, args: {}, rawText: {}, locations: {}, secondReadings: {}, confidence: {} };
+    return { ...primary, runs, readings: [], values: {}, mapping: null, tool: null, args: {}, rawText: {}, locations: {}, secondReadings: {}, confidence: {}, identity: null };
   }
   const readings = verifyReadings(schema, primary.evidence, second?.values);
   const values = valuesAfterVerification(primary.evidence.values, readings);
@@ -271,6 +274,14 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
     }
   }
 
+  const confirmedBox = (key: string) => {
+    const status = byKey.get(key)?.status;
+    return status === 'confirmed' || status === 'recovered';
+  };
+  const identity = primary.formType
+    ? identityFromValues(primary.formType, values, confirmedBox, { nameColumns: (primary.evidence.nameColumns ?? []).length > 0 })
+    : null;
+
   return {
     ...primary,
     runs,
@@ -283,6 +294,7 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
     locations,
     secondReadings,
     confidence,
+    identity,
   };
 }
 

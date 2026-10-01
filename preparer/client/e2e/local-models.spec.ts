@@ -19,7 +19,7 @@ test('a W-2 is read by the local models and entered on the return', async ({ pag
 
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/w2-basic-single.pdf');
   await expect(page.getByText(/with Qwen3\.5-0\.8B/)).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText('w2-basic-single.pdf')).toBeVisible({ timeout: 240_000 });
+  await expect(page.getByText('w2-basic-single.pdf', { exact: true })).toBeVisible({ timeout: 240_000 });
   await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 240_000 });
 
   await page.getByRole('link', { name: 'Approve' }).click();

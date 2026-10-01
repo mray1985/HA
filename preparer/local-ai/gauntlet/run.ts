@@ -29,7 +29,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import type { ClassifiableFormType } from '../src/documentClassifier.js';
-import { finishReading, readPagePrimary, readPageSecond, type ReaderPage, type VisionModel } from '../src/documentReader.js';
+import { finishReading, readPagePrimary, readPageSecond, type PageReading, type ReaderPage, type VisionModel } from '../src/documentReader.js';
 import { getFormExtractionSchema, mapBoxesToTool } from '../src/formSchemas.js';
 import { extractStructuredFields, parseMoneyToken } from '../src/structuredExtraction.js';
 import type { FieldReading } from '../src/secondReading.js';
@@ -47,6 +47,35 @@ interface GauntletCase {
   expectedKeys?: Record<string, ExpectedBox>;
   blankBoxes: string[];
   expected: { tool: string; args: Record<string, unknown> };
+  /** The person the form is about, as the product would put them on the return. */
+  expectedIdentity?: { tin?: string; tinLastFour?: string; name?: Record<string, string>; address?: Record<string, string> };
+}
+
+type IdentityOutcome = 'confirmed right' | 'CONFIRMED WRONG' | 'unconfirmed right' | 'unconfirmed wrong' | 'not split' | 'not read';
+
+/**
+ * Each identity part the case expects, scored as the product uses it: a
+ * confirmed part fills the return (so a confirmed wrong one is the failure
+ * that matters); an unconfirmed one is offered to the preparer to check.
+ */
+function scoreIdentity(want: NonNullable<GauntletCase['expectedIdentity']>, got: PageReading['identity']): Record<string, IdentityOutcome> {
+  const out: Record<string, IdentityOutcome> = {};
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const part = (key: string, expected: unknown, read: { confirmed: boolean; value: unknown } | undefined) => {
+    if (expected === undefined) return;
+    if (!read) out[key] = 'not read';
+    else if (read.value === null) out[key] = 'not split';
+    else if (read.confirmed) out[key] = same(read.value, expected) ? 'confirmed right' : 'CONFIRMED WRONG';
+    else out[key] = same(read.value, expected) ? 'unconfirmed right' : 'unconfirmed wrong';
+  };
+  part('tin', want.tin, got?.tin);
+  if (want.tinLastFour !== undefined) {
+    // Kept only when confirmed (it matches people across documents).
+    out.tinLastFour = got?.tinLastFour === undefined ? 'not read' : got.tinLastFour === want.tinLastFour ? 'confirmed right' : 'CONFIRMED WRONG';
+  }
+  part('name', want.name, got?.name);
+  part('address', want.address, got?.address);
+  return out;
 }
 
 /**
@@ -212,6 +241,7 @@ async function main() {
   };
   let totals = { argsOk: 0, argsTotal: 0, modelOnlyArgsOk: 0, invented: 0, classified: 0, cases: 0, ms: 0 };
   const readingTotals: Record<string, number> = { confirmed: 0, confirmedByModel: 0, unconfirmed: 0, conflict: 0, missed: 0, recovered: 0, confirmedWrong: 0, confirmedUnreadable: 0 };
+  const identityTotals: Record<string, number> = {};
   try {
     for (const c of cases) {
       const png = join(OUT_DIR, scan ? `${c.id}-${scan}.png` : `${c.id}${suffix}.png`);
@@ -292,7 +322,9 @@ async function main() {
         invented, reviewBoxes: mapped?.reviewBoxes ?? [],
         secondMs, readings: readingChecks, confirmedWrong, confirmedUnreadable, missed: evidence?.missed ?? [],
         modelValues: modelOnlyValues, runs: reading.runs,
+        identity: reading.identity, identityScore: c.expectedIdentity ? scoreIdentity(c.expectedIdentity, reading.identity) : null,
       };
+      for (const outcome of Object.values(entry.identityScore ?? {})) identityTotals[outcome] = (identityTotals[outcome] ?? 0) + 1;
       (report.cases as unknown[]).push(entry);
       totals = {
         argsOk: totals.argsOk + entry.argsOk, argsTotal: totals.argsTotal + entry.argsTotal, modelOnlyArgsOk: totals.modelOnlyArgsOk + modelOnlyArgsOk,
@@ -316,16 +348,23 @@ async function main() {
       }
       for (const r of confirmedWrong) console.log(`   CONFIRMED WRONG ${r.key}: ${JSON.stringify(r.primary ?? r.second)}`);
       for (const r of confirmedUnreadable) console.log(`   UNREADABLE ${r.key}: ${JSON.stringify(r.primary ?? r.second)} (left for the preparer)`);
+      if (entry.identityScore) {
+        console.log(`   IDENTITY ${Object.entries(entry.identityScore).map(([k, v]) => `${k} ${v}`).join(', ')}`);
+        for (const [k, v] of Object.entries(entry.identityScore)) {
+          if (v !== 'confirmed right') console.log(`     ${k}: read ${JSON.stringify((reading.identity as Record<string, unknown> | null)?.[k] ?? null)}`);
+        }
+      }
     }
   } finally {
     child.kill();
     second?.child.kill();
     await closeOcr();
   }
-  report.totals = { ...totals, readings: readingTotals };
+  report.totals = { ...totals, readings: readingTotals, identity: identityTotals };
   report.scan = scan ?? null;
   console.log(`TOTAL: class ${totals.classified}/${totals.cases} | tool args ${totals.argsOk}/${totals.argsTotal} (model only ${totals.modelOnlyArgsOk}) | invented ${totals.invented} | ${(totals.ms / 1000 / Math.max(1, totals.cases)).toFixed(0)}s per page`);
   console.log(`READINGS: ${Object.entries(readingTotals).map(([k, v]) => `${k} ${v}`).join(' | ')}`);
+  console.log(`IDENTITY: ${Object.entries(identityTotals).map(([k, v]) => `${k} ${v}`).join(' | ')}`);
   if (outFile) writeFileSync(resolve(outFile), JSON.stringify(report, null, 2));
 }
 

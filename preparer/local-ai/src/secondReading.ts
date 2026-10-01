@@ -16,6 +16,7 @@
 
 import type { FormEvidenceResult } from './formEvidence.js';
 import type { FormExtractionSchema } from './formSchemas.js';
+import { isIdentityKey } from './identity.js';
 import { parseMoneyToken } from './structuredExtraction.js';
 
 export type ReadingStatus = 'confirmed' | 'conflict' | 'unconfirmed' | 'missed' | 'recovered';
@@ -35,17 +36,27 @@ export interface FieldReading {
 
 type Evidence = Pick<FormEvidenceResult, 'values' | 'located' | 'box12FromPage'> & Partial<Pick<FormEvidenceResult, 'missed'>>;
 
-/** Boxes whose values must be confirmed: tool-feeding, transcribed by the model. */
+/**
+ * Boxes whose values must be confirmed: tool-feeding, transcribed by the
+ * model, and the person's identity (a TIN, name and address fill the return).
+ */
 function verifiableBoxes(schema: FormExtractionSchema) {
-  return schema.boxes.filter((b) => b.use === 'tool' && b.kind !== 'checkbox');
+  return schema.boxes.filter((b) => (b.use === 'tool' || isIdentityKey(schema.formType, b.key)) && b.kind !== 'checkbox');
 }
 
 function normalizedText(text: string): string {
   return text.split(/\r?\n/)[0]!.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-/** Two readings of one box say the same thing (money by amount, text by characters). */
-export function readingsAgree(a: string, b: string, kind: string): boolean {
+/**
+ * Two readings of one box say the same thing (money by amount, text by
+ * characters). `allLines` compares every line of a text, not the first.
+ */
+export function readingsAgree(a: string, b: string, kind: string, allLines = false): boolean {
+  if (allLines && kind === 'text') {
+    const x = a.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return x.length > 0 && x === b.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
   if (kind === 'money') {
     const x = parseMoneyToken(a.replace(/\s+/g, ''));
     const y = parseMoneyToken(b.replace(/\s+/g, ''));
@@ -97,7 +108,7 @@ export function verifyReadings(
     }
     if (second === undefined) {
       out.push({ key: b.key, status: 'unconfirmed', primary });
-    } else if (readingsAgree(primary, second, b.kind)) {
+    } else if (readingsAgree(primary, second, b.kind, isIdentityKey(schema.formType, b.key))) {
       out.push({ key: b.key, status: 'confirmed', primary, second, confirmedBy: 'model' });
     } else {
       out.push({ key: b.key, status: 'conflict', primary, second });

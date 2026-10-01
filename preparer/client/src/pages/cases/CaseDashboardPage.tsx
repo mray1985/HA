@@ -3,16 +3,50 @@
  * and the result — so the preparer starts with what needs them.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { CalendarPlus, Plus, Search, Trash2 } from 'lucide-react';
+import { CalendarPlus, FolderInput, Loader2, Plus, Search, Trash2, Upload } from 'lucide-react';
 import { SUPPORTED_TAX_YEARS } from '@hatax/engine';
 import { createReturn, deleteReturn, exportAllData } from '../../api/client';
 import type { CaseStatus } from '../../services/caseReview';
 import { caseQueue, STATUS_ORDER, type CaseRow } from '../../services/caseQueue';
 import { startNextYear } from '../../services/caseRollover';
+import { INTAKE_ACCEPT, isIntakeFile, type FileRead } from '../../services/caseIntake';
+import { useBatchStore } from '../../store/batchStore';
+
+const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+
+/** A file the batch could not place: the preparer picks its case (or a new one). */
+function UnmatchedRow({ read, cases, year, onPlaced }: { read: FileRead; cases: CaseRow[]; year: number; onPlaced: () => void }) {
+  const [target, setTarget] = useState('');
+  const [busy, setBusy] = useState(false);
+  const place = async () => {
+    setBusy(true);
+    try {
+      const { placeUnmatched } = await import('../../services/caseIntake');
+      const returnId = target === 'new' ? createReturn(year).id : target;
+      const r = await placeUnmatched(returnId, read);
+      if (r.failures.length) toast.warning(r.failures.join(' '));
+      else toast.success(`${read.file.name} added`);
+      onPlaced();
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm">
+      <span className="text-white flex-1 min-w-0 truncate">{read.file.name}</span>
+      <select aria-label={`Case for ${read.file.name}`} value={target} onChange={(e) => setTarget(e.target.value)} className="bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1">
+        <option value="">Choose the case…</option>
+        {cases.filter((c) => c.taxYear === year).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        <option value="new">New case</option>
+      </select>
+      <button type="button" disabled={!target || busy} onClick={() => { void place(); }} className="text-sm font-medium text-HATaxService-orange-400 hover:text-HATaxService-orange-300 disabled:opacity-40">Add</button>
+    </li>
+  );
+}
 import { useAuthStore } from '../../store/authStore';
 import { STATUS_META, StatusChip, refundOrOwed } from '../../components/case/caseBadges';
 
@@ -24,6 +58,12 @@ export default function CaseDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<CaseStatus | 'all'>('all');
   const [newYear, setNewYear] = useState<number>(SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!);
   const [downloadPassword, setDownloadPassword] = useState('');
+  const batchBusy = useBatchStore((s) => s.busy);
+  const batch = useBatchStore((s) => s.result);
+  const runBatch = useBatchStore((s) => s.run);
+  const markPlaced = useBatchStore((s) => s.placed);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
 
   const load = useCallback(() => setRows(caseQueue()), []);
   useEffect(load, [load]);
@@ -42,6 +82,21 @@ export default function CaseDashboardPage() {
     const created = createReturn(newYear);
     navigate(`/preparer/case/${created.id}/documents`);
   };
+
+  // §12, §49: documents for any clients, placed on each client's case.
+  const takeFiles = async (list: File[]) => {
+    const files = list.filter(isIntakeFile);
+    if (list.length > files.length) toast.info('Only PDFs and photos are read here; import CSV, TXF and FDX files on a case.');
+    if (batchBusy) {
+      toast.info('A batch is being read; drop these when it ends.');
+      return;
+    }
+    await runBatch(files, newYear);
+  };
+  // The case list follows the batch: new cases appear when it ends.
+  useEffect(() => {
+    if (!batchBusy) load();
+  }, [batchBusy, load]);
 
   // §14: a returning client's new year starts from last year's case.
   const startFrom = (row: CaseRow) => {
@@ -76,7 +131,24 @@ export default function CaseDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-900">
+    <div
+      className="min-h-screen bg-surface-900"
+      onDragEnter={(e) => { if (hasFiles(e)) { dragDepth.current++; setDragging(true); } }}
+      onDragLeave={(e) => { if (hasFiles(e) && --dragDepth.current <= 0) { dragDepth.current = 0; setDragging(false); } }}
+      onDragOver={(e) => { if (hasFiles(e)) e.preventDefault(); }}
+      onDrop={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        void takeFiles(Array.from(e.dataTransfer.files));
+      }}
+    >
+      {dragging && (
+        <div className="fixed inset-0 z-50 bg-surface-900/80 border-4 border-dashed border-HATaxService-orange-500 flex items-center justify-center pointer-events-none">
+          <p className="flex items-center gap-3 text-xl text-white font-medium"><Upload className="w-7 h-7" /> Drop documents for any client — each goes to its client’s {newYear} case</p>
+        </div>
+      )}
       <header className="bg-surface-800 border-b border-slate-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -115,6 +187,56 @@ export default function CaseDashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <section aria-label="Add documents" className="rounded-xl border border-dashed border-slate-600 bg-surface-800/60 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-white font-medium flex items-center gap-2"><FolderInput className="w-4 h-4" /> Documents for any client</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Drop them anywhere on this page. Each is read on this computer and goes to the {newYear} case of the person it names — by a confirmed SSN, or
+                the last four digits with the last name; new clients get a new case. A document that names no one with confidence waits here for you.
+              </p>
+            </div>
+            <label className={`inline-flex items-center gap-2 text-sm text-white bg-surface-700 hover:bg-surface-600 border border-slate-600 rounded-lg px-3 py-2 cursor-pointer ${batchBusy ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Upload className="w-4 h-4" /> Add documents
+              <input type="file" accept={INTAKE_ACCEPT} multiple className="hidden" aria-label="Add documents for any client" onChange={(e) => { void takeFiles(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
+            </label>
+          </div>
+          {batchBusy && <p role="status" className="mt-3 text-sm text-sky-300 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {batchBusy}</p>}
+          {batch && (
+            <div className="mt-4 space-y-3">
+              {batch.placed.length > 0 && (
+                <ul aria-label="Documents placed" className="space-y-1 text-sm">
+                  {batch.placed.map((p) => (
+                    <li key={p.returnId}>
+                      <Link to={`/preparer/case/${p.returnId}`} className="text-white font-medium hover:text-HATaxService-orange-400">{p.name}</Link>
+                      <span className="text-slate-400"> — {p.created ? 'new case' : 'case'}: {p.files.length ? p.files.join(', ') : 'already had these documents'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {batch.unmatched.length > 0 && (
+                <div>
+                  <p className="text-sm text-amber-300">Not placed — the document names no one this intake can match with confidence:</p>
+                  <ul aria-label="Documents not placed" className="mt-1 rounded-lg border border-slate-700 divide-y divide-slate-700/70">
+                    {batch.unmatched.map((read) => (
+                      <UnmatchedRow
+                        key={read.file.name}
+                        read={read}
+                        cases={rows}
+                        year={newYear}
+                        onPlaced={() => { markPlaced(read); load(); }}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {batch.failures.length > 0 && (
+                <ul className="text-xs text-red-300 space-y-1">{batch.failures.map((f) => <li key={f}>{f}</li>)}</ul>
+              )}
+            </div>
+          )}
+        </section>
+
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {STATUS_ORDER.map((s) => (
             <button

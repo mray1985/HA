@@ -6,6 +6,7 @@
  * everything from here and adds the PDF loading/parsing layer.
  */
 
+import type { PartyIdentity } from '@hatax/local-ai';
 import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
 
 // ─── Types ─────────────────────────────────────────
@@ -65,6 +66,8 @@ export interface PDFExtractResult {
   rawOCRText?: string;           // Raw OCR text for AI enhancement (only when ocrUsed)
   /** Additional forms extracted from a multi-form PDF (e.g., consolidated brokerage statement). */
   additionalResults?: PDFExtractResult[];
+  /** The person the form is about (the W-2 employee), when its labels were found. */
+  identity?: PartyIdentity;
 }
 
 /** Nearby box amount: parsed value when readable, original token always. */

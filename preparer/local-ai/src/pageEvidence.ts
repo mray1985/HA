@@ -945,6 +945,42 @@ export function restoreLineBreaks(value: string, words: readonly PageWord[]): st
   return null;
 }
 
+/**
+ * A one-line value's printed columns: its words found in order on one line of
+ * the page, split where the gap between two words is a column's, not a
+ * space's (wider than three times the line's height). "MAYA TESTPAYER" under
+ * a W-2's "first name" and "Last name" columns is two parts; "MARY ANN SMITH"
+ * with "MARY ANN" in the first column is two parts, not three. Commas and line
+ * breaks the reader wrote are ignored: only the page says where a column ends.
+ * Null when the words are not on one line of the page.
+ */
+export function columnParts(value: string, words: readonly PageWord[]): string[] | null {
+  const wanted = value.replace(/[,\n\r]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (wanted.length === 0) return null;
+  const toks = tokens(words);
+  const matching = (w: string) => toks.filter((t) => wordMatches(t.text, w));
+  for (const first of matching(wanted[0]!)) {
+    const parts: string[][] = [[wanted[0]!]];
+    let prev = first;
+    let ok = true;
+    for (const w of wanted.slice(1)) {
+      const h = prev.box[3] - prev.box[1];
+      const next = matching(w)
+        .filter((t) => sameLine(prev.box, t.box) && t.box[0] >= prev.box[2] - 1 && t.box[0] - prev.box[2] < 40 * h)
+        .sort((a, b) => a.box[0] - b.box[0])[0];
+      if (!next) {
+        ok = false;
+        break;
+      }
+      if (next.box[0] - prev.box[2] > 3 * h) parts.push([w]);
+      else parts[parts.length - 1]!.push(w);
+      prev = next;
+    }
+    if (ok) return parts.map((p) => p.join(' '));
+  }
+  return null;
+}
+
 // ─── OCR word boxes ──────────────────────────────────────────
 
 /** The subset of a tesseract.js `recognize(..., { blocks: true })` result used here. */

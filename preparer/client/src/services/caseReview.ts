@@ -45,6 +45,7 @@ import {
 import { dependentWaitReason, SOURCE_FORM_KEY } from './returnApplier';
 import { returnFieldSpec } from './returnFields';
 import type { RolloverRecord } from './caseRollover';
+import { planIdentity, type IdentityItem } from './caseIdentity';
 
 export type ReviewGroup = 'personal' | 'income' | 'dependents' | 'deductions' | 'credits' | 'payments' | 'state' | 'documents' | 'other';
 
@@ -115,7 +116,9 @@ export type ReviewAction =
   /** A return field the readiness check reports missing (name, SSN, address, filing status), filled in place. */
   | { kind: 'return_field'; field: string }
   /** Last year's refund account, put on the return once the preparer confirms it. */
-  | { kind: 'use_bank'; label: string };
+  | { kind: 'use_bank'; label: string }
+  /** The taxpayer's identity from the documents: a reading to use, a person to place, an address to choose. */
+  | NonNullable<IdentityItem['action']>;
 
 export type CaseStatus = 'waiting_for_documents' | 'needs_attention' | 'needs_review' | 'ready' | 'approved';
 
@@ -441,7 +444,11 @@ export function buildCaseReview(input: {
     ...(d.question ? { action: { kind: 'state_answer' as const, question: d.question } } : {}),
     ...(d.source === 'readiness' && d.field && returnFieldSpec(d.field, input.taxReturn) ? { action: { kind: 'return_field' as const, field: d.field } } : {}),
   }));
-  const items = [...rolloverItems(record, input.taxReturn), ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
+  const identity: ReviewItem[] = planIdentity(input.taxReturn, input.documents).items.map((i) => ({
+    id: i.id, category: 'REVIEW', group: 'personal', source: 'document', message: i.message,
+    ...(i.documentId ? { documentId: i.documentId } : {}), ...(i.action ? { action: i.action } : {}),
+  }));
+  const items = [...rolloverItems(record, input.taxReturn), ...identity, ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;

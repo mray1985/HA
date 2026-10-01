@@ -311,9 +311,13 @@ export function applyExtractionToDocument(input: {
 
   const primaryClassified = classifications.find((c) => c.status === 'classified');
   const classificationRecords = classifications.map(classificationRecord);
+  const identities = pieces
+    .filter((p) => classificationAllowsIncomeWrite(p.classification))
+    .map((p) => p.extracted?.identity ?? null);
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
+    ...(identities.some(Boolean) ? { identities } : {}),
     extractor,
     formTypes: formTypes.length > 0 ? formTypes : undefined,
     // Summary remains the first classified piece for existing UI consumers.
@@ -421,6 +425,7 @@ export function applyModelReadingsToDocument(input: {
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
+    ...(kept.some((r) => r.identity) ? { identities: kept.map((r) => r.identity) } : {}),
     extractor: `${reader.id} + ${second.id}`,
     formTypes: kept.map((r) => r.formType).filter((t): t is NonNullable<typeof t> => Boolean(t)),
     classification: classificationRecord(kept[0]!.classification),
