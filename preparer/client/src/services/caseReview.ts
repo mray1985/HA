@@ -177,7 +177,7 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
       if (!year || year === String(taxReturn.taxYear)) return;
       const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
       items.push({ id: `document:year:${doc.documentId}#${index}`, category: 'WARNING', group: 'documents', source: 'document', documentId: doc.documentId,
-        message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. Its amounts belong on the ${year} return — move it to that case, or record why it belongs here.` });
+        message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. It is held and not on the return: its amounts belong on the ${year} return — move it to that case, or record why it belongs here and it is added.` });
     });
     (doc.appliedAs ?? []).forEach((outcome, index) => {
       if (outcome !== 'not_applied') return;

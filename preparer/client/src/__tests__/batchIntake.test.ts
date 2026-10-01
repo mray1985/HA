@@ -13,6 +13,9 @@ import { clearRecordCache } from '../services/caseRecords';
 import { caseForIdentity, ingestBatch, placeableAfterNewCases, placeUnmatched } from '../services/caseIntake';
 import { loadDocuments } from '../services/documentIngestion';
 import { lock, setActiveKey, setupEncryption } from '../services/crypto';
+import { saveReviewRecord } from '../services/caseAudit';
+import { applyReleasedForm } from '../services/preparerDecisions';
+import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
 
 function installMemoryLocalStorage() {
   const store = new Map<string, string>();
@@ -83,8 +86,8 @@ describe('matching a form to a case', () => {
 describe("the year a form prints, read from the fixtures' text layers", () => {
   it('reads the W-2s as 2026 forms, the 1099-Q as 2025, and the W-2c by box c', async () => {
     const { readFile } = await import('../services/caseIntake');
-    expect((await readFile(pdf('w2-basic-single.pdf'))).taxYearPrinted).toBe('2026');
-    expect((await readFile(pdf('w2-indiana-local.pdf'))).taxYearPrinted).toBe('2026');
+    expect((await readFile(pdf('w2-basic-single.pdf'))).taxYearPrinted).toBe('2025');
+    expect((await readFile(pdf('w2-indiana-local.pdf'))).taxYearPrinted).toBe('2025');
     expect((await readFile(pdf('1099q-529.pdf'))).taxYearPrinted).toBe('2025');
     expect((await readFile(pdf('w2c-wages.pdf'))).taxYearPrinted).toBe('2025');
   });
@@ -126,6 +129,28 @@ describe('a batch for any clients', () => {
     const again = await ingestBatch([pdf('w2-basic-single.pdf')], 2025);
     expect(again.placed).toEqual([{ returnId: maya, name: 'Maya Testpayer', created: false, files: [] }]);
     expect(listReturns().filter((r) => r.taxYear === 2025)).toHaveLength(2);
+  });
+
+  it('holds a form printed for another year off the return until the preparer keeps it here', async () => {
+    // A 2025 W-2 dropped for a 2026 case.
+    const maya = createReturn(2026).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    await ingestBatch([pdf('w2-basic-single.pdf')], 2026);
+    const doc = loadDocuments(maya)[0]!;
+    expect(doc.taxYearsPrinted).toEqual(['2025']);
+    expect(doc.appliedAs).toEqual(['held']);
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+
+    // The preparer records why it belongs on this return: it goes on.
+    const formKey = `${doc.documentId}#0`;
+    saveReviewRecord(maya, { resolutions: { [`${YEAR_ITEM_PREFIX}${formKey}`]: { decision: 'accepted', note: 'Corrected copy issued in 2026 for this year', resolvedAt: '2026-10-01T00:00:00Z' } } });
+    applyReleasedForm(maya, formKey, 'Corrected copy issued in 2026 for this year');
+    expect(getReturn(maya).w2Income).toEqual([expect.objectContaining({ employerName: 'RIVERBEND LOGISTICS LLC', wages: 52431.18 })]);
+
+    // Reopened: it comes off again.
+    saveReviewRecord(maya, { resolutions: {} });
+    removeFormItems(maya, formKey);
+    expect(getReturn(maya).w2Income).toEqual([]);
   });
 
   it('says the vault locked rather than losing the documents it could not save', async () => {

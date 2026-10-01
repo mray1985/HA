@@ -30,7 +30,8 @@ import {
 import { loadDocuments } from '../services/documentIngestion';
 import type { IntakeResult } from '../services/caseIntake';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
-import type { DecisionResult } from '../services/preparerDecisions';
+import { applyReleasedForm, type DecisionResult } from '../services/preparerDecisions';
+import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
 export type CaseTab = 'review' | 'documents' | 'client' | 'return' | 'explain' | 'scenarios' | 'approve';
@@ -276,10 +277,14 @@ export const useCaseStore = create<CaseState>((set, get) => {
     resolve: (item, decision, note) => {
       saveRecord(resolveItem(get().reviewRecord, item, decision, note));
       record({ kind: 'resolution', itemId: item.id, note, decision, message: item.message });
+      // A form for another tax year the preparer keeps here goes on the return now.
+      if (item.id.startsWith(YEAR_ITEM_PREFIX)) get().act((id) => ({ ok: true, outcome: applyReleasedForm(id, item.id.slice(YEAR_ITEM_PREFIX.length), note) ?? { kind: 'recorded' } }));
     },
     reopen: (itemId) => {
       saveRecord(reopenItem(get().reviewRecord, itemId));
       record({ kind: 'reopened', itemId });
+      // ...and comes off it again when that decision is reopened.
+      if (itemId.startsWith(YEAR_ITEM_PREFIX)) get().act((id) => { removeFormItems(id, itemId.slice(YEAR_ITEM_PREFIX.length)); return { ok: true, outcome: { kind: 'recorded' } }; });
     },
     approve: () => {
       const { review, taxReturn, reviewRecord } = get();

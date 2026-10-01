@@ -82,6 +82,14 @@ function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
   return outcome;
 }
 
+/** A form the preparer released from a hold (a form for another tax year they kept on this return). */
+export function applyReleasedForm(returnId: string, formKey: string, why: string): ApplyOutcome | null {
+  const outcome = reapplyForm(returnId, formKey);
+  const fileName = formFacts(returnId, formKey)[0]?.sourceFileName ?? formKey;
+  appendAudit(returnId, { kind: 'decision', subject: 'Document kept on this return', detail: `${fileName}: ${why}` });
+  return outcome;
+}
+
 const describeAnswer = (answer: Record<string, unknown>) =>
   Object.entries(answer).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => `${k}=${String(v)}`).join(', ');
 

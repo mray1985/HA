@@ -62,7 +62,8 @@ import {
   type TaxToolSuccess,
 } from '@hatax/local-ai';
 import { ARRAY_FIELD_MAP, getReturn, updateReturn, upsertItemized, upsertSSA1099 } from '../api/client';
-import { upsertDocument, type ApplyExtractionResult } from './documentIngestion';
+import { loadReviewRecord } from './caseAudit';
+import { loadDocuments, upsertDocument, type ApplyExtractionResult } from './documentIngestion';
 import { INCOME_DISCOVERY_KEYS } from './pdfExtractHelpers';
 import { loadTaxFacts } from './preparerTaxFacts';
 
@@ -101,7 +102,9 @@ export function applyToolResult(
     case 'income_item': {
       const formKey = formKeyOf({ sourceDocumentId: source.documentId, sourceFormIndex: source.formIndex });
       if (heldForms(returnId).has(formKey)) {
-        return { kind: 'held', reason: 'Validation holds this form until a preparer reviews it.' };
+        return { kind: 'held', reason: formsForAnotherYear(returnId).has(formKey)
+          ? 'The form is for another tax year; it waits for the preparer.'
+          : 'Validation holds this form until a preparer reviews it.' };
       }
       markDiscovered(returnId, INCOME_DISCOVERY_KEYS[app.itemType]);
       const fields = app.itemType === 'business-receipts' ? businessReceiptItem(returnId, result.fields)
@@ -166,8 +169,41 @@ export function applyExtraction(returnId: string, extraction: ApplyExtractionRes
   return outcomes;
 }
 
+/** The review item for a form printed for another tax year (caseReview); a decision on it releases the form. */
+export const YEAR_ITEM_PREFIX = 'document:year:';
+
+/**
+ * Forms printed for another tax year than the case's: held off the return —
+ * their amounts belong on that year's return — until the preparer records why
+ * one belongs here.
+ */
+function formsForAnotherYear(returnId: string): Set<string> {
+  const year = String(getReturn(returnId).taxYear);
+  const decided = loadReviewRecord(returnId).resolutions;
+  const held = new Set<string>();
+  for (const doc of loadDocuments(returnId)) {
+    (doc.taxYearsPrinted ?? []).forEach((printed, index) => {
+      const formKey = `${doc.documentId}#${index}`;
+      if (printed && printed !== year && !decided[`${YEAR_ITEM_PREFIX}${formKey}`]) held.add(formKey);
+    });
+  }
+  return held;
+}
+
 function heldForms(returnId: string): Set<string> {
-  return new Set(validateImportedFacts(loadTaxFacts(returnId)).heldForms);
+  return new Set([...validateImportedFacts(loadTaxFacts(returnId)).heldForms, ...formsForAnotherYear(returnId)]);
+}
+
+/** Take a form's items off the return (a form held again after it was applied). */
+export function removeFormItems(returnId: string, formKey: string): void {
+  const tr = getReturn(returnId);
+  const patch: Partial<TaxReturn> = {};
+  for (const field of Object.values(ARRAY_FIELD_MAP)) {
+    const items = (tr[field] as unknown as Array<Record<string, unknown>> | undefined) ?? [];
+    const kept = items.filter((item) => item[SOURCE_FORM_KEY] !== formKey);
+    if (kept.length !== items.length) (patch as Record<string, unknown>)[field] = kept;
+  }
+  if (Object.keys(patch).length) updateReturn(returnId, patch);
 }
 
 function markDiscovered(returnId: string, key: string | undefined): void {
@@ -194,7 +230,7 @@ function putIncomeItem(returnId: string, itemType: string, formKey: string, fiel
 /** Facts of one kind, by form, as field → fact, and which of those forms validation holds. */
 function factsByForm(returnId: string, factPrefix: string): { forms: Map<string, Map<string, TaxFact>>; held: string[] } {
   const facts = loadTaxFacts(returnId);
-  const heldForms = new Set(validateImportedFacts(facts).heldForms);
+  const heldForms = new Set([...validateImportedFacts(facts).heldForms, ...formsForAnotherYear(returnId)]);
   const forms = new Map<string, Map<string, TaxFact>>();
   for (const fact of facts) {
     if (!fact.factType.startsWith(factPrefix)) continue;
