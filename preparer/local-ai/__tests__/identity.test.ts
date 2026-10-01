@@ -66,6 +66,15 @@ describe('the person on a form', () => {
     expect(id!.tin).toBeUndefined();
   });
 
+  it('builds no address from split cells when one was not read (a scanned 1099-G)', () => {
+    // Measured: the models read every cell but the city on a scanned 1099-G.
+    const id = identityFromValues('1099-G', {
+      'recipient.name': 'MAYA TESTPAYER', 'recipient.street': '815 MAGNOLIA AVE', 'recipient.state': 'LA', 'recipient.zip': '70802',
+    }, () => true);
+    expect(id?.address).toEqual({ raw: '815 MAGNOLIA AVE\n, LA 70802', confirmed: false, value: null });
+    expect(parseUSAddress(['815 MAGNOLIA AVE', ', LA 70802'])).toBeNull();
+  });
+
   it('never names the taxpayer from a 1098-T student or a 1099-Q recipient', () => {
     expect(identityFromValues('1098-T', { 'student.name': 'LEO LEE' }, () => true)).toBeNull();
     expect(identityFromValues('1099-Q', { 'recipient.name': 'LEO LEE' }, () => true)).toBeNull();

@@ -160,6 +160,8 @@ export function parseUSAddress(lines: readonly string[]): USAddress | null {
   if (clean.length < 2 || clean.length > 3) return null;
   const last = CITY_LINE.exec(clean[clean.length - 1]!);
   if (!last || !STATE_CODES.has(last[2]!.toUpperCase())) return null;
+  // A city is a word, not the comma before the state.
+  if (!/[A-Za-z]/.test(last[1]!)) return null;
   const streetLines = clean.slice(0, -1);
   // A street line begins with a house number or a PO box; an apartment line may follow.
   if (!/^(\d+[A-Z]?\b|P\.?\s*O\.?\s+BOX\b)/i.test(streetLines[0]!)) return null;
@@ -209,9 +211,14 @@ export function identityFromValues(
   const addressKeys = keys.address.filter((k) => values[k]?.trim());
   if (addressKeys.length > 0) {
     let lines = addressKeys.map((k) => values[k]!.trim());
-    // Split state and ZIP cells (2026 1099s) join the city line.
-    if (addressKeys.some((k) => k.endsWith('.state') || k.endsWith('.zip'))) {
-      const byKey = (suffix: string) => values[addressKeys.find((k) => k.endsWith(suffix)) ?? '']?.trim() ?? '';
+    // Split cells (2026 1099s): street, city, state and ZIP each read, or no
+    // address — a city line is never built from the cells that happened to be
+    // read (measured: a scan's empty city cell made ", LA 70802").
+    const split = keys.address.some((k) => k.endsWith('.state') || k.endsWith('.zip'));
+    let complete = true;
+    if (split) {
+      const byKey = (suffix: string) => values[keys.address.find((k) => k.endsWith(suffix)) ?? '']?.trim() ?? '';
+      complete = ['.street', '.city', '.state', '.zip'].every((suffix) => byKey(suffix) !== '');
       lines = [
         [byKey('.street'), byKey('.apt')].filter(Boolean).join(' '),
         `${byKey('.city')}, ${byKey('.state')} ${byKey('.zip')}`.trim(),
@@ -221,7 +228,11 @@ export function identityFromValues(
     const flat = lines.flatMap((l) => l.split(/\r?\n/)).map((l) => l.trim()).filter(Boolean);
     const printedName = nameText ? identityKeyText(nameText) : '';
     const withoutName = printedName && identityKeyText(flat[0] ?? '') === printedName ? flat.slice(1) : flat;
-    out.address = { raw: flat.join('\n'), confirmed: addressKeys.every((k) => confirmed(k)), value: parseUSAddress(withoutName) };
+    out.address = {
+      raw: flat.join('\n'),
+      confirmed: complete && addressKeys.every((k) => confirmed(k)),
+      value: complete ? parseUSAddress(withoutName) : null,
+    };
   }
   return out.tin || out.tinLastFour || out.name || out.address ? out : null;
 }
