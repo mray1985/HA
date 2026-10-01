@@ -122,6 +122,11 @@ describe('form checks', () => {
     const v = validateImportedFacts(call('add_1099_c', { payerName: 'BAYOU BANK', amountCancelled: 3000, identifiableEventCode: 'g', personallyLiable: false }));
     expect(v.heldForms).toEqual([]);
     expect(v.issues).toEqual([expect.objectContaining({ code: 'C_NOT_PERSONALLY_LIABLE', severity: 'warning' })]);
+    // Box 5 unread is not box 5 checked: the preparer looks at the form.
+    const unread = validateImportedFacts(call('add_1099_c', { payerName: 'BAYOU BANK', amountCancelled: 3000, identifiableEventCode: 'g' }));
+    expect(unread.heldForms).toEqual([]);
+    expect(unread.issues).toEqual([expect.objectContaining({ code: 'C_LIABILITY_UNREAD', severity: 'warning' })]);
+    expect(validateImportedFacts(call('add_1099_c', { payerName: 'BAYOU BANK', amountCancelled: 3000, identifiableEventCode: 'g', personallyLiable: true })).issues).toEqual([]);
   });
 
   it('keeps 1099-C box 5 as a fact but out of the engine item', () => {
