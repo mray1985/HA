@@ -28,8 +28,8 @@ export function createApp(options: { port: number | string; clientDist?: string 
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'wasm-unsafe-eval'", "blob:"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", "data:"],
         connectSrc: ["'self'", "blob:", ...(process.env.API_ORIGIN ? [process.env.API_ORIGIN] : [])],
         imgSrc: ["'self'", "data:", "blob:"],
         workerSrc: ["'self'", "blob:"],

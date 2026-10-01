@@ -1190,7 +1190,7 @@ The constants file contains inline citation comments referencing the underlying 
 | 2(a) | deceasedSpouse |
 | 2(b) | filingStatusValidation |
 | 1(a)-(d) | brackets |
-| 1(g) | kiddieTax |
+| 1(g) | form8615 |
 | 1(h) | capitalGains, scheduleD |
 | 1(h)(1)(E) | capitalGains, form4797 |
 | 21 | dependentCare |
@@ -1269,7 +1269,7 @@ The constants file contains inline citation comments referencing the underlying 
 | Reference | Module(s) |
 |-----------|-----------|
 | Rev. Proc. 2024-40, Section 3.01 | brackets |
-| Rev. Proc. 2024-40, Section 3 | scheduleSE, kiddieTax, feie |
+| Rev. Proc. 2024-40, Section 3 | scheduleSE, form8615, feie |
 | Rev. Proc. 2024-40, Section 3.12 | capitalGains |
 | Rev. Proc. 2024-40, Sections 3.04-3.07 | eitc |
 | Rev. Proc. 2024-40, Section 3.29 | qbi |
@@ -1328,7 +1328,7 @@ The constants file contains inline citation comments referencing the underlying 
 | Form 5329 | form5329 |
 | Form 5695 | cleanEnergy, energyEfficiency |
 | Form 8606 | form8606 |
-| Form 8615 | kiddieTax |
+| Form 8615 | form8615 |
 | Form 8829 | homeOffice |
 | Form 8839 | adoptionCredit |
 | Form 8863 | credits |

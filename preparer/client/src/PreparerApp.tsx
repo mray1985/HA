@@ -172,7 +172,10 @@ export default function PreparerApp() {
 
   const isLocked = appState === 'lock-setup' || appState === 'lock-unlock';
 
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  // A function, not a component defined here: a component made in render is a new
+  // type on every render, so React would remount the page under it (losing its state)
+  // each time this one re-renders.
+  const protectedPage = (children: React.ReactNode) => {
     if (isLocked) {
       return (
         <LockScreen
@@ -213,19 +216,11 @@ export default function PreparerApp() {
           <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
           <Route
             path="/preparer"
-            element={
-              <ProtectedRoute>
-                <CaseDashboardPage />
-              </ProtectedRoute>
-            }
+            element={protectedPage(<CaseDashboardPage />)}
           />
           <Route
             path="/preparer/case/:id/:tab?"
-            element={
-              <ProtectedRoute>
-                <CasePage />
-              </ProtectedRoute>
-            }
+            element={protectedPage(<CasePage />)}
           />
           <Route path="/preparer/*" element={<Navigate to="/preparer" replace />} />
           <Route path="/" element={<Navigate to="/preparer" replace />} />
