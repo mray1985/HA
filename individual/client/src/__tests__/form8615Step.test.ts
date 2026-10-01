@@ -21,8 +21,9 @@ function child(overrides: Partial<TaxReturn> = {}): TaxReturn {
   } as TaxReturn;
 }
 
+/** As the app shows it: the step list from the return and its live calculation. */
 const visible = (tr: TaxReturn) => {
-  useTaxReturnStore.setState({ taxReturn: tr, calculation: null });
+  useTaxReturnStore.setState({ taxReturn: tr, calculation: calculateForm1040(tr) });
   return useTaxReturnStore.getState().getVisibleSteps().map((s) => s.id).includes('form_8615');
 };
 
@@ -45,13 +46,16 @@ describe('the Form 8615 step', () => {
     });
   });
 
-  it('appears for a filer under 24 (or claimable, with no date of birth) who has unearned income', () => {
+  it('appears whenever the engine has Form 8615 for the return, whatever the unearned income is', () => {
     expect(visible(child())).toBe(true);
+    // Gambling winnings alone (W-2G): no list of income kinds decides it.
+    expect(visible(child({ income1099INT: [], incomeW2G: [{ id: 'g', payerName: 'Casino', grossWinnings: 9000, federalTaxWithheld: 0 }] } as Partial<TaxReturn>))).toBe(true);
     expect(visible(child({ dateOfBirth: undefined }))).toBe(true);
     expect(visible(child({ dateOfBirth: undefined, canBeClaimedAsDependent: false }))).toBe(false);
     expect(visible(child({ dateOfBirth: '1990-01-01' }))).toBe(false);
     expect(visible(child({ filingStatus: FilingStatus.MarriedFilingJointly }))).toBe(false);
     expect(visible(child({ income1099INT: [] }))).toBe(false);
+    expect(visible(child({ income1099INT: [{ id: 'i', payerName: 'Bank', amount: 2700 }] }))).toBe(false);
     // An answer already given keeps it in the interview.
     expect(visible(child({ dateOfBirth: '1990-01-01', form8615: { applies: false } }))).toBe(true);
   });

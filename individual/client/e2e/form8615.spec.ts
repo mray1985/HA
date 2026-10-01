@@ -25,9 +25,15 @@ test('a 15-year-old with $10,000 of interest figures Form 8615 from the parent\'
     s.updateField('canBeClaimedAsDependent', true);
     s.updateField('incomeDiscovery', { '1099int': 'yes' });
     s.updateField('income1099INT', [{ id: 'int-1', payerName: 'First Bank', amount: 10000 }]);
-    const steps = useTaxReturnStore.getState().getVisibleSteps();
-    useTaxReturnStore.getState().setCurrentStep(steps.findIndex((step: { id: string }) => step.id === 'form_8615'));
   });
+  // The step shows once the live calculation has Form 8615.
+  await expect.poll(() => page.evaluate(async () => {
+    const { useTaxReturnStore } = await import('/src/store/taxReturnStore.ts' as string);
+    const steps = useTaxReturnStore.getState().getVisibleSteps();
+    const index = steps.findIndex((step: { id: string }) => step.id === 'form_8615');
+    if (index >= 0) useTaxReturnStore.getState().setCurrentStep(index);
+    return index >= 0;
+  })).toBe(true);
 
   await expect(page.getByRole('heading', { name: /Form 8615 \(kiddie tax\)/i })).toBeVisible();
   await expect(page.getByText(/Your unearned income is \$10,000 and you are 15/)).toBeVisible();

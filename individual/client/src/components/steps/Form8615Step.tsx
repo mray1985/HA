@@ -109,14 +109,14 @@ export default function Form8615Step() {
       />
 
       <CalloutCard variant="info" title="Who files Form 8615" irsUrl="https://www.irs.gov/forms-pubs/about-form-8615">
-        You file it with your return if your unearned income was more than $2,700 and, at the end of {taxReturn.taxYear}, you were under 18, or 18 or a full-time student under 24 whose earned income was not more than half of your support — and at least one of your parents was alive and you don't file a joint return.
+        You file it with your return if you must file a return, your unearned income was more than $2,700 and, at the end of {taxReturn.taxYear}, you were under 18, or 18 or a full-time student under 24 whose earned income was not more than half of your support — and at least one of your parents was alive and you don't file a joint return.
       </CalloutCard>
 
       {outcome === undefined && info.applies !== true && (
         <div className="card mt-6 text-sm text-slate-300">
           {info.applies === false
             ? 'You said Form 8615 does not apply to you.'
-            : `Form 8615 is not needed: your unearned income is not more than $2,700${calculation ? '' : ' (enter your income first)'}.`}
+            : `Form 8615 is not needed: your unearned income is not more than $2,700, or you are 24 or older or file jointly${calculation ? '' : ' (enter your income first)'}.`}
           {info.applies === false && (
             <button type="button" onClick={() => set('applies', undefined)} className="ml-2 text-HATaxService-blue-400 hover:text-HATaxService-blue-300">Change</button>
           )}

@@ -25,6 +25,7 @@ export type StepCondition =
   | ArrayLengthGtCondition
   | DiscoveryEqualsCondition
   | AgiLteCondition
+  | CalculationHasCondition
   | AnyCondition
   | AllCondition
   | NotCondition;
@@ -89,6 +90,16 @@ export interface AgiLteCondition {
     hoh: number;
     qss: number;
   };
+}
+
+/**
+ * True when the CalculationResult has a value at `field` (dot-path): the
+ * engine itself says the step applies (e.g. `form8615`). False before the
+ * first calculation.
+ */
+export interface CalculationHasCondition {
+  type: 'calculation_has';
+  field: string;
 }
 
 /** True when ANY of the sub-conditions are true (logical OR). */

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { FilingStatus, TaxReturn, CalculationResult, evaluateCondition, setDeepPath } from '@hatax/engine';
+import { TaxReturn, CalculationResult, evaluateCondition, setDeepPath } from '@hatax/engine';
 import type { StepCondition } from '@hatax/engine';
 import { writeReturn } from '../api/client';
 import { isEncryptionSetup } from '../services/crypto';
@@ -89,22 +89,12 @@ const hasAMTData = (tr: TaxReturn) =>
   !!(tr.amtData?.isoExerciseSpread || tr.amtData?.privateActivityBondInterest || tr.amtData?.otherAMTAdjustments);
 
 const wantsItemized = (tr: TaxReturn) => tr.deductionMethod === 'itemized';
-/** Unearned income: interest, dividends, gains, rents and royalties, retirement and other income. */
-const hasUnearnedIncome = (tr: TaxReturn) =>
-  [tr.income1099INT, tr.income1099DIV, tr.income1099B, tr.income1099OID, tr.income1099DA, tr.incomeK1, tr.rentalProperties, tr.royaltyProperties, tr.income1099R, tr.income1099MISC, tr.income1099G]
-    .some((list) => (list?.length ?? 0) > 0) || (tr.otherIncome || 0) > 0;
 /**
- * Form 8615: the filer may be a child whose unearned income is taxed at the
- * parent's rate — under 24 at the end of the year (or, with no date of birth,
- * someone another taxpayer can claim), not filing jointly, with unearned
- * income. The step then says whether the engine needs the form.
+ * Form 8615: shown when the engine has a Form 8615 outcome for the return (a
+ * filer under 24, or claimable, with unearned income over $2,700 — whatever its
+ * source), or once the filer has answered it.
  */
-const mayFileForm8615 = (tr: TaxReturn) => {
-  if (tr.form8615) return true;
-  if (tr.filingStatus === FilingStatus.MarriedFilingJointly || !hasUnearnedIncome(tr)) return false;
-  const born = Number.parseInt(tr.dateOfBirth?.slice(0, 4) ?? '', 10);
-  return Number.isFinite(born) ? (tr.taxYear || 2025) - born < 24 : tr.canBeClaimedAsDependent === true;
-};
+const DC_FORM_8615: StepCondition = { type: 'any', conditions: [{ type: 'field_exists', field: 'form8615' }, { type: 'calculation_has', field: 'form8615' }] };
 const wantsChildCredit = (tr: TaxReturn) => tr.incomeDiscovery['child_credit'] === 'yes';
 const wantsEducationCredit = (tr: TaxReturn) => tr.incomeDiscovery['education_credit'] === 'yes';
 
@@ -276,7 +266,7 @@ export const WIZARD_STEPS: WizardStep[] = [
 
   // Review
   { id: 'transition_review', label: 'Review', section: 'review' },
-  { id: 'form_8615', label: 'Form 8615 (Kiddie Tax)', section: 'review', condition: mayFileForm8615 },
+  { id: 'form_8615', label: 'Form 8615 (Kiddie Tax)', section: 'review', declarativeCondition: DC_FORM_8615 },
   { id: 'review_schedule_c', label: 'Schedule C Review', section: 'review', condition: hasSelfeEmployment, declarativeCondition: DC_SELF_EMPLOYMENT },
   { id: 'amt_review', label: 'AMT Review', section: 'review' },
   { id: 'form8582_review', label: 'Passive Loss Review', section: 'review', condition: (tr) => ((tr.rentalProperties || []).length > 0 || (tr.incomeK1 || []).some(k => k.isPassiveActivity || k.rentalIncome)) },

@@ -182,6 +182,15 @@ describe('Form 8615 (2025)', () => {
     expect(calculateForm1040(childReturn({ income1099INT: interest(10_000), dateOfBirth: '2001-06-01' })).form8615).toBeUndefined();
     expect(calculateForm1040(childReturn({ income1099INT: interest(10_000), filingStatus: FilingStatus.MarriedFilingJointly })).form8615).toBeUndefined();
     expect(calculateForm1040(childReturn({ income1099INT: interest(2_700) })).form8615).toBeUndefined();
+    // No taxable income is no exception: the form stops at line 5 but is still attached.
+    const zero = {
+      taxYear: 2025, childFilingStatus: FilingStatus.Single, totalIncome: 20_000, agi: 20_000, taxableIncome: 0,
+      deduction: 25_000, itemizes: true, wages: 0, businessIncome: 0, farmIncome: 0, earlyWithdrawalPenalty: 0, nolDeduction: 0,
+      qualifiedDividends: 0, netCapitalGain: 0, has28RateOr1250Gain: false, filesForm2555: false, age: 17,
+    };
+    expect(figureForm8615(zero)).toEqual({ status: 'ask', unearnedIncome: 20_000, age: 17 });
+    const stopped = figureForm8615({ ...zero, info: { ...PARENT, childDirectlyConnectedDeductions: 0 } });
+    expect(stopped).toMatchObject({ status: 'figured', result: { applies: false, line3: 17_300, line4: 0, line5: 0 } });
     // With no date of birth, a taxpayer someone can claim as a dependent is asked about.
     expect(calculateForm1040(childReturn({ income1099INT: interest(10_000), dateOfBirth: undefined })).form8615).toEqual({ status: 'ask', unearnedIncome: 10_000 });
   });

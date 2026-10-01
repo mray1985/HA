@@ -116,8 +116,9 @@ export function figureForm8615(input: Omit<Form8615Input, 'info'> & { info?: For
   if (info?.applies !== true) {
     const line1 = form8615Line1(input);
     const young = input.age !== undefined ? input.age < getKiddieTax(input.taxYear).STUDENT_AGE_LIMIT : input.canBeClaimedAsDependent === true;
+    // Taxable income is not one of the conditions: with none, the form stops at line 5 but is still attached.
     const possible = young && input.childFilingStatus !== FilingStatus.MarriedFilingJointly
-      && line1 > getKiddieTax(input.taxYear).UNEARNED_INCOME_THRESHOLD && input.taxableIncome > 0;
+      && line1 > getKiddieTax(input.taxYear).UNEARNED_INCOME_THRESHOLD;
     return possible ? { status: 'ask', unearnedIncome: line1, ...(input.age !== undefined ? { age: input.age } : {}) } : undefined;
   }
   const missing = form8615Missing(info, input.itemizes);
