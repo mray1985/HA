@@ -40,8 +40,16 @@ export function calculateForm4562(
   assets: DepreciationAsset[],
   businessIncome: number,
   taxYear: number = 2025,
+  /** A state's IRC §179 limits in place of the federal ones (California: FTB 3885A). */
+  section179Limits?: Section179Limits,
+  /**
+   * Take an earlier year's asset's prior depreciation from the MACRS table on
+   * this computation's basis, not the stored (federal) amount — a state's
+   * depreciation of the same asset with its own basis.
+   */
+  options: { priorDepreciationFromRates?: boolean } = {},
 ): Form4562Result {
-  const SECTION_179 = getSection179(taxYear);
+  const SECTION_179 = { ...getSection179(taxYear), ...section179LimitOverrides(section179Limits) };
   const zero: Form4562Result = {
     totalCostSection179Property: 0,
     section179Limit: SECTION_179.MAX_DEDUCTION,
@@ -83,6 +91,7 @@ export function calculateForm4562(
     currentYearAssets,
     Math.max(0, businessIncome),
     taxYear,
+    section179Limits,
   );
 
   // ── Convention detection (IRC §168(d)(3)) ────────────────
@@ -112,7 +121,7 @@ export function calculateForm4562(
 
   // Prior-year assets: MACRS only (no 179, no bonus)
   for (const asset of priorYearAssets) {
-    const detail = computePriorYearAsset(asset, taxYear);
+    const detail = computePriorYearAsset(asset, taxYear, options.priorDepreciationFromRates === true);
     assetDetails.push(detail);
     macrsPriorTotal += detail.macrsDepreciation;
   }
@@ -277,6 +286,16 @@ function placedInServiceYear(asset: DepreciationAsset, taxYear: number): number 
 
 // ── Section 179 Computation ─────────────────────────────────
 
+/** IRC §179(b)(1) dollar limit and §179(b)(2) cost threshold, when a state's differ. */
+export interface Section179Limits {
+  maxDeduction: number;
+  phaseOutThreshold: number;
+}
+
+function section179LimitOverrides(limits?: Section179Limits): { MAX_DEDUCTION?: number; PHASE_OUT_THRESHOLD?: number } {
+  return limits ? { MAX_DEDUCTION: limits.maxDeduction, PHASE_OUT_THRESHOLD: limits.phaseOutThreshold } : {};
+}
+
 interface Section179Result {
   totalCost: number;
   thresholdReduction: number;
@@ -304,8 +323,9 @@ function computeSection179(
   currentYearAssets: DepreciationAsset[],
   businessIncome: number,
   taxYear: number = 2025,
+  section179Limits?: Section179Limits,
 ): Section179Result {
-  const SECTION_179 = getSection179(taxYear);
+  const SECTION_179 = { ...getSection179(taxYear), ...section179LimitOverrides(section179Limits) };
   const allocations = new Map<string, number>();
   const electedAllocations = new Map<string, number>();
 
@@ -513,7 +533,7 @@ function computeCurrentYearAsset(
  * If the asset was placed in service under mid-quarter convention (stored in
  * asset.convention/asset.quarterPlaced), continues using mid-quarter rates.
  */
-function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025): Form4562AssetDetail {
+function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025, priorFromRates = false): Form4562AssetDetail {
   const basisPct = Math.min(100, Math.max(0, asset.businessUsePercent ?? 100)) / 100;
   const businessUseBasis = round2(asset.cost * basisPct);
 
@@ -582,8 +602,11 @@ function computePriorYearAsset(asset: DepreciationAsset, taxYear: number = 2025)
   const macrsBasis = round2(basisAfterPrior179 * (1 - specialDepreciationRate(asset, placedInServiceYear(asset, taxYear)).rate));
   const macrsDepreciation = round2(macrsBasis * rates[yearIndex]);
 
-  // Ensure we don't depreciate below zero (remaining basis check)
-  const priorDepr = asset.priorDepreciation || 0;
+  // Ensure we don't depreciate below zero (remaining basis check). A state's
+  // run takes its own prior depreciation: this basis at the table's rates.
+  const priorDepr = priorFromRates
+    ? round2(rates.slice(0, yearIndex).reduce((sum, rate) => sum + round2(macrsBasis * rate), 0))
+    : asset.priorDepreciation || 0;
   const remainingBefore = round2(Math.max(0, basisAfterPrior179 - priorDepr));
   const allowedMacrs = round2(Math.min(macrsDepreciation, remainingBefore));
 

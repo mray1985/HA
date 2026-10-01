@@ -165,8 +165,14 @@ export function assessWashingtonCapitalGains(taxReturn: TaxReturn, federal: Calc
   const collectibles = round2((taxReturn.income1099B ?? [])
     .filter((t) => t.isLongTerm && t.isCollectible)
     .reduce((s, t) => s + transactionGainOrLoss(t), 0));
-  // Schedule D's long-term net holds the carryover as a loss and the collectibles; both are taken separately.
-  const securities = sd ? round2(sd.netLongTerm + federalCarryover - collectibles) : 0;
+  // Schedule D's long-term net holds the carryover as a loss, the collectibles,
+  // the K-1 long-term gain (line 12) and capital-asset installment gain (line
+  // 11): each is taken separately below.
+  const k1InScheduleD = federal.k1Routing?.longTermCapitalGain || 0;
+  const installmentInScheduleD = round2((federal.form6252 ?? [])
+    .filter((r) => r.disposition === 'long_term_capital')
+    .reduce((s, r) => s + r.totalReportableIncome, 0));
+  const securities = sd ? round2(sd.netLongTerm + federalCarryover - collectibles - k1InScheduleD - installmentInScheduleD) : 0;
   let intangibleGain = 0;
   if (residency === 'resident') {
     intangibleGain = securities;

@@ -54,6 +54,36 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     if (code === 'DC' && calculation?.form1040.deductionUsed === 'itemized') {
       add('DC.ITEMIZED', code, 'state', `DC itemized deductions are not calculated (HATax applies DC's standard deduction). ${STATE_ONLY}`);
     }
+    if (code === 'CA') {
+      // FTB 3885A: California's depreciation is figured from this year's
+      // Form 4562 with no special depreciation and California's §179 limits.
+      // An earlier year's §179 is California's only within its limits that year
+      // ($25,000, reduced over $200,000 of §179 property placed in service).
+      const byYear = new Map<number, { section179: number; cost: number }>();
+      for (const a of taxReturn.depreciationAssets ?? []) {
+        const placed = parseInt((a.dateInService || '').slice(0, 4), 10);
+        if (!Number.isFinite(placed) || placed >= year) continue;
+        const v = byYear.get(placed) ?? { section179: 0, cost: 0 };
+        v.section179 += Math.max(0, a.priorSection179 ?? 0);
+        if ((a.businessUsePercent ?? 100) > 50) v.cost += Math.max(0, a.cost) * Math.min(100, Math.max(0, a.businessUsePercent ?? 100)) / 100;
+        byYear.set(placed, v);
+      }
+      for (const [placed, v] of byYear) {
+        if (v.section179 > 0 && (v.section179 > 25000 || v.cost > 200000)) {
+          add('CA.DEPRECIATION', code, 'state', `California depreciation: the ${placed} federal §179 expense on assets still depreciated ($${Math.round(v.section179).toLocaleString('en-US')}) is beyond what California allowed that year (FTB 3885A: $25,000, reduced over $200,000 of §179 property), so their California basis is not figured. ${STATE_ONLY}`);
+        }
+      }
+      if ((calculation?.form4562?.section179Carryforward ?? 0) > 0) {
+        add('CA.DEPRECIATION', code, 'state', `California depreciation: the federal §179 deduction is limited by business income this year; California's limit uses California business income, which is not figured. ${STATE_ONLY}`);
+      }
+      const software = (taxReturn.depreciationAssets ?? []).filter((a) => a.isSoftware && !a.disposed && parseInt((a.dateInService || '').slice(0, 4), 10) < year);
+      if (software.length > 0) {
+        add('CA.DEPRECIATION', code, 'state', `California amortization of software placed in service in an earlier year (${software.map((a) => a.description || a.id).join(', ')}) is not figured. ${STATE_ONLY}`);
+      }
+      if (taxReturn.vehicle?.method === 'actual' && (taxReturn.vehicle.vehicleCost ?? 0) > 0) {
+        add('CA.DEPRECIATION', code, 'state', `California depreciation of the vehicle (no §168(k) special depreciation, so a different basis and §280F limits) is not figured. ${STATE_ONLY}`);
+      }
+    }
   }
 
   // TAX-001: special depreciation whose rate the facts do not settle.

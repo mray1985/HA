@@ -999,7 +999,9 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   const hasCapitalLossCarryforward = Math.abs(safeNum(taxReturn.capitalLossCarryforward))
     + Math.abs(safeNum(taxReturn.capitalLossCarryforwardST))
     + Math.abs(safeNum(taxReturn.capitalLossCarryforwardLT)) > 0;
-  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward || installmentShortTerm > 0 || installmentLongTerm > 0)
+  // K-1 box 8 and box 9a are Schedule D lines 5 and 12.
+  const hasK1CapitalGainOrLoss = ctx.k1ShortTermGain !== 0 || ctx.k1LongTermGain !== 0;
+  ctx.scheduleD = (has1099B || ctx.homeSaleTaxableGain > 0 || hasCapGainDist || hasCapitalLossCarryforward || installmentShortTerm > 0 || installmentLongTerm > 0 || hasK1CapitalGainOrLoss)
     ? calculateScheduleD(
         allScheduleDTransactions,
         safeNum(taxReturn.capitalLossCarryforward),
@@ -1009,6 +1011,7 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
         ctx.totalCapitalGainDistributions,
         _taxYear,
         { shortTerm: installmentShortTerm, longTerm: installmentLongTerm },
+        { shortTerm: ctx.k1ShortTermGain, longTerm: ctx.k1LongTermGain },
       )
     : undefined;
 
@@ -1071,11 +1074,11 @@ export function calculateCapitalAssetsSection(ctx: Form1040Context): void {
   }
   ctx.capitalLossDeduction = ctx.scheduleD?.capitalLossDeduction || 0;
   ctx.scheduleDNetGain = round2((netWith1231 > 0 ? netWith1231 : 0) + ctx.homeSaleTaxableGain);
-  // IRC §1(h) net long-term gain: combine Schedule D, K-1, and section 1231
-  // before the zero floor, so a short-term loss can offset those gains.
-  // Home-sale gain is added after that net, as it was before.
-  const netSTForRates = round2(schedNetST + ctx.k1ShortTermGain);
-  const netLTForRates = round2(schedNetLT + ctx.k1LongTermGain + section1231Ltcg);
+  // IRC §1(h) net long-term gain: combine Schedule D (K-1 gains are its lines
+  // 5 and 12) and section 1231 before the zero floor, so a short-term loss can
+  // offset those gains. Home-sale gain is added after that net, as it was before.
+  const netSTForRates = round2(schedNetST);
+  const netLTForRates = round2(schedNetLT + section1231Ltcg);
   const netForRates = round2(netSTForRates + netLTForRates);
   ctx.scheduleDLongTermGain = round2(
     Math.max(0, Math.min(netLTForRates, netForRates)) + ctx.homeSaleTaxableGain,
@@ -1114,7 +1117,7 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     ctx.scheduleCNetProfit + ctx.scheduleFNetProfit + ctx.totalRetirementIncome + ctx.totalUnemployment +
     ctx.total1099MISCIncome + ctx.otherIncome + ctx.totalGamblingIncome + ctx.cancellationOfDebtIncome +
     ctx.alimonyReceivedIncome + ctx.taxable529Income +
-    ctx.k1OrdinaryIncome - ctx.k1Section179Deduction + ctx.k1ShortTermGain + ctx.k1LongTermGain +
+    ctx.k1OrdinaryIncome - ctx.k1Section179Deduction +
     ctx.hsaDistributionTaxable +
     ctx.scheduleDNetGain - ctx.capitalLossDeduction +
     ctx.form4797OrdinaryIncome + ctx.form4797OrdinaryLoss + ctx.section1231LookbackOrdinary +
@@ -1834,10 +1837,8 @@ export function calculateAdditionalTaxesSection(ctx: Form1040Context): void {
   const rentalIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.netRentalIncome) : 0;
   const royaltyIncomeForNIIT = ctx.scheduleEResult ? Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)) : 0;
   // K-1 rental excluded — already in rentalIncomeForNIIT via Schedule E netRentalIncome
-  const k1InvestmentForNIIT = round2(
-    ctx.k1Interest + ctx.k1OrdinaryDividends + Math.max(0, ctx.k1ShortTermGain) +
-    Math.max(0, ctx.k1LongTermGain),
-  );
+  // K-1 capital gains are in Schedule D (lines 5 and 12), so in scheduleDGainForNIIT.
+  const k1InvestmentForNIIT = round2(ctx.k1Interest + ctx.k1OrdinaryDividends);
   // Capital gain distributions and section 1231 gain are in scheduleDGainForNIIT.
   const grossInvestmentIncomeForNIIT = round2(
     ctx.allInterest + ctx.allOrdinaryDividends +
@@ -2283,7 +2284,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
   // EITC investment income per IRS Pub 596 includes: taxable + tax-exempt interest,
   // ordinary dividends, capital gain net income (Schedule D line 7), and net rental/royalty income.
   const scheduleDNetGain = Math.max(0, round2((ctx.scheduleD?.netGainOrLoss || 0) + ctx.form4797LTCGContribution));
-  const k1CapitalGains = round2(Math.max(0, ctx.k1ShortTermGain) + Math.max(0, ctx.k1LongTermGain));
+  // K-1 capital gains are in Schedule D (lines 5 and 12), so in scheduleDNetGain.
   const rentalRoyaltyNet = ctx.scheduleEResult
     ? round2(Math.max(0, ctx.scheduleEResult.netRentalIncome) + Math.max(0, ctx.scheduleEResult.royaltyIncome - (ctx.scheduleEResult.totalRoyaltyExpenses || 0)))
     : 0;
@@ -2291,7 +2292,7 @@ export function calculateCreditsSection(ctx: Form1040Context): void {
   // Capital gain distributions now included in scheduleDNetGain (via Schedule D Line 13)
   const investmentIncomeForEITC = round2(
     ctx.allInterest + taxExemptInterest + ctx.allOrdinaryDividends +
-    scheduleDNetGain + k1CapitalGains + rentalRoyaltyNet,
+    scheduleDNetGain + rentalRoyaltyNet,
   );
   // Combat pay EITC election — IRC §32(c)(2)(B)(vi)
   // Taxpayers with nontaxable combat pay (W-2 Box 12 code Q) may elect to
@@ -2672,6 +2673,8 @@ export function assembleForm1040Result(ctx: Form1040Context): CalculationResult 
 
   const federalResult: CalculationResult = {
     scheduleC: ctx.scheduleC,
+    // Form 4562 for the Schedule C assets: states that adjust depreciation read it (California, FTB 3885A).
+    ...(ctx.scheduleC?.form4562Result ? { form4562: ctx.scheduleC.form4562Result } : {}),
     scheduleSE: ctx.scheduleSE,
     scheduleA: ctx.scheduleA,
     scheduleD: ctx.scheduleD,

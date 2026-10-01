@@ -774,6 +774,8 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Does not handle involuntary conversion (IRC 1033) deferral
 - Depreciation history must be provided as input per property
 - Installment sales reach Form 4797 from Form 6252 (engine/form6252.ts): line 26 on line 4 or 10, the year-of-sale recapture on line 13
+- Schedule K-1 box 8 and box 9a capital gain or loss are Schedule D lines 5 and 12 (Schedule D instructions), netted and limited with the other sales
+- California depreciation (engine/state/ca.ts `caDepreciationAdjustment`): FTB 3885A instructions (2025) — no IRC §168(k); IRC §179 $25,000, reduced over $200,000; California basis reduced by the California §179
 - Does not handle related-party sale rules under IRC 1239
 
 ---

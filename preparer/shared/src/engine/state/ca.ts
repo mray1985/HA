@@ -29,7 +29,7 @@ import {
   CA_MHST_THRESHOLD, CA_MHST_RATE,
   CA_EITC_TABLE, CA_EITC_INVESTMENT_INCOME_LIMIT,
   CA_YCTC_AMOUNT_PER_CHILD, CA_YCTC_PHASE_OUT_START, CA_YCTC_PHASE_OUT_RATE,
-  CA_MORTGAGE_LIMIT, CA_SECTION_179_LIMIT,
+  CA_MORTGAGE_LIMIT, CA_SECTION_179_LIMIT, CA_SECTION_179_THRESHOLD,
   CA_RENTERS_CREDIT,
   CA_DEPENDENT_CARE_TABLE, CA_DEPENDENT_CARE_EXPENSE_LIMIT_1, CA_DEPENDENT_CARE_EXPENSE_LIMIT_2,
   CA_SENIOR_HOH_CREDIT, CA_SENIOR_HOH_CREDIT_RATE, CA_SENIOR_HOH_AGI_LIMIT, CA_SENIOR_HOH_MIN_AGE,
@@ -43,6 +43,7 @@ import { STATE_FORM_REFS, StateFormLineRefs } from '../../constants/states/state
 import { TraceBuilder } from '../traceBuilder.js';
 import { applyBrackets, getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
 import { round2 } from '../utils.js';
+import { calculateForm4562 } from '../form4562.js';
 
 // ─── CA Additions / Subtractions ────────────────────────────────
 
@@ -58,15 +59,9 @@ function getAdditions(taxReturn: TaxReturn, federalResult: CalculationResult): n
     ? stateData.otherStateMuniBondInterest : 0;
   if (otherStateMuni > 0) additions += otherStateMuni;
 
-  // Bonus depreciation addback — CA doesn't conform to IRC §168(k)
-  const bonusDepTotal = federalResult.form4562?.bonusDepreciationTotal || 0;
-  if (bonusDepTotal > 0) additions += bonusDepTotal;
-
-  // Section 179 difference — CA limit is $25K vs federal $1.25M
-  const federalSection179 = federalResult.form4562?.section179Deduction || 0;
-  if (federalSection179 > CA_SECTION_179_LIMIT) {
-    additions += federalSection179 - CA_SECTION_179_LIMIT;
-  }
+  // Federal depreciation over California's (FTB 3885A): no §168(k) bonus, a smaller §179.
+  const depreciation = caDepreciationAdjustment(taxReturn, federalResult);
+  if (depreciation > 0) additions += depreciation;
 
   return round2(additions);
 }
@@ -99,68 +94,38 @@ function getSubtractions(taxReturn: TaxReturn, federalResult: CalculationResult)
     ? stateData.railroadRetirementBenefits : 0;
   if (railroadRetirement > 0) subtractions += railroadRetirement;
 
-  // CA MACRS subtraction — for assets where federal bonus was taken,
-  // CA allows regular MACRS instead. Net = bonus addback − CA MACRS.
-  // Computed as a subtraction to partially offset the addition.
-  const caMACRS = computeCAMACRSSubtraction(federalResult);
-  if (caMACRS > 0) subtractions += caMACRS;
+  // California depreciation over federal (FTB 3885A), e.g. a later year of an
+  // asset whose federal basis went to bonus depreciation in its first year.
+  const depreciation = caDepreciationAdjustment(taxReturn, federalResult);
+  if (depreciation < 0) subtractions += -depreciation;
 
   return round2(subtractions);
 }
 
 /**
- * For assets where federal bonus depreciation was taken, CA allows
- * regular MACRS depreciation. This subtraction partially offsets
- * the bonus depreciation addition.
+ * Federal depreciation of the Schedule C assets less California's (FTB 3885A,
+ * 2025 instructions): California has not conformed to IRC §168(k) additional
+ * depreciation, and its IRC §179 deduction is limited to $25,000, reduced by
+ * the cost of §179 property placed in service over $200,000, with the
+ * California basis reduced by the California §179 expense. California's figure
+ * is the same Form 4562 computation with no special depreciation and those
+ * limits. Positive: an addition on Schedule CA; negative: a subtraction.
+ * What this cannot settle — an earlier year's §179 beyond California's limits,
+ * a §179 limited by business income, a vehicle's depreciation — holds the
+ * California return (engine/unsupported.ts).
  */
-function computeCAMACRSSubtraction(federalResult: CalculationResult): number {
-  const assets = federalResult.form4562?.assetDetails;
-  if (!assets || assets.length === 0) return 0;
-
-  // Import MACRS rate tables inline to avoid circular deps
-  let total = 0;
-  for (const asset of assets) {
-    if (asset.bonusDepreciation <= 0) continue;
-
-    // For assets with bonus, federal MACRS may be $0 since bonus consumed the basis.
-    // CA needs to compute MACRS on the full businessUseBasis (after §179).
-    const basisForMACRS = asset.businessUseBasis - asset.section179Amount;
-    if (basisForMACRS <= 0) continue;
-
-    // Use the asset's first-year MACRS rate based on property class
-    // The macrsDepreciation on the asset already represents what MACRS would be
-    // if computed after bonus. We need the full first-year MACRS rate on the full basis.
-    // For 100% bonus assets, macrsDepreciation is $0 — we recompute.
-    if (asset.macrsDepreciation > 0) {
-      // Partial bonus — federal already computed some MACRS
-      total += asset.macrsDepreciation;
-    } else {
-      // 100% bonus consumed the basis — recompute CA MACRS from first-year rates
-      // Use standard half-year convention rates by property class
-      const firstYearRates: Record<number, number> = {
-        3: 0.3333, 5: 0.2000, 7: 0.1429, 10: 0.1000, 15: 0.0500, 20: 0.0375,
-      };
-      // Mid-quarter rates vary by quarter placed in service (IRS Pub 946)
-      const midQuarterRates: Record<number, Record<number, number>> = {
-        3:  { 1: 0.5833, 2: 0.4167, 3: 0.2500, 4: 0.0833 },
-        5:  { 1: 0.3500, 2: 0.2500, 3: 0.1500, 4: 0.0500 },
-        7:  { 1: 0.2500, 2: 0.1785, 3: 0.1071, 4: 0.0357 },
-        10: { 1: 0.1750, 2: 0.1250, 3: 0.0750, 4: 0.0250 },
-        15: { 1: 0.0875, 2: 0.0625, 3: 0.0375, 4: 0.0125 },
-        20: { 1: 0.0656, 2: 0.0469, 3: 0.0281, 4: 0.0094 },
-      };
-      let rate: number;
-      if (asset.convention === 'mid-quarter') {
-        const quarter = asset.quarterPlaced || 1;
-        rate = midQuarterRates[asset.propertyClass]?.[quarter] || 0;
-      } else {
-        rate = firstYearRates[asset.propertyClass] || 0;
-      }
-      if (rate === 0) continue;
-      total += round2(basisForMACRS * rate);
-    }
-  }
-  return round2(total);
+export function caDepreciationAdjustment(taxReturn: TaxReturn, federalResult: CalculationResult): number {
+  const federal = federalResult.form4562;
+  const assets = taxReturn.depreciationAssets ?? [];
+  if (!federal || assets.length === 0) return 0;
+  const california = calculateForm4562(
+    assets.map((a) => ({ ...a, electOutOfBonus: true })),
+    federal.section179BusinessIncomeLimit,
+    taxReturn.taxYear || 2025,
+    { maxDeduction: CA_SECTION_179_LIMIT, phaseOutThreshold: CA_SECTION_179_THRESHOLD },
+    { priorDepreciationFromRates: true },
+  );
+  return round2(federal.totalDepreciation - california.totalDepreciation);
 }
 
 // ─── CA Itemized Deductions ─────────────────────────────────────

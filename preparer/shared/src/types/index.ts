@@ -2201,6 +2201,10 @@ export interface ScheduleAResult {
   otherDeduction: number;
   totalItemized: number;
   form8283?: Form8283Result;           // Per-item non-cash charitable detail (when nonCashDonations provided)
+  /** Prior-year charitable carryforward deducted this year (IRC §170(d)(1)). */
+  charitableCarryforwardUsed?: number;
+  /** This year's contributions over the AGI limits, carried to the next five years (IRC §170(d)(1)). */
+  charitableExcessCarryforward?: number;
 }
 
 export interface ScheduleDResult {

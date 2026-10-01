@@ -161,8 +161,12 @@ export function carryoversFrom(prior: TaxReturn, calc: CalculationResult): { pat
   // or whose next-year amount the engine does not give.
   const nol = Math.max(0, (prior.nolCarryforward ?? 0) - (f.nolDeduction ?? 0)) + (f.currentYearNOL ?? 0);
   if (nol > 0) manual.push({ id: 'nol', text: `Net operating loss: ${y} carried in ${money(prior.nolCarryforward ?? 0)}, deducted ${money(f.nolDeduction ?? 0)}, and had a new NOL of ${money(f.currentYearNOL ?? 0)}. Figure the carryover with the NOL worksheet and enter it.` });
-  const charitable = (calc.form8283?.excessCarryforward ?? 0) + (prior.itemizedDeductions?.charitableCarryforward ?? []).reduce((s, c) => s + (c.amount || 0), 0);
-  if (charitable > 0) manual.push({ id: 'charitable', text: `Charitable contribution carryover: the ${y} return carried or created about ${money(charitable)}. Enter each year's remaining amount by category.` });
+  const priorCharitable = (prior.itemizedDeductions?.charitableCarryforward ?? []).reduce((s, c) => s + (c.amount || 0), 0);
+  const newCharitable = calc.scheduleA?.charitableExcessCarryforward ?? 0;
+  if (priorCharitable > 0 || newCharitable > 0) {
+    const used = calc.scheduleA?.charitableCarryforwardUsed ?? 0;
+    manual.push({ id: 'charitable', text: `Charitable contribution carryover: ${y}'s contributions over the AGI limits were ${money(newCharitable)}${priorCharitable > 0 ? `, and of ${money(priorCharitable)} carried in, ${money(used)} was used` : ''}${calc.scheduleA ? '' : ' (the standard deduction was taken)'}. Enter each year's remaining amount by category; carryovers expire after five years.` });
+  }
   const home = calc.scheduleC?.homeOfficeResult;
   if ((home?.operatingExpenseCarryover ?? 0) > 0 || (home?.depreciationCarryover ?? 0) > 0) {
     manual.push({ id: 'home-office', text: `Form 8829 carryovers: operating expenses ${money(home?.operatingExpenseCarryover ?? 0)} (line 43) and depreciation ${money(home?.depreciationCarryover ?? 0)} (line 44). Enter them with this year's home office.` });

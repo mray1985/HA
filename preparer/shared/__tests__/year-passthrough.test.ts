@@ -232,8 +232,9 @@ describe('tax year is passed into year-parameterized calculations', () => {
 
   it('does not reduce the QBI limit by K-1 long-term gain that a short-term loss already offset', () => {
     const standardDeduction = getStandardDeduction(2025)[FilingStatus.Single];
-    // Schedule D loss deduction $3,000 and K-1 long-term gain $10,000 are both in income.
-    const wages = 100000 + standardDeduction - 7000;
+    // The K-1's $10,000 long-term gain is Schedule D line 12: it nets with the
+    // $15,000 short-term loss, leaving a $5,000 loss — $3,000 deducted, $2,000 carried.
+    const wages = 100000 + standardDeduction + 3000;
     const result = calculateForm1040(makeReturn({
       w2Income: [{ id: 'w2', employerName: 'Acme', wages, federalTaxWithheld: 0 }],
       income1099B: [{
