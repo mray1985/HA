@@ -10,7 +10,7 @@ import type { PartyIdentity } from '@hatax/local-ai';
 import type { TaxReturn } from '@hatax/engine';
 import { clearReturnCache, createReturn, getReturn, listReturns, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
-import { caseForIdentity, ingestBatch, placeUnmatched } from '../services/caseIntake';
+import { caseForIdentity, ingestBatch, placeableAfterNewCases, placeUnmatched } from '../services/caseIntake';
 import { loadDocuments } from '../services/documentIngestion';
 
 function installMemoryLocalStorage() {
@@ -48,11 +48,44 @@ describe('matching a form to a case', () => {
     expect(caseForIdentity({ formType: '1099-INT', tinLastFour: '3456' }, cases)).toBeNull();
   });
 
+  it("places a 1099-Q or 1098-T by its recipient or student — the taxpayer, the spouse or a dependent", () => {
+    const families = [
+      { id: 'lee', ssn: '111223456', lastName: 'Lee', dependents: [{ id: 'd', firstName: 'Alex', lastName: 'Lee', ssn: '222331122', relationship: 'Son', monthsLivedWithYou: 12 }] },
+      { id: 'maya', ssn: '000123456', lastName: 'Testpayer' },
+    ] as unknown as TaxReturn[];
+    const placed = (formType: '1099-Q' | '1098-T', lastFour: string, last: string): PartyIdentity =>
+      ({ formType, placementOnly: true, tinLastFour: lastFour, name: { raw: '', confirmed: true, value: { first: 'X', last } } });
+    expect(caseForIdentity(placed('1099-Q', '3456', 'Testpayer'), families)?.id).toBe('maya');
+    // A dependent student.
+    expect(caseForIdentity(placed('1098-T', '1122', 'Lee'), families)?.id).toBe('lee');
+    // A dependent is matched only for these forms: a 1099-INT names the return's own people.
+    expect(caseForIdentity({ formType: '1099-INT', tinLastFour: '1122', name: { raw: '', confirmed: true, value: { first: 'Alex', last: 'Lee' } } }, families)).toBeNull();
+    // An unconfirmed name places nothing.
+    expect(caseForIdentity({ ...placed('1099-Q', '3456', 'Testpayer'), name: { raw: '', confirmed: false, value: { first: 'X', last: 'Testpayer' } } }, families)).toBeNull();
+  });
+
+  it('places what a batch held once its new clients have cases', () => {
+    const read = { file: new File(['q'], '1099q.pdf'), how: 'models', readings: [{ classification: { status: 'classified' }, identity: { formType: '1099-Q', placementOnly: true, tinLastFour: '3456', name: { raw: '', confirmed: true, value: { first: 'Maya', last: 'Testpayer' } } } }] } as never;
+    const cases = [{ id: 'maya', ssn: '000123456', lastName: 'Testpayer' }] as unknown as TaxReturn[];
+    expect(placeableAfterNewCases([read], cases)).toEqual([{ read, returnId: 'maya' }]);
+    expect(placeableAfterNewCases([read], [])).toEqual([]);
+  });
+
   it('matches the last four kept from a masked TIN on a case with no full SSN', () => {
     const masked = [{ id: 'new', ssnLastFour: '7788', lastName: 'Rivera' }] as unknown as TaxReturn[];
     const int: PartyIdentity = { formType: '1099-INT', tinLastFour: '7788', name: { raw: '', confirmed: true, value: { first: 'Ana', last: 'Rivera' } } };
     expect(caseForIdentity(int, masked)?.id).toBe('new');
     expect(caseForIdentity({ ...int, tinLastFour: '1111' }, masked)).toBeNull();
+  });
+});
+
+describe("the year a form prints, read from the fixtures' text layers", () => {
+  it('reads the W-2s as 2026 forms, the 1099-Q as 2025, and the W-2c by box c', async () => {
+    const { readFile } = await import('../services/caseIntake');
+    expect((await readFile(pdf('w2-basic-single.pdf'))).taxYearPrinted).toBe('2026');
+    expect((await readFile(pdf('w2-indiana-local.pdf'))).taxYearPrinted).toBe('2026');
+    expect((await readFile(pdf('1099q-529.pdf'))).taxYearPrinted).toBe('2025');
+    expect((await readFile(pdf('w2c-wages.pdf'))).taxYearPrinted).toBe('2025');
   });
 });
 

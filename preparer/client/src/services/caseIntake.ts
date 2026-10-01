@@ -236,11 +236,25 @@ const digits = (s: string | undefined) => {
   return d.length === 9 ? d : undefined;
 };
 
-/** The case of this year for the person a form names, when exactly one fits. */
+/** The people on a case a form can be for: the taxpayer and spouse, and for a 1098-T or 1099-Q its dependents. */
+function peopleOnCase(c: TaxReturn, withDependents: boolean): Array<{ ssn?: string; lastFour?: string; last: string }> {
+  return [
+    { ssn: c.ssn, lastFour: c.ssnLastFour, last: c.lastName ?? '' },
+    { ssn: c.spouseSsn, lastFour: c.spouseSsnLastFour, last: c.spouseLastName ?? c.lastName ?? '' },
+    ...(withDependents ? (c.dependents ?? []).map((d) => ({ ssn: d.ssn, lastFour: d.ssnLastFour, last: d.lastName ?? '' })) : []),
+  ];
+}
+
+/**
+ * The case of this year for the person a form names, when exactly one fits:
+ * by a confirmed SSN, or the last four digits with the last name. A 1098-T
+ * student or 1099-Q recipient may be a dependent on the case.
+ */
 export function caseForIdentity(identity: PartyIdentity, cases: readonly TaxReturn[]): TaxReturn | null {
+  const people = (c: TaxReturn) => peopleOnCase(c, identity.placementOnly === true);
   const tin = identity.tin?.confirmed ? identity.tin.value : undefined;
   if (tin) {
-    const hit = cases.filter((c) => digits(c.ssn) === tin || digits(c.spouseSsn) === tin);
+    const hit = cases.filter((c) => people(c).some((p) => digits(p.ssn) === tin));
     return hit.length === 1 ? hit[0]! : null;
   }
   const lastFour = identity.tinLastFour;
@@ -249,12 +263,18 @@ export function caseForIdentity(identity: PartyIdentity, cases: readonly TaxRetu
     // The last four of a full SSN, or the confirmed last four kept from a masked one.
     const lastFourOf = (full: string | undefined, kept: string | undefined) =>
       digits(full)?.slice(5) ?? (kept && /^\d{4}$/.test(kept) ? kept : undefined);
-    const hit = cases.filter((c) =>
-      (lastFourOf(c.ssn, c.ssnLastFour) === lastFour && identityKeyText(c.lastName ?? '') === last)
-      || (lastFourOf(c.spouseSsn, c.spouseSsnLastFour) === lastFour && identityKeyText(c.spouseLastName ?? c.lastName ?? '') === last));
+    const hit = cases.filter((c) => people(c).some((p) => lastFourOf(p.ssn, p.lastFour) === lastFour && identityKeyText(p.last) === last));
     return hit.length === 1 ? hit[0]! : null;
   }
   return null;
+}
+
+/** Of the files a batch could not place, the ones a single case of `cases` now fits (after the batch's new cases). */
+export function placeableAfterNewCases(reads: readonly FileRead[], cases: readonly TaxReturn[]): Array<{ read: FileRead; returnId: string }> {
+  return reads.flatMap((read) => {
+    const targets = new Set(identitiesOf(read).map((id) => caseForIdentity(id, cases)?.id).filter((id): id is string => Boolean(id)));
+    return targets.size === 1 ? [{ read, returnId: [...targets][0]! }] : [];
+  });
 }
 
 /**
@@ -281,8 +301,9 @@ export async function ingestBatch(files: readonly File[], taxYear: number, hooks
   }
 
   // New clients: the people the unplaced files confirm, in households by confirmed address.
+  // A 1098-T student or 1099-Q recipient never starts a client of its own.
   const sources: Array<IdentitySource & { read: FileRead }> = unplacedReads.flatMap((read, n) =>
-    identitiesOf(read).map((identity, index) => ({ documentId: `batch-${n}`, fileName: read.file.name, index, identity, read })));
+    identitiesOf(read).flatMap((identity, index) => (identity.placementOnly ? [] : [{ documentId: `batch-${n}`, fileName: read.file.name, index, identity, read }])));
   const people = peopleOnDocuments(sources).filter((p) => p.tin || (p.tinLastFour && p.name) || (p.name && p.addresses.length > 0));
   const households: Array<{ people: typeof people; reads: Set<FileRead> }> = [];
   for (const person of people) {
@@ -318,7 +339,19 @@ export async function ingestBatch(files: readonly File[], taxYear: number, hooks
     finishCase(created.id, hooks);
     placed.push({ returnId: created.id, name: clientNameOf(getReturn(created.id)), created: true, files: names });
   }
-  return { placed, unmatched, failures };
+
+  // What is left — a 1099-Q or 1098-T for a client this batch started — fits a case now.
+  const yearCases = listReturns().filter((r) => r.taxYear === taxYear);
+  const late = placeableAfterNewCases(unmatched, yearCases);
+  for (const { read, returnId } of late) {
+    if (!(await placeRead(returnId, read, hooks, failures))) continue;
+    finishCase(returnId, hooks);
+    const entry = placed.find((p) => p.returnId === returnId);
+    if (entry) entry.files.push(read.file.name);
+    else placed.push({ returnId, name: clientNameOf(getReturn(returnId)), created: false, files: [read.file.name] });
+  }
+  const placedLate = new Set(late.map((l) => l.read));
+  return { placed, unmatched: unmatched.filter((r) => !placedLate.has(r)), failures };
 }
 
 /** Put a file the batch could not place on the case the preparer chose (no second reading). */

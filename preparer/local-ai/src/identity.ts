@@ -11,7 +11,8 @@
  * "City, ST 12345" line is kept as printed.
  *
  * The 1098-T student and the 1099-Q recipient can be a dependent, so those
- * forms never name the taxpayer.
+ * forms never name the taxpayer: their person is read only to place the form
+ * on its case (`placementOnly`) — the taxpayer, the spouse or a dependent.
  */
 
 import type { ClassifiableFormType } from './documentClassifier.js';
@@ -48,6 +49,8 @@ export interface PartyIdentity {
   name?: IdentityPart<PersonName | null>;
   /** The printed address; `value` is null when it is not a plain US address. */
   address?: IdentityPart<USAddress | null>;
+  /** The 1098-T student or 1099-Q recipient: places the form, never fills the taxpayer's identity. */
+  placementOnly?: boolean;
 }
 
 /** Schema keys of the person's TIN, name and address lines, by form. */
@@ -81,12 +84,18 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
 };
 
+/** Forms whose person may be a dependent: read to place the form only. */
+export const PLACEMENT_ONLY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> = {
+  '1099-Q': { tin: 'recipient.tin', name: 'recipient.name', address: ['recipient.street', 'recipient.city'] },
+  '1098-T': { tin: 'student.tin', name: 'student.name', address: ['student.street', 'student.apt', 'student.city', 'student.state', 'student.zip'] },
+};
+
 /** Name boxes printed in columns (first name and initial | last name | suffix). */
 export const NAME_COLUMN_KEYS: Partial<Record<ClassifiableFormType, string>> = { 'W-2': 'e' };
 
 /** Every schema key that holds a person's identity on some form. */
 export function isIdentityKey(formType: ClassifiableFormType, key: string): boolean {
-  const k = IDENTITY_KEYS[formType];
+  const k = IDENTITY_KEYS[formType] ?? PLACEMENT_ONLY_KEYS[formType];
   return Boolean(k && (k.tin === key || k.name === key || k.address.includes(key)));
 }
 
@@ -190,9 +199,10 @@ export function identityFromValues(
   /** The name box's lines are its printed columns, as the page's geometry showed them. */
   options: { nameColumns?: boolean } = {},
 ): PartyIdentity | null {
-  const keys = IDENTITY_KEYS[formType];
+  const placementOnly = !IDENTITY_KEYS[formType] && Boolean(PLACEMENT_ONLY_KEYS[formType]);
+  const keys = IDENTITY_KEYS[formType] ?? PLACEMENT_ONLY_KEYS[formType];
   if (!keys) return null;
-  const out: PartyIdentity = { formType };
+  const out: PartyIdentity = { formType, ...(placementOnly ? { placementOnly: true } : {}) };
   const tinText = values[keys.tin]?.trim();
   if (tinText) {
     const tin = parseTin(tinText);

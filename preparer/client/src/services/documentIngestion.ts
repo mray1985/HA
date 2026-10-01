@@ -138,6 +138,12 @@ export async function registerDroppedDocument(input: {
   return { document, duplicate: false, rejected: false };
 }
 
+/** The tax year a model reading saw printed (a W-2c's box c), as four digits. */
+function yearOfReading(r: { formType: string | null; taxYearPrinted?: string; args?: Record<string, unknown> }): string | null {
+  const text = r.formType === 'W-2C' ? String(r.args?.taxYearCorrected ?? '') : (r.taxYearPrinted ?? '');
+  return text.match(/20\d{2}/)?.[0] ?? null;
+}
+
 function classificationRecord(c: DocumentClassification): DocumentClassificationRecord {
   return {
     status: c.status,
@@ -320,10 +326,14 @@ export function applyExtractionToDocument(input: {
   const identities = pieces
     .filter((p) => classificationAllowsIncomeWrite(p.classification))
     .map((p) => p.extracted?.identity ?? null);
+  const taxYearsPrinted = pieces
+    .filter((p) => classificationAllowsIncomeWrite(p.classification))
+    .map((p) => p.extracted?.taxYearPrinted ?? null);
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
     ...(identities.some(Boolean) ? { identities } : {}),
+    ...(taxYearsPrinted.some(Boolean) ? { taxYearsPrinted } : {}),
     extractor,
     formTypes: formTypes.length > 0 ? formTypes : undefined,
     // Summary remains the first classified piece for existing UI consumers.
@@ -432,6 +442,7 @@ export function applyModelReadingsToDocument(input: {
     ...input.document,
     status: 'extracted',
     ...(kept.some((r) => r.identity) ? { identities: kept.map((r) => r.identity) } : {}),
+    ...(kept.some((r) => yearOfReading(r)) ? { taxYearsPrinted: kept.map((r) => yearOfReading(r)) } : {}),
     extractor: `${reader.id} + ${second.id}`,
     formTypes: kept.map((r) => r.formType).filter((t): t is NonNullable<typeof t> => Boolean(t)),
     classification: classificationRecord(kept[0]!.classification),

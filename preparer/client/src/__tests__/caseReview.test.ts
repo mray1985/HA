@@ -50,6 +50,16 @@ describe('buildCaseReview', () => {
     expect(review.status).toBe('needs_attention');
   });
 
+  it('warns of a form for another tax year, and says nothing when the year matches', () => {
+    const w2For = (year: string) => ({ ...doc('DOC-W2'), formTypes: ['W-2'], taxYearsPrinted: [year] });
+    const other = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [w2For('2025')] });
+    expect(other.items.find((i) => i.id === 'document:year:DOC-W2#0')).toMatchObject({ category: 'WARNING', group: 'documents' });
+    expect(other.items.find((i) => i.id === 'document:year:DOC-W2#0')!.message).toContain('is a 2025 W-2; this is the 2026 return');
+    expect(other.canApprove).toBe(false);
+    const same = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [w2For('2026')] });
+    expect(same.items.find((i) => i.id.startsWith('document:year:'))).toBeUndefined();
+  });
+
   it('asks for the education credit choice and flags unreadable documents', () => {
     const facts = factsOf('add_education_expense', { institutionName: 'Bayou State University', tuitionPaid: 8400 }, 'DOC-1098T');
     const review = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts, documents: [doc('DOC-1098T'), doc('SCAN-1', 'unclassified')] });

@@ -13,6 +13,7 @@ import {
   extractW2Fields,
   extract1099INTFields,
   extract1099DIVFields,
+  printedTaxYear,
   extract1099NECFields,
   extract1099RFields,
   extract1098Fields,
@@ -494,6 +495,21 @@ describe('extract1099NECFields with phrase-level blocks', () => {
 });
 
 // ── 1099-DIV Field Extraction ─────────────────────────
+
+describe('printedTaxYear', () => {
+  const body = Array.from({ length: 20 }, (_, i) => tb(`label ${i}`, 30, 100 + i * 10, 80, 7));
+  it("reads a W-2's year from its large type, not a revision date", () => {
+    expect(printedTaxYear([...body, tb('(Rev. 1-2026)', 300, 20, 40, 7), tb('2025', 400, 700, 60, 24)], 'W-2', {})).toBe('2025');
+  });
+  it("reads a 1099's \"For calendar year\" entry", () => {
+    expect(printedTaxYear([...body, tb('For calendar year', 300, 40, 60, 7), tb('2025', 365, 40, 20, 8)], '1099-INT', {})).toBe('2025');
+    expect(printedTaxYear([...body, tb('For calendar year 2024', 300, 40, 90, 7)], '1099-INT', {})).toBe('2024');
+  });
+  it("takes a W-2c's year from box c, and nothing when the page shows no year", () => {
+    expect(printedTaxYear(body, 'W-2C', { taxYearCorrected: 2025 })).toBe('2025');
+    expect(printedTaxYear(body, 'W-2', {})).toBeUndefined();
+  });
+});
 
 describe('extract1099DIVFields with phrase-level blocks', () => {
   function make1099DIVBlocks(): TextBlock[] {

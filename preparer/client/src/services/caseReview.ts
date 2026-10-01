@@ -172,6 +172,13 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
       items.push({ id: `document:unread:${doc.documentId}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
         message: `${doc.fileName} has not been read yet. Drop the file on the case again to read it.` });
     }
+    // A form for another tax year: its amounts belong on that year's return.
+    (doc.taxYearsPrinted ?? []).forEach((year, index) => {
+      if (!year || year === String(taxReturn.taxYear)) return;
+      const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
+      items.push({ id: `document:year:${doc.documentId}#${index}`, category: 'WARNING', group: 'documents', source: 'document', documentId: doc.documentId,
+        message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. Its amounts belong on the ${year} return — move it to that case, or record why it belongs here.` });
+    });
     (doc.appliedAs ?? []).forEach((outcome, index) => {
       if (outcome !== 'not_applied') return;
       const form = doc.formTypes?.[index] ?? doc.classifications?.[index]?.formType ?? 'form';
