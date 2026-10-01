@@ -8,7 +8,8 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import OfflineBanner from './components/common/OfflineBanner';
 import LockScreen from './components/common/LockScreen';
-import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './services/crypto';
+import { getActiveKey, isEncryptionSetup, isUnlocked, lock, setActiveKey, setupEncryption, unlock, verifyKey } from './services/crypto';
+import { rememberSessionKey, restoreSessionKey } from './services/sessionKey';
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
 import { preparerSeatActive, useAuthHydrated, useAuthStore } from './store/authStore';
@@ -32,6 +33,7 @@ export default function PreparerApp() {
     try {
       if (appState === 'lock-setup') {
         await setupEncryption(passphrase);
+        await rememberSessionKey(getActiveKey()!);
         await loadAllReturns();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
@@ -40,6 +42,8 @@ export default function PreparerApp() {
       }
       const ok = await unlock(passphrase);
       if (ok) {
+        // Kept for this browser session, so a reload does not ask again (services/sessionKey).
+        await rememberSessionKey(getActiveKey()!);
         await loadAllReturns();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
@@ -53,16 +57,26 @@ export default function PreparerApp() {
   };
 
   useEffect(() => {
-    if (isUnlocked()) {
-      loadAllReturns()
-        .then(() => useDeductionFinderStore.getState().loadDecrypted?.())
-        .then(() => useAuthStore.getState().loadDecrypted())
-        .then(() => setAppState('unlocked'));
-    } else if (isEncryptionSetup()) {
-      setAppState('lock-unlock');
-    } else {
-      setAppState('lock-setup');
-    }
+    let live = true;
+    void (async () => {
+      // A reload within an unlocked session: that session's key, checked against the vault.
+      if (!isUnlocked() && isEncryptionSetup()) {
+        const kept = await restoreSessionKey();
+        if (kept && (await verifyKey(kept))) setActiveKey(kept);
+      }
+      if (!live) return;
+      if (isUnlocked()) {
+        await loadAllReturns();
+        await useDeductionFinderStore.getState().loadDecrypted?.();
+        await useAuthStore.getState().loadDecrypted();
+        if (live) setAppState('unlocked');
+      } else if (isEncryptionSetup()) {
+        setAppState('lock-unlock');
+      } else {
+        setAppState('lock-setup');
+      }
+    })();
+    return () => { live = false; };
   }, []);
 
   useEffect(() => {

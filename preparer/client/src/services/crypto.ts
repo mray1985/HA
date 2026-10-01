@@ -44,6 +44,8 @@ export function isUnlocked(): boolean {
 
 export function lock(): void {
   activeKey = null;
+  // The session's kept key goes with it (services/sessionKey).
+  void import('./sessionKey').then((m) => m.forgetSessionKey());
 }
 
 // ─── Setup Detection ────────────────────────────────
@@ -113,6 +115,17 @@ export async function setupEncryption(passphrase: string): Promise<CryptoKey> {
 
   activeKey = key;
   return key;
+}
+
+/** True when `key` opens this vault (it decrypts the stored verify token). */
+export async function verifyKey(key: CryptoKey): Promise<boolean> {
+  const verifyEncrypted = localStorage.getItem(VERIFY_KEY);
+  if (!verifyEncrypted) return false;
+  try {
+    return (await decrypt(verifyEncrypted, key)) === VERIFY_PLAINTEXT;
+  } catch {
+    return false;
+  }
 }
 
 /**
