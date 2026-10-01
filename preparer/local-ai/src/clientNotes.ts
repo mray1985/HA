@@ -217,6 +217,24 @@ function onlyThisPersonBefore(firstName: string, lastName: string, sentence: str
   return !between.some((w) => people.has(w) && !own.has(w));
 }
 
+/**
+ * Whether this person is one of the names joined by "and" right before `at`:
+ * in "Noah Okafor (born …) and Lily Okafor (born …) lived with us all year"
+ * the verb is said of both. Between this person and `at` there may be only
+ * other names, "and", and parentheses ("Noah, who moved out, and Lily lived
+ * with us" says it of Lily alone).
+ */
+function listedBefore(firstName: string, sentence: string, at: number, people: Set<string>): boolean {
+  const before = sentence.slice(0, at);
+  const mentions = [...before.matchAll(new RegExp(`(?<![a-z])${escape(firstName.toLowerCase())}(?![a-z])`, 'g'))];
+  const last = mentions[mentions.length - 1];
+  if (!last) return false;
+  const between = before.slice(last.index! + firstName.length).replace(/\([^()]*\)/g, ' ');
+  if (/[^a-z\s,'-]/.test(between)) return false;
+  const words: string[] = between.match(/[a-z][a-z'-]+/g) ?? [];
+  return words.includes('and') && words.every((w) => w === 'and' || people.has(w));
+}
+
 /** The date the words say this person was born ("Noah Okafor (born April 12, 2016"), with no one else named in between. */
 function birthDateOf(firstName: string, lastName: string, sentence: string, people: Set<string>): string | undefined {
   for (const m of sentence.matchAll(/\bborn\b(?:\s+on)?\s+([^()]*?\b\d{4}\b)/g)) {
@@ -297,7 +315,7 @@ function checkDependent(item: Record<string, unknown>, sentence: string, words: 
     else dropped.push('dateOfBirth');
   }
   for (const m of sentence.matchAll(LIVED_ALL_YEAR)) {
-    if (onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) args.monthsLivedWithYou = 12;
+    if (onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people) || listedBefore(firstName, sentence, m.index!, people)) args.monthsLivedWithYou = 12;
   }
   const ssn = fromWords ? ssnOf(firstName, lastName, sentence, people) ?? '' : String(item.ssn ?? '').trim();
   if (ssn) {

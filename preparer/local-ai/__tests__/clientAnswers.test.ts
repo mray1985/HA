@@ -211,6 +211,23 @@ describe("reading the client's own words", () => {
     expect(readAnswerFromWords(hsa, words)).toBe(want);
   });
 
+  it('reads a quote of several sentences from the one about the question', () => {
+    // The stress run: the model quoted the whole reply, and "not insolvent" read as "no".
+    const reply = "I'm single, no dependents, Ohio resident. The HSA distribution paid doctor bills. The credit card debt was cancelled and I was not insolvent.";
+    const hsa = ask('yes_no', {
+      subjectWords: ['buckeye', 'hsa', '1099-sa'],
+      target: { kind: 'form', tool: 'add_1099_sa', formKey: 'DOC-SA#0', field: 'usedForQualifiedMedicalExpenses' },
+    });
+    const filing = ask('filing_status', { id: 'filing-status' });
+    expect(confirmClientAnswer(hsa, reply, { answer: 'yes', quote: reply }, { others: [hsa, filing] }))
+      .toMatchObject({ status: 'answered', value: true, sentence: 'the hsa distribution paid doctor bills' });
+    expect(confirmClientAnswer(filing, reply, { answer: 'single', quote: reply }, { others: [hsa, filing] }))
+      .toMatchObject({ status: 'answered', value: 'single' });
+    // Two sentences about it that disagree: the whole quote is read, and it is not plain.
+    const both = 'The HSA paid doctor bills. The HSA did not pay for anything medical.';
+    expect(confirmClientAnswer(hsa, both, { answer: 'yes', quote: both }, { others: [hsa] })).toMatchObject({ status: 'unclear' });
+  });
+
   it('reads a statement of medical use only for the 1099-SA question', () => {
     expect(readAnswerFromWords(ask('yes_no'), 'The HSA distribution paid doctor bills.')).toBeNull();
   });

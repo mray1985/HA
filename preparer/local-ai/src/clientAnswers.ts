@@ -429,6 +429,23 @@ function subjectProblem(q: ClientQuestion, reply: string, sentence: string, othe
 }
 
 /**
+ * A quote of several sentences is read from the one sentence in it that
+ * answers: of the sentences stating an answer of this kind, the one naming the
+ * question's subject (or the only one, for a question without a subject).
+ * Otherwise a word from another sentence decides — "The HSA distribution paid
+ * doctor bills. … I was not insolvent." would read as "no". When that is not
+ * one sentence, the whole quote is read, as before.
+ */
+function answeringSentence(q: ClientQuestion, span: string): string {
+  const parts = sentencesOf(span).map((s) => span.slice(s.start, s.end).trim()).filter(Boolean);
+  if (parts.length < 2) return span;
+  const own = subjectWordsOf(q);
+  const stating = parts.filter((p) => readAnswerFromWords(q, p) !== null);
+  const about = own.length > 0 ? stating.filter((p) => names(own, p)) : stating;
+  return about.length === 1 ? about[0]! : span;
+}
+
+/**
  * Record a value only when the model's grammar-constrained answer and the
  * client's own words agree. A reply naming other people the open questions
  * are about must name this question's person in the words that answer it.
@@ -462,6 +479,7 @@ export function confirmClientAnswer(q: ClientQuestion, reply: string, modelOutpu
     if (stating.length === 1) sentence = stating[0]!;
   }
   if (!sentence) return { status: 'unclear', reason: 'the words the model quoted are not in the reply', quote };
+  sentence = answeringSentence(q, sentence);
 
   const problem = subjectProblem(q, reply, sentence, others);
   if (problem) return { status: 'unclear', reason: problem, quote };
