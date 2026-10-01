@@ -1,11 +1,13 @@
 // Checks the client build the installer packages (../client/dist): it must
-// exist and must have been built with the Syncfusion license key, or every
-// page using Syncfusion shows its license banner.
+// exist, must have been built with the Syncfusion license key (or every page
+// using Syncfusion shows its license banner), and its stylesheets and pages
+// must not load anything from another host (the Privacy Policy says nothing
+// leaves the computer; Syncfusion's themes import Google Fonts).
 //
 // Usage: node scripts/check-client.mjs [--warn]
 //   --warn reports a problem without failing (npm run pack, for local testing).
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const warnOnly = process.argv.includes('--warn');
@@ -38,4 +40,22 @@ if (info.syncfusionLicensed !== true) {
   );
 }
 
-console.log(`client build ${info.builtAt}: Syncfusion license key present.`);
+/** Stylesheets and pages that load from another host: a remote @import, or a <link> to one. */
+function remoteLoads(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...remoteLoads(path));
+    else if (/\.(css|html)$/.test(entry.name)) {
+      const text = readFileSync(path, 'utf8');
+      if (/@import\s+(url\()?\s*["']?(https?:)?\/\//i.test(text) || /<link[^>]+href=["']https?:\/\//i.test(text)) found.push(path);
+    }
+  }
+  return found;
+}
+const remote = remoteLoads(dist);
+if (remote.length > 0) {
+  problem(`the client build loads stylesheets from another host (${remote.join(', ')}); the app must not reach the internet. See client/postcss.config.js.`);
+}
+
+console.log(`client build ${info.builtAt}: Syncfusion license key present; nothing loaded from another host.`);
