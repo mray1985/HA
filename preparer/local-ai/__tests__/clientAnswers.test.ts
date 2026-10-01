@@ -194,6 +194,23 @@ describe("reading the client's own words", () => {
     expect(readAnswerFromWords(ask('yes_no'), words)).toBe(want);
   });
 
+  it.each([
+    ['The HSA distribution paid doctor bills.', true],
+    ['We used the HSA money for prescriptions and dental work', true],
+    ['It went to my surgery copays.', true],
+    ['It paid some doctor bills and a vacation', null],
+    ['Not for medical stuff, we used it for rent.', false],
+    ['I think it paid doctor bills', null],
+    ['We used it for a vacation.', null],
+  ])('the 1099-SA medical-use question: %j → %s', (words, want) => {
+    const hsa = ask('yes_no', { target: { kind: 'form', tool: 'add_1099_sa', formKey: 'DOC-SA#0', field: 'usedForQualifiedMedicalExpenses' } });
+    expect(readAnswerFromWords(hsa, words)).toBe(want);
+  });
+
+  it('reads a statement of medical use only for the 1099-SA question', () => {
+    expect(readAnswerFromWords(ask('yes_no'), 'The HSA distribution paid doctor bills.')).toBeNull();
+  });
+
   it('filing status: only a stated status', () => {
     expect(readAnswerFromWords(ask('filing_status'), "We'll file jointly again.")).toBe('married_filing_jointly');
     expect(readAnswerFromWords(ask('filing_status'), 'Whatever saves us the most.')).toBeNull();
