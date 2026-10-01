@@ -1,5 +1,6 @@
 /**
- * California State Tax Constants — Tax Year 2025
+ * California State Tax Constants — Tax Years 2025 and 2026
+ * (2026: the amounts the FTB has published so far; see the end of this file)
  *
  * Sources:
  *   - CA Revenue & Taxation Code §17041 — California income tax rates
@@ -195,3 +196,144 @@ export const CA_DEPENDENT_PARENT_CREDIT = 475;
 // Rate: 1.1% (2025) on all wages (no wage cap as of 2024+).
 // Included here for reference/informational purposes only.
 export const CA_SDI_RATE = 0.011;
+
+// ─── CalEITC / YCTC earned income limit (2025) ──────────────────
+// Source: FTB, "California Earned Income Tax Credit" and "Young Child Tax Credit"
+// (tax year 2025: earned income of $32,900 or less). Used to bound a year whose
+// tables are not published yet.
+export const CA_EITC_EARNED_INCOME_LIMIT_2025 = 32900;
+
+// ═══ Tax Year 2026 ═══════════════════════════════════════════════
+// Source: FTB Tax News, October 2026, "2026 Indexing": the CCPI change from
+// June 2025 to June 2026 is 3.4%; standard deduction, personal, senior and
+// dependent exemption credits, renter's credit AGI limits and the rate
+// schedules X, Y and Z. (Schedule Y's fifth row prints "the amount over
+// 118,966"; the row starts at $118,996, twice Schedule X's $59,498, and its
+// base tax $4,109.92 is figured from $118,996.)
+// The FTB publishes the other 2026 amounts in late December: the AGI threshold
+// of the exemption credit phase-out and itemized deduction limitation,
+// CalEITC, YCTC, and the senior head of household and dependent parent credits.
+// Until then they are left out, and a return they can affect is held
+// (engine/state/ca.ts `californiaUnpublished`).
+
+export const CA_CCPI_CHANGE_2026 = 0.034;
+
+export const CA_BRACKETS_2026: Record<string, StateTaxBracket[]> = {
+  single: [
+    { min: 0,       max: 11456,   rate: 0.01 },
+    { min: 11456,   max: 27157,   rate: 0.02 },
+    { min: 27157,   max: 42861,   rate: 0.04 },
+    { min: 42861,   max: 59498,   rate: 0.06 },
+    { min: 59498,   max: 75197,   rate: 0.08 },
+    { min: 75197,   max: 384109,  rate: 0.093 },
+    { min: 384109,  max: 460927,  rate: 0.103 },
+    { min: 460927,  max: 768213,  rate: 0.113 },
+    { min: 768213,  max: Infinity, rate: 0.123 },
+  ],
+  married_joint: [
+    { min: 0,       max: 22912,   rate: 0.01 },
+    { min: 22912,   max: 54314,   rate: 0.02 },
+    { min: 54314,   max: 85722,   rate: 0.04 },
+    { min: 85722,   max: 118996,  rate: 0.06 },
+    { min: 118996,  max: 150394,  rate: 0.08 },
+    { min: 150394,  max: 768218,  rate: 0.093 },
+    { min: 768218,  max: 921854,  rate: 0.103 },
+    { min: 921854,  max: 1536426, rate: 0.113 },
+    { min: 1536426, max: Infinity, rate: 0.123 },
+  ],
+  married_separate: [
+    { min: 0,       max: 11456,   rate: 0.01 },
+    { min: 11456,   max: 27157,   rate: 0.02 },
+    { min: 27157,   max: 42861,   rate: 0.04 },
+    { min: 42861,   max: 59498,   rate: 0.06 },
+    { min: 59498,   max: 75197,   rate: 0.08 },
+    { min: 75197,   max: 384109,  rate: 0.093 },
+    { min: 384109,  max: 460927,  rate: 0.103 },
+    { min: 460927,  max: 768213,  rate: 0.113 },
+    { min: 768213,  max: Infinity, rate: 0.123 },
+  ],
+  head_of_household: [
+    { min: 0,       max: 22927,   rate: 0.01 },
+    { min: 22927,   max: 54316,   rate: 0.02 },
+    { min: 54316,   max: 70018,   rate: 0.04 },
+    { min: 70018,   max: 86654,   rate: 0.06 },
+    { min: 86654,   max: 102356,  rate: 0.08 },
+    { min: 102356,  max: 522385,  rate: 0.093 },
+    { min: 522385,  max: 626864,  rate: 0.103 },
+    { min: 626864,  max: 1044771, rate: 0.113 },
+    { min: 1044771, max: Infinity, rate: 0.123 },
+  ],
+};
+
+export const CA_STANDARD_DEDUCTION_2026: Record<string, number> = {
+  single: 5900,
+  married_joint: 11800,
+  married_separate: 5900,
+  head_of_household: 11800,
+};
+
+export const CA_PERSONAL_EXEMPTION_CREDIT_2026: Record<string, number> = {
+  single: 158,
+  married_joint: 316,        // $158 per spouse
+  married_separate: 158,
+  head_of_household: 158,
+};
+
+export const CA_DEPENDENT_EXEMPTION_CREDIT_2026 = 491;
+
+// Renter's credit: $60 / $120 (R&TC §17053.5); the AGI limits are indexed.
+export const CA_RENTERS_CREDIT_2026: Record<string, { credit: number; agiLimit: number }> = {
+  single: { credit: 60, agiLimit: 55830 },
+  married_joint: { credit: 120, agiLimit: 111660 },
+  married_separate: { credit: 60, agiLimit: 55830 },
+  head_of_household: { credit: 120, agiLimit: 111660 },
+};
+
+// ─── Per-year tables ─────────────────────────────────────────────
+
+/** The amounts the calculator uses for a tax year. One the FTB has not published for the year is undefined. */
+export interface CaliforniaYearTables {
+  taxYear: number;
+  brackets: Record<string, StateTaxBracket[]>;
+  standardDeduction: Record<string, number>;
+  personalExemptionCredit: Record<string, number>;
+  dependentExemptionCredit: number;
+  rentersCredit: Record<string, { credit: number; agiLimit: number }>;
+  /** The CCPI change the year's amounts were recomputed by (R&TC §17041(h)). */
+  ccpiChange?: number;
+  /** AGI threshold of the exemption credit phase-out and the itemized deduction limitation. */
+  agiLimitationThreshold?: Record<string, number>;
+  calEitc?: { table: Record<number, CalEITCEntry>; investmentIncomeLimit: number };
+  yctc?: { amountPerChild: number; phaseOutStart: Record<string, number>; phaseOutRate: number };
+  seniorHoH?: { credit: number; agiLimit: number };
+  dependentParentCredit?: number;
+}
+
+const CA_TABLES_2025: CaliforniaYearTables = {
+  taxYear: 2025,
+  brackets: CA_BRACKETS,
+  standardDeduction: CA_STANDARD_DEDUCTION,
+  personalExemptionCredit: CA_PERSONAL_EXEMPTION_CREDIT,
+  dependentExemptionCredit: CA_DEPENDENT_EXEMPTION_CREDIT,
+  rentersCredit: CA_RENTERS_CREDIT,
+  agiLimitationThreshold: CA_ITEMIZED_DEDUCTION_LIMITATION_THRESHOLD,
+  calEitc: { table: CA_EITC_TABLE, investmentIncomeLimit: CA_EITC_INVESTMENT_INCOME_LIMIT },
+  yctc: { amountPerChild: CA_YCTC_AMOUNT_PER_CHILD, phaseOutStart: CA_YCTC_PHASE_OUT_START, phaseOutRate: CA_YCTC_PHASE_OUT_RATE },
+  seniorHoH: { credit: CA_SENIOR_HOH_CREDIT, agiLimit: CA_SENIOR_HOH_AGI_LIMIT },
+  dependentParentCredit: CA_DEPENDENT_PARENT_CREDIT,
+};
+
+const CA_TABLES_2026: CaliforniaYearTables = {
+  taxYear: 2026,
+  brackets: CA_BRACKETS_2026,
+  standardDeduction: CA_STANDARD_DEDUCTION_2026,
+  personalExemptionCredit: CA_PERSONAL_EXEMPTION_CREDIT_2026,
+  dependentExemptionCredit: CA_DEPENDENT_EXEMPTION_CREDIT_2026,
+  rentersCredit: CA_RENTERS_CREDIT_2026,
+  ccpiChange: CA_CCPI_CHANGE_2026,
+};
+
+/** The year's tables, or undefined for a year HATax has no California amounts for. */
+export function californiaTables(taxYear: number): CaliforniaYearTables | undefined {
+  return taxYear === 2025 ? CA_TABLES_2025 : taxYear === 2026 ? CA_TABLES_2026 : undefined;
+}

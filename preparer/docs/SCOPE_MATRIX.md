@@ -254,7 +254,7 @@ All 43 income-tax states + DC have declarative field mapping templates in `share
 |---|---|
 | E-filing (MeF XML) | Requires IRS Transmitter Control Code (TCC) approval and strict XML schema compliance. **Explicitly marked out of scope** for this project (not just deferred). |
 | Amended returns (Form 1040-X) | Requires diff logic against a previously filed return. Deferred until core filing flow is stable. |
-| Multi-year support | Federal constants and flat-tax state tables are checked in for 2024, 2025, and 2026. Progressive and custom state bracket tables are checked in for 2025 only; other years are unavailable rather than filled with another year's brackets. |
+| Multi-year support | Federal constants and flat-tax state tables are checked in for 2024, 2025, and 2026. Progressive and custom state bracket tables are checked in for 2025 only (California: 2025 and 2026); other years are unavailable rather than filled with another year's brackets. |
 | IP PIN support | Identity Protection PIN is a transmittal-layer concern, not a calculation concern. Relevant only if e-filing is added. |
 
 ---
@@ -295,6 +295,8 @@ These are edge cases within otherwise comprehensive modules:
 
 | Feature | Limitation |
 |---|---|
+| Tax year 2026 | The amounts the FTB published in Tax News, October 2026 ("2026 Indexing"): rate schedules X, Y and Z, standard deduction, personal, senior and dependent exemption credits, renter's credit AGI limits. The rest is published in late December; until then the return is held (CA.YEAR.UNPUBLISHED) where it can matter: AGI over the 2025 threshold of the exemption credit phase-out and itemized deduction limitation; earned income within the 2025 CalEITC/YCTC limit ($32,900) recomputed by the 3.4% CCPI change; a dependent under 6 (YCTC, no earned income needed); the senior head of household and dependent parent credits |
+| Charitable floor | California itemized deductions take charitable contributions without the federal 2026 0.5%-of-AGI floor (IRC §170(b)(1)(I), enacted after California's January 1, 2025 specified date, R&TC §17024.5) |
 | Foster Youth Tax Credit (FYTC) | Not implemented |
 | Joint Custody Head of Household Credit | Not implemented |
 | Pass-Through Entity Tax (AB 2220) | Not implemented; requires entity-level election and K-1 PET credit data |

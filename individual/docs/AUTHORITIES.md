@@ -777,6 +777,7 @@ This document provides a comprehensive reference of the legal authorities (IRC s
 - Schedule K-1 box 8 and box 9a capital gain or loss are Schedule D lines 5 and 12 (Schedule D instructions), netted and limited with the other sales
 - Schedule K-1 box 9b (1120-S 8b, 1041 4b) is 28% Rate Gain Worksheet line 4; box 9c (8c, 4c) is Unrecaptured Section 1250 Gain Worksheet line 5 (partnership, S corporation) or line 11 (estate, trust) — Schedule D instructions
 - California depreciation (engine/state/ca.ts `caDepreciationAdjustment`): FTB 3885A instructions (2025) — no IRC §168(k); IRC §179 $25,000, reduced over $200,000; California basis reduced by the California §179
+- California 2026 (constants/states/ca.ts `californiaTables`): FTB Tax News, October 2026, "2026 Indexing" (CCPI 3.4%; rate schedules; standard deduction $5,900/$11,800; exemption credits $158/$316, dependent $491; renter's credit AGI $55,830/$111,660). Holds for amounts not yet published (engine/state/ca.ts `californiaUnpublished`): R&TC §17041(h), §17052(c)(4) (CalEITC amounts recomputed by the CCPI change), FTB CalEITC and YCTC pages (2025 limit $32,900; YCTC with no earned income from 2022). R&TC §17024.5 (specified date January 1, 2025): the federal 0.5% charitable floor is not California's
 - Does not handle related-party sale rules under IRC 1239
 
 ---

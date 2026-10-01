@@ -1,5 +1,7 @@
 /**
- * California State Tax Calculator — Tax Year 2025
+ * California State Tax Calculator — Tax Years 2025 and 2026 (per-year tables in
+ * constants/states/ca.ts; a 2026 amount the FTB has not published is held, see
+ * `californiaUnpublished`)
  *
  * Calculates:
  *   1. CA income tax (9 progressive brackets)
@@ -24,19 +26,14 @@ import {
   StateReturnConfig, FilingStatus, CalculationTrace,
 } from '../../types/index.js';
 import {
-  CA_BRACKETS, CA_STANDARD_DEDUCTION,
-  CA_PERSONAL_EXEMPTION_CREDIT, CA_DEPENDENT_EXEMPTION_CREDIT,
   CA_MHST_THRESHOLD, CA_MHST_RATE,
-  CA_EITC_TABLE, CA_EITC_INVESTMENT_INCOME_LIMIT,
-  CA_YCTC_AMOUNT_PER_CHILD, CA_YCTC_PHASE_OUT_START, CA_YCTC_PHASE_OUT_RATE,
   CA_MORTGAGE_LIMIT, CA_SECTION_179_LIMIT, CA_SECTION_179_THRESHOLD,
-  CA_RENTERS_CREDIT,
   CA_DEPENDENT_CARE_TABLE, CA_DEPENDENT_CARE_EXPENSE_LIMIT_1, CA_DEPENDENT_CARE_EXPENSE_LIMIT_2,
-  CA_SENIOR_HOH_CREDIT, CA_SENIOR_HOH_CREDIT_RATE, CA_SENIOR_HOH_AGI_LIMIT, CA_SENIOR_HOH_MIN_AGE,
-  CA_DEPENDENT_PARENT_CREDIT,
-  CA_ITEMIZED_DEDUCTION_LIMITATION_THRESHOLD,
+  CA_SENIOR_HOH_CREDIT_RATE, CA_SENIOR_HOH_MIN_AGE,
   CA_ITEMIZED_LIMITATION_RATE, CA_ITEMIZED_LIMITATION_MAX_REDUCTION,
   CA_EXEMPTION_PHASEOUT_REDUCTION_PER_STEP, CA_EXEMPTION_PHASEOUT_STEP,
+  CA_EITC_EARNED_INCOME_LIMIT_2025,
+  californiaTables, type CaliforniaYearTables,
 } from '../../constants/states/ca.js';
 import { parseDateString } from '../utils.js';
 import { STATE_FORM_REFS, StateFormLineRefs } from '../../constants/states/stateFormRefs.js';
@@ -136,13 +133,16 @@ export function caDepreciationAdjustment(taxReturn: TaxReturn, federalResult: Ca
  * - CA state income tax is NOT deductible on CA return
  * - CA SDI is NOT deductible on CA return
  * - Mortgage interest: CA uses $1M limit (pre-TCJA), not federal $750K
- * - Medical, charitable: CA conforms to federal rules
+ * - Medical, charitable: CA conforms to federal rules, except the 2026 federal
+ *   0.5%-of-AGI charitable floor (IRC §170(b)(1)(I), P.L. 119-21, enacted after
+ *   California's specified date of January 1, 2025 — R&TC §17024.5)
  */
 function calculateCAItemizedDeductions(
   taxReturn: TaxReturn,
   federalResult: CalculationResult,
   filingKey: string,
   caAGI: number,
+  threshold: number | undefined,
 ): number {
   const itemized = taxReturn.itemizedDeductions;
   if (!itemized) return 0;
@@ -181,8 +181,8 @@ function calculateCAItemizedDeductions(
   }
   const mortgageInsurance = itemized.mortgageInsurancePremiums || 0;
 
-  // Charitable: CA conforms — reuse federal calculation
-  const charitable = Math.max(0, sa.charitableDeduction);
+  // Charitable: CA conforms — reuse federal calculation, without the federal 0.5% floor
+  const charitable = Math.max(0, sa.charitableDeduction) + Math.max(0, sa.charitableFloorReduction ?? 0);
 
   // Other deductions: pass through
   const otherDeductions = Math.max(0, sa.otherDeduction);
@@ -199,8 +199,8 @@ function calculateCAItemizedDeductions(
   // ── CA Itemized Deduction Limitation (Pease-style phase-out) ──
   // Medical expenses are exempt from the limitation.
   // All other categories are subject to reduction.
-  const threshold = CA_ITEMIZED_DEDUCTION_LIMITATION_THRESHOLD[filingKey] || 252203;
-  if (caAGI <= threshold) return totalBeforeLimitation;
+  // A year whose threshold is not published: held when AGI is over last year's (californiaUnpublished).
+  if (threshold === undefined || caAGI <= threshold) return totalBeforeLimitation;
 
   const subjectAmount = round2(totalBeforeLimitation - medical);
   if (subjectAmount <= 0) return totalBeforeLimitation;
@@ -227,13 +227,15 @@ function calculatePersonalExemptionCredits(
   filingKey: string,
   numDependents: number,
   federalAGI: number,
+  t: CaliforniaYearTables,
 ): number {
-  const personalCredit = CA_PERSONAL_EXEMPTION_CREDIT[filingKey] || 153;
-  const dependentCredit = numDependents * CA_DEPENDENT_EXEMPTION_CREDIT;
+  const personalCredit = t.personalExemptionCredit[filingKey] ?? t.personalExemptionCredit.single!;
+  const dependentCredit = numDependents * t.dependentExemptionCredit;
 
-  // Phase-out: same AGI thresholds as itemized deduction limitation
-  const threshold = CA_ITEMIZED_DEDUCTION_LIMITATION_THRESHOLD[filingKey] || 252203;
-  if (federalAGI <= threshold) return personalCredit + dependentCredit;
+  // Phase-out: same AGI thresholds as itemized deduction limitation. A year whose
+  // threshold is not published is held when AGI is over last year's (californiaUnpublished).
+  const threshold = t.agiLimitationThreshold?.[filingKey];
+  if (threshold === undefined || federalAGI <= threshold) return personalCredit + dependentCredit;
 
   const excess = federalAGI - threshold;
   const step = CA_EXEMPTION_PHASEOUT_STEP[filingKey] || 2500;
@@ -263,13 +265,16 @@ function calculateCalEITCFull(
   earnedIncome: number,
   investmentIncome: number,
   qualifyingChildren: number,
+  eitc: CaliforniaYearTables['calEitc'],
 ): number {
+  // A year whose table is not published: held (californiaUnpublished).
+  if (!eitc) return 0;
   // Investment income disqualification
-  if (investmentIncome > CA_EITC_INVESTMENT_INCOME_LIMIT) return 0;
+  if (investmentIncome > eitc.investmentIncomeLimit) return 0;
   if (earnedIncome <= 0) return 0;
 
   const childKey = Math.min(qualifyingChildren, 3); // 3+ uses same table
-  const table = CA_EITC_TABLE[childKey];
+  const table = eitc.table[childKey];
   if (!table || earnedIncome > table.earnedIncomeLimit) return 0;
 
   // Phase-in: credit increases as income rises
@@ -304,7 +309,10 @@ function calculateYCTC(
   earnedIncome: number,
   calEITCAmount: number,
   filingKey: string,
+  yctc: CaliforniaYearTables['yctc'],
 ): number {
+  // A year whose amounts are not published: held (californiaUnpublished).
+  if (!yctc) return 0;
   // YCTC requires CalEITC eligibility
   if (calEITCAmount <= 0) return 0;
 
@@ -322,14 +330,14 @@ function calculateYCTC(
 
   if (childrenUnder6 === 0) return 0;
 
-  const maxCredit = childrenUnder6 * CA_YCTC_AMOUNT_PER_CHILD;
-  const phaseOutStart = CA_YCTC_PHASE_OUT_START[filingKey] || 27425;
+  const maxCredit = childrenUnder6 * yctc.amountPerChild;
+  const phaseOutStart = yctc.phaseOutStart[filingKey] ?? yctc.phaseOutStart.single!;
 
   if (earnedIncome <= phaseOutStart) return maxCredit;
 
   // Phase-out: reduction per $100 of earned income over threshold
   const excessIncome = earnedIncome - phaseOutStart;
-  const reduction = round2(Math.floor(excessIncome / 100) * (CA_YCTC_PHASE_OUT_RATE * 100));
+  const reduction = round2(Math.floor(excessIncome / 100) * (yctc.phaseOutRate * 100));
   return Math.max(0, round2(maxCredit - reduction));
 }
 
@@ -341,9 +349,10 @@ function calculateRentersCredit(
   caAGI: number,
   filingKey: string,
   isRenter: boolean,
+  rentersCredit: CaliforniaYearTables['rentersCredit'],
 ): number {
   if (!isRenter) return 0;
-  const entry = CA_RENTERS_CREDIT[filingKey];
+  const entry = rentersCredit[filingKey];
   if (!entry || caAGI > entry.agiLimit) return 0;
   return entry.credit;
 }
@@ -393,9 +402,12 @@ function calculateSeniorHoHCredit(
   caAGI: number,
   filingKey: string,
   taxableIncome: number,
+  senior: CaliforniaYearTables['seniorHoH'],
 ): number {
+  // A year whose amounts are not published: held (californiaUnpublished).
+  if (!senior) return 0;
   if (filingKey !== 'head_of_household') return 0;
-  if (caAGI > CA_SENIOR_HOH_AGI_LIMIT) return 0;
+  if (caAGI > senior.agiLimit) return 0;
   if (!taxReturn.dateOfBirth) return 0;
 
   const dob = parseDateString(taxReturn.dateOfBirth);
@@ -406,7 +418,7 @@ function calculateSeniorHoHCredit(
   const ageAtYearEnd = (taxReturn.taxYear || 2025) - dob.year;
   if (ageAtYearEnd < CA_SENIOR_HOH_MIN_AGE) return 0;
 
-  return Math.min(round2(taxableIncome * CA_SENIOR_HOH_CREDIT_RATE), CA_SENIOR_HOH_CREDIT);
+  return Math.min(round2(taxableIncome * CA_SENIOR_HOH_CREDIT_RATE), senior.credit);
 }
 
 /**
@@ -416,12 +428,14 @@ function calculateSeniorHoHCredit(
  * Source: FTB Form 540 Instructions, p.15
  * Nonrefundable.
  */
-function calculateDependentParentCredit(taxReturn: TaxReturn, filingKey: string): number {
+function calculateDependentParentCredit(taxReturn: TaxReturn, filingKey: string, amount: number | undefined): number {
+  // A year whose amount is not published: held (californiaUnpublished).
+  if (amount === undefined) return 0;
   if (filingKey !== 'married_separate') return 0;
   const parentDeps = (taxReturn.dependents || []).filter(
     d => d.relationship === 'parent'
   );
-  return parentDeps.length * CA_DEPENDENT_PARENT_CREDIT;
+  return parentDeps.length * amount;
 }
 
 /**
@@ -431,6 +445,79 @@ function calculateDependentParentCredit(taxReturn: TaxReturn, filingKey: string)
 function calculateMHST(taxableIncome: number): number {
   if (taxableIncome <= CA_MHST_THRESHOLD) return 0;
   return round2((taxableIncome - CA_MHST_THRESHOLD) * CA_MHST_RATE);
+}
+
+/** Earned income for CalEITC and YCTC: wages plus 92.35% of a Schedule C profit. */
+function caEarnedIncome(taxReturn: TaxReturn, federalResult: CalculationResult): number {
+  const profit = federalResult.form1040.scheduleCNetProfit;
+  return (taxReturn.w2Income || []).reduce((sum, w) => sum + (w.wages || 0), 0)
+    + (profit > 0 ? round2(profit * 0.9235) : 0);
+}
+
+/**
+ * What a year's unpublished California amounts leave unsettled on this return
+ * (2026: the FTB publishes them in late December). Each is held, never zero:
+ * - the AGI threshold of the exemption credit phase-out and the itemized
+ *   deduction limitation (R&TC §17054.1, §17077), when AGI is over last year's
+ *   — the threshold is recomputed by the year's CCPI change (3.4% for 2026), so
+ *   AGI at or under last year's is under this year's too;
+ * - CalEITC and YCTC, when earned income is within last year's limit ($32,900,
+ *   FTB) recomputed by the CCPI change (R&TC §17052(c)(4)(A)), rounded up to
+ *   the next $100; YCTC needs no earned income (FTB, tax year 2022 forward);
+ * - the senior head of household credit, when the calculator would allow it
+ *   but for the amounts (AGI within last year's limit recomputed the same way);
+ * - the dependent parent credit, for a separate return with a parent dependent.
+ */
+export function californiaUnpublished(taxReturn: TaxReturn, calculation: CalculationResult | null | undefined): string[] {
+  const year = taxReturn.taxYear || 2025;
+  const t = californiaTables(year);
+  const prior = californiaTables(year - 1);
+  const result = calculation?.stateResults?.find((r) => r.stateCode === 'CA');
+  if (!t || !prior || !calculation || !result || result.additionalLines?.unavailable === 1) return [];
+  const growth = 1 + (t.ccpiChange ?? 0);
+  const upTo100 = (n: number) => Math.ceil(n / 100) * 100;
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const filingKey = getStateFilingKey(taxReturn.filingStatus);
+  const federalAGI = calculation.form1040.agi;
+  const caAGI = (result.additionalLines?.fullYearCAGI as number | undefined) ?? result.stateAGI;
+  const out: string[] = [];
+
+  const threshold = prior.agiLimitationThreshold?.[filingKey];
+  if (!t.agiLimitationThreshold && threshold !== undefined) {
+    const over = [
+      federalAGI > threshold ? `federal AGI (${money(federalAGI)}) for the exemption credit phase-out` : '',
+      taxReturn.deductionMethod === 'itemized' && caAGI > threshold ? `California AGI (${money(caAGI)}) for the itemized deduction limitation` : '',
+    ].filter(Boolean);
+    if (over.length > 0) {
+      out.push(`California's ${year} AGI threshold for the exemption credit phase-out and the itemized deduction limitation is not published yet (the FTB publishes it in late December). This return's ${over.join(' and ')} is over the ${year - 1} threshold (${money(threshold)}), so the phase-out may apply.`);
+    }
+  }
+
+  const earnedLimit = upTo100(CA_EITC_EARNED_INCOME_LIMIT_2025 * growth);
+  const earned = caEarnedIncome(taxReturn, calculation);
+  if (!t.calEitc && prior.calEitc && earned > 0 && earned <= earnedLimit) {
+    out.push(`CalEITC: the ${year} credit table is not published yet. Earned income of ${money(earned)} is within reach of the credit (the ${year - 1} limit, ${money(CA_EITC_EARNED_INCOME_LIMIT_2025)}, recomputed by the ${year} CCPI change).`);
+  }
+  const youngChild = (taxReturn.dependents || []).some((d) => {
+    const dob = d.dateOfBirth ? parseDateString(d.dateOfBirth) : null;
+    return !dob || year - dob.year < 6;
+  });
+  if (!t.yctc && prior.yctc && youngChild && earned <= earnedLimit) {
+    out.push(`Young Child Tax Credit: the ${year} amounts are not published yet, and the return has a dependent under 6 (or one without a date of birth) with earned income within reach of the credit.`);
+  }
+
+  if (!t.seniorHoH && prior.seniorHoH && filingKey === 'head_of_household' && caAGI <= upTo100(prior.seniorHoH.agiLimit * growth)) {
+    const dob = taxReturn.dateOfBirth ? parseDateString(taxReturn.dateOfBirth) : null;
+    if (dob && year - dob.year >= CA_SENIOR_HOH_MIN_AGE) {
+      out.push(`Senior head of household credit: the ${year} credit and AGI limit are not published yet.`);
+    }
+  }
+
+  if (t.dependentParentCredit === undefined && prior.dependentParentCredit !== undefined && filingKey === 'married_separate'
+      && (taxReturn.dependents || []).some((d) => d.relationship === 'parent')) {
+    out.push(`Dependent parent credit: the ${year} amount is not published yet.`);
+  }
+  return out;
 }
 
 // ─── Core Tax Computation (reusable for resident + 540NR) ───────
@@ -469,32 +556,29 @@ function computeCACoreTax(
 ): CACoreTaxResult {
   const f = federalResult.form1040;
   const filingKey = getStateFilingKey(taxReturn.filingStatus);
+  // The registry offers California only for a year with tables; a direct call for another year uses 2025's.
+  const t = californiaTables(taxReturn.taxYear || 2025) ?? californiaTables(2025)!;
 
   const additions = getAdditions(taxReturn, federalResult);
   const subtractions = getSubtractions(taxReturn, federalResult);
   const caAGI = Math.max(0, agi + additions - subtractions);
 
-  const standardDeduction = CA_STANDARD_DEDUCTION[filingKey] || 5706;
+  const standardDeduction = t.standardDeduction[filingKey] ?? t.standardDeduction.single!;
   let caItemized = 0;
   if (taxReturn.deductionMethod === 'itemized' && federalResult.scheduleA) {
-    caItemized = calculateCAItemizedDeductions(taxReturn, federalResult, filingKey, caAGI);
+    caItemized = calculateCAItemizedDeductions(taxReturn, federalResult, filingKey, caAGI, t.agiLimitationThreshold?.[filingKey]);
   }
   const deduction = Math.max(standardDeduction, caItemized);
   const taxableIncome = Math.max(0, caAGI - deduction);
 
-  const brackets = CA_BRACKETS[filingKey] || CA_BRACKETS['single'];
+  const brackets = t.brackets[filingKey] ?? t.brackets.single!;
   const { tax: baseTax, details: bracketDetails } = applyBrackets(taxableIncome, brackets);
   const mhst = calculateMHST(taxableIncome);
 
   const numDependents = taxReturn.dependents?.length || 0;
-  const exemptionCredits = calculatePersonalExemptionCredits(filingKey, numDependents, agi);
+  const exemptionCredits = calculatePersonalExemptionCredits(filingKey, numDependents, agi, t);
 
-  const seEarnedIncome = f.scheduleCNetProfit > 0
-    ? round2(f.scheduleCNetProfit * 0.9235)
-    : 0;
-  const earnedIncome = (taxReturn.w2Income || []).reduce(
-    (sum, w) => sum + (w.wages || 0), 0
-  ) + seEarnedIncome;
+  const earnedIncome = caEarnedIncome(taxReturn, federalResult);
 
   const interest = f.totalInterest || 0;
   const dividends = f.totalDividends || 0;
@@ -510,15 +594,15 @@ function computeCACoreTax(
     return dep.monthsLivedWithYou >= 6 && (age < 19 || (dep.isStudent && age < 24));
   }).length;
 
-  const calEITC = calculateCalEITCFull(earnedIncome, investmentIncome, qualifyingChildrenForEIC);
-  const yctc = calculateYCTC(taxReturn, earnedIncome, calEITC, filingKey);
+  const calEITC = calculateCalEITCFull(earnedIncome, investmentIncome, qualifyingChildrenForEIC, t.calEitc);
+  const yctc = calculateYCTC(taxReturn, earnedIncome, calEITC, filingKey, t.yctc);
 
   const stateData = config.stateSpecificData || {};
   const isRenter = stateData.isRenter === true;
-  const rentersCredit = calculateRentersCredit(caAGI, filingKey, isRenter);
+  const rentersCredit = calculateRentersCredit(caAGI, filingKey, isRenter, t.rentersCredit);
   const caDependentCareCredit = calculateCADependentCareCredit(taxReturn, caAGI);
-  const seniorHoHCredit = calculateSeniorHoHCredit(taxReturn, caAGI, filingKey, taxableIncome);
-  const dependentParentCredit = calculateDependentParentCredit(taxReturn, filingKey);
+  const seniorHoHCredit = calculateSeniorHoHCredit(taxReturn, caAGI, filingKey, taxableIncome, t.seniorHoH);
+  const dependentParentCredit = calculateDependentParentCredit(taxReturn, filingKey, t.dependentParentCredit);
 
   const nonrefundableCredits = exemptionCredits + rentersCredit + caDependentCareCredit + seniorHoHCredit + dependentParentCredit;
   const refundableCredits = calEITC + yctc;
@@ -602,8 +686,9 @@ function calculate540NR(
     return dep.monthsLivedWithYou >= 6 && (age < 19 || (dep.isStudent && age < 24));
   }).length;
 
-  const calEITC = calculateCalEITCFull(caSourceEarnedIncome, investmentIncome, qualifyingChildrenForEIC);
-  const yctc = calculateYCTC(taxReturn, caSourceEarnedIncome, calEITC, filingKey);
+  const t = californiaTables(taxReturn.taxYear || 2025) ?? californiaTables(2025)!;
+  const calEITC = calculateCalEITCFull(caSourceEarnedIncome, investmentIncome, qualifyingChildrenForEIC, t.calEitc);
+  const yctc = calculateYCTC(taxReturn, caSourceEarnedIncome, calEITC, filingKey, t.yctc);
   const refundableCredits = calEITC + yctc;
 
   // Tax calculation (540NR method) — same MHST ordering as resident path:
@@ -816,7 +901,7 @@ export function calculateCalifornia(
   if (dependentParentCredit > 0) {
     creditChildren.push({
       lineId: 'state.credits.dependentParent', label: 'Dependent Parent Credit', value: dependentParentCredit,
-      formula: `$475 × parent dependent(s)`,
+      formula: 'Dependent parent credit × parent dependent(s)',
       inputs: [],
     });
   }

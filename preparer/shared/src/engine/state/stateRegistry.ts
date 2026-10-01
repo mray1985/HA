@@ -15,6 +15,7 @@ import {
 // Custom state calculators
 import { calculateNewYork } from './ny.js';
 import { calculateCalifornia } from './ca.js';
+import { californiaTables } from '../../constants/states/ca.js';
 import { calculateNewJersey } from './nj.js';
 import { calculateOhio } from './oh.js';
 import { calculateWisconsin } from './wi.js';
@@ -99,7 +100,8 @@ function yearScopedCalculator(
 /** Registry of implemented state calculators — factories that create calculators per tax year. */
 const CALCULATOR_FACTORIES: Record<string, (taxYear: number) => StateCalculator | null> = {
   // Custom calculators (complex state-specific rules). Only the TY2025 table is checked in.
-  CA: yearScopedCalculator((taxReturn, federalResult, config) => calculateCalifornia(taxReturn, federalResult, config)),
+  // California: each year with its own tables (constants/states/ca.ts — 2026 holds what the FTB has not published).
+  CA: (taxYear: number) => (californiaTables(taxYear) ? { calculate: (taxReturn, federalResult, config) => calculateCalifornia(taxReturn, federalResult, config) } : null),
   NY: yearScopedCalculator((taxReturn, federalResult, config) => calculateNewYork(taxReturn, federalResult, config)),
   NJ: yearScopedCalculator((taxReturn, federalResult, config) => calculateNewJersey(taxReturn, federalResult, config)),
   OH: yearScopedCalculator((taxReturn, federalResult, config) => calculateOhio(taxReturn, federalResult, config)),
