@@ -113,6 +113,35 @@ wrote the name-and-address block as one sentence, and the comma it put at the
 end of each printed line was kept. A comma closing a restored line is now
 dropped unless the page prints it there, and the name is taken without it.
 
+### The person on each form (work order §12, §13)
+
+Each case states its person (`expectedIdentity`: the W-2 employee, or the
+1099/1098 recipient or borrower; the 1098-T, 1099-Q and W-2c name no
+taxpayer). `run.ts` scores each part as the product uses it: a confirmed part
+fills the return, so **confirmed wrong** is the failure that matters; a part
+not split (a name or address the parser will not guess) is left for the
+preparer. Identity boxes go through the same two-reader check as the
+amounts, an address only when every line agrees.
+
+| Page | Cases | Identity parts | Confirmed right | Not split | Confirmed wrong |
+|---|---|---|---|---|---|
+| Native PDF, 150 dpi | 16/16 | 41 | **41** | 0 | 0 |
+| Office scan | 14 of 16 | 37 | 35 | 1 | 1 (fixed since, not re-measured) |
+| Fax | 5 of 16 | 15 | 13 | 2 | 0 |
+
+Tool arguments on the native run stayed 121/121, 0 invented. The first
+native run left both W-2 names unsplit: the model wrote box e as
+"MAYA\nTESTPAYER" and "JORDAN, TESTPAYER". Box e is now split by the page's
+own column gaps (first name and initial | last name | suffix), never the
+reader's commas; on the scan, OCR did not show the gap, so the name is left
+for the preparer. The scan's confirmed wrong part was the 1099-G address:
+the models read every split cell but the city, and the cells read were
+joined into ", LA 70802" with an empty city. An address from split cells now
+needs every cell, and a city must be a word (unit test with that reading).
+The scan run stopped at `w2-indiana-local`, whose scanned copies had not
+been rendered; the fax run was stopped by the machine running low on memory.
+Both are to be completed.
+
 ### Work order §16 forms (7 cases, Qwen3.5-0.8B + page evidence + GLM-OCR)
 
 1099-B, 1099-C, 1099-G, 1099-MISC, 1099-OID, 1099-Q and 1099-SA, each filled on
