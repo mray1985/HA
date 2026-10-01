@@ -47,6 +47,13 @@ describe('matching a form to a case', () => {
     expect(caseForIdentity(int('Smith'), cases)).toBeNull();
     expect(caseForIdentity({ formType: '1099-INT', tinLastFour: '3456' }, cases)).toBeNull();
   });
+
+  it('matches the last four kept from a masked TIN on a case with no full SSN', () => {
+    const masked = [{ id: 'new', ssnLastFour: '7788', lastName: 'Rivera' }] as unknown as TaxReturn[];
+    const int: PartyIdentity = { formType: '1099-INT', tinLastFour: '7788', name: { raw: '', confirmed: true, value: { first: 'Ana', last: 'Rivera' } } };
+    expect(caseForIdentity(int, masked)?.id).toBe('new');
+    expect(caseForIdentity({ ...int, tinLastFour: '1111' }, masked)).toBeNull();
+  });
 });
 
 describe('a batch for any clients', () => {

@@ -474,7 +474,9 @@ export function buildCaseReview(input: {
 
   const open = items.filter((i) => i.category !== 'INFORMATIONAL' && !i.resolution);
   const canApprove = open.length === 0;
-  const approval = record.approval && record.approval.returnFingerprint === returnFingerprint(input.taxReturn) ? record.approval : undefined;
+  // An approval stands for the return it approved and only while nothing is open:
+  // new evidence (a held or unread document) can open items without changing the return.
+  const approval = canApprove && record.approval && record.approval.returnFingerprint === returnFingerprint(input.taxReturn) ? record.approval : undefined;
 
   const hasIncome = [
     input.taxReturn.w2Income, input.taxReturn.income1099INT, input.taxReturn.income1099DIV, input.taxReturn.income1099NEC,

@@ -175,6 +175,11 @@ export function planIdentity(tr: TaxReturn, documents: readonly IngestedDocument
       patch.ssn = taxpayer.tin;
       ssn = taxpayer.tin;
       filled.push(`SSN (${files(taxpayer)})`);
+    } else if (taxpayer?.tinLastFour && !tr.ssnLastFour) {
+      // Only a masked TIN: keep its confirmed last four, so the client's later
+      // masked documents find this case (caseIntake.caseForIdentity).
+      patch.ssnLastFour = taxpayer.tinLastFour;
+      filled.push(`SSN last four (${files(taxpayer)})`);
     }
   }
   const spouseSsn = digits(tr.spouseSsn);

@@ -31,6 +31,7 @@ import type { PDFExtractResult } from './pdfExtractHelpers';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
+import { saveDocumentFile } from './documentFiles';
 
 const EMPTY_VALIDATION: FactValidationResult = { ready: true, issues: [], heldForms: [] };
 
@@ -111,10 +112,13 @@ export async function registerDroppedDocument(input: {
   const prior = findDocumentByHash(loadDocuments(input.returnId), contentHash);
   if (prior?.status === 'extracted') {
     // Successful prior extraction of the same bytes — keep the record, no downgrade.
+    // The same bytes again: keep them, for a document read before source files were kept.
+    await saveDocumentFile(input.returnId, prior.documentId, input.file);
     return { document: prior, duplicate: true, rejected: false };
   }
   if (prior) {
     // Failed or incomplete registration — allow retry with the same document id.
+    await saveDocumentFile(input.returnId, prior.documentId, input.file);
     return { document: prior, duplicate: false, rejected: false };
   }
 
@@ -129,6 +133,8 @@ export async function registerDroppedDocument(input: {
     status: 'registered',
   });
   upsertDocument(input.returnId, document);
+  // The source file itself, encrypted, so the review can show it (services/documentFiles).
+  await saveDocumentFile(input.returnId, document.documentId, input.file);
   return { document, duplicate: false, rejected: false };
 }
 

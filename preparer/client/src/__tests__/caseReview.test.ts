@@ -88,6 +88,15 @@ describe('resolving and approving', () => {
     expect(buildCaseReview({ taxReturn: changed, facts: [], documents: [], record }).status).toBe('ready');
     expect(buildCaseReview({ taxReturn: { ...tr, updatedAt: 'later' }, facts: [], documents: [], record }).status).toBe('approved');
   });
+
+  it('withdraws the approval when new evidence opens an item without changing the return', () => {
+    const record = approveCase({ resolutions: {} }, buildCaseReview({ taxReturn: tr, facts: [], documents: [] }), tr);
+    // A document nobody could identify arrives after approval: the return is unchanged, the case is not approved.
+    const after = buildCaseReview({ taxReturn: tr, facts: [], documents: [scan], record });
+    expect(after.open.length).toBeGreaterThan(0);
+    expect(after.approval).toBeUndefined();
+    expect(after.status).toBe('needs_review');
+  });
 });
 
 describe('groupForSection', () => {

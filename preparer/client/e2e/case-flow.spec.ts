@@ -57,7 +57,7 @@ test('the Explain and Return tabs render for a new case', async ({ page }) => {
 test('a 1099-Q waits for the qualified expenses, and the review list takes the decision', async ({ page }) => {
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Review/ }).click();
@@ -80,7 +80,7 @@ test('a W-2c read from its text layer corrects the W-2 it names', async ({ page 
   await page.getByLabel('Tax year for a new case').selectOption('2025');
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
-  await page.locator('input[type="file"]').first().setInputFiles(['e2e/fixtures/w2-basic-single.pdf', 'e2e/fixtures/w2c-wages.pdf']);
+  await page.getByLabel("Add the client's documents").setInputFiles(['e2e/fixtures/w2-basic-single.pdf', 'e2e/fixtures/w2c-wages.pdf']);
   await expect(page.getByText('w2c-wages.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Corrected the W-2')).toBeVisible({ timeout: 30000 });
 
@@ -94,7 +94,7 @@ test('the Client tab asks only what the case cannot settle, and says when the lo
   await page.getByLabel('Tax year for a new case').selectOption('2025');
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: 'Client' }).click();
@@ -113,7 +113,7 @@ test("last year's documents the case lacks are possibly missing, and the client 
   await page.getByLabel('Tax year for a new case').selectOption('2025');
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/w2-basic-single.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/w2-basic-single.pdf');
   await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 30000 });
 
   // Last year's HATax return: the same employer's W-2, and a 1099-INT from Chase.

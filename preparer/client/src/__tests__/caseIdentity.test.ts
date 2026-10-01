@@ -48,6 +48,13 @@ function doc(id: string, ...identities: Array<PartyIdentity | null>): IngestedDo
 const empty = { dependents: [] } as unknown as TaxReturn;
 
 describe('planning the identity', () => {
+  it('keeps the confirmed last four of a masked TIN, so later masked forms find the case', () => {
+    const masked: PartyIdentity = { formType: '1099-INT', tinLastFour: '3456', name: { raw: 'MAYA TESTPAYER', confirmed: true, value: { first: 'Maya', last: 'Testpayer' } } };
+    const plan = planIdentity(empty, [doc('INT', masked)]);
+    expect(plan.patch).toMatchObject({ ssnLastFour: '3456', firstName: 'Maya', lastName: 'Testpayer' });
+    expect(plan.patch.ssn).toBeUndefined();
+  });
+
   it("fills a new case's taxpayer from a confirmed W-2", () => {
     const plan = planIdentity(empty, [doc('W2', w2('000-12-3456', 'Maya', 'Testpayer'))]);
     expect(plan.patch).toEqual({ ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer', addressStreet: '815 MAGNOLIA AVE', addressCity: 'BATON ROUGE', addressState: 'LA', addressZip: '70802' });

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
 import { missingDocumentTitle, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
+import { loadDocumentFile } from '../../services/documentFiles';
 import { INTAKE_ACCEPT } from '../../services/caseIntake';
 import { useCaseStore } from '../../store/caseStore';
 import ExpenseScannerToolView from '../tools/ExpenseScannerToolView';
@@ -39,12 +40,58 @@ const STATUS_LABEL: Record<IngestedDocument['status'], string> = {
   rejected: 'Rejected',
 };
 
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|bmp)$/i;
+
+/** The source file as dropped: an image as is, a PDF's pages rendered on this computer. */
+function SourceDocument({ returnId, doc }: { returnId: string; doc: IngestedDocument }) {
+  const [view, setView] = useState<{ pages?: string[]; error?: string }>({});
+  useEffect(() => {
+    let live = true;
+    const urls: string[] = [];
+    void (async () => {
+      const file = await loadDocumentFile(returnId, doc.documentId);
+      if (!file) {
+        if (live) setView({ error: 'The original file was not kept with this case (it was added before HATax kept source files, or storage was not available). Check the client’s copy.' });
+        return;
+      }
+      if (file.type.startsWith('image/') || IMAGE_FILE.test(file.name)) {
+        const url = URL.createObjectURL(file);
+        urls.push(url);
+        if (live) setView({ pages: [url] });
+        return;
+      }
+      const { renderPDFToImages } = await import('../../services/pdfToImages');
+      const canvases = await renderPDFToImages(file, 20, 110);
+      if (live) setView({ pages: canvases.map((c) => c.toDataURL('image/png')) });
+    })().catch((err) => {
+      if (live) setView({ error: `The original file could not be shown: ${err instanceof Error ? err.message : 'unreadable'}.` });
+    });
+    return () => {
+      live = false;
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [returnId, doc.documentId]);
+
+  if (view.error) return <p className="text-xs text-amber-300 mt-2">{view.error}</p>;
+  if (!view.pages) return <p className="text-xs text-slate-400 mt-2" role="status">Opening {doc.fileName}…</p>;
+  return (
+    <div className="mt-2 space-y-2 max-h-[80vh] overflow-y-auto rounded-lg border border-slate-700 bg-white p-2" aria-label={`${doc.fileName} as dropped`}>
+      {view.pages.map((src, i) => (
+        <img key={i} src={src} alt={`${doc.fileName}, page ${i + 1} of ${view.pages!.length}`} className="w-full" />
+      ))}
+    </div>
+  );
+}
+
 function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: TaxFact[]; focused: boolean }) {
   const [open, setOpen] = useState(focused);
+  const [showSource, setShowSource] = useState(focused);
+  const returnId = useCaseStore((s) => s.returnId);
   const ref = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
     if (!focused) return;
     setOpen(true);
+    setShowSource(true);
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focused]);
   return (
@@ -66,11 +113,19 @@ function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: T
         </div>
         <span className="text-xs text-slate-400 whitespace-nowrap">{STATUS_LABEL[doc.status]}</span>
       </div>
-      {facts.length > 0 && (
-        <button onClick={() => setOpen((v) => !v)} className="text-xs text-sky-300 hover:text-sky-200 mt-2">
-          {open ? 'Hide values read' : `Show ${facts.length} values read`}
-        </button>
-      )}
+      <div className="flex gap-4 mt-2">
+        {doc.status !== 'rejected' && returnId && (
+          <button onClick={() => setShowSource((v) => !v)} className="text-xs text-sky-300 hover:text-sky-200">
+            {showSource ? 'Hide the document' : 'Show the document'}
+          </button>
+        )}
+        {facts.length > 0 && (
+          <button onClick={() => setOpen((v) => !v)} className="text-xs text-sky-300 hover:text-sky-200">
+            {open ? 'Hide values read' : `Show ${facts.length} values read`}
+          </button>
+        )}
+      </div>
+      {showSource && returnId && doc.status !== 'rejected' && <SourceDocument returnId={returnId} doc={doc} />}
       {open && (
         <ul className="mt-2 space-y-1">
           {facts.map((fact) => (
@@ -198,6 +253,7 @@ export default function DocumentsPanel() {
             </p>
             <input
               type="file"
+              aria-label="Add the client's documents"
               accept={INTAKE_ACCEPT}
               multiple
               className="hidden"

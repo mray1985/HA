@@ -38,7 +38,7 @@ export function modelRunStorageKey(returnId: string): string {
   return `${MODEL_RUN_KEY_PREFIX}${returnId}`;
 }
 
-/** Provenance records for dropped preparer documents (metadata only, not file bytes). */
+/** Provenance records for dropped preparer documents (metadata; the files themselves, encrypted, are in services/documentFiles). */
 export const DOCUMENT_KEY_PREFIX = isPreparerApp()
   ? 'hatax-preparer:documents:'
   : 'hatax:documents:';

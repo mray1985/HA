@@ -246,9 +246,12 @@ export function caseForIdentity(identity: PartyIdentity, cases: readonly TaxRetu
   const lastFour = identity.tinLastFour;
   const last = identity.name?.confirmed && identity.name.value ? identityKeyText(identity.name.value.last) : undefined;
   if (lastFour && last) {
+    // The last four of a full SSN, or the confirmed last four kept from a masked one.
+    const lastFourOf = (full: string | undefined, kept: string | undefined) =>
+      digits(full)?.slice(5) ?? (kept && /^\d{4}$/.test(kept) ? kept : undefined);
     const hit = cases.filter((c) =>
-      (digits(c.ssn)?.endsWith(lastFour) && identityKeyText(c.lastName ?? '') === last)
-      || (digits(c.spouseSsn)?.endsWith(lastFour) && identityKeyText(c.spouseLastName ?? c.lastName ?? '') === last));
+      (lastFourOf(c.ssn, c.ssnLastFour) === lastFour && identityKeyText(c.lastName ?? '') === last)
+      || (lastFourOf(c.spouseSsn, c.spouseSsnLastFour) === lastFour && identityKeyText(c.spouseLastName ?? c.lastName ?? '') === last));
     return hit.length === 1 ? hit[0]! : null;
   }
   return null;

@@ -75,13 +75,13 @@ test('a W-2 dropped on the Review tab is read, and names the taxpayer', async ({
 
 test('next case goes to the case that needs the preparer', async ({ page }) => {
   await newCase(page, '2025');
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
   const first = page.url().match(/case\/([^/]+)/)![1];
 
   await page.getByRole('link', { name: 'Back to cases' }).click();
   await newCase(page, '2025');
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/w2-basic-single.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/w2-basic-single.pdf');
   await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Review/ }).click();
@@ -91,7 +91,7 @@ test('next case goes to the case that needs the preparer', async ({ page }) => {
 
 test('a review item opens its own document', async ({ page }) => {
   await newCase(page, '2025');
-  await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
+  await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Review/ }).click();
@@ -100,6 +100,8 @@ test('a review item opens its own document', async ({ page }) => {
   await expect(page).toHaveURL(/\/documents$/);
   // The document's values are shown without another click.
   await expect(page.getByRole('button', { name: /Hide values read/ })).toBeVisible();
+  // And the document itself, as dropped: kept encrypted with the case and shown page by page.
+  await expect(page.getByRole('img', { name: /1099q-529\.pdf, page 1 of/ })).toBeVisible({ timeout: 15000 });
 });
 
 test("a returning client's next year starts from last year's case", async ({ page }) => {

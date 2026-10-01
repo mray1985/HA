@@ -190,6 +190,22 @@ export async function decrypt(payload: string, key?: CryptoKey): Promise<string>
   return new TextDecoder().decode(decrypted);
 }
 
+/** Encrypt bytes (a source document) with AES-256-GCM: the IV and the ciphertext. */
+export async function encryptBytes(bytes: ArrayBuffer, key?: CryptoKey): Promise<{ iv: Uint8Array; ct: ArrayBuffer }> {
+  const k = key || activeKey;
+  if (!k) throw new Error('No encryption key available');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: AAD }, k, bytes);
+  return { iv, ct };
+}
+
+/** Decrypt bytes encrypted with encryptBytes(). */
+export async function decryptBytes(iv: Uint8Array, ct: ArrayBuffer, key?: CryptoKey): Promise<ArrayBuffer> {
+  const k = key || activeKey;
+  if (!k) throw new Error('No encryption key available');
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv), additionalData: AAD }, k, ct);
+}
+
 // ─── Migration ──────────────────────────────────────
 
 /**

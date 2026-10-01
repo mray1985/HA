@@ -26,6 +26,7 @@ import {
   lock,
 } from '../services/crypto';
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
+import { deleteDocumentFiles } from '../services/documentFiles';
 import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
 import { clearRecordCache, hasPendingRecordWrites, loadRecords } from '../services/caseRecords';
 import { deleteAllCaseReviews, deleteCaseReview } from '../services/caseAudit';
@@ -356,6 +357,7 @@ export function deleteReturn(id: string): { success: boolean } {
   localStorage.removeItem(returnKey(id));
   returnCache.delete(id);
   deleteDocuments(id);
+  void deleteDocumentFiles(id).catch(() => { /* removed with the vault by wipeAllData */ });
   deleteTaxFacts(id);
   deleteCaseReview(id);
   const ids = getReturnIds().filter((i) => i !== id);
