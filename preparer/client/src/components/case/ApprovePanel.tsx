@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { ArrowRight, CheckCircle2, Download, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardList, Download, ShieldCheck } from 'lucide-react';
 import { nextCase } from '../../services/caseQueue';
 import { downloadIRSFormsPDF } from '../../api/client';
 import { generateStateFormPDF } from '../../services/stateFormFiller';
@@ -49,6 +49,8 @@ export default function ApprovePanel() {
   const calculation = useCaseStore((s) => s.calculation);
   const review = useCaseStore((s) => s.review);
   const audit = useCaseStore((s) => s.audit);
+  const documents = useCaseStore((s) => s.documents);
+  const missingDocuments = useCaseStore((s) => s.missingDocuments);
   const approve = useCaseStore((s) => s.approve);
   const requestTab = useCaseStore((s) => s.requestTab);
   const navigate = useNavigate();
@@ -83,6 +85,13 @@ export default function ApprovePanel() {
       setBusy(false);
     }
   };
+  // §38: the case summarized for the preparer's file.
+  const downloadReviewPackage = () => run('review package', async () => {
+    flushCaseSave();
+    const { generateReviewPackagePDF } = await import('../../services/reviewPackage');
+    const bytes = await generateReviewPackagePDF({ taxReturn, calculation, review, documents, missingDocuments });
+    saveBlob(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }), `${name}-${taxReturn.taxYear}-review-package.pdf`);
+  });
   const downloadFederal = () => run('federal filing packet', buildFederal);
   const downloadStates = () => run('state forms', buildStates);
   const downloadAll = () => run('filing packet', async () => { await buildFederal(); await buildStates(); });
@@ -148,6 +157,9 @@ export default function ApprovePanel() {
               <Download className="w-4 h-4" /> Federal and state
             </button>
           )}
+          <button disabled={busy} onClick={() => { void downloadReviewPackage(); }} className="inline-flex items-center gap-2 text-sm text-white bg-surface-700 hover:bg-surface-600 border border-slate-600 rounded-lg px-3 py-2 disabled:opacity-50">
+            <ClipboardList className="w-4 h-4" /> Review package
+          </button>
           <button disabled={busy} onClick={() => { void downloadFederal(); }} className="inline-flex items-center gap-2 text-sm text-white bg-surface-700 hover:bg-surface-600 border border-slate-600 rounded-lg px-3 py-2 disabled:opacity-50">
             <Download className="w-4 h-4" /> Federal filing packet
           </button>
