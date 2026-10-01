@@ -32,6 +32,7 @@ import {
 } from '@hatax/local-ai';
 import { getReturn } from '../api/client';
 import { appendAudit, appendModelRuns } from './caseAudit';
+import { runBackgroundWork } from './backgroundWork';
 import { askLocalModel, type ModelRunRecord } from './localModels';
 import { recordClientFormAnswer } from './preparerDecisions';
 import { loadDocuments } from './documentIngestion';
@@ -114,13 +115,23 @@ function recordAnswer(returnId: string, q: ClientQuestion, value: ClientAnswerVa
 
 /**
  * Read a client's reply against the case's open questions and record every
- * answer the model and the client's words agree on.
+ * answer the model and the client's words agree on. Background work: a vault
+ * lock waits for it to save.
  */
-export async function readClientReply(
+export function readClientReply(
   returnId: string,
   reply: string,
   onProgress?: (message: string) => void,
   now = new Date(),
+): Promise<ReadReplyResult> {
+  return runBackgroundWork(() => readClientReplyNow(returnId, reply, onProgress, now));
+}
+
+async function readClientReplyNow(
+  returnId: string,
+  reply: string,
+  onProgress: ((message: string) => void) | undefined,
+  now: Date,
 ): Promise<ReadReplyResult> {
   const text = reply.trim();
   if (!text) throw new Error('The reply is empty.');

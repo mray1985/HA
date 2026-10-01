@@ -12,6 +12,7 @@ import { clearReturnCache, createReturn, getReturn, listReturns, updateReturn } 
 import { clearRecordCache } from '../services/caseRecords';
 import { caseForIdentity, ingestBatch, placeableAfterNewCases, placeUnmatched } from '../services/caseIntake';
 import { loadDocuments } from '../services/documentIngestion';
+import { lock, setActiveKey, setupEncryption } from '../services/crypto';
 
 function installMemoryLocalStorage() {
   const store = new Map<string, string>();
@@ -125,5 +126,19 @@ describe('a batch for any clients', () => {
     const again = await ingestBatch([pdf('w2-basic-single.pdf')], 2025);
     expect(again.placed).toEqual([{ returnId: maya, name: 'Maya Testpayer', created: false, files: [] }]);
     expect(listReturns().filter((r) => r.taxYear === 2025)).toHaveLength(2);
+  });
+
+  it('says the vault locked rather than losing the documents it could not save', async () => {
+    await setupEncryption('a passphrase for the test');
+    const maya = createReturn(2025).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    lock();
+    try {
+      await expect(ingestBatch([pdf('w2-basic-single.pdf')], 2025)).rejects.toThrow(
+        'The vault locked before w2-basic-single.pdf was saved. Unlock it and add the documents again.',
+      );
+    } finally {
+      setActiveKey(null);
+    }
   });
 });

@@ -23,6 +23,8 @@ import { identityKeyText, selectDocumentExtractKind, type IngestedDocument, type
 import type { TaxReturn } from '@hatax/engine';
 import { createReturn, getReturn, listReturns } from '../api/client';
 import { appendAudit, appendModelRuns } from './caseAudit';
+import { runBackgroundWork } from './backgroundWork';
+import { isEncryptionSetup, isUnlocked } from './crypto';
 import { applyExtractionToDocument, applyModelReadingsToDocument, loadDocuments, registerDroppedDocument, type ApplyExtractionResult } from './documentIngestion';
 import { applyIdentityFromDocuments, clientNameOf, peopleOnDocuments, type IdentitySource } from './caseIdentity';
 import { fetchModelStatus, type LocalRuntimeStatus, type ModelRunRecord } from './localModels';
@@ -136,6 +138,8 @@ export function identitiesOf(read: FileRead): PartyIdentity[] {
 
 /** Put a read file on a case: registered, applied, audited. Returns false when the case already has it. */
 async function placeRead(returnId: string, read: FileRead, hooks: IntakeHooks, failures: string[]): Promise<boolean> {
+  // Nothing is saved while the vault is locked: say so rather than lose the document.
+  if (isEncryptionSetup() && !isUnlocked()) throw new Error(`The vault locked before ${read.file.name} was saved. Unlock it and add the documents again.`);
   const registered = await registerDroppedDocument({ returnId, file: read.file });
   if (registered.rejected || registered.duplicate) {
     appendAudit(returnId, { kind: 'document', documentId: registered.document.documentId, fileName: read.file.name, outcome: registered.rejected ? 'rejected' : 'duplicate' });
@@ -355,7 +359,11 @@ export async function ingestBatch(files: readonly File[], taxYear: number, hooks
 }
 
 /** Put a file the batch could not place on the case the preparer chose (no second reading). */
-export async function placeUnmatched(returnId: string, read: FileRead, hooks: IntakeHooks = {}): Promise<IntakeResult> {
+export function placeUnmatched(returnId: string, read: FileRead, hooks: IntakeHooks = {}): Promise<IntakeResult> {
+  return runBackgroundWork(() => placeUnmatchedNow(returnId, read, hooks));
+}
+
+async function placeUnmatchedNow(returnId: string, read: FileRead, hooks: IntakeHooks): Promise<IntakeResult> {
   const failures: string[] = [];
   const placedOk = await placeRead(returnId, read, hooks, failures);
   if (placedOk) finishCase(returnId, hooks);
@@ -368,9 +376,10 @@ let queue: Promise<unknown> = Promise.resolve();
 /**
  * Run intakes one after another (work order §48): the local models load one at
  * a time, so a batch dropped on another case waits for the one being read.
+ * Each is background work: a vault lock waits for it to save.
  */
 function enqueue<T>(job: () => Promise<T>): Promise<T> {
-  const run = queue.then(job);
+  const run = runBackgroundWork(() => queue.then(job));
   queue = run.catch(() => undefined);
   return run;
 }
