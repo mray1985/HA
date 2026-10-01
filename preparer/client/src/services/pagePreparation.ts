@@ -13,7 +13,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
-import './pdfWorkerInit';
+import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit';
 import { wordsFromTesseract, type PageRaster, type PageWord, type ReaderPage, type TesseractBlocks } from '@hatax/local-ai';
 import { recognizeUpright } from './ocrService';
 
@@ -69,7 +69,7 @@ async function ocrPage(canvas: HTMLCanvasElement, pageNumber: number): Promise<R
 
 /** Pages of a PDF: text-layer words where the page has them, OCR otherwise. */
 export async function pdfReaderPages(file: File, onPage?: (n: number, of: number) => void): Promise<ReaderPage[]> {
-  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), ...PDFJS_DOCUMENT_OPTIONS }).promise;
   try {
     const count = Math.min(pdf.numPages, MAX_PAGES);
     const pages: ReaderPage[] = [];

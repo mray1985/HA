@@ -13,7 +13,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
-import './pdfWorkerInit'; // Ensure worker is configured before any document loading
+import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit'; // Ensure worker is configured before any document loading
 
 /**
  * Render PDF pages to canvas elements at the specified DPI.
@@ -29,7 +29,7 @@ export async function renderPDFToImages(
   dpi = 300,
 ): Promise<HTMLCanvasElement[]> {
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, ...PDFJS_DOCUMENT_OPTIONS }).promise;
 
   try {
     const pagesToRender = Math.min(pdf.numPages, maxPages);

@@ -10,7 +10,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
-import './pdfWorkerInit';
+import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit';
 import type { ParseResult } from './deductionFinderTypes';
 import { groupIntoLines, parseTransactionLines } from './pdfStatementParserHelpers';
 import type { TextItem } from './pdfStatementParserHelpers';
@@ -22,7 +22,7 @@ export async function parsePDFStatement(file: File): Promise<ParseResult> {
 
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, ...PDFJS_DOCUMENT_OPTIONS }).promise;
 
     const items = await extractAllTextItems(pdf);
     const lines = groupIntoLines(items);
