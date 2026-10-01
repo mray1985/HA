@@ -144,7 +144,41 @@ function namedIn(name: string, words: string): boolean {
 const NOT_A_NAME = new Set(['baby', 'son', 'daughter', 'mom', 'dad', 'mother', 'father', 'grandma', 'grandpa', 'the', 'my', 'our', 'he', 'she', 'we', 'i', 'hi', 'hello', 'thanks', 'irs']);
 
 /** The note says a person joined the household. */
-const JOINED = /\b(born|baby|newborn|adopted|adopt|had a|gave birth|welcomed|moved in with (us|me)|lives? with (us|me)|living with (us|me)|dependent)\b/;
+const JOINED = /\b(born|baby|newborn|adopted|adopt|had a|gave birth|welcomed|moved in with (us|me)|lives? with (us|me)|lived with (us|me)|living with (us|me)|dependent)\b/;
+
+/** Capitalized words that are not people: the reader, months, sentence openers. */
+const NOT_A_PERSON = new Set([
+  ...NOT_A_NAME, ...MONTHS, 'our', 'we', "i'm", 'ssn', 'also', 'and', 'but', 'so', 'it', 'this', 'that', 'they', 'please', 'dear', 'thank', 'yes', 'no',
+]);
+
+/** The people the note names: its capitalized words, lowercased, that are not other words or states. */
+function peopleNamedIn(note: string): Set<string> {
+  const states = new Set(STATES.flatMap((st) => st.name.split(' ')));
+  return new Set((note.match(/\b[A-Z][a-z'-]+\b/g) ?? []).map((w) => w.toLowerCase()).filter((w) => !NOT_A_PERSON.has(w) && !states.has(w)));
+}
+
+/** Whether the words from the person's last mention before `at` up to `at` name no one else. */
+function onlyThisPersonBefore(firstName: string, lastName: string, sentence: string, at: number, people: Set<string>): boolean {
+  const before = sentence.slice(0, at);
+  const mentions = [...before.matchAll(new RegExp(`(?<![a-z])${escape(firstName.toLowerCase())}(?![a-z])`, 'g'))];
+  const last = mentions[mentions.length - 1];
+  if (!last) return false;
+  const own = new Set([firstName.toLowerCase(), lastName.toLowerCase()].filter(Boolean));
+  const between = before.slice(last.index! + firstName.length).match(/[a-z][a-z'-]+/g) ?? [];
+  return !between.some((w) => people.has(w) && !own.has(w));
+}
+
+/** The date the words say this person was born ("Noah Okafor (born April 12, 2016"), with no one else named in between. */
+function birthDateOf(firstName: string, lastName: string, sentence: string, people: Set<string>): string | undefined {
+  for (const m of sentence.matchAll(/\bborn\b(?:\s+on)?\s+([^()]*?\b\d{4}\b)/g)) {
+    const dates = datesIn(m[1]!);
+    if (dates.length === 1 && onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) return dates[0];
+  }
+  return undefined;
+}
+
+/** "Marcus lived with me all year": the whole year in the home, said of this person. */
+const LIVED_ALL_YEAR = /\blived with (me|us) (all year|all of the year|the whole year|the entire year|all of \d{4}|for the whole year|for the entire year)\b/g;
 
 const question = (kind: ClientQuestion['kind'], stateCode = ''): ClientQuestion => ({
   id: kind, kind, text: '', target: kind === 'residency' ? { kind: 'residency', field: 'residencyType', stateCode } : { kind: 'filing_status' },
@@ -168,6 +202,7 @@ function movedStates(words: string): string[] {
 // ─── Checking the model's list ───────────────────────────────
 
 function checkDependent(item: Record<string, unknown>, sentence: string, words: string): NoteProposal | NoteRejection {
+  const people = peopleNamedIn(words);
   const quote = String(item.quote ?? '');
   const firstName = String(item.firstName ?? '').trim();
   if (!firstName || NOT_A_NAME.has(firstName.toLowerCase()) || !namedIn(firstName, words) || !new RegExp(`\\b${escape(firstName.toLowerCase())}\\b`).test(sentence)) {
@@ -188,9 +223,12 @@ function checkDependent(item: Record<string, unknown>, sentence: string, words: 
   }
   const birth = String(item.dateOfBirth ?? '');
   if (birth) {
-    const dates = datesIn(sentence);
-    if (dates.length === 1 && dates[0] === birth && /\bborn\b|\bbirth/.test(sentence)) args.dateOfBirth = birth;
+    // The date said of this person: in "Ben and I (Cara, born July 19, 1988)" it is not Ben's.
+    if (birthDateOf(firstName, lastName, sentence, people) === birth) args.dateOfBirth = birth;
     else dropped.push('dateOfBirth');
+  }
+  for (const m of sentence.matchAll(LIVED_ALL_YEAR)) {
+    if (onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) args.monthsLivedWithYou = 12;
   }
   if (args.relationship === undefined && !JOINED.test(sentence)) {
     return { tool: 'add_dependent', reason: `the note does not say ${firstName} is a dependent or joined the household`, quote };
@@ -368,6 +406,15 @@ export function proposalIsKnown(proposal: NoteProposal, facts: readonly TaxFact[
     payments.set(key, (payments.get(key) ?? new Map()).set(f.sourceField, f.value));
   }
   return [...payments.values()].some((p) => p.get('jurisdiction') === a.jurisdiction && p.get('amount') === a.amount && (a.datePaid === undefined || p.get('datePaid') === a.datePaid));
+}
+
+/** A proposed dependent who is the taxpayer or the spouse on the case: never offered. */
+export function namesSomeoneOnTheReturn(proposal: NoteProposal, people: ReadonlyArray<{ firstName?: string; lastName?: string }>): boolean {
+  if (proposal.tool !== 'add_dependent') return false;
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+  const first = norm(proposal.args.firstName);
+  const last = norm(proposal.args.lastName);
+  return people.some((p) => norm(p.firstName) !== '' && norm(p.firstName) === first && (!last || !norm(p.lastName) || norm(p.lastName) === last));
 }
 
 /** The proposal as the preparer reads it before accepting it. */

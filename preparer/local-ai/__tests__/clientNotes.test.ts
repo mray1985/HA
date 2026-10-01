@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { confirmNoteCall, confirmNoteProposals, datesIn, noteCalls, noteSchema, proposalIsKnown } from '../src/clientNotes.js';
+import { confirmNoteCall, confirmNoteProposals, datesIn, namesSomeoneOnTheReturn, noteCalls, noteSchema, proposalIsKnown } from '../src/clientNotes.js';
 import type { TaxFact } from '../src/taxFact.js';
 import { invokeTaxTool, type TaxToolName } from '../src/taxTools.js';
 
@@ -28,6 +28,36 @@ describe("a note's proposals keep only what its words give", () => {
     expect(out.rejected).toEqual([]);
     // "baby girl" is not the word daughter: the relationship stays unknown and is asked for.
     expect(out.proposals).toEqual([{ tool: 'add_dependent', args: { firstName: 'Lily', lastName: 'Lee', dateOfBirth: '2025-03-03' }, quote: 'we had a baby girl, Lily Lee, born March 3, 2025', sentence: 'big news: we had a baby girl, lily lee, born march 3, 2025', dropped: ['relationship'] }]);
+  });
+
+  it("gives each person the birth date and the year at home said of them, not another's", () => {
+    const reply = 'Ben and I (Cara Okafor, SSN 000-31-5502, born July 19, 1988) are married and file jointly. Ben was born March 2, 1986. Our kids Noah Okafor (born April 12, 2016, SSN 000-55-1201) and Lily Okafor (born September 30, 2019, SSN 000-55-1202) lived with us all year. We all live in Illinois.';
+    const out = confirmNoteProposals('dependents', reply, {
+      people: [
+        // The model's misreading in the stress run: the taxpayer, with his wife's birth date.
+        { quote: 'Ben and I (Cara Okafor, SSN 000-31-5502, born July 19, 1988)', firstName: 'Ben', lastName: 'Okafor', relationship: '', dateOfBirth: '1988-07-19' },
+        { quote: 'Our kids Noah Okafor (born April 12, 2016', firstName: 'Noah', lastName: 'Okafor', relationship: '', dateOfBirth: '2016-04-12' },
+        { quote: 'Lily Okafor (born September 30, 2019', firstName: 'Lily', lastName: 'Okafor', relationship: '', dateOfBirth: '2019-09-30' },
+      ],
+    }, 2025);
+    const byName = Object.fromEntries(out.proposals.map((p) => [p.args.firstName, p]));
+    expect(byName.Ben!.args).not.toHaveProperty('dateOfBirth');
+    expect(byName.Ben!.dropped).toContain('dateOfBirth');
+    expect(byName.Noah!.args).toMatchObject({ dateOfBirth: '2016-04-12' });
+    expect(byName.Lily!.args).toMatchObject({ dateOfBirth: '2019-09-30', monthsLivedWithYou: 12 });
+    // Lily is named between Noah and "lived with us all year": his months are asked, not assumed.
+    expect(byName.Noah!.args).not.toHaveProperty('monthsLivedWithYou');
+    // Ben is the taxpayer: never offered as his own dependent.
+    expect(namesSomeoneOnTheReturn(byName.Ben!, [{ firstName: 'Ben', lastName: 'Okafor' }])).toBe(true);
+    expect(namesSomeoneOnTheReturn(byName.Noah!, [{ firstName: 'Ben', lastName: 'Okafor' }, { firstName: 'Cara', lastName: 'Okafor' }])).toBe(false);
+  });
+
+  it('reads "lived with me all year" as twelve months in the home', () => {
+    const reply = "I'm filing as head of household. My son Marcus Whitfield (born February 3, 2014, SSN 000-66-3001) lived with me all year and I paid all the household costs.";
+    const out = confirmNoteProposals('dependents', reply, {
+      people: [{ quote: 'I paid all the household costs.', firstName: 'Marcus', lastName: 'Whitfield', relationship: 'son', dateOfBirth: '2014-02-03' }],
+    }, 2025);
+    expect(out.proposals[0]!.args).toMatchObject({ firstName: 'Marcus', lastName: 'Whitfield', dateOfBirth: '2014-02-03', monthsLivedWithYou: 12 });
   });
 
   it('rejects a person the note does not name, or does not say joined the household', () => {

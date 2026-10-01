@@ -23,6 +23,7 @@ import {
   confirmNoteCall,
   describeNoteProposal,
   generateClientQuestions,
+  namesSomeoneOnTheReturn,
   noteCalls,
   proposalIsKnown,
   type NoteProposal,
@@ -163,8 +164,14 @@ async function readClientReplyNow(
     for (const [i, call] of calls.entries()) {
       onProgress?.(`Reading the reply for new facts (${i + 1} of ${calls.length})…`);
       const { content, run } = await askLocalModel({ prompt: call.prompt, name: call.name, jsonSchema: call.schema as Record<string, unknown> }, runs);
+      const onTheReturn = [
+        { firstName: tr.firstName, lastName: tr.lastName },
+        { firstName: tr.spouseFirstName, lastName: tr.spouseLastName ?? tr.lastName },
+      ];
       for (const proposal of confirmNoteCall(call, text, content, tr.taxYear).proposals) {
         if (proposalIsKnown(proposal, loadTaxFacts(returnId), tr.taxYear)) continue;
+        // The taxpayer and the spouse are never their own dependents.
+        if (namesSomeoneOnTheReturn(proposal, onTheReturn)) continue;
         offers.push({
           id: `${replyId}:${offers.length}`, proposal, description: describeNoteProposal(proposal),
           extractor: `${run?.modelName ?? 'Local reader'} + the client's words`, ...(run ? { modelRunId: run.runId } : {}),
