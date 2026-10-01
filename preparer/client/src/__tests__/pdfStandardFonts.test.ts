@@ -27,7 +27,8 @@ describe('pdf.js standard fonts', () => {
   it('ships the standard fonts of the installed pdf.js', () => {
     const files = readdirSync(installed).sort();
     expect(readdirSync(bundled).sort()).toEqual(files);
-    for (const f of files) expect(statSync(join(bundled, f)).size, f).toBe(statSync(join(installed, f)).size);
+    // The fonts byte for byte (the LICENSE texts may get CRLF line endings in a checkout).
+    for (const f of files.filter((name) => !name.startsWith('LICENSE'))) expect(statSync(join(bundled, f)).size, f).toBe(statSync(join(installed, f)).size);
     expect(files).toContain('FoxitDingbats.pfb');
     expect(PDFJS_DOCUMENT_OPTIONS.standardFontDataUrl).toBe('/pdfjs-standard-fonts/');
   });
