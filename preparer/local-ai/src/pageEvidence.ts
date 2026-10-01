@@ -861,6 +861,72 @@ export function readBox12Entry(
   return { code, amount: amount.text, codeBox: codeTok.box, amountBox: amount.box };
 }
 
+/** The page's text size: the median height of its words (a single OCR box can merge two lines). */
+function medianWordHeight(words: readonly PageWord[]): number {
+  const heights = words.filter((w) => /[A-Za-z0-9]/.test(w.text)).map((w) => w.box[3] - w.box[1]).sort((a, b) => a - b);
+  return heights.length ? heights[Math.floor(heights.length / 2)]! : 0;
+}
+
+/**
+ * How much of a W-2 box 12 slot's value area is printed in, where no reader
+ * read it (an OCR that turned "W  1,200.00" into "HEE"), in text heights:
+ * the total width of the text-shaped marks — connected ink a text line high
+ * — right of the printed vertical "Code" letters, across the box 12 column.
+ * A ruled line (straight or skewed), the form's shaded band and specks of
+ * noise are not text. Null when the slot's label is not on the page.
+ */
+export function box12CellTextWidth(slot: string, words: readonly PageWord[], raster: PageRaster, near?: PixelBox | null): number | null {
+  const labels = findPhrase(words, slot);
+  if (labels.length === 0 || (labels.length > 1 && !near)) return null;
+  const label = labels.length === 1 ? labels[0]! : [...labels].sort((a, b) => boxGap(a, near!) - boxGap(b, near!))[0]!;
+  const h = medianWordHeight(words) || label[3] - label[1];
+  if (h <= 0) return null;
+  const x0 = Math.max(0, Math.round(label[0] + 1.5 * h));
+  const x1 = Math.min(raster.width, Math.round(label[0] + 28 * h));
+  // From the label's top: an OCR box can run past a label's bottom.
+  const y0 = Math.max(0, Math.round(label[1] + 1.5 * h));
+  const y1 = Math.min(raster.height, Math.round(label[1] + 3.8 * h));
+  const w = x1 - x0;
+  const rows = y1 - y0;
+  if (rows <= 0 || w <= 0) return 0;
+  // The cell's own ink threshold: a faded copy's print is lighter than a fax's.
+  const threshold = regionThreshold(raster, [x0, y0, x1 - 1, y1 - 1]);
+  const seen = new Uint8Array(w * rows);
+  const ink = (x: number, y: number) => isInk(raster, x0 + x, y0 + y, threshold);
+  let width = 0;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < w; x++) {
+      if (seen[y * w + x] || !ink(x, y)) continue;
+      // One connected mark (4-neighbours), with its extent.
+      let minX = x, maxX = x, minY = y, maxY = y, n = 0;
+      const stack = [x, y];
+      seen[y * w + x] = 1;
+      while (stack.length) {
+        const cy = stack.pop()!;
+        const cx = stack.pop()!;
+        n++;
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+        for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]] as const) {
+          if (nx < 0 || ny < 0 || nx >= w || ny >= rows || seen[ny * w + nx] || !ink(nx, ny)) continue;
+          seen[ny * w + nx] = 1;
+          stack.push(nx, ny);
+        }
+      }
+      const tall = maxY - minY + 1;
+      const wide = maxX - minX + 1;
+      // Text: a line high, not a whole-cell rule or band, more than a speck.
+      if (n >= 4 && tall >= 0.45 * h && tall <= 1.6 * h && wide <= 12 * h) width += wide;
+    }
+  }
+  return width / h;
+}
+
+/** Text width (in text heights) from which a box 12 slot counts as printed in: about one character. */
+export const BOX12_MIN_TEXT_WIDTH = 0.9;
+
 /**
  * Read the box 12 code printed on the same line, left of a located amount.
  * Only official codes count; anything else leaves the code unknown.

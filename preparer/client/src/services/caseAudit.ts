@@ -63,6 +63,12 @@ export function appendAudit(returnId: string, event: NewAuditEvent, now = new Da
   return events;
 }
 
+/** Add another case's trail to this one's (a case joined into it), in time order. */
+export function mergeAudit(returnId: string, events: readonly CaseAuditEvent[]): void {
+  if (events.length === 0) return;
+  writeRecord(auditStorageKey(returnId), [...loadAudit(returnId), ...events].sort((a, b) => a.at.localeCompare(b.at)));
+}
+
 /** The local model runs that read this case's documents (§42); facts name theirs by run id. */
 export function loadModelRuns(returnId: string): ModelRunRecord[] {
   return readRecord<ModelRunRecord[]>(modelRunStorageKey(returnId)) ?? [];

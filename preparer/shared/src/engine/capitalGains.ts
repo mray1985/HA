@@ -1,6 +1,6 @@
 import { FilingStatus } from '../types/index.js';
 import { getTaxConstants } from '../constants/taxConstants.js';
-import { calculateProgressiveTax } from './brackets.js';
+import { calculateTaxTableTax } from './brackets.js';
 import { round2 } from './utils.js';
 
 /**
@@ -30,7 +30,7 @@ import { round2 } from './utils.js';
  *   IRC: Section 1(h)(1)(E) — 25% rate on unrecaptured Section 1250 gain
  *   IRC: Section 1(h)(1)(F), Section 1(h)(4) — 28% maximum rate on collectibles gain
  *   Rev. Proc: 2024-40, Section 3.12 — inflation-adjusted rate thresholds
- *   Form: Form 1040, Qualified Dividends and Capital Gain Tax Worksheet
+ *   Form: Form 1040, Qualified Dividends and Capital Gain Tax Worksheet (lines 22 and 24: Tax Table below $100,000)
  *   Form: Schedule D Tax Worksheet (when Section 1250 or 28% rate gain is present)
  * @scope Preferential rate tax for qualified dividends and LTCG (0%/15%/20%), 25% Section 1250 zone, and 28% collectibles
  * @limitations None
@@ -79,8 +79,8 @@ export function calculatePreferentialRateTax(
     taxableIncome,
   );
 
-  // Regular tax: all at progressive rates (the baseline comparison)
-  const regularResult = calculateProgressiveTax(taxableIncome, filingStatus, taxYear);
+  // Regular tax (worksheet line 24): the Tax Table below $100,000, else the Tax Computation Worksheet
+  const regularResult = calculateTaxTableTax(taxableIncome, filingStatus, taxYear);
   const regularTax = regularResult.tax;
 
   // If no preferential income, fall back to normal progressive calculation
@@ -100,8 +100,8 @@ export function calculatePreferentialRateTax(
   // Ordinary portion = taxable income minus all preferential income
   const ordinaryTaxableIncome = round2(taxableIncome - totalPreferential);
 
-  // Tax on ordinary income at progressive rates
-  const ordinaryResult = calculateProgressiveTax(ordinaryTaxableIncome, filingStatus, taxYear);
+  // Tax on ordinary income (worksheet line 22): the Tax Table below $100,000, else the Tax Computation Worksheet
+  const ordinaryResult = calculateTaxTableTax(ordinaryTaxableIncome, filingStatus, taxYear);
   const ordinaryTax = ordinaryResult.tax;
 
   const rates = getTaxConstants(taxYear).CAPITAL_GAINS_RATES;

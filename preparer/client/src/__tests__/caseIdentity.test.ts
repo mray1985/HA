@@ -48,6 +48,11 @@ function doc(id: string, ...identities: Array<PartyIdentity | null>): IngestedDo
 const empty = { dependents: [] } as unknown as TaxReturn;
 
 describe('planning the identity', () => {
+  it('never takes the taxpayer from a 1099-Q recipient or a 1098-T student (they may be a dependent)', () => {
+    const student: PartyIdentity = { formType: '1098-T', placementOnly: true, tinLastFour: '1122', name: { raw: 'ALEX LEE', confirmed: true, value: { first: 'Alex', last: 'Lee' } } };
+    expect(planIdentity(empty, [doc('T', student)])).toMatchObject({ patch: {}, items: [] });
+  });
+
   it('keeps the confirmed last four of a masked TIN, so later masked forms find the case', () => {
     const masked: PartyIdentity = { formType: '1099-INT', tinLastFour: '3456', name: { raw: 'MAYA TESTPAYER', confirmed: true, value: { first: 'Maya', last: 'Testpayer' } } };
     const plan = planIdentity(empty, [doc('INT', masked)]);

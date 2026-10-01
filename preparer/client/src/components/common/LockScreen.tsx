@@ -173,13 +173,13 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
 
       {mode === 'setup' && (
         <p className="text-xs text-slate-400 text-center mb-5 leading-relaxed">
-          Your tax data is encrypted on this device. Create a passphrase to get started.
-          If you forget it, your data cannot be recovered.
+          Your clients' returns are encrypted on this computer. Create a passphrase to get started.
+          If you forget it, the returns cannot be recovered.
         </p>
       )}
       {mode === 'unlock' && (
         <p className="text-xs text-slate-500 text-center mb-5">
-          Enter your passphrase to unlock your encrypted tax data.
+          Enter your passphrase to unlock your clients' returns.
         </p>
       )}
 
@@ -285,9 +285,9 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold">
-            HA Tax service
+            HA Preparer
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Free, private, open-source tax prep.</p>
+          <p className="text-slate-400 text-sm mt-1">Client returns stay on this computer, encrypted with your passphrase.</p>
         </div>
         {formContent}
       </div>

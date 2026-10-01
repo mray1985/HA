@@ -57,6 +57,18 @@ describe('the person on a form', () => {
     expect(id!.tinLastFour).toBeUndefined();
   });
 
+  it('reads a 1099-Q recipient and a 1098-T student to place the form only', () => {
+    const q = identityFromValues('1099-Q', { 'recipient.tin': 'XXX-XX-3456', 'recipient.name': 'MAYA TESTPAYER' }, () => true);
+    expect(q).toMatchObject({ formType: '1099-Q', placementOnly: true, tinLastFour: '3456', name: { value: { first: 'Maya', last: 'Testpayer' } } });
+    const t = identityFromValues('1098-T', { 'student.tin': 'XXX-XX-1122', 'student.name': 'ALEX LEE' }, () => true);
+    expect(t).toMatchObject({ placementOnly: true, tinLastFour: '1122', name: { value: { first: 'Alex', last: 'Lee' } } });
+    // The recipient and student boxes are identity boxes: the page and the second reader confirm them.
+    expect(isIdentityKey('1099-Q', 'recipient.name')).toBe(true);
+    expect(isIdentityKey('1098-T', 'student.tin')).toBe(true);
+    // Every other form's person is the return's own.
+    expect(identityFromValues('1099-INT', { 'recipient.name': 'MAYA LEE' }, () => true)!.placementOnly).toBeUndefined();
+  });
+
   it('joins a 2026 1099’s split address cells', () => {
     const id = identityFromValues('1099-NEC', {
       'recipient.tin': 'XXX-XX-6789', 'recipient.name': 'MAYA LEE', 'recipient.street': '815 MAGNOLIA AVE', 'recipient.apt': 'APT 2',
@@ -75,10 +87,9 @@ describe('the person on a form', () => {
     expect(parseUSAddress(['815 MAGNOLIA AVE', ', LA 70802'])).toBeNull();
   });
 
-  it('never names the taxpayer from a 1098-T student or a 1099-Q recipient', () => {
-    expect(identityFromValues('1098-T', { 'student.name': 'LEO LEE' }, () => true)).toBeNull();
-    expect(identityFromValues('1099-Q', { 'recipient.name': 'LEO LEE' }, () => true)).toBeNull();
-    expect(isIdentityKey('1099-Q', 'recipient.name')).toBe(false);
+  it('never names the taxpayer from a 1098-T student or a 1099-Q recipient: they place the form only', () => {
+    expect(identityFromValues('1098-T', { 'student.name': 'LEO LEE' }, () => true)).toMatchObject({ placementOnly: true });
+    expect(identityFromValues('1099-Q', { 'recipient.name': 'LEO LEE' }, () => true)).toMatchObject({ placementOnly: true });
     expect(isIdentityKey('1098', 'borrower.tin')).toBe(true);
   });
 
@@ -117,5 +128,13 @@ describe("a W-2's name by its printed columns", () => {
     expect(id?.name?.value).toEqual({ first: 'Jordan', last: 'Testpayer' });
     // Without the page's columns, a two-line name is not split.
     expect(identityFromValues('W-2', { e: 'JORDAN\nTESTPAYER' }, () => true)?.name?.value).toBeNull();
+  });
+
+  it('reads the name when the reading ran on into the address below it (stress run)', () => {
+    const id = identityFromValues('W-2', { a: '000-31-5502', e: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540', f: '1427 ASPEN CT\nNAPERVILLE IL 60540' }, () => true, { nameColumns: true });
+    expect(id?.name).toMatchObject({ raw: 'CARA\nOKAFOR\n1427 ASPEN CT\nNAPERVILLE IL 60540', value: { first: 'Cara', last: 'Okafor' } });
+    expect(id?.address?.value).toEqual({ street: '1427 ASPEN CT', city: 'NAPERVILLE', state: 'IL', zip: '60540' });
+    // A third line that is not an address (nor a suffix) still leaves the name unread.
+    expect(identityFromValues('W-2', { e: 'CARA\nOKAFOR\nSOMETHING ELSE' }, () => true, { nameColumns: true })?.name?.value).toBeNull();
   });
 });

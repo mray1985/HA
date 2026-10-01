@@ -25,9 +25,11 @@
  */
 
 import type { FormBoxSchema, FormExtractionSchema } from './formSchemas.js';
-import { isIdentityKey, NAME_COLUMN_KEYS } from './identity.js';
+import { IDENTITY_KEYS, isIdentityKey, NAME_COLUMN_KEYS, withoutTrailingAddress } from './identity.js';
 import { parseMoneyToken } from './structuredExtraction.js';
 import {
+  BOX12_MIN_TEXT_WIDTH,
+  box12CellTextWidth,
   box12CodeAt,
   columnParts,
   distanceToRegion,
@@ -79,6 +81,12 @@ export interface FormEvidenceResult {
    * single-source candidate, so the box goes to review.
    */
   missed: Array<{ key: string; pageText: string; box: PixelBox }>;
+  /**
+   * W-2 box 12 keys whose cell the page prints in (its ink) while neither the
+   * model nor the page's text read it: for the second reader, and held when
+   * no reader reads them.
+   */
+  printedUnread: string[];
   /** Region of the form instance that was read, when any value was located. */
   region: PixelBox | null;
 }
@@ -130,7 +138,14 @@ export function applyPageEvidence(
   const nameColumns: string[] = [];
   const columnKey = NAME_COLUMN_KEYS[schema.formType];
   if (columnKey && values[columnKey] !== undefined) {
-    const parts = columnParts(values[columnKey]!, page.words);
+    // A reading that ran on into the address below (box f) is checked as the name alone;
+    // when box f was not read, those lines are its reading, located on the page like any other.
+    const lines = values[columnKey]!.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const nameLines = withoutTrailingAddress(lines);
+    const addressKey = IDENTITY_KEYS[schema.formType]?.address[0];
+    if (nameLines.length < lines.length && addressKey && !values[addressKey]?.trim()) values[addressKey] = lines.slice(nameLines.length).join('\n');
+    const name = nameLines.join('\n');
+    const parts = columnParts(name, page.words);
     if (parts) {
       values[columnKey] = parts.join('\n');
       nameColumns.push(columnKey);
@@ -249,6 +264,7 @@ export function applyPageEvidence(
   //    code (measured: a model read "C" into 12a and into the empty 12b–12d).
   const box12Codes: Record<string, string> = {};
   const box12FromPage: Record<string, { code: string; amount: string }> = {};
+  const printedUnread: string[] = [];
   if (schema.formType === 'W-2') {
     const source = page.words[0]?.source ?? 'ocr';
     for (const slot of ['12a', '12b', '12c', '12d']) {
@@ -265,9 +281,13 @@ export function applyPageEvidence(
           located[amountKey] = { box: entry.amountBox, source, pageText: entry.amount };
           located[codeKey] = { box: entry.codeBox, source, pageText: entry.code };
           box12FromPage[slot] = { code: entry.code, amount: entry.amount };
-        } else if (modelCode !== undefined) {
-          delete values[codeKey];
-          phantoms.push(codeKey);
+        } else {
+          if (modelCode !== undefined) {
+            delete values[codeKey];
+            phantoms.push(codeKey);
+          }
+          // Printed in, but no reader read it: the second reader is asked.
+          if ((box12CellTextWidth(slot, page.words, page.raster, region) ?? 0) >= BOX12_MIN_TEXT_WIDTH) printedUnread.push(codeKey, amountKey);
         }
         continue;
       }
@@ -289,7 +309,7 @@ export function applyPageEvidence(
 
   const missed = region ? findMissedValues(schema, values, located, page.words, region) : [];
 
-  return { values, located, checkboxes, box12Codes, box12FromPage, phantoms, relined, nameColumns, missed, region };
+  return { values, located, checkboxes, box12Codes, box12FromPage, phantoms, relined, nameColumns, missed, printedUnread, region };
 }
 
 /**

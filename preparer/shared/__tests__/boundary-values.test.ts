@@ -15,6 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { calculateForm1040 } from '../src/engine/form1040.js';
+import { calculateProgressiveTax } from '../src/engine/brackets.js';
 import { TaxReturn, FilingStatus } from '../src/types/index.js';
 
 // ─── Helper ─────────────────────────────────────────────────────────────────
@@ -75,7 +76,9 @@ describe('BV-01 — Single 10%→12% Bracket Edge', () => {
       w2Income: [{ id: 'w1', employerName: 'A', wages: 27675, federalTaxWithheld: 0, socialSecurityWages: 27675, socialSecurityTax: 1716, medicareWages: 27675, medicareTax: 401 }],
     }).form1040;
     expect(f.taxableIncome).toBe(11925);
-    expect(f.incomeTax).toBe(1192.5);
+    // The schedule: 11925 × 10% = 1192.50; line 16 is the Tax Table row 11,900–11,950: $1,193
+    expect(calculateProgressiveTax(11925, FilingStatus.Single, 2025).tax).toBe(1192.5);
+    expect(f.incomeTax).toBe(1193);
   });
 
   it('taxable income $11,926 → $1 taxed at 12%', () => {
@@ -84,7 +87,9 @@ describe('BV-01 — Single 10%→12% Bracket Edge', () => {
       w2Income: [{ id: 'w1', employerName: 'A', wages: 27676, federalTaxWithheld: 0, socialSecurityWages: 27676, socialSecurityTax: 1716, medicareWages: 27676, medicareTax: 401 }],
     }).form1040;
     expect(f.taxableIncome).toBe(11926);
-    expect(f.incomeTax).toBe(1192.62);
+    // The schedule taxes the $1 over at 12%: 1192.62; the Tax Table row is the same as $11,925's
+    expect(calculateProgressiveTax(11926, FilingStatus.Single, 2025).tax).toBe(1192.62);
+    expect(f.incomeTax).toBe(1193);
   });
 });
 
@@ -113,7 +118,8 @@ describe('BV-02 — Standard Deduction Zero Taxable Floor', () => {
       w2Income: [{ id: 'w1', employerName: 'A', wages: 15751, federalTaxWithheld: 0, socialSecurityWages: 15751, socialSecurityTax: 977, medicareWages: 15751, medicareTax: 228 }],
     }).form1040;
     expect(f.taxableIncome).toBe(1);
-    expect(f.incomeTax).toBe(0.10);
+    // Tax Table row 0–5: $0
+    expect(f.incomeTax).toBe(0);
   });
 
   it('wages $1 below standard deduction → taxable $0 (no negative)', () => {

@@ -38,6 +38,8 @@ export type FieldSourceLocationValue =
   | Array<FieldSourceLocation | undefined>;
 
 export interface PDFExtractResult {
+  /** The tax year the form prints (printedTaxYear), when the page shows it. */
+  taxYearPrinted?: string;
   formType: SupportedFormType | null;
   confidence: 'high' | 'medium' | 'low';
   extractedData: Record<string, unknown>;
@@ -1702,6 +1704,33 @@ function k1EntityType(textBlocks: TextBlock[]): 'partnership' | 's_corp' | undef
   const named = [/form\s*1065\b/.test(text), /form\s*1120-?s\b/.test(text), /form\s*1041\b/.test(text)];
   if (named.filter(Boolean).length !== 1) return undefined;
   return named[0] ? 'partnership' : named[1] ? 's_corp' : undefined;
+}
+
+/**
+ * The tax year a form prints: a W-2c's box c (the year corrected); a 1099's
+ * "For calendar year" entry; otherwise a year printed in large type, as the
+ * W-2 prints its year. A revision date ("Rev. April 2025") is not a tax year.
+ * Undefined when the page shows none of these.
+ */
+export function printedTaxYear(blocks: readonly TextBlock[], formType: string | null, extracted: Record<string, unknown>): string | undefined {
+  if (formType === 'W-2C') {
+    const corrected = String(extracted.taxYearCorrected ?? '').match(/20\d{2}/);
+    return corrected?.[0];
+  }
+  const standalone = (b: TextBlock) => /^20\d{2}$/.test(b.text.trim());
+  const calendar = blocks.find((b) => /calendar\s+year/i.test(b.text));
+  if (calendar) {
+    const inline = /calendar\s+year\s*(20\d{2})/i.exec(calendar.text);
+    if (inline) return inline[1];
+    const near = blocks
+      .filter((b) => standalone(b) && b.page === calendar.page && Math.abs(b.y - calendar.y) <= 3 * Math.max(calendar.height, b.height))
+      .sort((a, b) => Math.hypot(a.x - calendar.x, a.y - calendar.y) - Math.hypot(b.x - calendar.x, b.y - calendar.y));
+    if (near[0]) return near[0].text.trim();
+  }
+  const heights = blocks.map((b) => b.height).filter((h) => h > 0).sort((a, b) => a - b);
+  const median = heights[Math.floor(heights.length / 2)] ?? 0;
+  const large = blocks.filter((b) => standalone(b) && median > 0 && b.height >= 2 * median).sort((a, b) => b.height - a.height);
+  return large[0]?.text.trim();
 }
 
 export function extractK1Fields(

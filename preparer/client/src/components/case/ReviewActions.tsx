@@ -8,13 +8,14 @@
 import { useState, type ReactNode } from 'react';
 import { getAllStates } from '@hatax/engine';
 import { CHOICE_FIELDS, DEPENDENT_RELATIONSHIPS, fieldInput, type ChoiceTool } from '@hatax/local-ai';
-import { FILING_STATUS_OPTIONS, K1_ENTITY_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
+import { FILING_STATUS_OPTIONS, K1_ENTITY_OPTIONS, YES_NO_OPTIONS, parseReturnField, returnFieldSpec } from '../../services/returnFields';
 import { applyLastYearsAccount } from '../../services/caseRollover';
 import { applyAddress, applyIdentityReading, setPersonOnReturn } from '../../services/caseIdentity';
 import { loadDocuments } from '../../services/documentIngestion';
 import type { ReviewAction } from '../../services/caseReview';
 import { completeDependent, correctFormField, recordAcquisition, recordChoice, recordStateAnswer, applyStatedFilingStatus, type DecisionResult } from '../../services/preparerDecisions';
-import { useCaseStore } from '../../store/caseStore';
+import { flushCaseSave, useCaseStore } from '../../store/caseStore';
+import { joinSpouseCase } from '../../services/spouseCases';
 
 const inputClass = 'bg-surface-700 border border-slate-600 text-white text-sm rounded px-2 py-1.5 w-full';
 
@@ -214,6 +215,7 @@ const TITLE: Record<ReviewAction['kind'], string> = {
   use_identity: 'Use the reading',
   identity_person: 'Put the person on the return',
   choose_address: 'Use an address',
+  join_spouse_case: 'Make it a joint return',
 };
 
 export function actionLabel(action: ReviewAction): string {
@@ -223,11 +225,15 @@ export function actionLabel(action: ReviewAction): string {
     : action.kind === 'return_field' ? 'Enter it'
     : action.kind === 'use_bank' || action.kind === 'use_identity' ? 'Use it'
     : action.kind === 'identity_person' ? (action.purpose === 'taxpayer' ? 'Choose the taxpayer' : 'Enter as the spouse')
-    : action.kind === 'choose_address' ? 'Choose' : 'Complete';
+    : action.kind === 'choose_address' ? 'Choose'
+    : action.kind === 'join_spouse_case' ? 'Join the cases' : 'Complete';
 }
 
 export default function ReviewActionForm({ action, onDone }: { action: ReviewAction; onDone: () => void }) {
   const act = useCaseStore((s) => s.act);
+  const returnId = useCaseStore((s) => s.returnId);
+  const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
+  const [joining, setJoining] = useState(false);
   const [answer, setAnswer] = useState<Answer>(action.kind === 'state_answer' && action.current !== undefined ? { value: action.current } : {});
   const [error, setError] = useState<string | null>(null);
   const set = (field: string, value: unknown) => setAnswer((a) => ({ ...a, [field]: value }));
@@ -239,6 +245,19 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       : action.kind === 'dependent' ? action.missing.filter((f) => answer[f] === undefined) : [];
     if (unanswered.length > 0) {
       setError(`Answer every question (${unanswered.map(label).join(', ')}).`);
+      return;
+    }
+    if (action.kind === 'join_spouse_case') {
+      // The other case's documents and source files move here: not one synchronous step.
+      if (!returnId || joining) return;
+      setJoining(true);
+      flushCaseSave();
+      void joinSpouseCase(returnId, action.returnId).then((joined) => {
+        setJoining(false);
+        reloadEvidence();
+        if (joined.ok) onDone();
+        else setError(joined.error);
+      });
       return;
     }
     const result: DecisionResult = act((returnId) => {
@@ -342,6 +361,11 @@ export default function ReviewActionForm({ action, onDone }: { action: ReviewAct
       )}
       {action.kind === 'identity_person' && action.options.length === 1 && <p className="text-sm text-slate-300">Enter {action.options[0]!.label.split(' — ')[0]} as the {action.purpose}.</p>}
       {action.kind === 'use_bank' && <p className="text-sm text-slate-300">Put the {action.label} on the return for the refund. Use it only after the client confirms the account.</p>}
+      {action.kind === 'join_spouse_case' && (
+        <p className="text-sm text-slate-300">
+          {action.name} becomes the spouse on this return. {action.documents === 0 ? 'Their case has no documents.' : `${action.documents} document${action.documents === 1 ? '' : 's'} move here and each form is applied on the joint return.`} {action.name}'s own case is then removed. Set the filing status once the couple confirms they file jointly.{joining ? ' Joining…' : ''}
+        </p>
+      )}
       {action.kind === 'filing_status' && <p className="text-sm text-slate-300">Set the return's filing status to {action.label}. The engine still checks that the client qualifies for it.</p>}
       {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       <p className="text-xs text-slate-500">Recorded as a preparer entry and kept in the audit trail.</p>
@@ -399,10 +423,10 @@ export function ReturnFieldsForm({ fields, onDone }: { fields: string[]; onDone:
                 <option value="">Choose…</option>
                 {FILING_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-            ) : spec.kind === 'k1_entity' ? (
+            ) : spec.kind === 'k1_entity' || spec.kind === 'yes_no' ? (
               <select aria-label={spec.label} autoFocus={i === 0} className={inputClass} value={values[field] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}>
                 <option value="">Choose…</option>
-                {K1_ENTITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {(spec.kind === 'yes_no' ? YES_NO_OPTIONS : K1_ENTITY_OPTIONS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             ) : (
               <input

@@ -81,7 +81,8 @@ describe('Phase 9 — IRS Worksheet Differential Tests (C4)', () => {
     // AGI = $75,000
     // Taxable income = $75,000 - $15,750 = $59,250
     // Tax: 10%×$11,925 + 12%×($48,475-$11,925) + 22%×($59,250-$48,475)
-    //    = $1,192.50 + $4,386.00 + $2,370.50 = $7,949.00
+    //    = $1,192.50 + $4,386.00 + $2,370.50 = $7,949.00 by the schedule;
+    //    line 16 is the Tax Table row $59,250–$59,300: $7,955
     const tr = makeTaxReturn({
       w2Income: [{ id: 'w1', employerName: 'Acme', wages: 75000, federalTaxWithheld: 8000, socialSecurityWages: 75000, medicareWages: 75000 }],
     });
@@ -90,9 +91,9 @@ describe('Phase 9 — IRS Worksheet Differential Tests (C4)', () => {
     expect(r.agi).toBe(75000);
     expect(r.standardDeduction).toBe(15750);
     expect(r.taxableIncome).toBe(59250);
-    expect(r.incomeTax).toBeCloseTo(7949, 0);
-    expect(r.totalTax).toBeCloseTo(7949, 0);
-    expect(r.refundAmount).toBeCloseTo(51, 0);    // $8,000 withheld - $7,949 = $51
+    expect(r.incomeTax).toBe(7955);
+    expect(r.totalTax).toBe(7955);
+    expect(r.refundAmount).toBe(45);    // $8,000 withheld - $7,955 = $45
   });
 
   it('D2: MFJ, $150k combined W-2, 2 kids, standard deduction', () => {
@@ -203,7 +204,7 @@ describe('Phase 9 — IRS Worksheet Differential Tests (C4)', () => {
     expect(r.agi).toBe(35000);
     expect(r.standardDeduction).toBe(23625);
     expect(r.taxableIncome).toBe(11375);
-    expect(r.incomeTax).toBe(1137.5);  // 10% × $11,375 = $1,137.50
+    expect(r.incomeTax).toBe(1138);  // Tax Table row $11,350–$11,400 (the schedule: $1,137.50)
     // CTC ($2,200) exceeds tax liability → non-refundable portion limited to tax
     expect(r.taxAfterCredits).toBe(0);
     // ACTC refundable portion should be > 0
@@ -288,8 +289,9 @@ describe('Phase 9 — IRS Worksheet Differential Tests (C4)', () => {
 
     expect(r.agi).toBe(40000);
     expect(r.taxableIncome).toBe(24250);  // $40,000 - $15,750
-    // Tax on $24,250: 10%×$11,925 + 12%×($24,250-$11,925) = $1,192.50 + $1,479 = $2,671.50
-    expect(r.incomeTax).toBe(2671.5);
+    // Tax on $24,250: the schedule gives $1,192.50 + $1,479 = $2,671.50; line 16 is the
+    // Tax Table row $24,250–$24,300: $2,675
+    expect(r.incomeTax).toBe(2675);
     // AOTC = $2,500 total credit (non-refundable $1,500 + refundable $1,000)
     expect(r.totalCredits).toBeGreaterThan(2000);
     // Should get a refund (withholding + refundable AOTC portion)

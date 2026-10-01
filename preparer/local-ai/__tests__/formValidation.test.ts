@@ -79,6 +79,17 @@ describe('duplicate forms across files', () => {
     expect(v.issues.find((i) => i.code === 'DUPLICATE_FORM')!.message).toMatch(/matches DOC-pdf#0/);
   });
 
+  it('keeps the clean copy when the first copy is held for a misreading (a photo, then the PDF)', () => {
+    const w2 = { employerEin: '72-1234567', wages: 68250, federalTaxWithheld: 7120, medicareTax: 1029.5 };
+    const photo = facts('add_w2', w2, 'DOC-photo').map((f) => (f.sourceField === 'medicareTax'
+      ? { ...f, secondReading: { source: 'model' as const, reader: 'GLM-OCR', text: '2,750.00', agrees: false } }
+      : f));
+    const v = validateImportedFacts([...photo, ...facts('add_w2', w2, 'DOC-pdf')]);
+    // The PDF goes on the return; the photo stays held, now also as a copy of it.
+    expect(v.heldForms).toEqual(['DOC-photo#0']);
+    expect(v.issues.find((i) => i.code === 'DUPLICATE_FORM')).toMatchObject({ formKey: 'DOC-photo#0', message: expect.stringMatching(/matches DOC-pdf#0/) });
+  });
+
   it('does not treat two different W-2s from one employer as duplicates', () => {
     const v = validateImportedFacts([
       ...facts('add_w2', { employerEin: '72-1234567', wages: 52431.18, federalTaxWithheld: 5873.4 }, 'DOC-a'),

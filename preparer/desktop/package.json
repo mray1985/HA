@@ -11,8 +11,8 @@
     "build": "node build.mjs",
     "native": "node scripts/rebuild-native.mjs",
     "start": "npm run build && npm run native && electron .",
-    "pack": "npm run build && npm run native && electron-builder --config electron-builder.cjs --win dir",
-    "dist": "npm run build && npm run native && electron-builder --config electron-builder.cjs --win nsis",
+    "pack": "node scripts/check-client.mjs --warn && npm run build && npm run native && electron-builder --config electron-builder.cjs --win dir",
+    "dist": "node scripts/check-client.mjs && npm run build && npm run native && electron-builder --config electron-builder.cjs --win nsis",
     "icon": "node scripts/make-icon.mjs"
   },
   "dependencies": {

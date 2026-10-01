@@ -29,10 +29,10 @@ import {
 } from './taxTools.js';
 import type { JsonSchema } from './toolDefinitions.js';
 
-export type NoteKind = 'dependents' | 'states' | 'payments';
-export const NOTE_KINDS: readonly NoteKind[] = ['dependents', 'states', 'payments'];
+export type NoteKind = 'dependents' | 'states' | 'payments' | 'spouse' | 'expenses';
+export const NOTE_KINDS: readonly NoteKind[] = ['dependents', 'states', 'payments', 'spouse', 'expenses'];
 
-export type NoteTool = 'add_dependent' | 'set_state_residency' | 'add_estimated_payment';
+export type NoteTool = 'add_dependent' | 'set_state_residency' | 'add_estimated_payment' | 'set_spouse' | 'add_business_expense';
 
 export interface NoteProposal {
   tool: NoteTool;
@@ -59,6 +59,8 @@ export interface NoteReading {
 // ─── Grammar and prompt ──────────────────────────────────────
 
 const DATE_OR_BLANK = '^(|[0-9]{4}-[0-9]{2}-[0-9]{2})$';
+const SSN_OR_BLANK = '^(|[0-9]{3}-?[0-9]{2}-?[0-9]{4})$';
+const AMOUNT = '^[0-9]{1,9}(\\.[0-9]{1,2})?$';
 const text = (maxLength: number): JsonSchema => ({ type: 'string', maxLength });
 
 /** What the model lists from a note. States are asked one at a time instead (noteCalls). */
@@ -69,14 +71,37 @@ const LISTS: Record<ListKind, { key: string; item: JsonSchema; instruction: stri
     key: 'people',
     item: {
       type: 'object', additionalProperties: false,
-      required: ['quote', 'firstName', 'lastName', 'relationship', 'dateOfBirth'],
+      required: ['quote', 'firstName', 'lastName', 'relationship', 'dateOfBirth', 'ssn'],
       properties: {
         quote: text(300), firstName: text(40), lastName: text(40),
         relationship: { type: 'string', enum: [...DEPENDENT_RELATIONSHIPS, ''] },
         dateOfBirth: { type: 'string', pattern: DATE_OR_BLANK },
+        ssn: { type: 'string', pattern: SSN_OR_BLANK },
       },
     },
-    instruction: 'List each child or relative the note says is new in the household or was born or adopted (first name, last name, relationship to the client, date of birth as YYYY-MM-DD). Leave a field "" when the note does not give it.',
+    instruction: 'List each child or relative the note says lives with the client, is their dependent, or was born or adopted — not the client and not their spouse (first name, last name, relationship to the client, date of birth as YYYY-MM-DD, Social Security number). Leave a field "" when the note does not give it.',
+  },
+  spouse: {
+    key: 'spouse',
+    item: {
+      type: 'object', additionalProperties: false,
+      required: ['quote', 'firstName', 'lastName', 'dateOfBirth', 'ssn'],
+      properties: {
+        quote: text(300), firstName: text(40), lastName: text(40),
+        dateOfBirth: { type: 'string', pattern: DATE_OR_BLANK },
+        ssn: { type: 'string', pattern: SSN_OR_BLANK },
+      },
+    },
+    instruction: "If the note names the husband, wife or spouse of the client who wrote it, give that one person (first name, last name, date of birth as YYYY-MM-DD, Social Security number) — never a child. Leave a field \"\" when the note does not give it; give an empty list when the note names no spouse.",
+  },
+  expenses: {
+    key: 'expenses',
+    item: {
+      type: 'object', additionalProperties: false,
+      required: ['quote', 'amount', 'description'],
+      properties: { quote: text(300), amount: { type: 'string', pattern: AMOUNT }, description: text(80) },
+    },
+    instruction: "List each expense of the client's own business or self-employment that the note gives an amount for: the amount in digits and what it was for, in the note's words. Not personal spending.",
   },
   payments: {
     key: 'payments',
@@ -99,16 +124,40 @@ export function noteSchema(kind: ListKind): JsonSchema {
   return { type: 'object', additionalProperties: false, required: [key], properties: { [key]: { type: 'array', maxItems: 4, items: item } } };
 }
 
-export function notePrompt(kind: ListKind, note: string, taxYear: number): string {
+export function notePrompt(kind: ListKind, note: string, taxYear: number, client?: string): string {
+  // Whose return it is: a note a spouse wrote ("Ben and I are married") names the client as "Ben".
+  const whose = client
+    ? kind === 'spouse'
+      ? `The return is ${client}'s. Give the one person the note says is married to ${client} — never ${client}. Leave a field "" when the note does not give it; give an empty list when the note names no such person.`
+      : kind === 'dependents'
+        ? `The return is ${client}'s. Never list ${client} or the person married to ${client}.`
+        : null
+    : null;
   return [
     `A client of a tax preparer wrote this note about their ${taxYear} taxes:`,
     '"""',
     note.trim(),
     '"""',
     '',
-    LISTS[kind].instruction,
+    kind === 'spouse' && whose ? whose : LISTS[kind].instruction,
+    ...(kind === 'dependents' && whose ? [whose] : []),
     "For each, copy into \"quote\" the note's own words that state it. Give an empty list when the note states none.",
   ].join('\n');
+}
+
+/**
+ * People the client's words write as "Noah Okafor (born April 12, 2016" or
+ * "Lily Lee, born March 3, 2025": a small reader lists one of several such
+ * people in a sentence and repeats it, so these come from the words as well,
+ * and go through the same checks as the reader's.
+ */
+function bornPeopleIn(note: string): Array<Record<string, unknown>> {
+  const out: Array<Record<string, unknown>> = [];
+  for (const m of note.matchAll(/\b([A-Z][a-z'-]+) ([A-Z][a-z'-]+)\s*(?:\(|,)\s*born\b/g)) {
+    if (NOT_A_PERSON.has(m[1]!.toLowerCase())) continue;
+    out.push({ quote: m[0]!, firstName: m[1], lastName: m[2], relationship: '', dateOfBirth: '', ssn: '', fromWords: true });
+  }
+  return out;
 }
 
 // ─── The client's own words ──────────────────────────────────
@@ -144,7 +193,51 @@ function namedIn(name: string, words: string): boolean {
 const NOT_A_NAME = new Set(['baby', 'son', 'daughter', 'mom', 'dad', 'mother', 'father', 'grandma', 'grandpa', 'the', 'my', 'our', 'he', 'she', 'we', 'i', 'hi', 'hello', 'thanks', 'irs']);
 
 /** The note says a person joined the household. */
-const JOINED = /\b(born|baby|newborn|adopted|adopt|had a|gave birth|welcomed|moved in with (us|me)|lives? with (us|me)|living with (us|me)|dependent)\b/;
+const JOINED = /\b(born|baby|newborn|adopted|adopt|had a|gave birth|welcomed|moved in with (us|me)|lives? with (us|me)|lived with (us|me)|living with (us|me)|dependent)\b/;
+
+/** Capitalized words that are not people: the reader, months, sentence openers. */
+const NOT_A_PERSON = new Set([
+  ...NOT_A_NAME, ...MONTHS, 'our', 'we', "i'm", 'ssn', 'also', 'and', 'but', 'so', 'it', 'this', 'that', 'they', 'please', 'dear', 'thank', 'yes', 'no',
+]);
+
+/** The people the note names: its capitalized words, lowercased, that are not other words or states. */
+function peopleNamedIn(note: string): Set<string> {
+  const states = new Set(STATES.flatMap((st) => st.name.split(' ')));
+  return new Set((note.match(/\b[A-Z][a-z'-]+\b/g) ?? []).map((w) => w.toLowerCase()).filter((w) => !NOT_A_PERSON.has(w) && !states.has(w)));
+}
+
+/** Whether the words from the person's last mention before `at` up to `at` name no one else. */
+function onlyThisPersonBefore(firstName: string, lastName: string, sentence: string, at: number, people: Set<string>): boolean {
+  const before = sentence.slice(0, at);
+  const mentions = [...before.matchAll(new RegExp(`(?<![a-z])${escape(firstName.toLowerCase())}(?![a-z])`, 'g'))];
+  const last = mentions[mentions.length - 1];
+  if (!last) return false;
+  const own = new Set([firstName.toLowerCase(), lastName.toLowerCase()].filter(Boolean));
+  const between = before.slice(last.index! + firstName.length).match(/[a-z][a-z'-]+/g) ?? [];
+  return !between.some((w) => people.has(w) && !own.has(w));
+}
+
+/** The date the words say this person was born ("Noah Okafor (born April 12, 2016"), with no one else named in between. */
+function birthDateOf(firstName: string, lastName: string, sentence: string, people: Set<string>): string | undefined {
+  for (const m of sentence.matchAll(/\bborn\b(?:\s+on)?\s+([^()]*?\b\d{4}\b)/g)) {
+    const dates = datesIn(m[1]!);
+    if (dates.length === 1 && onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) return dates[0];
+  }
+  return undefined;
+}
+
+/** The SSN the words give this person ("Noah Okafor (born …, SSN 000-55-1201"), with no one else named in between. */
+function ssnOf(firstName: string, lastName: string, sentence: string, people: Set<string>): string | undefined {
+  for (const m of sentence.matchAll(/\b(\d{3})-?(\d{2})-?(\d{4})\b/g)) {
+    if (onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  return undefined;
+}
+
+const digitsOf = (s: string) => s.replace(/\D/g, '');
+
+/** "Marcus lived with me all year": the whole year in the home, said of this person. */
+const LIVED_ALL_YEAR = /\blived with (me|us) (all year|all of the year|the whole year|the entire year|all of \d{4}|for the whole year|for the entire year)\b/g;
 
 const question = (kind: ClientQuestion['kind'], stateCode = ''): ClientQuestion => ({
   id: kind, kind, text: '', target: kind === 'residency' ? { kind: 'residency', field: 'residencyType', stateCode } : { kind: 'filing_status' },
@@ -168,6 +261,7 @@ function movedStates(words: string): string[] {
 // ─── Checking the model's list ───────────────────────────────
 
 function checkDependent(item: Record<string, unknown>, sentence: string, words: string): NoteProposal | NoteRejection {
+  const people = peopleNamedIn(words);
   const quote = String(item.quote ?? '');
   const firstName = String(item.firstName ?? '').trim();
   if (!firstName || NOT_A_NAME.has(firstName.toLowerCase()) || !namedIn(firstName, words) || !new RegExp(`\\b${escape(firstName.toLowerCase())}\\b`).test(sentence)) {
@@ -177,25 +271,126 @@ function checkDependent(item: Record<string, unknown>, sentence: string, words: 
   const dropped: string[] = [];
   const lastName = String(item.lastName ?? '').trim();
   if (lastName) {
-    if (namedIn(lastName, words) && new RegExp(`\\b${escape(lastName.toLowerCase())}\\b`).test(sentence)) args.lastName = lastName;
+    // "Our son Eli" gives no last name: the first name is not one.
+    if (lastName.toLowerCase() !== firstName.toLowerCase() && namedIn(lastName, words) && new RegExp(`\\b${escape(lastName.toLowerCase())}\\b`).test(sentence)) args.lastName = lastName;
     else dropped.push('lastName');
   }
   const relationship = String(item.relationship ?? '');
   const stated = readAnswerFromWords(question('relationship'), sentence);
-  if (relationship) {
+  // "I got married to Priya Shah, born …": a spouse, not a dependent.
+  if (!stated && /\b(married|wife|husband|spouse|fianc[eé]e?)\b/.test(sentence) && !/\b(son|daughter|child|children|kids?|baby|grand\w*|niece|nephew|mother|father|mom|dad|parents?|sister|brother)\b/.test(sentence)) {
+    return { tool: 'add_dependent', reason: `the words make ${firstName} a spouse, not a dependent`, quote };
+  }
+  // A person taken from the words has the values the words give: a relationship
+  // only when the sentence names no one else, a birth date and SSN said of them.
+  const fromWords = item.fromWords === true;
+  const othersHere = [...people].filter((p) => p !== firstName.toLowerCase() && p !== lastName.toLowerCase() && new RegExp(`\\b${escape(p)}\\b`).test(sentence));
+  if (fromWords && stated && othersHere.length === 0) args.relationship = stated;
+  else if (relationship) {
     if (stated === relationship) args.relationship = relationship;
     else dropped.push('relationship');
   }
-  const birth = String(item.dateOfBirth ?? '');
+  const birth = fromWords ? birthDateOf(firstName, lastName, sentence, people) ?? '' : String(item.dateOfBirth ?? '');
   if (birth) {
-    const dates = datesIn(sentence);
-    if (dates.length === 1 && dates[0] === birth && /\bborn\b|\bbirth/.test(sentence)) args.dateOfBirth = birth;
+    // The date said of this person: in "Ben and I (Cara, born July 19, 1988)" it is not Ben's.
+    if (birthDateOf(firstName, lastName, sentence, people) === birth) args.dateOfBirth = birth;
     else dropped.push('dateOfBirth');
+  }
+  for (const m of sentence.matchAll(LIVED_ALL_YEAR)) {
+    if (onlyThisPersonBefore(firstName, lastName, sentence, m.index!, people)) args.monthsLivedWithYou = 12;
+  }
+  const ssn = fromWords ? ssnOf(firstName, lastName, sentence, people) ?? '' : String(item.ssn ?? '').trim();
+  if (ssn) {
+    const said = ssnOf(firstName, lastName, sentence, people);
+    if (said && digitsOf(said) === digitsOf(ssn)) args.ssn = said;
+    else dropped.push('ssn');
   }
   if (args.relationship === undefined && !JOINED.test(sentence)) {
     return { tool: 'add_dependent', reason: `the note does not say ${firstName} is a dependent or joined the household`, quote };
   }
   return { tool: 'add_dependent', args, quote, sentence, dropped };
+}
+
+/** Relatives whose name is never the writer's spouse ("my sister Jane Doe got married"). */
+const RELATIVE_BEFORE = /\b(sister|brother|son|daughter|mother|father|mom|dad|parents?|cousin|aunt|uncle|niece|nephew|friend|grand\w*|in-law)\s*,?\s*$/i;
+
+/**
+ * The spouse the client's words name, when the reader listed none: a sentence
+ * tying the writer to the marriage ("Ben and I (Cara Okafor, …) are married",
+ * "I got married in June to Priya Shah", "my wife Ana Ruiz") that names one
+ * full name other than the client's — never one after "sister", "son"….
+ */
+function spouseFromWords(note: string, client?: string): Array<Record<string, unknown>> {
+  const clientFirst = client?.trim().split(/\s+/)[0]?.toLowerCase();
+  for (const sentence of note.split(/(?<=[.!?])\s+/)) {
+    if (!/\b(married|wife|husband|spouse)\b/i.test(sentence)) continue;
+    if (!/\b(i|we)\b.*\b(married|wife|husband|spouse)\b|\bmy (wife|husband|spouse)\b|\b(and i|i and)\b/i.test(sentence)) continue;
+    const names = [...sentence.matchAll(/\b([A-Z][a-z'-]+) ([A-Z][a-z'-]+)\b/g)]
+      .filter((m) => !NOT_A_PERSON.has(m[1]!.toLowerCase()) && m[1]!.toLowerCase() !== clientFirst)
+      .filter((m) => !RELATIVE_BEFORE.test(sentence.slice(0, m.index!).replace(/[(]\s*$/, '')));
+    const unique = [...new Map(names.map((m) => [`${m[1]} ${m[2]}`, m])).values()];
+    if (unique.length !== 1) continue;
+    const m = unique[0]!;
+    return [{ quote: m[0], firstName: m[1], lastName: m[2], dateOfBirth: '', ssn: '', fromWords: true }];
+  }
+  return [];
+}
+
+function checkSpouse(item: Record<string, unknown>, sentence: string, words: string): NoteProposal | NoteRejection {
+  const people = peopleNamedIn(words);
+  const quote = String(item.quote ?? '');
+  const firstName = String(item.firstName ?? '').trim();
+  if (!firstName || NOT_A_NAME.has(firstName.toLowerCase()) || !namedIn(firstName, words) || !new RegExp(`\\b${escape(firstName.toLowerCase())}\\b`).test(sentence)) {
+    return { tool: 'set_spouse', reason: `the note does not name "${firstName || 'anyone'}" in the words given`, quote };
+  }
+  if (!/\b(married|wife|husband|spouse|jointly)\b/.test(sentence)) {
+    return { tool: 'set_spouse', reason: `the words do not say ${firstName} is the client's spouse`, quote };
+  }
+  const args: Record<string, unknown> = { firstName };
+  const dropped: string[] = [];
+  const lastName = String(item.lastName ?? '').trim();
+  if (lastName) {
+    if (namedIn(lastName, words) && new RegExp(`\\b${escape(lastName.toLowerCase())}\\b`).test(sentence)) args.lastName = lastName;
+    else dropped.push('lastName');
+  }
+  const fromWords = item.fromWords === true;
+  const birth = fromWords ? birthDateOf(firstName, lastName, sentence, people) ?? '' : String(item.dateOfBirth ?? '');
+  if (birth) {
+    if (birthDateOf(firstName, lastName, sentence, people) === birth) args.dateOfBirth = birth;
+    else dropped.push('dateOfBirth');
+  }
+  const ssn = fromWords ? ssnOf(firstName, lastName, sentence, people) ?? '' : String(item.ssn ?? '').trim();
+  if (ssn) {
+    const said = ssnOf(firstName, lastName, sentence, people);
+    if (said && digitsOf(said) === digitsOf(ssn)) args.ssn = said;
+    else dropped.push('ssn');
+  }
+  return { tool: 'set_spouse', args, quote, sentence, dropped };
+}
+
+/** "My business expenses were $3,200 for software and equipment": one business expense, its amount and what for. */
+function checkExpense(item: Record<string, unknown>, sentence: string): NoteProposal | NoteRejection {
+  const quote = String(item.quote ?? '');
+  const business = /\b(business|freelanc\w*|self-employ\w*|contract work|contractor|1099|side (job|gig|business)|my clients?)\b/.test(sentence);
+  if (!business || !/\b(expenses?|spent|costs?|paid for|bought|purchased)\b/.test(sentence)) {
+    return { tool: 'add_business_expense', reason: 'the words do not say it was a business expense', quote };
+  }
+  if (/\b(each|per|a month|monthly|every|a week|weekly)\b/.test(sentence)) {
+    return { tool: 'add_business_expense', reason: 'the words give a rate, not the year\'s amount', quote };
+  }
+  const amount = Number(item.amount);
+  const stated = readAnswerFromWords(question('amount'), sentence);
+  if (stated !== amount) return { tool: 'add_business_expense', reason: `the model read ${amount} but the words state ${stated ?? 'no single amount'}`, quote };
+  const args: Record<string, unknown> = { amount };
+  const dropped: string[] = [];
+  const description = String(item.description ?? '').trim();
+  if (description) {
+    // What it was for, in the client's words.
+    const wordsOf = description.toLowerCase().match(/[a-z]{3,}/g) ?? [];
+    if (wordsOf.length > 0 && wordsOf.every((w) => new RegExp(`\\b${escape(w)}\\b`).test(sentence))) args.description = description;
+    else dropped.push('description');
+  }
+  return { tool: 'add_business_expense', args, quote, sentence, dropped };
 }
 
 function checkState(item: Record<string, unknown>, sentence: string, words: string): NoteProposal | NoteRejection {
@@ -242,14 +437,14 @@ function checkPayment(item: Record<string, unknown>, sentence: string): NoteProp
   return { tool: 'add_estimated_payment', args, quote, sentence, dropped };
 }
 
-const TOOL_OF: Record<ListKind, NoteTool> = { dependents: 'add_dependent', payments: 'add_estimated_payment' };
+const TOOL_OF: Record<ListKind, NoteTool> = { dependents: 'add_dependent', payments: 'add_estimated_payment', spouse: 'set_spouse', expenses: 'add_business_expense' };
 
 /**
  * Check each item the model listed against the note's words. Returns the
  * proposals the words support (with unsupported values dropped) and the
  * items rejected, with the reason.
  */
-export function confirmNoteProposals(kind: ListKind, note: string, modelOutput: unknown, taxYear: number): NoteReading {
+export function confirmNoteProposals(kind: ListKind, note: string, modelOutput: unknown, taxYear: number, client?: string): NoteReading {
   let out = modelOutput;
   if (typeof out === 'string') {
     try {
@@ -262,14 +457,24 @@ export function confirmNoteProposals(kind: ListKind, note: string, modelOutput: 
   if (!Array.isArray(items)) return { proposals: [], rejected: [{ tool: TOOL_OF[kind], reason: 'the model gave no usable list' }] };
 
   const reading: NoteReading = { proposals: [], rejected: [] };
-  for (const raw of items) {
+  // People the words write with their birth, which the reader did not list.
+  const listed = new Set(items.map((i) => String((i as Record<string, unknown>)?.firstName ?? '').trim().toLowerCase()));
+  const clientFirst = client?.trim().split(/\s+/)[0]?.toLowerCase();
+  // A spouse from the words only when the reader gave none but the client.
+  const readerSpouse = [...listed].some((n) => n && n !== clientFirst);
+  const fromWords = kind === 'dependents' ? bornPeopleIn(note).filter((p) => !listed.has(String(p.firstName).toLowerCase()))
+    : kind === 'spouse' && !readerSpouse ? spouseFromWords(note, client) : [];
+  for (const raw of [...items, ...fromWords]) {
     const item = (raw ?? {}) as Record<string, unknown>;
     const sentence = typeof item.quote === 'string' ? sentenceAround(note, item.quote) : null;
     if (!sentence) {
       reading.rejected.push({ tool: TOOL_OF[kind], reason: 'the words the model quoted are not in the note', ...(typeof item.quote === 'string' ? { quote: item.quote } : {}) });
       continue;
     }
-    const checked = kind === 'dependents' ? checkDependent(item, sentence, note) : checkPayment(item, sentence);
+    const checked = kind === 'dependents' ? checkDependent(item, sentence, note)
+      : kind === 'spouse' ? checkSpouse(item, sentence, note)
+      : kind === 'expenses' ? checkExpense(item, sentence)
+      : checkPayment(item, sentence);
     if (!('args' in checked)) {
       reading.rejected.push(checked);
       continue;
@@ -295,6 +500,8 @@ export interface NoteCall {
   /** Name of the JSON schema (for the grammar). */
   name: string;
   schema: JsonSchema;
+  /** Whose return the note is on (noteCalls), for the checks that need it. */
+  client?: string;
   /** For a state the note names: the residency question asked of the note. */
   question?: ClientQuestion;
 }
@@ -305,8 +512,16 @@ export interface NoteCall {
  * reader lists states poorly from 51 codes (it gave an empty list for "I moved
  * from Texas to Louisiana") but answers a question about one named state.
  */
-export function noteCalls(note: string, taxYear: number): NoteCall[] {
-  const calls: NoteCall[] = (['dependents', 'payments'] as const).map((kind) => ({ kind, prompt: notePrompt(kind, note, taxYear), name: 'note', schema: noteSchema(kind) }));
+/** `client`: whose return it is ("Ben Okafor"), when the case knows, so a note a spouse wrote is read for the right people. */
+export function noteCalls(note: string, taxYear: number, client?: string): NoteCall[] {
+  const t = note.toLowerCase();
+  // A spouse or a business expense is listed only when the words could state one.
+  const kinds: ListKind[] = [
+    'dependents', 'payments',
+    ...(/\b(married|wife|husband|spouse|jointly)\b/.test(t) ? ['spouse' as const] : []),
+    ...(/\b(expenses?|spent|costs?)\b/.test(t) && /\$\s?\d|\b\d[\d,]*(\.\d{2})?\s*(dollars|usd)\b/.test(t) ? ['expenses' as const] : []),
+  ];
+  const calls: NoteCall[] = kinds.map((kind) => ({ kind, prompt: notePrompt(kind, note, taxYear, client), name: 'note', schema: noteSchema(kind), ...(client ? { client } : {}) }));
   for (const code of statesNamedIn(note)) {
     const q: ClientQuestion = {
       id: `note-residency:${code}`, kind: 'residency',
@@ -321,7 +536,7 @@ export function noteCalls(note: string, taxYear: number): NoteCall[] {
 /** Check one call's output against the note's words. */
 export function confirmNoteCall(call: NoteCall, note: string, modelOutput: unknown, taxYear: number): NoteReading {
   if (call.kind !== 'states' || !call.question || call.question.target.kind !== 'residency') {
-    return confirmNoteProposals(call.kind as ListKind, note, modelOutput, taxYear);
+    return confirmNoteProposals(call.kind as ListKind, note, modelOutput, taxYear, call.client);
   }
   const code = call.question.target.stateCode;
   let out = modelOutput;
@@ -361,22 +576,64 @@ export function proposalIsKnown(proposal: NoteProposal, facts: readonly TaxFact[
   if (proposal.tool === 'set_state_residency') {
     return resolveStateResidency(facts).some((s) => s.stateCode === a.stateCode && s.residencyType === a.residencyType);
   }
-  const payments = new Map<string, Map<string, unknown>>();
-  for (const f of facts) {
-    if (!f.factType.startsWith(factPrefixOf('add_estimated_payment')) || f.status !== 'extracted') continue;
-    const key = formKeyOf(f);
-    payments.set(key, (payments.get(key) ?? new Map()).set(f.sourceField, f.value));
+  // Recorded facts of the tool, one map per record (form key).
+  const records = (tool: NoteTool) => {
+    const byKey = new Map<string, Map<string, unknown>>();
+    for (const f of facts) {
+      if (!f.factType.startsWith(factPrefixOf(tool)) || f.status !== 'extracted') continue;
+      const key = formKeyOf(f);
+      byKey.set(key, (byKey.get(key) ?? new Map()).set(f.sourceField, f.value));
+    }
+    return [...byKey.values()];
+  };
+  const norm = (s: unknown) => String(s ?? '').trim().toLowerCase();
+  if (proposal.tool === 'set_spouse') {
+    return records('set_spouse').some((r) => Object.entries(a).every(([k, v]) => norm(r.get(k)) === norm(v)));
   }
-  return [...payments.values()].some((p) => p.get('jurisdiction') === a.jurisdiction && p.get('amount') === a.amount && (a.datePaid === undefined || p.get('datePaid') === a.datePaid));
+  if (proposal.tool === 'add_business_expense') {
+    return records('add_business_expense').some((r) => r.get('amount') === a.amount && norm(r.get('description')) === norm(a.description));
+  }
+  return records('add_estimated_payment').some((p) => p.get('jurisdiction') === a.jurisdiction && p.get('amount') === a.amount && (a.datePaid === undefined || p.get('datePaid') === a.datePaid));
 }
+
+/**
+ * A proposal naming someone already on the return in another role: a
+ * dependent who is the taxpayer or the spouse, or a spouse who is the
+ * taxpayer (`people` lists the taxpayer first). Never offered.
+ */
+export function namesSomeoneOnTheReturn(proposal: NoteProposal, people: ReadonlyArray<{ firstName?: string; lastName?: string }>): boolean {
+  if (proposal.tool !== 'add_dependent' && proposal.tool !== 'set_spouse') return false;
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
+  const first = norm(proposal.args.firstName);
+  const last = norm(proposal.args.lastName);
+  const others = proposal.tool === 'set_spouse' ? people.slice(0, 1) : people;
+  return others.some((p) => norm(p.firstName) !== '' && norm(p.firstName) === first && (!last || !norm(p.lastName) || norm(p.lastName) === last));
+}
+
+/** "000-55-1201" shown as "SSN ending 1201". */
+const ssnEnding = (ssn: unknown) => (ssn ? `SSN ending ${String(ssn).replace(/\D/g, '').slice(-4)}` : null);
 
 /** The proposal as the preparer reads it before accepting it. */
 export function describeNoteProposal(p: NoteProposal): string {
   const a = p.args;
   if (p.tool === 'add_dependent') {
     const name = [a.firstName, a.lastName].filter(Boolean).join(' ');
-    const extra = [a.relationship ? String(a.relationship).toLowerCase() : null, a.dateOfBirth ? `born ${String(a.dateOfBirth)}` : null].filter(Boolean);
+    const extra = [
+      a.relationship ? String(a.relationship).toLowerCase() : null,
+      a.dateOfBirth ? `born ${String(a.dateOfBirth)}` : null,
+      a.monthsLivedWithYou === 12 ? 'lived with the client all year' : null,
+      ssnEnding(a.ssn),
+    ].filter(Boolean);
     return `Add ${name} as a dependent${extra.length ? ` (${extra.join(', ')})` : ''}`;
+  }
+  if (p.tool === 'set_spouse') {
+    const name = [a.firstName, a.lastName].filter(Boolean).join(' ');
+    const extra = [a.dateOfBirth ? `born ${String(a.dateOfBirth)}` : null, ssnEnding(a.ssn)].filter(Boolean);
+    return `Add ${name} as the spouse${extra.length ? ` (${extra.join(', ')})` : ''}`;
+  }
+  if (p.tool === 'add_business_expense') {
+    const amount = Number(a.amount).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return `Business expense of ${amount}${a.description ? ` (${String(a.description)})` : ''}`;
   }
   if (p.tool === 'set_state_residency') {
     const type = a.residencyType === 'part_year' ? 'part-year resident' : a.residencyType === 'nonresident' ? 'nonresident' : 'resident all year';

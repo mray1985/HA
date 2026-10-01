@@ -59,6 +59,7 @@ export function describeOutcome(outcome: ApplyOutcome): string {
     case 'correction': return outcome.applied ? `corrected the W-2 ${outcome.w2FormKey}` : outcome.reason;
     case 'held': return outcome.reason;
     case 'recorded': return 'recorded';
+    case 'spouse': return outcome.applied ? 'recorded as the spouse' : outcome.reason;
   }
 }
 

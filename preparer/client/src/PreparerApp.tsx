@@ -8,7 +8,9 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import OfflineBanner from './components/common/OfflineBanner';
 import LockScreen from './components/common/LockScreen';
-import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './services/crypto';
+import { getActiveKey, isEncryptionSetup, isUnlocked, lock, setActiveKey, setupEncryption, unlock, verifyKey } from './services/crypto';
+import { forgetSessionKey, rememberSessionKey, restoreSessionKey } from './services/sessionKey';
+import { whenBackgroundWorkIdle } from './services/backgroundWork';
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
 import { preparerSeatActive, useAuthHydrated, useAuthStore } from './store/authStore';
@@ -27,19 +29,50 @@ export default function PreparerApp() {
   const { isAuthenticated, user, fetchMe } = useAuthStore();
   const location = useLocation();
 
+  // A locked screen whose key waits for the local AI's running work (lockScreen).
+  const cancelDeferredLock = useRef<(() => void) | null>(null);
+
+  /**
+   * The idle and hidden-window locks: the screen locks at once; the key and the
+   * decrypted cases are forgotten when the local AI's running work — a batch
+   * of documents, a client's reply — has saved (services/backgroundWork).
+   */
+  const lockScreen = useCallback(() => {
+    setAppState('lock-unlock');
+    // A reload of the locked screen must ask for the passphrase, even while work saves.
+    void forgetSessionKey();
+    cancelDeferredLock.current?.();
+    cancelDeferredLock.current = whenBackgroundWorkIdle(() => {
+      cancelDeferredLock.current = null;
+      lock();
+      clearReturnCache();
+      useDeductionFinderStore.getState().clearDecryptedState?.();
+    });
+  }, []);
+
   const handleUnlock = async (passphrase: string): Promise<boolean> => {
     setLockError(null);
     try {
       if (appState === 'lock-setup') {
         await setupEncryption(passphrase);
+        await rememberSessionKey(getActiveKey()!);
         await loadAllReturns();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
         setAppState('unlocked');
         return true;
       }
+      // The screen locked while work was still saving: the cases in memory are current.
+      const keyStillHeld = isUnlocked();
       const ok = await unlock(passphrase);
-      if (ok) {
+      if (ok && keyStillHeld) {
+        cancelDeferredLock.current?.();
+        cancelDeferredLock.current = null;
+        await rememberSessionKey(getActiveKey()!);
+        setAppState('unlocked');
+      } else if (ok) {
+        // Kept for this browser session, so a reload does not ask again (services/sessionKey).
+        await rememberSessionKey(getActiveKey()!);
         await loadAllReturns();
         await useDeductionFinderStore.getState().loadDecrypted?.();
         await useAuthStore.getState().loadDecrypted();
@@ -53,28 +86,33 @@ export default function PreparerApp() {
   };
 
   useEffect(() => {
-    if (isUnlocked()) {
-      loadAllReturns()
-        .then(() => useDeductionFinderStore.getState().loadDecrypted?.())
-        .then(() => useAuthStore.getState().loadDecrypted())
-        .then(() => setAppState('unlocked'));
-    } else if (isEncryptionSetup()) {
-      setAppState('lock-unlock');
-    } else {
-      setAppState('lock-setup');
-    }
+    let live = true;
+    void (async () => {
+      // A reload within an unlocked session: that session's key, checked against the vault.
+      if (!isUnlocked() && isEncryptionSetup()) {
+        const kept = await restoreSessionKey();
+        if (kept && (await verifyKey(kept))) setActiveKey(kept);
+      }
+      if (!live) return;
+      if (isUnlocked()) {
+        await loadAllReturns();
+        await useDeductionFinderStore.getState().loadDecrypted?.();
+        await useAuthStore.getState().loadDecrypted();
+        if (live) setAppState('unlocked');
+      } else if (isEncryptionSetup()) {
+        setAppState('lock-unlock');
+      } else {
+        setAppState('lock-setup');
+      }
+    })();
+    return () => { live = false; };
   }, []);
 
   useEffect(() => {
     if (appState !== 'unlocked') return;
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden' && isEncryptionSetup()) {
-        hiddenTimerRef.current = setTimeout(() => {
-          lock();
-          clearReturnCache();
-          useDeductionFinderStore.getState().clearDecryptedState?.();
-          setAppState('lock-unlock');
-        }, 30_000);
+        hiddenTimerRef.current = setTimeout(lockScreen, 30_000);
       } else if (hiddenTimerRef.current) {
         clearTimeout(hiddenTimerRef.current);
         hiddenTimerRef.current = null;
@@ -85,18 +123,13 @@ export default function PreparerApp() {
       document.removeEventListener('visibilitychange', handleVisibility);
       if (hiddenTimerRef.current) clearTimeout(hiddenTimerRef.current);
     };
-  }, [appState]);
+  }, [appState, lockScreen]);
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (appState !== 'unlocked') return;
-    timerRef.current = setTimeout(() => {
-      lock();
-      clearReturnCache();
-      useDeductionFinderStore.getState().clearDecryptedState?.();
-      setAppState('lock-unlock');
-    }, AUTO_LOCK_MS);
-  }, [appState]);
+    timerRef.current = setTimeout(lockScreen, AUTO_LOCK_MS);
+  }, [appState, lockScreen]);
 
   useEffect(() => {
     if (appState !== 'unlocked') return;

@@ -275,6 +275,21 @@ function readYesNo(t: string, aboutDocument: boolean): boolean | null {
   return yes;
 }
 
+/** Medical costs a client names when an HSA paid them. */
+const MEDICAL_COSTS = /\b(doctors?|doctor's|medical|dental|dentists?|orthodont\w*|prescriptions?|pharmacy|hospital|surgery|therapy|therapist|clinic|copays?|deductibles?|vision|glasses|contact lenses|eye exams?|medicines?|medications?|health care|healthcare|physical therapy|urgent care)\b/;
+
+/**
+ * A plain statement answering whether a 1099-SA distribution paid qualified
+ * medical expenses, without the word "yes": "The HSA distribution paid doctor
+ * bills." A partial, hedged or negated statement answers nothing.
+ */
+function statedMedicalUse(q: ClientQuestion, t: string): boolean | null {
+  if (q.target.kind !== 'form' || q.target.field !== 'usedForQualifiedMedicalExpenses') return null;
+  if (/\b(some|part|partly|partially|half|most|portion|except|but|all but|not all|other|also)\b|\d/.test(t)) return null;
+  if (/n't\b|\b(not|never|no|none)\b/.test(t)) return null;
+  return MEDICAL_COSTS.test(t) && /\b(paid|pay|paying|used|went|covered|cover|for)\b/.test(t) ? true : null;
+}
+
 /**
  * The answer the client's words state, read without the model. Null when the
  * words are unsure, give two answers, or do not state one.
@@ -289,7 +304,7 @@ export function readAnswerFromWords(q: ClientQuestion, words: string): ClientAns
     case 'amount': return readAmount(t);
     case 'relationship': return readRelationship(t);
     case 'residency': return q.target.kind === 'residency' ? readResidency(t, q.target.stateCode) : null;
-    case 'yes_no': return readYesNo(t, q.target.kind === 'document');
+    case 'yes_no': return readYesNo(t, q.target.kind === 'document') ?? statedMedicalUse(q, t);
     case 'filing_status': return filingStatusFromClientWords(words);
   }
 }

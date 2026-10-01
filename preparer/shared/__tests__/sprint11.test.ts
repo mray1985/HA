@@ -3,7 +3,6 @@ import { calculateForm1040 } from '../src/engine/form1040.js';
 import { calculateHSADeduction } from '../src/engine/hsaForm8889.js';
 import { calculateForm8606, Form8606Result } from '../src/engine/form8606.js';
 import { calculateEstimatedTaxPenalty } from '../src/engine/estimatedTaxPenalty.js';
-import { calculateKiddieTax } from '../src/engine/kiddieTax.js';
 import { calculateFEIE } from '../src/engine/feie.js';
 import { calculateScheduleH } from '../src/engine/scheduleH.js';
 import { calculateAdoptionCredit } from '../src/engine/adoptionCredit.js';
@@ -443,55 +442,9 @@ describe('28. Estimated Tax Penalty (Form 2210)', () => {
 // ════════════════════════════════════════════════════
 
 describe('29. Kiddie Tax (Form 8615)', () => {
-  it('child age >= 19 results in no kiddie tax', () => {
-    const result = calculateKiddieTax({
-      childUnearnedIncome: 10000,
-      childAge: 19,
-      parentMarginalRate: 0.32,
-    });
-    expect(result.applies).toBe(false);
-    expect(result.additionalTax).toBe(0);
-  });
-
-  it('unearned income below $2,700 threshold results in no kiddie tax', () => {
-    const result = calculateKiddieTax({
-      childUnearnedIncome: 2500,
-      childAge: 15,
-      parentMarginalRate: 0.32,
-    });
-    expect(result.applies).toBe(false);
-    expect(result.additionalTax).toBe(0);
-  });
-
-  it('excess unearned income is taxed at parent rate minus child rate', () => {
-    const result = calculateKiddieTax({
-      childUnearnedIncome: 10000,
-      childAge: 15,
-      parentMarginalRate: 0.32,
-    });
-    // unearnedAbove = 10000 - 2700 = 7300
-    // additionalTax = 7300 * (0.32 - 0.10) = 7300 * 0.22 = 1606
-    expect(result.applies).toBe(true);
-    expect(result.unearnedIncomeAboveThreshold).toBe(7300);
-    expect(result.additionalTax).toBe(1606);
-  });
-
-  it('full-time student extends age limit to 24', () => {
-    // Age 20 normally not subject to kiddie tax (>= 19), but student extends to 24
-    const result = calculateKiddieTax({
-      childUnearnedIncome: 5000,
-      childAge: 20,
-      isFullTimeStudent: true,
-      parentMarginalRate: 0.24,
-    });
-    // unearnedAbove = 5000 - 2700 = 2300
-    // additionalTax = 2300 * (0.24 - 0.10) = 2300 * 0.14 = 322
-    expect(result.applies).toBe(true);
-    expect(result.unearnedIncomeAboveThreshold).toBe(2300);
-    expect(result.additionalTax).toBe(322);
-  });
-
-  it('integration: kiddieTaxAmount appears in form1040 result', () => {
+  // Form 8615 is figured line by line on the child's own return (form8615.test.ts).
+  // A child's income listed on another return is Form 8814's, which is not supported.
+  it('a kiddie tax entry adds nothing and is reported unsupported', () => {
     const tr = baseTaxReturn({
       kiddieTax: {
         childUnearnedIncome: 8000,
@@ -500,12 +453,9 @@ describe('29. Kiddie Tax (Form 8615)', () => {
       },
     });
     const result = calculateForm1040(tr);
-    // unearnedAbove = 8000 - 2700 = 5300
-    // additionalTax = 5300 * (0.24 - 0.10) = 5300 * 0.14 = 742
-    expect(result.form1040.kiddieTaxAmount).toBe(742);
-    expect(result.kiddieTax).toBeDefined();
-    expect(result.kiddieTax!.additionalTax).toBe(742);
-    expect(result.kiddieTax!.childTaxableUnearned).toBe(5300);
+    expect(result.form1040.kiddieTaxAmount).toBe(0);
+    expect(result.kiddieTax).toBeUndefined();
+    expect(result.unsupported?.map((u) => u.ruleId)).toContain('FED.8814');
   });
 });
 
@@ -937,7 +887,7 @@ describe('Sprint 11 Integration', () => {
     expect(result.form1040.totalTax).toBeGreaterThanOrEqual(result.form1040.householdEmploymentTax);
   });
 
-  it('combined scenario with FEIE, kiddie tax, and estimated penalty', () => {
+  it('combined scenario with FEIE, a kiddie tax entry, and estimated penalty', () => {
     const tr = baseTaxReturn({
       w2Income: [{ id: 'w1', employerName: 'Overseas Inc', wages: 90000, federalTaxWithheld: 5000 }],
       foreignEarnedIncome: {
@@ -958,11 +908,9 @@ describe('Sprint 11 Integration', () => {
     expect(result.form1040.feieExclusion).toBe(60000);
     expect(result.feie).toBeDefined();
 
-    // Kiddie tax
-    // unearnedAbove = 5000 - 2700 = 2300
-    // additionalTax = 2300 * (0.22 - 0.10) = 2300 * 0.12 = 276
-    expect(result.form1040.kiddieTaxAmount).toBe(276);
-    expect(result.kiddieTax).toBeDefined();
+    // Kiddie tax entries are not estimated (Form 8814 is not supported)
+    expect(result.form1040.kiddieTaxAmount).toBe(0);
+    expect(result.unsupported?.map((u) => u.ruleId)).toContain('FED.8814');
 
     // Estimated tax penalty computed (priorYearTax provided)
     expect(result.estimatedTaxPenalty).toBeDefined();

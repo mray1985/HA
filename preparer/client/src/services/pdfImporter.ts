@@ -65,7 +65,7 @@ export type {
   FormPageSpan,
 } from './pdfExtractHelpers';
 
-import {
+import { printedTaxYear,
   detectFormType,
   detectFormPages,
   extractW2Fields,
@@ -323,6 +323,8 @@ function processTextBlocks(
   const { extractedData, payerName, fieldRawTokens, fieldSourceLocations } = extractFormData(type, effectiveBlocks);
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
   const identity = type === 'W-2' ? w2EmployeeFromTextLayer(effectiveBlocks, !ocrUsed) : null;
+  // The tax year the form prints, checked against the case's year in the review.
+  const taxYearPrinted = printedTaxYear(effectiveBlocks, type, extractedData);
 
   // Add form-specific warnings
   if (type === '1099-B') {
@@ -405,6 +407,7 @@ function processTextBlocks(
 
   return {
     formType: type,
+    ...(taxYearPrinted ? { taxYearPrinted } : {}),
     confidence,
     extractedData,
     fieldRawTokens: Object.keys(fieldRawTokens).length > 0 ? fieldRawTokens : undefined,

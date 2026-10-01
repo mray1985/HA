@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleHelp, Copy, MessageSquareText } from 'lucide-react';
 import { clientQuestionLetter, generateClientQuestions } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
-import { acceptNoteOffer, answerLabel, dismissNoteOffer, readClientReply, type NoteOffer, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
+import { acceptNoteOffer, answerLabel, dismissNoteOffer, readClientReply, SCHEDULE_C_EXPENSE_LINES, type NoteOffer, type ReadReplyResult, type ReplyAnswer } from '../../services/clientReplies';
 import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 
 function AnswerLine({ answer }: { answer: ReplyAnswer }) {
@@ -40,8 +40,17 @@ function AnswerLine({ answer }: { answer: ReplyAnswer }) {
 
 type OfferState = { kind: 'accepted'; detail: string } | { kind: 'dismissed' } | { kind: 'error'; error: string };
 
-function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; state?: OfferState; onAccept: () => void; onDismiss: () => void }) {
+type BusinessChoice = { id: string; name: string };
+
+function OfferLine({ offer, state, businesses, onAccept, onDismiss }: { offer: NoteOffer; state?: OfferState; businesses: BusinessChoice[]; onAccept: (decided?: Record<string, unknown>) => void; onDismiss: () => void }) {
   const dropped = offer.proposal.dropped;
+  // A business expense's Schedule C line is the preparer's to give — and its business, when there is more than one.
+  const isExpense = offer.proposal.tool === 'add_business_expense';
+  const [lineChoice, setLineChoice] = useState('');
+  const [businessId, setBusinessId] = useState('');
+  const chosen = SCHEDULE_C_EXPENSE_LINES.find((l) => `${l.line}:${l.category}` === lineChoice);
+  const needsBusiness = isExpense && businesses.length > 1;
+  const business = businesses.find((b) => b.id === businessId);
   return (
     <li className="text-sm rounded-lg border border-slate-700 bg-surface-900 p-3">
       <p className="text-white">{offer.description}</p>
@@ -51,9 +60,41 @@ function OfferLine({ offer, state, onAccept, onDismiss }: { offer: NoteOffer; st
       {state?.kind === 'dismissed' && <p className="text-xs text-slate-400 mt-1">Dismissed.</p>}
       {state?.kind === 'error' && <p role="alert" className="text-xs text-red-300 mt-1">{state.error}</p>}
       {(!state || state.kind === 'error') && (
-        <div className="mt-2 flex gap-2 justify-end">
+        <div className="mt-2 flex flex-wrap gap-2 justify-end items-center">
+          {isExpense && (
+            <>
+              <select
+                aria-label="Schedule C line for this expense"
+                value={lineChoice}
+                onChange={(e) => setLineChoice(e.target.value)}
+                className="bg-surface-800 border border-slate-600 text-white text-sm rounded px-2 py-1"
+              >
+                <option value="">Choose the Schedule C line…</option>
+                {SCHEDULE_C_EXPENSE_LINES.map((l) => <option key={`${l.line}:${l.category}`} value={`${l.line}:${l.category}`}>{l.label}</option>)}
+              </select>
+              {needsBusiness && (
+                <select
+                  aria-label="Business this expense belongs to"
+                  value={businessId}
+                  onChange={(e) => setBusinessId(e.target.value)}
+                  className="bg-surface-800 border border-slate-600 text-white text-sm rounded px-2 py-1"
+                >
+                  <option value="">Choose the business…</option>
+                  {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              )}
+              <span className="text-xs text-slate-500 w-full text-right">Equipment is an asset: enter it with its date placed in service.</span>
+            </>
+          )}
           <button type="button" onClick={onDismiss} className="text-sm text-slate-400 hover:text-white px-3 py-1">Dismiss</button>
-          <button type="button" onClick={onAccept} className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1">Add</button>
+          <button
+            type="button"
+            disabled={isExpense && (!chosen || (needsBusiness && !business))}
+            onClick={() => onAccept(chosen ? { scheduleCLine: chosen.line, category: chosen.category, ...(business ? { businessId: business.id } : {}) } : undefined)}
+            className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 disabled:opacity-40 text-white rounded px-3 py-1"
+          >
+            Add
+          </button>
         </div>
       )}
     </li>
@@ -88,6 +129,10 @@ export default function ClientPanel() {
   );
   const letter = useMemo(() => clientQuestionLetter(questions, facts), [questions, facts]);
   const replies = useMemo(() => audit.filter((e) => e.kind === 'client_reply').reverse(), [audit]);
+  const businessChoices = useMemo(
+    () => (taxReturn?.businesses ?? []).map((b, i) => ({ id: b.id, name: b.businessName?.trim() || `Business ${i + 1}` })),
+    [taxReturn?.businesses],
+  );
 
   if (!returnId || !taxReturn) return null;
 
@@ -184,10 +229,11 @@ export default function ClientPanel() {
                       key={offer.id}
                       offer={offer}
                       state={offerStates[offer.id]}
-                      onAccept={() => {
+                      businesses={businessChoices}
+                      onAccept={(decided) => {
                         let outcome: OfferState = { kind: 'error', error: 'The case is not open.' };
                         act((id) => {
-                          const r = acceptNoteOffer(id, result, offer, i);
+                          const r = acceptNoteOffer(id, result, offer, i, decided);
                           outcome = r.ok ? { kind: 'accepted', detail: r.detail } : { kind: 'error', error: r.error };
                           return r.ok ? { ok: true, outcome: { kind: 'recorded' } } : r;
                         });

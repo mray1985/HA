@@ -260,7 +260,7 @@ export default function ExpenseScannerSetup({ transactionCount, onStartScan }: P
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          Scan {enabledCount} {enabledCount === 1 ? 'category' : 'categories'} with{' '}<span>HA Tax service</span>
+          Scan {enabledCount} {enabledCount === 1 ? 'category' : 'categories'}
         </button>
       </div>
     </div>

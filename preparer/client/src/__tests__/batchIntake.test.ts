@@ -10,8 +10,13 @@ import type { PartyIdentity } from '@hatax/local-ai';
 import type { TaxReturn } from '@hatax/engine';
 import { clearReturnCache, createReturn, getReturn, listReturns, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
-import { caseForIdentity, ingestBatch, placeUnmatched } from '../services/caseIntake';
+import { caseForIdentity, ingestBatch, placeableAfterNewCases, placeUnmatched } from '../services/caseIntake';
 import { loadDocuments } from '../services/documentIngestion';
+import { lock, setActiveKey, setupEncryption } from '../services/crypto';
+import { saveReviewRecord } from '../services/caseAudit';
+import { applyReleasedForm } from '../services/preparerDecisions';
+import { removeFormItems, YEAR_ITEM_PREFIX } from '../services/returnApplier';
+import { useCaseStore } from '../store/caseStore';
 
 function installMemoryLocalStorage() {
   const store = new Map<string, string>();
@@ -48,11 +53,44 @@ describe('matching a form to a case', () => {
     expect(caseForIdentity({ formType: '1099-INT', tinLastFour: '3456' }, cases)).toBeNull();
   });
 
+  it("places a 1099-Q or 1098-T by its recipient or student — the taxpayer, the spouse or a dependent", () => {
+    const families = [
+      { id: 'lee', ssn: '111223456', lastName: 'Lee', dependents: [{ id: 'd', firstName: 'Alex', lastName: 'Lee', ssn: '222331122', relationship: 'Son', monthsLivedWithYou: 12 }] },
+      { id: 'maya', ssn: '000123456', lastName: 'Testpayer' },
+    ] as unknown as TaxReturn[];
+    const placed = (formType: '1099-Q' | '1098-T', lastFour: string, last: string): PartyIdentity =>
+      ({ formType, placementOnly: true, tinLastFour: lastFour, name: { raw: '', confirmed: true, value: { first: 'X', last } } });
+    expect(caseForIdentity(placed('1099-Q', '3456', 'Testpayer'), families)?.id).toBe('maya');
+    // A dependent student.
+    expect(caseForIdentity(placed('1098-T', '1122', 'Lee'), families)?.id).toBe('lee');
+    // A dependent is matched only for these forms: a 1099-INT names the return's own people.
+    expect(caseForIdentity({ formType: '1099-INT', tinLastFour: '1122', name: { raw: '', confirmed: true, value: { first: 'Alex', last: 'Lee' } } }, families)).toBeNull();
+    // An unconfirmed name places nothing.
+    expect(caseForIdentity({ ...placed('1099-Q', '3456', 'Testpayer'), name: { raw: '', confirmed: false, value: { first: 'X', last: 'Testpayer' } } }, families)).toBeNull();
+  });
+
+  it('places what a batch held once its new clients have cases', () => {
+    const read = { file: new File(['q'], '1099q.pdf'), how: 'models', readings: [{ classification: { status: 'classified' }, identity: { formType: '1099-Q', placementOnly: true, tinLastFour: '3456', name: { raw: '', confirmed: true, value: { first: 'Maya', last: 'Testpayer' } } } }] } as never;
+    const cases = [{ id: 'maya', ssn: '000123456', lastName: 'Testpayer' }] as unknown as TaxReturn[];
+    expect(placeableAfterNewCases([read], cases)).toEqual([{ read, returnId: 'maya' }]);
+    expect(placeableAfterNewCases([read], [])).toEqual([]);
+  });
+
   it('matches the last four kept from a masked TIN on a case with no full SSN', () => {
     const masked = [{ id: 'new', ssnLastFour: '7788', lastName: 'Rivera' }] as unknown as TaxReturn[];
     const int: PartyIdentity = { formType: '1099-INT', tinLastFour: '7788', name: { raw: '', confirmed: true, value: { first: 'Ana', last: 'Rivera' } } };
     expect(caseForIdentity(int, masked)?.id).toBe('new');
     expect(caseForIdentity({ ...int, tinLastFour: '1111' }, masked)).toBeNull();
+  });
+});
+
+describe("the year a form prints, read from the fixtures' text layers", () => {
+  it('reads the W-2s as 2026 forms, the 1099-Q as 2025, and the W-2c by box c', async () => {
+    const { readFile } = await import('../services/caseIntake');
+    expect((await readFile(pdf('w2-basic-single.pdf'))).taxYearPrinted).toBe('2025');
+    expect((await readFile(pdf('w2-indiana-local.pdf'))).taxYearPrinted).toBe('2025');
+    expect((await readFile(pdf('1099q-529.pdf'))).taxYearPrinted).toBe('2025');
+    expect((await readFile(pdf('w2c-wages.pdf'))).taxYearPrinted).toBe('2025');
   });
 });
 
@@ -92,5 +130,64 @@ describe('a batch for any clients', () => {
     const again = await ingestBatch([pdf('w2-basic-single.pdf')], 2025);
     expect(again.placed).toEqual([{ returnId: maya, name: 'Maya Testpayer', created: false, files: [] }]);
     expect(listReturns().filter((r) => r.taxYear === 2025)).toHaveLength(2);
+  });
+
+  it('holds a form printed for another year off the return until the preparer keeps it here', async () => {
+    // A 2025 W-2 dropped for a 2026 case.
+    const maya = createReturn(2026).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    await ingestBatch([pdf('w2-basic-single.pdf')], 2026);
+    const doc = loadDocuments(maya)[0]!;
+    expect(doc.taxYearsPrinted).toEqual(['2025']);
+    expect(doc.appliedAs).toEqual(['held']);
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+
+    // The preparer records why it belongs on this return: it goes on.
+    const formKey = `${doc.documentId}#0`;
+    saveReviewRecord(maya, { resolutions: { [`${YEAR_ITEM_PREFIX}${formKey}`]: { decision: 'accepted', note: 'Corrected copy issued in 2026 for this year', resolvedAt: '2026-10-01T00:00:00Z' } } });
+    applyReleasedForm(maya, formKey, 'Corrected copy issued in 2026 for this year');
+    expect(getReturn(maya).w2Income).toEqual([expect.objectContaining({ employerName: 'RIVERBEND LOGISTICS LLC', wages: 52431.18 })]);
+
+    // Reopened: it comes off again.
+    saveReviewRecord(maya, { resolutions: {} });
+    removeFormItems(maya, formKey);
+    expect(getReturn(maya).w2Income).toEqual([]);
+  });
+
+  it('keeps a form for another year off the return when the preparer marks it not applicable, and takes back one reopened', async () => {
+    const maya = createReturn(2026).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    await ingestBatch([pdf('w2-basic-single.pdf')], 2026);
+    const itemId = `${YEAR_ITEM_PREFIX}${loadDocuments(maya)[0]!.documentId}#0`;
+    const store = useCaseStore.getState();
+    store.openCase(maya);
+    const item = () => useCaseStore.getState().review!.items.find((i) => i.id === itemId)!;
+
+    // Not applicable to this client: the item closes and the W-2 stays off.
+    useCaseStore.getState().resolve(item(), 'not_applicable', 'Not applicable to this client.');
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+    useCaseStore.getState().reopen(itemId);
+    expect(getReturn(maya).w2Income ?? []).toEqual([]);
+
+    // Checked and correct: it goes on; reopened, it comes off.
+    useCaseStore.getState().resolve(item(), 'accepted', 'Corrected copy issued in 2026 for this year');
+    expect(getReturn(maya).w2Income).toEqual([expect.objectContaining({ employerName: 'RIVERBEND LOGISTICS LLC' })]);
+    useCaseStore.getState().reopen(itemId);
+    expect(getReturn(maya).w2Income).toEqual([]);
+    useCaseStore.getState().closeCase();
+  });
+
+  it('says the vault locked rather than losing the documents it could not save', async () => {
+    await setupEncryption('a passphrase for the test');
+    const maya = createReturn(2025).id;
+    updateReturn(maya, { ssn: '000123456', firstName: 'Maya', lastName: 'Testpayer' });
+    lock();
+    try {
+      await expect(ingestBatch([pdf('w2-basic-single.pdf')], 2025)).rejects.toThrow(
+        'The vault locked before w2-basic-single.pdf was saved. Unlock it and add the documents again.',
+      );
+    } finally {
+      setActiveKey(null);
+    }
   });
 });

@@ -29,7 +29,7 @@ import { appendAudit } from './caseAudit';
 import { loadDocuments, upsertDocument } from './documentIngestion';
 import { loadTaxFacts, saveTaxFacts } from './preparerTaxFacts';
 import { recordEvidence } from './recordTools';
-import { applyChoiceForm, applyToolResult, outcomeOfApply, type ApplyOutcome } from './returnApplier';
+import { applyChoiceForm, applyToolResult, clearAggregateWithoutForms, outcomeOfApply, removeFormItems, type ApplyOutcome } from './returnApplier';
 
 export type DecisionResult = { ok: true; outcome: ApplyOutcome } | { ok: false; error: string };
 
@@ -69,7 +69,7 @@ function noteDocumentOutcome(returnId: string, formKey: string, outcome: ApplyOu
 }
 
 /** Re-apply one form from its facts (after a decision or a correction). */
-function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
+export function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
   const facts = formFacts(returnId, formKey);
   const tool = formToolOfFacts(facts);
   if (!tool) return null;
@@ -79,6 +79,31 @@ function reapplyForm(returnId: string, formKey: string): ApplyOutcome | null {
     ? applyChoiceForm(returnId, tool, formKey)
     : applyToolResult(returnId, { application: TOOL_APPLICATION[tool], fields: toolFieldsFromFacts(tool, facts) }, source);
   noteDocumentOutcome(returnId, formKey, outcome);
+  return outcome;
+}
+
+/** A form the preparer released from a hold (a form for another tax year they kept on this return). */
+export function applyReleasedForm(returnId: string, formKey: string, why: string): ApplyOutcome | null {
+  const outcome = reapplyForm(returnId, formKey);
+  const fileName = formFacts(returnId, formKey)[0]?.sourceFileName ?? formKey;
+  appendAudit(returnId, { kind: 'decision', subject: 'Document kept on this return', detail: `${fileName}: ${why}` });
+  return outcome;
+}
+
+/**
+ * A released form held again (its decision reopened): every way it reached
+ * the return is taken back — its items, a choice form's item (a 1099-S home
+ * sale), its share of a total (SSA-1099, 1098), a W-2c's corrections — by
+ * applying it again under the hold.
+ */
+export function withdrawReleasedForm(returnId: string, formKey: string): ApplyOutcome | null {
+  removeFormItems(returnId, formKey);
+  const outcome = reapplyForm(returnId, formKey);
+  const tool = formToolOfFacts(formFacts(returnId, formKey));
+  const application = tool ? TOOL_APPLICATION[tool] : undefined;
+  if (application?.kind === 'aggregate' && (application.target === 'socialSecurityBenefits' || application.target === 'mortgageInterest')) {
+    clearAggregateWithoutForms(returnId, application.target);
+  }
   return outcome;
 }
 

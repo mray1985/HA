@@ -41,6 +41,18 @@ describe('buildCaseReview', () => {
     expect(review).toMatchObject({ status: 'ready', canApprove: true });
   });
 
+  it('asks for a date of birth it does not have, which reads as under 65', () => {
+    const { dateOfBirth: _dob, ...noBirth } = PERSON;
+    const single = buildCaseReview({ taxReturn: makeReturn({ ...noBirth, w2Income: [W2] }), facts: [], documents: [doc('DOC-W2')] });
+    expect(single.open.map((i) => i.id)).toEqual(['case:dateOfBirth']);
+    expect(single.open[0]).toMatchObject({ category: 'REVIEW', group: 'personal', action: { kind: 'return_field', field: 'dateOfBirth' } });
+    const joint = buildCaseReview({
+      taxReturn: makeReturn({ ...PERSON, filingStatus: FilingStatus.MarriedFilingJointly, spouseFirstName: 'Lee', spouseLastName: 'Testpayer', spouseSsn: '000987654', w2Income: [W2] }),
+      facts: [], documents: [doc('DOC-W2')],
+    });
+    expect(joint.items.map((i) => i.id)).toContain('case:spouseDateOfBirth');
+  });
+
   it('blocks on a form that validation holds, in the documents group', () => {
     const facts = factsOf('add_1099_div', { payerName: 'Summit Index Funds', ordinaryDividends: 100, qualifiedDividends: 250 }, 'DOC-DIV');
     const review = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts, documents: [doc('DOC-DIV')] });
@@ -48,6 +60,16 @@ describe('buildCaseReview', () => {
     expect(held).toMatchObject({ category: 'BLOCKING', group: 'documents', documentId: 'DOC-DIV' });
     expect(held!.message).toContain('DOC-DIV.pdf is held');
     expect(review.status).toBe('needs_attention');
+  });
+
+  it('warns of a form for another tax year, and says nothing when the year matches', () => {
+    const w2For = (year: string) => ({ ...doc('DOC-W2'), formTypes: ['W-2'], taxYearsPrinted: [year] });
+    const other = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [w2For('2025')] });
+    expect(other.items.find((i) => i.id === 'document:year:DOC-W2#0')).toMatchObject({ category: 'WARNING', group: 'documents' });
+    expect(other.items.find((i) => i.id === 'document:year:DOC-W2#0')!.message).toContain('is a 2025 W-2; this is the 2026 return');
+    expect(other.canApprove).toBe(false);
+    const same = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [w2For('2026')] });
+    expect(same.items.find((i) => i.id.startsWith('document:year:'))).toBeUndefined();
   });
 
   it('asks for the education credit choice and flags unreadable documents', () => {

@@ -1285,9 +1285,10 @@ describe('S15 — MFS Triple Disallowance', () => {
   });
 
   it('computes correct tax and refund', () => {
-    // MFS brackets match Single: 10% on $11,925 + 12% on remainder
-    expect(f.incomeTax).toBeCloseTo(5071.50, 0);
-    expect(f.refundAmount).toBeCloseTo(2928.50, 0);
+    // MFS brackets match Single: the schedule gives 10% on $11,925 + 12% on remainder = $5,071.50;
+    // line 16 is the Tax Table row $44,250–$44,300: $5,075
+    expect(f.incomeTax).toBe(5075);
+    expect(f.refundAmount).toBe(2925);
   });
 });
 
@@ -1571,8 +1572,9 @@ describe('S19 — Capital Loss Limitation + Carryforward', () => {
   it('computes correct taxable income and tax', () => {
     expect(f.taxableIncome).toBeCloseTo(71250, 0);
     // The $10,000 long-term gain is wiped out by the net capital loss, so none
-    // of it is taxed at 15%. Taxing that $10,000 at 22% instead adds $700.
-    expect(f.incomeTax).toBeCloseTo(10589, 0);
+    // of it is taxed at 15%: line 16 is the Tax Table row $71,250–$71,300, $10,595
+    // (the schedule: $10,589).
+    expect(f.incomeTax).toBe(10595);
   });
 });
 

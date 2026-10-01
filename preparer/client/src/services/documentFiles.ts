@@ -94,6 +94,31 @@ export async function loadDocumentFile(returnId: string, documentId: string): Pr
   return new File([bytes], stored.fileName, { type: stored.mimeType });
 }
 
+/**
+ * Copy a kept file to another case as it is kept (encrypted with the same
+ * vault key), and check the copy is there. 'none' when no file was kept for
+ * the document; 'failed' when it could not be copied.
+ */
+export async function copyDocumentFile(fromReturnId: string, toReturnId: string, documentId: string): Promise<'copied' | 'none' | 'failed'> {
+  const target = currentStore();
+  if (!target) return 'none';
+  try {
+    const stored = await target.get(fileKey(fromReturnId, documentId));
+    if (!stored) return 'none';
+    await target.put(fileKey(toReturnId, documentId), stored);
+    const copy = await target.get(fileKey(toReturnId, documentId));
+    return copy && copy.ct.byteLength === stored.ct.byteLength ? 'copied' : 'failed';
+  } catch (err) {
+    console.warn(`The source file of ${documentId} could not be copied:`, err);
+    return 'failed';
+  }
+}
+
+/** Remove one document's kept file. */
+export async function deleteDocumentFile(returnId: string, documentId: string): Promise<void> {
+  await currentStore()?.deletePrefix(fileKey(returnId, documentId));
+}
+
 /** Remove a case's source files (paired with deleteReturn). */
 export async function deleteDocumentFiles(returnId: string): Promise<void> {
   await currentStore()?.deletePrefix(`${returnId}/`);

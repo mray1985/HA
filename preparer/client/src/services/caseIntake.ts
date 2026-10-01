@@ -23,6 +23,8 @@ import { identityKeyText, selectDocumentExtractKind, type IngestedDocument, type
 import type { TaxReturn } from '@hatax/engine';
 import { createReturn, getReturn, listReturns } from '../api/client';
 import { appendAudit, appendModelRuns } from './caseAudit';
+import { runBackgroundWork } from './backgroundWork';
+import { isEncryptionSetup, isUnlocked } from './crypto';
 import { applyExtractionToDocument, applyModelReadingsToDocument, loadDocuments, registerDroppedDocument, type ApplyExtractionResult } from './documentIngestion';
 import { applyIdentityFromDocuments, clientNameOf, peopleOnDocuments, type IdentitySource } from './caseIdentity';
 import { fetchModelStatus, type LocalRuntimeStatus, type ModelRunRecord } from './localModels';
@@ -136,6 +138,8 @@ export function identitiesOf(read: FileRead): PartyIdentity[] {
 
 /** Put a read file on a case: registered, applied, audited. Returns false when the case already has it. */
 async function placeRead(returnId: string, read: FileRead, hooks: IntakeHooks, failures: string[]): Promise<boolean> {
+  // Nothing is saved while the vault is locked: say so rather than lose the document.
+  if (isEncryptionSetup() && !isUnlocked()) throw new Error(`The vault locked before ${read.file.name} was saved. Unlock it and add the documents again.`);
   const registered = await registerDroppedDocument({ returnId, file: read.file });
   if (registered.rejected || registered.duplicate) {
     appendAudit(returnId, { kind: 'document', documentId: registered.document.documentId, fileName: read.file.name, outcome: registered.rejected ? 'rejected' : 'duplicate' });
@@ -236,11 +240,25 @@ const digits = (s: string | undefined) => {
   return d.length === 9 ? d : undefined;
 };
 
-/** The case of this year for the person a form names, when exactly one fits. */
+/** The people on a case a form can be for: the taxpayer and spouse, and for a 1098-T or 1099-Q its dependents. */
+function peopleOnCase(c: TaxReturn, withDependents: boolean): Array<{ ssn?: string; lastFour?: string; last: string }> {
+  return [
+    { ssn: c.ssn, lastFour: c.ssnLastFour, last: c.lastName ?? '' },
+    { ssn: c.spouseSsn, lastFour: c.spouseSsnLastFour, last: c.spouseLastName ?? c.lastName ?? '' },
+    ...(withDependents ? (c.dependents ?? []).map((d) => ({ ssn: d.ssn, lastFour: d.ssnLastFour, last: d.lastName ?? '' })) : []),
+  ];
+}
+
+/**
+ * The case of this year for the person a form names, when exactly one fits:
+ * by a confirmed SSN, or the last four digits with the last name. A 1098-T
+ * student or 1099-Q recipient may be a dependent on the case.
+ */
 export function caseForIdentity(identity: PartyIdentity, cases: readonly TaxReturn[]): TaxReturn | null {
+  const people = (c: TaxReturn) => peopleOnCase(c, identity.placementOnly === true);
   const tin = identity.tin?.confirmed ? identity.tin.value : undefined;
   if (tin) {
-    const hit = cases.filter((c) => digits(c.ssn) === tin || digits(c.spouseSsn) === tin);
+    const hit = cases.filter((c) => people(c).some((p) => digits(p.ssn) === tin));
     return hit.length === 1 ? hit[0]! : null;
   }
   const lastFour = identity.tinLastFour;
@@ -249,12 +267,18 @@ export function caseForIdentity(identity: PartyIdentity, cases: readonly TaxRetu
     // The last four of a full SSN, or the confirmed last four kept from a masked one.
     const lastFourOf = (full: string | undefined, kept: string | undefined) =>
       digits(full)?.slice(5) ?? (kept && /^\d{4}$/.test(kept) ? kept : undefined);
-    const hit = cases.filter((c) =>
-      (lastFourOf(c.ssn, c.ssnLastFour) === lastFour && identityKeyText(c.lastName ?? '') === last)
-      || (lastFourOf(c.spouseSsn, c.spouseSsnLastFour) === lastFour && identityKeyText(c.spouseLastName ?? c.lastName ?? '') === last));
+    const hit = cases.filter((c) => people(c).some((p) => lastFourOf(p.ssn, p.lastFour) === lastFour && identityKeyText(p.last) === last));
     return hit.length === 1 ? hit[0]! : null;
   }
   return null;
+}
+
+/** Of the files a batch could not place, the ones a single case of `cases` now fits (after the batch's new cases). */
+export function placeableAfterNewCases(reads: readonly FileRead[], cases: readonly TaxReturn[]): Array<{ read: FileRead; returnId: string }> {
+  return reads.flatMap((read) => {
+    const targets = new Set(identitiesOf(read).map((id) => caseForIdentity(id, cases)?.id).filter((id): id is string => Boolean(id)));
+    return targets.size === 1 ? [{ read, returnId: [...targets][0]! }] : [];
+  });
 }
 
 /**
@@ -281,8 +305,9 @@ export async function ingestBatch(files: readonly File[], taxYear: number, hooks
   }
 
   // New clients: the people the unplaced files confirm, in households by confirmed address.
+  // A 1098-T student or 1099-Q recipient never starts a client of its own.
   const sources: Array<IdentitySource & { read: FileRead }> = unplacedReads.flatMap((read, n) =>
-    identitiesOf(read).map((identity, index) => ({ documentId: `batch-${n}`, fileName: read.file.name, index, identity, read })));
+    identitiesOf(read).flatMap((identity, index) => (identity.placementOnly ? [] : [{ documentId: `batch-${n}`, fileName: read.file.name, index, identity, read }])));
   const people = peopleOnDocuments(sources).filter((p) => p.tin || (p.tinLastFour && p.name) || (p.name && p.addresses.length > 0));
   const households: Array<{ people: typeof people; reads: Set<FileRead> }> = [];
   for (const person of people) {
@@ -318,11 +343,27 @@ export async function ingestBatch(files: readonly File[], taxYear: number, hooks
     finishCase(created.id, hooks);
     placed.push({ returnId: created.id, name: clientNameOf(getReturn(created.id)), created: true, files: names });
   }
-  return { placed, unmatched, failures };
+
+  // What is left — a 1099-Q or 1098-T for a client this batch started — fits a case now.
+  const yearCases = listReturns().filter((r) => r.taxYear === taxYear);
+  const late = placeableAfterNewCases(unmatched, yearCases);
+  for (const { read, returnId } of late) {
+    if (!(await placeRead(returnId, read, hooks, failures))) continue;
+    finishCase(returnId, hooks);
+    const entry = placed.find((p) => p.returnId === returnId);
+    if (entry) entry.files.push(read.file.name);
+    else placed.push({ returnId, name: clientNameOf(getReturn(returnId)), created: false, files: [read.file.name] });
+  }
+  const placedLate = new Set(late.map((l) => l.read));
+  return { placed, unmatched: unmatched.filter((r) => !placedLate.has(r)), failures };
 }
 
 /** Put a file the batch could not place on the case the preparer chose (no second reading). */
-export async function placeUnmatched(returnId: string, read: FileRead, hooks: IntakeHooks = {}): Promise<IntakeResult> {
+export function placeUnmatched(returnId: string, read: FileRead, hooks: IntakeHooks = {}): Promise<IntakeResult> {
+  return runBackgroundWork(() => placeUnmatchedNow(returnId, read, hooks));
+}
+
+async function placeUnmatchedNow(returnId: string, read: FileRead, hooks: IntakeHooks): Promise<IntakeResult> {
   const failures: string[] = [];
   const placedOk = await placeRead(returnId, read, hooks, failures);
   if (placedOk) finishCase(returnId, hooks);
@@ -335,9 +376,10 @@ let queue: Promise<unknown> = Promise.resolve();
 /**
  * Run intakes one after another (work order §48): the local models load one at
  * a time, so a batch dropped on another case waits for the one being read.
+ * Each is background work: a vault lock waits for it to save.
  */
 function enqueue<T>(job: () => Promise<T>): Promise<T> {
-  const run = queue.then(job);
+  const run = runBackgroundWork(() => queue.then(job));
   queue = run.catch(() => undefined);
   return run;
 }

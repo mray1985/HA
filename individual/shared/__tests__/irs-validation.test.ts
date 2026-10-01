@@ -80,15 +80,16 @@ function makeTaxReturn(overrides: Partial<TaxReturn> = {}): TaxReturn {
 //   Tax (QSS = MFJ brackets):
 //     10% on 0–23,850        = 2,385
 //     12% on 23,850–43,500   = (43,500 − 23,850) × 0.12 = 19,650 × 0.12 = 2,358
-//     Total income tax       = 4,743
+//     Schedule total         = 4,743
+//     Line 16, Tax Table row 43,500–43,550 (MFJ/QSS column) = 4,746
 //
 //   Credits:
 //     CTC = 1 × $2,200 = $2,200 (AGI $75k well under $400k MFJ/QSS threshold)
 //     Total credits = 2,200
 //
-//   Tax after credits        = 4,743 − 2,200 = 2,543
+//   Tax after credits        = 4,746 − 2,200 = 2,546
 //   Withholding              = 9,000
-//   Refund                   = 9,000 − 2,543 = 6,457
+//   Refund                   = 9,000 − 2,546 = 6,454
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Scenario V1 — Qualifying Surviving Spouse, $75k W-2, 1 Child', () => {
@@ -132,8 +133,8 @@ describe('Scenario V1 — Qualifying Surviving Spouse, $75k W-2, 1 Child', () =>
   it('uses QSS brackets (same as MFJ)', () => {
     // 10% × 23,850 = 2,385
     // 12% × (43,500 − 23,850) = 12% × 19,650 = 2,358
-    // Total = 4,743
-    expect(f.incomeTax).toBe(4743);
+    // Schedule total = 4,743; Tax Table row 43,500–43,550: 4,746
+    expect(f.incomeTax).toBe(4746);
   });
 
   it('has correct CTC', () => {
@@ -142,10 +143,10 @@ describe('Scenario V1 — Qualifying Surviving Spouse, $75k W-2, 1 Child', () =>
   });
 
   it('calculates correct refund', () => {
-    // Tax after credits: 4,743 − 2,200 = 2,543
-    expect(f.taxAfterCredits).toBe(2543);
+    // Tax after credits: 4,746 − 2,200 = 2,546
+    expect(f.taxAfterCredits).toBe(2546);
     expect(f.totalWithholding).toBe(9000);
-    expect(f.refundAmount).toBe(6457);
+    expect(f.refundAmount).toBe(6454);
     expect(f.amountOwed).toBe(0);
   });
 });
@@ -179,10 +180,11 @@ describe('Scenario V1 — Qualifying Surviving Spouse, $75k W-2, 1 Child', () =>
 //     10% on 0–11,925        = 1,192.50
 //     12% on 11,925–48,475   = 36,550 × 0.12 = 4,386
 //     22% on 48,475–61,250   = 12,775 × 0.22 = 2,810.50
-//     Total                  = 8,389
+//     Schedule total         = 8,389
+//     Line 16, Tax Table row 61,250–61,300 = 8,395
 //
 //   Withholding              = 10,000
-//   Refund                   = 10,000 − 8,389 = 1,611
+//   Refund                   = 10,000 − 8,395 = 1,605
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Scenario V2 — Single, 1099-B Capital Losses + Carryforward', () => {
@@ -259,13 +261,13 @@ describe('Scenario V2 — Single, 1099-B Capital Losses + Carryforward', () => {
   });
 
   it('calculates correct tax', () => {
-    // 10%: 1,192.50 + 12%: 4,386 + 22%: 2,810.50 = 8,389
-    expect(f.incomeTax).toBe(8389);
+    // Schedule: 1,192.50 + 4,386 + 2,810.50 = 8,389; Tax Table row 61,250–61,300: 8,395
+    expect(f.incomeTax).toBe(8395);
   });
 
   it('calculates correct refund', () => {
     expect(f.totalWithholding).toBe(10000);
-    expect(f.refundAmount).toBe(1611);
+    expect(f.refundAmount).toBe(1605);
   });
 });
 
@@ -467,7 +469,8 @@ describe('Scenario V4 — Single, Foreign Earned Income Exclusion ($120k)', () =
 //   Tax (MFJ brackets):
 //     10% on 0–23,850        = 2,385
 //     12% on 23,850–78,500   = 54,650 × 0.12 = 6,558
-//     Total                  = 8,943
+//     Schedule total         = 8,943
+//     Line 16, Tax Table row 78,500–78,550 (MFJ) = 8,946
 //
 //   Dependent Care Credit (Form 2441):
 //     Max expenses for 2+ = $6,000
@@ -483,9 +486,9 @@ describe('Scenario V4 — Single, Foreign Earned Income Exclusion ($120k)', () =
 //   CTC = 2 × $2,200 = $4,400 (AGI $110k under $400k MFJ)
 //
 //   Total credits = 600 + 4,400 = 5,000
-//   Tax after credits = max(0, 8,943 − 5,000) = 3,943
+//   Tax after credits = max(0, 8,946 − 5,000) = 3,946
 //   Withholding = 8,000 + 5,500 = 13,500
-//   Refund = 13,500 − 3,943 = 9,557
+//   Refund = 13,500 − 3,946 = 9,554
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Scenario V5 — MFJ, Dependent Care Credit + FSA, 2 Kids', () => {
@@ -539,8 +542,8 @@ describe('Scenario V5 — MFJ, Dependent Care Credit + FSA, 2 Kids', () => {
   });
 
   it('calculates correct income tax', () => {
-    // 10%: 2,385 + 12%: 6,558 = 8,943
-    expect(f.incomeTax).toBe(8943);
+    // Schedule: 2,385 + 6,558 = 8,943; Tax Table row 78,500–78,550: 8,946
+    expect(f.incomeTax).toBe(8946);
   });
 
   it('reduces dependent care credit by FSA amount', () => {
@@ -556,10 +559,10 @@ describe('Scenario V5 — MFJ, Dependent Care Credit + FSA, 2 Kids', () => {
 
   it('has correct total credits and refund', () => {
     expect(f.totalCredits).toBe(5000);
-    // 8,943 − 5,000 = 3,943 tax
-    expect(f.taxAfterCredits).toBe(3943);
+    // 8,946 − 5,000 = 3,946 tax
+    expect(f.taxAfterCredits).toBe(3946);
     expect(f.totalWithholding).toBe(13500);
-    expect(f.refundAmount).toBe(9557);
+    expect(f.refundAmount).toBe(9554);
   });
 });
 
@@ -580,15 +583,16 @@ describe('Scenario V5 — MFJ, Dependent Care Credit + FSA, 2 Kids', () => {
 //   Taxable income           = 22,000 − 15,750 = 6,250
 //
 //   Tax (Single brackets):
-//     10% on 0–6,250         = 625
+//     10% on 0–6,250         = 625 by the schedule
+//     Line 16, Tax Table row 6,250–6,300 = 628
 //
 //   Saver's Credit:
 //     AGI $22,000 < $23,750 → 50% rate
 //     Eligible contributions = min(2,000, 2,000 limit) = 2,000
 //     Credit = 2,000 × 50% = 1,000
-//     Limited to tax: min(1,000, 625) = 625 (non-refundable)
+//     Limited to tax: min(1,000, 628) = 628 (non-refundable)
 //
-//   Tax after credits        = 625 − 625 = 0
+//   Tax after credits        = 628 − 628 = 0
 //   Withholding              = 1,800
 //   Refund                   = 1,800
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -617,7 +621,7 @@ describe('Scenario V6 — Single, Saver\'s Credit at 50% Rate', () => {
   it('has correct income and tax', () => {
     expect(f.agi).toBe(22000);
     expect(f.taxableIncome).toBe(6250);
-    expect(f.incomeTax).toBe(625);
+    expect(f.incomeTax).toBe(628);
   });
 
   it('gives 50% Saver\'s Credit (AGI under $23,750)', () => {
@@ -627,7 +631,7 @@ describe('Scenario V6 — Single, Saver\'s Credit at 50% Rate', () => {
   });
 
   it('limits total non-refundable credits to tax', () => {
-    // Tax = $625, Saver's credit = $1,000 → limited to $625 at aggregate
+    // Tax = $628, Saver's credit = $1,000 → limited to $628 at aggregate
     expect(f.taxAfterCredits).toBe(0);
     expect(f.totalWithholding).toBe(1800);
     expect(f.refundAmount).toBe(1800);
@@ -653,10 +657,11 @@ describe('Scenario V6 — Single, Saver\'s Credit at 50% Rate', () => {
 //   Tax (Single brackets):
 //     10% on 0–11,925        = 1,192.50
 //     12% on 11,925–44,250   = 32,325 × 0.12 = 3,879
-//     Total                  = 5,071.50
+//     Schedule total         = 5,071.50
+//     Line 16, Tax Table row 44,250–44,300 = 5,075
 //
 //   Withholding              = 6,000 + 2,500 = 8,500
-//   Refund                   = 8,500 − 5,071.50 = 3,428.50
+//   Refund                   = 8,500 − 5,075 = 3,425
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('Scenario V7 — Single, W-2G Gambling Income', () => {
@@ -695,13 +700,13 @@ describe('Scenario V7 — Single, W-2G Gambling Income', () => {
   });
 
   it('calculates correct tax', () => {
-    // 10%: 1,192.50 + 12%: 3,879 = 5,071.50
-    expect(f.incomeTax).toBe(5071.50);
+    // Schedule: 1,192.50 + 3,879 = 5,071.50; Tax Table row 44,250–44,300: 5,075
+    expect(f.incomeTax).toBe(5075);
   });
 
   it('aggregates withholding from W-2 + W-2G', () => {
     expect(f.totalWithholding).toBe(8500);
-    expect(f.refundAmount).toBe(3428.50);
+    expect(f.refundAmount).toBe(3425);
   });
 });
 

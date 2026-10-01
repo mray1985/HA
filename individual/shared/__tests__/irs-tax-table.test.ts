@@ -2,9 +2,11 @@
  * IRS Tax Table Cross-Validation
  *
  * Validates the engine's federal income tax calculations against an independent
- * oracle with hard-coded bracket thresholds and standard deductions. The oracle
- * does NOT import from tax2025.ts — it is a fully independent reimplementation
- * based on Rev. Proc. 2024-40 and OBBBA §11021.
+ * oracle: below $100,000 of taxable income the IRS's printed 2025 Tax Table
+ * (fixtures/irs-tax-table-2025.json, Publication 1040 (2025)); from $100,000
+ * the rate schedule with hard-coded bracket thresholds and standard deductions.
+ * The oracle does NOT import from tax2025.ts — it is a fully independent
+ * reimplementation based on Rev. Proc. 2024-40 and OBBBA §11021.
  *
  * Sections:
  *   A. Zero income ($0 wages → $0 tax, all 5 statuses)
@@ -19,6 +21,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateForm1040 } from '../src/engine/form1040.js';
 import { TaxReturn, FilingStatus } from '../src/types/index.js';
+import { taxTable2025 } from './irsTaxTable2025.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Independent Oracle — Hard-coded from Rev. Proc. 2024-40 + OBBBA §11021
@@ -95,7 +98,8 @@ const ALL_STATUSES: StatusKey[] = ['Single', 'MFJ', 'MFS', 'HOH', 'QSS'];
 
 // ─── Independent Tax Computation ─────────────────────────────────────────
 
-function computeExpectedTax(taxableIncome: number, status: StatusKey): number {
+/** Tax by the rate schedule (the Tax Computation Worksheet), to the cent. */
+function scheduleTax(taxableIncome: number, status: StatusKey): number {
   if (taxableIncome <= 0) return 0;
   const brackets = BRACKETS[status];
   let tax = 0;
@@ -105,6 +109,15 @@ function computeExpectedTax(taxableIncome: number, status: StatusKey): number {
     tax += taxable * b.rate;
   }
   return round2(tax);
+}
+
+/**
+ * Form 1040 line 16: below $100,000 the IRS's printed 2025 Tax Table
+ * (fixtures/irs-tax-table-2025.json); from $100,000 the Tax Computation Worksheet.
+ */
+function computeExpectedTax(taxableIncome: number, status: StatusKey): number {
+  if (taxableIncome <= 0) return 0;
+  return taxableIncome < 100000 ? taxTable2025(taxableIncome, status) : scheduleTax(taxableIncome, status);
 }
 
 function getMarginalRate(taxableIncome: number, status: StatusKey): number {
@@ -548,7 +561,8 @@ describe('Section E — Mathematical Invariants', () => {
     }
   });
 
-  // E10. Piecewise linearity: within any single bracket, tax is a linear function of income
+  // E10. Piecewise linearity: within any single bracket, the rate schedule is a
+  // linear function of income (the Tax Table below $100,000 steps by row).
   describe('E10 — Piecewise Linearity', () => {
     for (const status of ALL_STATUSES) {
       const brackets = BRACKETS[status];
@@ -567,9 +581,9 @@ describe('Section E — Mathematical Invariants', () => {
         const p3 = b.min + Math.floor(range * 0.75);
 
         it(`${status} bracket ${i + 1} (${(b.rate * 100)}%): linearity at 25%/50%/75%`, () => {
-          const t1 = computeExpectedTax(p1, status);
-          const t2 = computeExpectedTax(p2, status);
-          const t3 = computeExpectedTax(p3, status);
+          const t1 = scheduleTax(p1, status);
+          const t2 = scheduleTax(p2, status);
+          const t3 = scheduleTax(p3, status);
 
           // Slope between (p1, t1) and (p2, t2) should equal slope between (p2, t2) and (p3, t3)
           const slope12 = round2((t2 - t1) / (p2 - p1) * 10000) / 10000;
@@ -579,11 +593,11 @@ describe('Section E — Mathematical Invariants', () => {
           // Both slopes should equal the bracket rate
           expect(slope12).toBeCloseTo(b.rate, 4);
 
-          // Also verify against the engine
+          // Also verify against the engine (the Tax Table below $100,000)
           const f1 = w2Return(status, p1 + stdDed).form1040;
           const f2 = w2Return(status, p2 + stdDed).form1040;
-          expect(f1.incomeTax).toBe(t1);
-          expect(f2.incomeTax).toBe(t2);
+          expect(f1.incomeTax).toBe(computeExpectedTax(p1, status));
+          expect(f2.incomeTax).toBe(computeExpectedTax(p2, status));
         });
       }
     }
@@ -639,7 +653,7 @@ describe('Section G — IRS ATS Scenario Validation', () => {
     const blindAddition = 2000; // Single/HOH additional for blind (Rev. Proc. 2024-40 §3.02)
     const expectedStdDed = STD_DED['HOH'] + blindAddition; // 23625 + 2000 = 25625
     const expectedTaxableIncome = wages - expectedStdDed; // 31232 - 25625 = 5607
-    const expectedTax = computeExpectedTax(expectedTaxableIncome, 'HOH'); // 10% of $5,607 = $560.70
+    const expectedTax = computeExpectedTax(expectedTaxableIncome, 'HOH'); // Tax Table row $5,600–$5,650: $563
 
     const result = calc({
       filingStatus: STATUS_MAP['HOH'],
@@ -675,42 +689,50 @@ describe('Section G — IRS ATS Scenario Validation', () => {
 
   // Cross-check: ATS oracle results match the full ATS test expectations
   describe('ATS oracle cross-reference', () => {
-    it('ATS-4 Sarah Smith: oracle tax $2,193.18 matches IRS expected ~$2,193', () => {
+    // The rate schedule's tax, and the Tax Table's (what line 16 shows below $100,000).
+    it('ATS-4 Sarah Smith: schedule $2,193.18, Tax Table $2,195', () => {
       // 10%: $11,925 × 0.10 = $1,192.50
       // 12%: ($20,264 - $11,925) × 0.12 = $8,339 × 0.12 = $1,000.68
-      // Total: $2,193.18
-      expect(computeExpectedTax(20264, 'Single')).toBe(2193.18);
+      // Schedule total $2,193.18; the Tax Table row $20,250–$20,300 prints $2,195
+      expect(scheduleTax(20264, 'Single')).toBe(2193.18);
+      expect(computeExpectedTax(20264, 'Single')).toBe(2195);
     });
 
-    it('ATS-13 Birch: oracle tax $12.00 matches IRS expected $12', () => {
-      // 10%: $120 × 0.10 = $12.00
-      expect(computeExpectedTax(120, 'MFJ')).toBe(12);
+    it('ATS-13 Birch: schedule $12.00, Tax Table $11', () => {
+      // 10%: $120 × 0.10 = $12.00; the Tax Table row $100–$125 prints $11
+      expect(scheduleTax(120, 'MFJ')).toBe(12);
+      expect(computeExpectedTax(120, 'MFJ')).toBe(11);
     });
 
-    it('ATS-1 Tara Black: oracle tax $2,967.90 matches IRS expected ~$2,968', () => {
+    it('ATS-1 Tara Black: schedule $2,967.90, Tax Table $2,969', () => {
       // 10%: $11,925 × 0.10 = $1,192.50
       // 12%: ($26,720 - $11,925) × 0.12 = $14,795 × 0.12 = $1,775.40
-      // Total: $2,967.90
-      expect(computeExpectedTax(26720, 'Single')).toBe(2967.90);
+      // Schedule total $2,967.90; the Tax Table row $26,700–$26,750 prints $2,969
+      expect(scheduleTax(26720, 'Single')).toBe(2967.90);
+      expect(computeExpectedTax(26720, 'Single')).toBe(2969);
     });
 
-    it('ATS-2 Jones: oracle tax $652.60 matches IRS expected ~$653', () => {
-      // 10%: $6,526 × 0.10 = $652.60
-      expect(computeExpectedTax(6526, 'MFJ')).toBe(652.60);
+    it('ATS-2 Jones: schedule $652.60, Tax Table $653', () => {
+      // 10%: $6,526 × 0.10 = $652.60; the Tax Table row $6,500–$6,550 prints $653
+      expect(scheduleTax(6526, 'MFJ')).toBe(652.60);
+      expect(computeExpectedTax(6526, 'MFJ')).toBe(653);
     });
 
-    it('ATS-5 Bobby Barker: oracle tax $560.70 matches engine (10% bracket)', () => {
+    it('ATS-5 Bobby Barker: Tax Table $563 (10% bracket)', () => {
       // Taxable: $31,232 - $25,625 (HOH + blind $2,000) = $5,607
-      // 10%: $5,607 × 0.10 = $560.70 (entirely within HOH 10% bracket, 0–$17,000)
-      expect(computeExpectedTax(5607, 'HOH')).toBe(560.70);
+      // The schedule gives $5,607 × 0.10 = $560.70; the Tax Table row $5,600–$5,650 prints $563
+      // (the tax at the row's middle, $5,625, is $562.50).
+      expect(scheduleTax(5607, 'HOH')).toBe(560.70);
+      expect(computeExpectedTax(5607, 'HOH')).toBe(563);
     });
 
     it('ATS-12 Sam Gardenia: oracle tax on W-2-only taxable $85,086 spans 3 brackets', () => {
       // 10%: $11,925 × 0.10 = $1,192.50
       // 12%: ($48,475 - $11,925) × 0.12 = $36,550 × 0.12 = $4,386.00
       // 22%: ($85,086 - $48,475) × 0.22 = $36,611 × 0.22 = $8,054.42
-      // Total: $13,632.92
-      expect(computeExpectedTax(85086, 'Single')).toBe(13632.92);
+      // Total: $13,632.92 by the schedule; the Tax Table row $85,050–$85,100 prints $13,631
+      expect(scheduleTax(85086, 'Single')).toBe(13632.92);
+      expect(computeExpectedTax(85086, 'Single')).toBe(13631);
     });
   });
 });

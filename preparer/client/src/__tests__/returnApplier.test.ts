@@ -3,8 +3,10 @@ import { invokeTaxTool, type IngestedDocument, type TaxToolName, type TaxToolSuc
 import { clearReturnCache, createReturn, getReturn, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
 import { appendTaxFacts } from '../services/preparerTaxFacts';
-import { applyExtraction, applyToolResult, SOURCE_FORM_KEY } from '../services/returnApplier';
-import { loadDocuments, type ApplyExtractionResult } from '../services/documentIngestion';
+import { applyExtraction, applyToolResult, SOURCE_FORM_KEY, YEAR_ITEM_PREFIX } from '../services/returnApplier';
+import { loadDocuments, upsertDocument, type ApplyExtractionResult } from '../services/documentIngestion';
+import { saveReviewRecord } from '../services/caseAudit';
+import { applyReleasedForm, reapplyForm, withdrawReleasedForm } from '../services/preparerDecisions';
 import { buildCaseReview } from '../services/caseReview';
 import { loadTaxFacts } from '../services/preparerTaxFacts';
 
@@ -199,5 +201,96 @@ describe('applyExtraction', () => {
     expect(saved.appliedAs).toEqual(['income_item', 'income_item', 'not_applied']);
     const review = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [saved] });
     expect(review.items.find((i) => i.id === 'document:not-applied:DOC-PDF#2')?.message).toContain('the 1098-E was read but is not entered automatically');
+  });
+});
+
+describe('a form printed for another year, released and taken back', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn(2025).id;
+  });
+
+  /** The document a form came from, with the year printed on it. */
+  const printed = (documentId: string, year: string) =>
+    upsertDocument(returnId, { documentId, returnId, fileName: `${documentId}.pdf`, status: 'extracted', taxYearsPrinted: [year] } as unknown as IngestedDocument);
+  const decide = (formKey: string, decision?: 'accepted' | 'not_applicable') =>
+    saveReviewRecord(returnId, { resolutions: decision ? { [`${YEAR_ITEM_PREFIX}${formKey}`]: { decision, note: 'test', resolvedAt: '2026-10-01T00:00:00Z' } } : {} });
+
+  it("keeps a 2024 SSA-1099 out of the 2025 total, adds it when accepted, and takes it back out when reopened", () => {
+    readDocument('add_ssa_1099', { netBenefits: 18000, federalTaxWithheld: 1800 }, 'DOC-SSA-1');
+    printed('DOC-SSA-2', '2024');
+    expect(readDocument('add_ssa_1099', { netBenefits: 9600 }, 'DOC-SSA-2')).toMatchObject({ kind: 'held' });
+    expect(getReturn(returnId).incomeSSA1099).toMatchObject({ totalBenefits: 18000 });
+
+    // "Not applicable to this client": it stays off.
+    decide('DOC-SSA-2#0', 'not_applicable');
+    expect(reapplyForm(returnId, 'DOC-SSA-2#0')).toMatchObject({ kind: 'held' });
+    expect(getReturn(returnId).incomeSSA1099).toMatchObject({ totalBenefits: 18000 });
+
+    decide('DOC-SSA-2#0', 'accepted');
+    applyReleasedForm(returnId, 'DOC-SSA-2#0', 'test');
+    expect(getReturn(returnId).incomeSSA1099).toMatchObject({ totalBenefits: 27600 });
+
+    decide('DOC-SSA-2#0');
+    withdrawReleasedForm(returnId, 'DOC-SSA-2#0');
+    expect(getReturn(returnId).incomeSSA1099).toMatchObject({ totalBenefits: 18000 });
+  });
+
+  it('takes a total away when the only form that gave it is taken back', () => {
+    printed('DOC-SSA', '2024');
+    readDocument('add_ssa_1099', { netBenefits: 9600 }, 'DOC-SSA');
+    expect(getReturn(returnId).incomeSSA1099).toBeUndefined();
+    decide('DOC-SSA#0', 'accepted');
+    applyReleasedForm(returnId, 'DOC-SSA#0', 'test');
+    expect(getReturn(returnId).incomeSSA1099).toMatchObject({ totalBenefits: 9600 });
+    decide('DOC-SSA#0');
+    withdrawReleasedForm(returnId, 'DOC-SSA#0');
+    expect(getReturn(returnId).incomeSSA1099).toBeUndefined();
+  });
+
+  it("takes a W-2c's correction back off the W-2", () => {
+    readDocument('add_w2', { employerName: 'RIVERBEND LOGISTICS', employerEin: '72-1234567', wages: 52431.18, federalTaxWithheld: 5873.4 }, 'DOC-W2');
+    printed('DOC-W2C', '2026');
+    expect(readDocument('add_w2c', { employerEin: '72-1234567', taxYearCorrected: 2025, previousWages: 52431.18, correctWages: 54000 }, 'DOC-W2C')).toMatchObject({ kind: 'held' });
+    expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 52431.18 })]);
+    decide('DOC-W2C#0', 'accepted');
+    applyReleasedForm(returnId, 'DOC-W2C#0', 'test');
+    expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 54000 })]);
+    decide('DOC-W2C#0');
+    withdrawReleasedForm(returnId, 'DOC-W2C#0');
+    expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 52431.18 })]);
+  });
+});
+
+describe('a business expense from a client reply', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn(2025).id;
+  });
+
+  const expense = (extra: Record<string, unknown> = {}) =>
+    readDocument('add_business_expense', { amount: 3200, description: 'software', scheduleCLine: 27, category: 'other', ...extra }, 'REPLY-1:note');
+
+  it('waits for its business when the return has more than one, and goes to the one chosen', () => {
+    updateReturn(returnId, { businesses: [{ id: 'biz-a', businessName: 'Design' }, { id: 'biz-b', businessName: 'Tutoring', isSpouse: true }] as never });
+    expect(expense()).toEqual({ kind: 'held', reason: 'The return has more than one business: the expense waits for the business it belongs to.' });
+    expect(getReturn(returnId).expenses).toEqual([]);
+    expect(expense({ businessId: 'biz-b' })).toMatchObject({ kind: 'income_item', itemType: 'expenses' });
+    expect(getReturn(returnId).expenses).toEqual([expect.objectContaining({ amount: 3200, businessId: 'biz-b' })]);
+    // A business no longer on the return: taken off, and it waits again.
+    expect(expense({ businessId: 'biz-gone' })).toMatchObject({ kind: 'held', reason: expect.stringMatching(/no longer on the return/) });
+    expect(getReturn(returnId).expenses).toEqual([]);
+  });
+
+  it("goes to the return's only business", () => {
+    updateReturn(returnId, { businesses: [{ id: 'biz-a', businessName: 'Design' }] as never });
+    expense();
+    expect(getReturn(returnId).expenses).toEqual([expect.objectContaining({ businessId: 'biz-a' })]);
   });
 });

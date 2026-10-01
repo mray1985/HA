@@ -65,9 +65,13 @@ describe('client questions come from what the case cannot settle (§24)', () => 
     expect(qs).toHaveLength(1);
     expect(qs[0]).toMatchObject({ kind: 'amount', target: { kind: 'form', tool: 'add_1099_q', formKey: 'Q#0', field: 'qualifiedExpenses' } });
     expect(qs[0]!.text).toContain('on the 1099-Q from VANGUARD 529 PLAN');
-    // An education credit waits for the preparer's choice of credit, which is never put to the client.
-    const t = record('add_education_expense', { studentName: 'Maya Lee', tuitionPaid: 9000 }, 'T');
-    expect(generateClientQuestions({ facts: t, taxYear: 2025, filingStatus: 'single' })).toEqual([]);
+    // An education credit: the choice of credit is the preparer's, never put to the client, but the
+    // facts that decide it (Form 8863 lines 23–26) are asked before the choice.
+    const t = record('add_education_expense', { studentName: 'Maya Lee', tuitionPaid: 9000, halfTimeStudent: true }, 'T');
+    const education = generateClientQuestions({ facts: t, taxYear: 2025, filingStatus: 'single' });
+    expect(education.map((q) => (q.target as { field: string }).field)).toEqual(['enrolledHalfTime', 'aotcClaimedPrior4Years', 'completedFirst4Years', 'felonyDrugConviction']);
+    // Box 8 shows half-time only; line 24 also asks for a program toward a degree or credential.
+    expect(education[0]!.text).toBe('Was Maya Lee enrolled at least half-time, for at least one academic period that began in 2025, in a program leading to a degree, certificate or other recognized credential?');
   });
 
   it('asks where the client lived when a state has no residency, then for days when part-year', () => {
@@ -192,6 +196,23 @@ describe("reading the client's own words", () => {
     ["I'm not sure", null],
   ])('yes/no: %j → %s', (words, want) => {
     expect(readAnswerFromWords(ask('yes_no'), words)).toBe(want);
+  });
+
+  it.each([
+    ['The HSA distribution paid doctor bills.', true],
+    ['We used the HSA money for prescriptions and dental work', true],
+    ['It went to my surgery copays.', true],
+    ['It paid some doctor bills and a vacation', null],
+    ['Not for medical stuff, we used it for rent.', false],
+    ['I think it paid doctor bills', null],
+    ['We used it for a vacation.', null],
+  ])('the 1099-SA medical-use question: %j → %s', (words, want) => {
+    const hsa = ask('yes_no', { target: { kind: 'form', tool: 'add_1099_sa', formKey: 'DOC-SA#0', field: 'usedForQualifiedMedicalExpenses' } });
+    expect(readAnswerFromWords(hsa, words)).toBe(want);
+  });
+
+  it('reads a statement of medical use only for the 1099-SA question', () => {
+    expect(readAnswerFromWords(ask('yes_no'), 'The HSA distribution paid doctor bills.')).toBeNull();
   });
 
   it('filing status: only a stated status', () => {

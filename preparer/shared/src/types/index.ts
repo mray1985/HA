@@ -1245,6 +1245,84 @@ export interface KiddieTaxInfo {
   isFullTimeStudent?: boolean;            // Full-time student (extends age limit to 24)
 }
 
+/**
+ * Form 8615 (2025) on a child's return: whether it applies, and the parent's
+ * figures it takes (lines A–C, 6, 7 and 10, and what line 8 includes).
+ * The preparer fills them one at a time from the review list, so each is
+ * optional here; the engine figures the form only once every one it needs is
+ * entered (engine/form8615.ts) and reports the rest as missing.
+ */
+export interface Form8615Info {
+  /** The preparer's answer: the child must attach Form 8615 (age, support, a living parent, no joint return). */
+  applies?: boolean;
+  parentName?: string;                        // Line A
+  parentSsn?: string;                         // Line B
+  parentFilingStatus?: FilingStatus;          // Line C
+  parentTaxableIncome?: number;               // Line 6: the parent's Form 1040 line 15 (zero or more)
+  /** Line 10: the parent's Form 1040 line 16, without Form 4972 or 8814 tax or education credit recapture. */
+  parentTax?: number;
+  parentQualifiedDividends?: number;          // Qualified dividends included on line 6 (the parent's Form 1040 line 3a)
+  parentNetCapitalGain?: number;              // Net capital gain included on line 6
+  otherChildrenNetUnearnedIncome?: number;    // Line 7: the other children's Forms 8615, line 5 (0 when none)
+  otherChildrenQualifiedDividends?: number;   // Qualified dividends included on line 7
+  otherChildrenNetCapitalGain?: number;       // Net capital gain included on line 7
+  /** Line 2, when the child itemizes: deductions directly connected with the unearned income. */
+  childDirectlyConnectedDeductions?: number;
+  /**
+   * The parent's tax used the Schedule D Tax Worksheet (28% rate or unrecaptured
+   * section 1250 gain), Schedule J or the Foreign Earned Income Tax Worksheet,
+   * or another child has 28% rate or unrecaptured section 1250 gain: lines 9 and
+   * 10 then follow worksheets HATax does not fill for Form 8615.
+   */
+  parentSpecialComputation?: boolean;
+}
+
+/** The parent's figures Form 8615 needs before it can be figured. */
+export type Form8615Field = Exclude<keyof Form8615Info, 'applies'>;
+
+/** Form 8615 (2025), line by line (engine/form8615.ts). */
+export interface Form8615Result {
+  /** Line 18 is the child's Form 1040 line 16. False when the form stops at line 3 or 5, or cannot be figured. */
+  applies: boolean;
+  line1: number;
+  line2: number;
+  line3: number;
+  line4: number;
+  line5: number;
+  line6: number;
+  line7: number;
+  line8: number;
+  line9: number;
+  line10: number;
+  line11: number;
+  line12a?: number;
+  line12b?: number;
+  line13: number;
+  line14: number;
+  line15: number;
+  line16: number;
+  line17: number;
+  line18: number;
+  /** Lines 9, 15 and 17 by the Qualified Dividends and Capital Gain Tax Worksheet (their checkboxes). */
+  worksheet: { line9: boolean; line15: boolean; line17: boolean };
+  /** Qualified dividends and net capital gain included on lines 5, 8 and 14. */
+  included: { line5: { qd: number; ncg: number }; line8: { qd: number; ncg: number }; line14: { qd: number; ncg: number } };
+  /** Which Line 5 Worksheet split the child's qualified dividends and net capital gain, if one did. */
+  line5Worksheet?: 1 | 3;
+  /** What stops the form being figured: each is reported unsupported and the return holds. */
+  unsupported: Array<{ ruleId: string; message: string }>;
+}
+
+/**
+ * Form 8615 on the return: a question for the preparer (the child's unearned
+ * income is over the threshold and the child may be one Form 8615 covers), the
+ * parent's figures still missing, or the form figured.
+ */
+export type Form8615Outcome =
+  | { status: 'ask'; unearnedIncome: number; age?: number }
+  | { status: 'missing'; missing: Form8615Field[] }
+  | { status: 'figured'; result: Form8615Result };
+
 // Foreign Earned Income Exclusion (Form 2555)
 export interface ForeignEarnedIncomeInfo {
   foreignEarnedIncome: number;          // Total foreign earned income
@@ -1909,6 +1987,11 @@ export interface TaxReturn {
   kiddieTaxEntries?: KiddieTaxInfo[];
   /** @deprecated Use kiddieTaxEntries[] instead. Kept for backward compatibility with saved data. */
   kiddieTax?: Omit<KiddieTaxInfo, 'id'>;
+  /**
+   * Form 8615 on this return when it is a child's: the parent's figures the
+   * form takes. Line 18 becomes this return's Form 1040 line 16.
+   */
+  form8615?: Form8615Info;
 
   // Foreign Earned Income Exclusion (Form 2555)
   foreignEarnedIncome?: ForeignEarnedIncomeInfo;
@@ -2651,6 +2734,8 @@ export interface CalculationResult {
   estimatedTaxPenalty?: EstimatedTaxPenaltyResult;
   kiddieTax?: { additionalTax: number; childTaxableUnearned: number };
   kiddieTaxEntries?: { childName?: string; additionalTax: number; childTaxableUnearned: number }[];
+  /** Form 8615 on a child's return (engine/form8615.ts). */
+  form8615?: Form8615Outcome;
   feie?: { incomeExclusion: number; housingExclusion: number };
   scheduleH?: ScheduleHResult;
   adoptionCredit?: AdoptionCreditResult;

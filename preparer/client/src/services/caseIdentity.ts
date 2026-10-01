@@ -68,7 +68,8 @@ const formatTin = (d: string) => `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)
 
 export function identitySources(documents: readonly IngestedDocument[]): IdentitySource[] {
   return documents.flatMap((doc) => (doc.status === 'extracted' ? doc.identities ?? [] : []).flatMap((identity, index) =>
-    identity ? [{ documentId: doc.documentId, fileName: doc.fileName, index, identity }] : []));
+    // A 1098-T student or 1099-Q recipient places its form only (caseIntake.caseForIdentity).
+    identity && !identity.placementOnly ? [{ documentId: doc.documentId, fileName: doc.fileName, index, identity }] : []));
 }
 
 /** The people the documents name, one per confirmed SSN, or last four digits and last name, or name. */

@@ -11,7 +11,8 @@
  * "City, ST 12345" line is kept as printed.
  *
  * The 1098-T student and the 1099-Q recipient can be a dependent, so those
- * forms never name the taxpayer.
+ * forms never name the taxpayer: their person is read only to place the form
+ * on its case (`placementOnly`) — the taxpayer, the spouse or a dependent.
  */
 
 import type { ClassifiableFormType } from './documentClassifier.js';
@@ -48,6 +49,8 @@ export interface PartyIdentity {
   name?: IdentityPart<PersonName | null>;
   /** The printed address; `value` is null when it is not a plain US address. */
   address?: IdentityPart<USAddress | null>;
+  /** The 1098-T student or 1099-Q recipient: places the form, never fills the taxpayer's identity. */
+  placementOnly?: boolean;
 }
 
 /** Schema keys of the person's TIN, name and address lines, by form. */
@@ -81,12 +84,18 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
 };
 
+/** Forms whose person may be a dependent: read to place the form only. */
+export const PLACEMENT_ONLY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> = {
+  '1099-Q': { tin: 'recipient.tin', name: 'recipient.name', address: ['recipient.street', 'recipient.city'] },
+  '1098-T': { tin: 'student.tin', name: 'student.name', address: ['student.street', 'student.apt', 'student.city', 'student.state', 'student.zip'] },
+};
+
 /** Name boxes printed in columns (first name and initial | last name | suffix). */
 export const NAME_COLUMN_KEYS: Partial<Record<ClassifiableFormType, string>> = { 'W-2': 'e' };
 
 /** Every schema key that holds a person's identity on some form. */
 export function isIdentityKey(formType: ClassifiableFormType, key: string): boolean {
-  const k = IDENTITY_KEYS[formType];
+  const k = IDENTITY_KEYS[formType] ?? PLACEMENT_ONLY_KEYS[formType];
   return Boolean(k && (k.tin === key || k.name === key || k.address.includes(key)));
 }
 
@@ -169,6 +178,14 @@ export function parseUSAddress(lines: readonly string[]): USAddress | null {
   return { street: streetLines.join(' '), city: last[1]!.replace(/,$/, '').trim(), state: last[2]!.toUpperCase(), zip: last[3]! };
 }
 
+/** The lines before a trailing US address ("CARA / OKAFOR / 1427 ASPEN CT / NAPERVILLE IL 60540" → the name lines). */
+export function withoutTrailingAddress(lines: readonly string[]): string[] {
+  for (let cut = 1; cut < lines.length - 1; cut++) {
+    if (parseUSAddress(lines.slice(cut))) return lines.slice(0, cut);
+  }
+  return [...lines];
+}
+
 /** A printed TIN: nine digits, or a masked one showing only the last four. */
 export function parseTin(text: string): { full?: string; lastFour?: string } {
   const t = text.trim();
@@ -190,9 +207,10 @@ export function identityFromValues(
   /** The name box's lines are its printed columns, as the page's geometry showed them. */
   options: { nameColumns?: boolean } = {},
 ): PartyIdentity | null {
-  const keys = IDENTITY_KEYS[formType];
+  const placementOnly = !IDENTITY_KEYS[formType] && Boolean(PLACEMENT_ONLY_KEYS[formType]);
+  const keys = IDENTITY_KEYS[formType] ?? PLACEMENT_ONLY_KEYS[formType];
   if (!keys) return null;
-  const out: PartyIdentity = { formType };
+  const out: PartyIdentity = { formType, ...(placementOnly ? { placementOnly: true } : {}) };
   const tinText = values[keys.tin]?.trim();
   if (tinText) {
     const tin = parseTin(tinText);
@@ -202,10 +220,13 @@ export function identityFromValues(
   }
   const nameText = values[keys.name]?.trim();
   if (nameText) {
-    const columns = options.nameColumns && NAME_COLUMN_KEYS[formType] === keys.name ? nameText.split(/\r?\n/).map((p) => p.trim()) : null;
+    // A reading of the name box that ran on into the address below it (W-2 box e into f):
+    // the address lines are not part of the name (the address is read from its own box).
+    const nameLines = withoutTrailingAddress(nameText.split(/\r?\n/).map((p) => p.trim()).filter(Boolean));
+    const columns = options.nameColumns && NAME_COLUMN_KEYS[formType] === keys.name ? nameLines : null;
     const value = columns && (columns.length === 2 || columns.length === 3)
       ? parseNameColumns(columns[0]!, columns[1]!, columns[2] ?? '')
-      : parsePersonName(nameText);
+      : parsePersonName(nameLines.join('\n'));
     out.name = { raw: nameText, confirmed: confirmed(keys.name), value };
   }
   const addressKeys = keys.address.filter((k) => values[k]?.trim());

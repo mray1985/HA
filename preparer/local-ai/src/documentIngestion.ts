@@ -87,6 +87,8 @@ export interface IngestedDocument {
   appliedAs?: DocumentPieceOutcome[];
   /** The person each form in the file is about (employee, recipient, borrower), in extraction order. */
   identities?: Array<PartyIdentity | null>;
+  /** The tax year each form in the file prints (a W-2c's box c), in extraction order; null when not read. */
+  taxYearsPrinted?: Array<string | null>;
 }
 
 export interface DocumentFileMeta {

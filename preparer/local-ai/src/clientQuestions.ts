@@ -77,7 +77,8 @@ const FORM_QUESTIONS: Partial<Record<ChoiceTool, Record<string, { kind: ClientAn
   add_education_expense: {
     enrolledHalfTime: {
       kind: 'yes_no',
-      text: (c) => `Was ${c.student} enrolled at least half-time for at least one academic period that began in ${c.year}?`,
+      // Form 8863 line 24: half-time in a program toward a degree or credential (1098-T box 8 shows only half-time).
+      text: (c) => `Was ${c.student} enrolled at least half-time, for at least one academic period that began in ${c.year}, in a program leading to a degree, certificate or other recognized credential?`,
     },
     aotcClaimedPrior4Years: {
       kind: 'yes_no',
@@ -213,13 +214,18 @@ export function generateClientQuestions(input: ClientQuestionInputs): ClientQues
       const built = buildChoiceItem(tool, formFacts);
       if (built.state !== 'needs_answer') continue;
       const v = formFieldValues(formFacts);
+      // The education credit's facts decide which credit the student can have, so they
+      // are asked before the preparer chooses it, not after.
+      const missing = tool === 'add_education_expense' && built.missing.includes('creditType')
+        ? Object.keys(fields).filter((f) => !v.has(f))
+        : built.missing;
       const payer = firstLine(v.get('payerName')) ?? firstLine(v.get('filerName')) ?? firstLine(v.get('institutionName'));
       const context: FormContext = {
         year,
         from: payer ? ` from ${payer}` : '',
         student: firstLine(v.get('studentName')) ?? 'the student',
       };
-      for (const field of built.missing) {
+      for (const field of missing) {
         const ask = fields[field];
         if (!ask) continue;
         out.push({

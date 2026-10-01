@@ -202,16 +202,16 @@ describe('I1 — Retiree: Pension + SS + Rental + Qualified Dividends', () => {
   });
 
   it('calculates correct income tax', () => {
-    // Ordinary: 38650 − 8000 (QD) = 30650
-    // 10% × 11925 = 1192.50; 12% × (30650 − 11925) = 12% × 18725 = 2247
-    // Total = 3439.50
-    expect(f.incomeTax).toBeCloseTo(3439.50, 0);
+    // Ordinary (worksheet line 5): 38650 − 8000 (QD) = 30650
+    // Line 22, Tax Table row 30,650–30,700: $3,443 (the schedule: 1192.50 + 2247 = 3439.50)
+    // Line 24, Tax Table row 38,650–38,700: $4,403. Tax = min(3443 + 0, 4403) = 3443
+    expect(f.incomeTax).toBe(3443);
   });
 
   it('calculates correct balance', () => {
     expect(f.totalWithholding).toBe(4000);
-    // 4000 − 3439.50 = 560.50 refund
-    expect(f.refundAmount).toBeCloseTo(560.50, 0);
+    // 4000 − 3443 = 557 refund
+    expect(f.refundAmount).toBe(557);
     expect(f.amountOwed).toBe(0);
   });
 });
@@ -355,14 +355,14 @@ describe('I2 — Multi-Business Freelancer (Income Routing by businessId)', () =
   });
 
   it('has correct income tax', () => {
-    // 1192.50 + 4386 + 466.61 = 6045.11
-    expect(f.incomeTax).toBeCloseTo(6045.11, 0);
+    // Tax Table row 50,550–50,600: $6,041 (the schedule: 1192.50 + 4386 + 466.61 = 6045.11)
+    expect(f.incomeTax).toBe(6041);
   });
 
   it('calculates correct balance', () => {
-    // 6045.11 + 12010.12 = 18055.23. Estimated payments = 18000
-    expect(f.taxAfterCredits).toBeCloseTo(18055.23, 0);
-    expect(f.amountOwed).toBeCloseTo(55.23, 0);
+    // 6041 + 12010.12 = 18051.12. Estimated payments = 18000
+    expect(f.taxAfterCredits).toBeCloseTo(18051.12, 2);
+    expect(f.amountOwed).toBeCloseTo(51.12, 2);
   });
 });
 
@@ -643,13 +643,15 @@ describe('I4 — K-1 Partnership: QBI + SE Tax', () => {
   });
 
   it('has correct income tax', () => {
-    expect(f.incomeTax).toBeCloseTo(4494.75, 0);
+    // Tax Table row 39,400–39,450: $4,493 (the schedule: 4,494.75)
+    expect(f.incomeTax).toBe(4493);
   });
 
   it('calculates correct balance', () => {
-    expect(f.taxAfterCredits).toBeCloseTo(14385.44, 0);
+    // 4493 + SE tax 9890.69 = 14383.69
+    expect(f.taxAfterCredits).toBeCloseTo(14383.69, 2);
     expect(f.estimatedPayments).toBe(14000);
-    expect(f.amountOwed).toBeCloseTo(385.44, 0);
+    expect(f.amountOwed).toBeCloseTo(383.69, 2);
   });
 });
 
@@ -726,12 +728,13 @@ describe('I5 — Gig Worker: W-2 Tips + Overtime + OBBBA Schedule 1-A', () => {
   });
 
   it('has correct income tax', () => {
-    // 10% × 11925 + 12% × 9325 = 1192.50 + 1119 = 2311.50
-    expect(f.incomeTax).toBeCloseTo(2311.50, 0);
+    // Tax Table row 21,250–21,300: $2,315 (the schedule: 1192.50 + 1119 = 2311.50)
+    expect(f.incomeTax).toBe(2315);
   });
 
   it('calculates correct refund', () => {
-    expect(f.refundAmount).toBeCloseTo(3188.50, 0);
+    // 5500 − 2315
+    expect(f.refundAmount).toBe(3185);
     expect(f.amountOwed).toBe(0);
   });
 });
@@ -806,12 +809,13 @@ describe('I6 — Home Sale: Section 121 Exclusion (MFJ)', () => {
   });
 
   it('has correct income tax', () => {
-    // MFJ: 2385 + 7758 = 10143
-    expect(f.incomeTax).toBe(10143);
+    // MFJ, Tax Table row 88,500–88,550: $10,146 (the schedule: 2385 + 7758 = 10143)
+    expect(f.incomeTax).toBe(10146);
   });
 
   it('calculates correct refund', () => {
-    expect(f.refundAmount).toBe(5857);
+    // 16000 − 10146
+    expect(f.refundAmount).toBe(5854);
   });
 });
 
@@ -993,23 +997,15 @@ describe('I8 — ACA Family: Premium Tax Credit Reconciliation', () => {
 
 
 // ═════════════════════════════════════════════════════════════════════════════
-// I9 — Kiddie Tax
+// I9 — Kiddie Tax Entry
 //
-// Profile: Child (age 14) with $5,000 unearned income (dividends from
-//          custodial account).  Parent's marginal rate is 32%.
-//
-// Hand calculation:
-//   Child's unearned income = 5,000
-//   Kiddie tax threshold = 2,700 (2025)
-//   Excess above threshold = 5,000 − 2,700 = 2,300
-//
-//   Additional tax = excess × (parent rate − child rate)
-//                  = 2,300 × (0.32 − 0.10) = 2,300 × 0.22 = 506
-//
-//   This tests the kiddie tax calculation flows through the pipeline.
+// Profile: a kiddie tax entry for a child (age 14) with $5,000 of unearned
+//          income and a 32% parent rate. A guessed rate is never applied: the
+//          entry adds nothing and is reported unsupported (Form 8814). Form 8615
+//          on the child's own return is tested in form8615.test.ts.
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('I9 — Kiddie Tax: Child Unearned Income at Parent Rate', () => {
+describe('I9 — Kiddie Tax Entry: Not Estimated', () => {
   const taxReturn = makeTaxReturn({
     filingStatus: FilingStatus.Single,
     income1099DIV: [{
@@ -1029,21 +1025,15 @@ describe('I9 — Kiddie Tax: Child Unearned Income at Parent Rate', () => {
   const result = calculateForm1040(taxReturn);
   const f = result.form1040;
 
-  it('triggers kiddie tax', () => {
-    expect(result.kiddieTax).toBeDefined();
-    expect(result.kiddieTax!.additionalTax).toBeGreaterThan(0);
+  // A guessed parent rate is never applied: Form 8615 is figured line by line
+  // from the parent's figures (form8615.test.ts), and Form 8814 is not supported.
+  it('adds no kiddie tax estimate', () => {
+    expect(result.kiddieTax).toBeUndefined();
+    expect(f.kiddieTaxAmount).toBe(0);
   });
 
-  it('calculates correct additional tax at parent rate', () => {
-    // Excess = 5000 − 2700 = 2300
-    // Additional = 2300 × (0.32 − 0.10) = 506
-    expect(result.kiddieTax!.additionalTax).toBe(506);
-  });
-
-  it('includes kiddie tax in total tax', () => {
-    expect(f.kiddieTaxAmount).toBe(506);
-    // Child's standard deduction covers earned income; total tax may be just kiddie tax
-    expect(f.totalTax).toBeGreaterThanOrEqual(506);
+  it('reports the entry unsupported', () => {
+    expect(result.unsupported?.map((u) => u.ruleId)).toContain('FED.8814');
   });
 });
 
@@ -1215,8 +1205,8 @@ describe('I11 — Clean Energy Credits Bundle: Solar + Heat Pump + EV', () => {
 
   it('total credits limited to tax liability', () => {
     // Solar (6k computed) + heat pump (2k cap) + EV (4k) = 12k total computed
-    // Non-refundable credits limited to $7,743 tax liability
-    expect(f.totalCredits).toBeCloseTo(7743, 0);
+    // Non-refundable credits limited to the $7,746 tax liability (MFJ, Tax Table row 68,500–68,550)
+    expect(f.totalCredits).toBe(7746);
     // After credits wipe out tax, withholding of $12k → full refund
     expect(f.refundAmount).toBeGreaterThan(0);
   });
@@ -1311,8 +1301,8 @@ describe('I12 — Farmer: Schedule F + SE Tax', () => {
   });
 
   it('calculates correct balance', () => {
-    // Income tax ~900 + SE ~6500 = ~7400. Estimated = 8000.
-    expect(f.refundAmount).toBeCloseTo(600.39, 0);
+    // Income tax $903 (Tax Table row 9,000–9,050; the schedule: 900.02) + SE ~6500. Estimated = 8000.
+    expect(f.refundAmount).toBeCloseTo(597.41, 2);
   });
 });
 

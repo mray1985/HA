@@ -55,6 +55,8 @@ export const RECORD_TOOL_NAMES = [
   'add_estimated_payment',
   'set_state_residency',
   'set_document_expected',
+  'set_spouse',
+  'add_business_expense',
 ] as const;
 
 /** Every tool that produces TaxFacts. */
@@ -104,7 +106,11 @@ export type TaxToolApplication =
   /** A W-2c: corrects the boxes of the W-2 it names (same employer EIN and year) on this case. */
   | { kind: 'w2_correction' }
   | { kind: 'needs_preparer_choice'; target: PreparerChoiceTarget; choice: PreparerChoice }
-  | { kind: 'candidate_fact' };
+  | { kind: 'candidate_fact' }
+  /** The spouse on a joint return: name, SSN, date of birth. */
+  | { kind: 'spouse' }
+  /** A Schedule C expense, on the line and category the preparer gives it. */
+  | { kind: 'business_expense' };
 
 /**
  * Decisions a form cannot make, which the engine needs before the form can be
@@ -665,6 +671,31 @@ const SetStateResidencyFieldsSchema = z
   .strict();
 
 /** Whether the client received a document the missing-document engine asked about (§23, §25). */
+/** The spouse on a joint return, as the client states them. */
+const SetSpouseFieldsSchema = z
+  .object({
+    firstName: optionalString,
+    lastName: optionalString,
+    /** Full SSN or ITIN (9 digits; dashes allowed). */
+    ssn: z.preprocess(asMissing, z.string().regex(/^\d{3}-?\d{2}-?\d{4}$/).optional()),
+    dateOfBirth: optionalDate,
+  })
+  .strict();
+
+/** A Schedule C expense the client states. Its line and category are the preparer's to give. */
+const AddBusinessExpenseFieldsSchema = z
+  .object({
+    amount: optionalNonNegative,
+    description: optionalString,
+    /** Schedule C line 8–27. */
+    scheduleCLine: z.preprocess(asMissing, z.number().int().min(8).max(27).optional()),
+    /** The expense category on that line (meals and travel share line 24). */
+    category: optionalString,
+    /** The Schedule C business it belongs to (the return's business id), when the return has more than one. */
+    businessId: optionalString,
+  })
+  .strict();
+
 const SetDocumentExpectedFieldsSchema = z
   .object({
     formType: z.preprocess(asMissing, z.enum(EXPECTED_DOCUMENT_TYPES).optional()),
@@ -681,6 +712,8 @@ export const RECORD_FIELD_SCHEMAS: Record<RecordToolName, z.ZodObject<z.ZodRawSh
   add_estimated_payment: AddEstimatedPaymentFieldsSchema,
   set_state_residency: SetStateResidencyFieldsSchema,
   set_document_expected: SetDocumentExpectedFieldsSchema,
+  set_spouse: SetSpouseFieldsSchema,
+  add_business_expense: AddBusinessExpenseFieldsSchema,
 };
 
 export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawShape>> = {
@@ -742,6 +775,8 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_estimated_payment: { kind: 'aggregate', target: 'estimatedPayments' },
   set_state_residency: { kind: 'aggregate', target: 'stateResidency' },
   set_document_expected: { kind: 'candidate_fact' },
+  set_spouse: { kind: 'spouse' },
+  add_business_expense: { kind: 'business_expense' },
 };
 
 /** The field schema of a fact tool that takes fields (every tool but the filing-status candidate). */
@@ -789,6 +824,8 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_estimated_payment: 'ESTPAY',
   set_state_residency: 'STATE_RESIDENCY',
   set_document_expected: 'DOCEXPECT',
+  set_spouse: 'SPOUSE',
+  add_business_expense: 'SCHC_EXPENSE',
 };
 
 /** Fact-type prefix of every fact a tool writes (`<prefix>_<field>`). */

@@ -27,6 +27,7 @@ import { calculateEITC } from '../src/engine/eitc.js';
 import { calculateCredits } from '../src/engine/credits.js';
 import { calculateScheduleD } from '../src/engine/scheduleD.js';
 import { calculateProgressiveTax } from '../src/engine/brackets.js';
+import { taxTable2025 } from './irsTaxTable2025.js';
 import { FilingStatus } from '../src/types/index.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -47,9 +48,9 @@ describe('Worksheet 1: Qualified Dividends and Capital Gain Tax Worksheet', () =
    *   Line 3. Schedule D, Line 15 (net LTCG if positive):           $0
    *   Line 4. Add lines 2 and 3:                                    $10,000
    *   Line 5. Subtract line 4 from line 1 (ordinary income):        $65,000
-   *   Line 6. Tax on line 5 (ordinary income at progressive rates): $9,421
-   *           [$11,925 × 10% = $1,192.50] + [($48,475-$11,925) × 12% = $4,386]
-   *           + [($65,000-$48,475) × 22% = $3,635.50] → Total: $9,214
+   *   Line 6. Tax on line 5 (worksheet line 22: the Tax Table below $100,000): $9,220
+   *           (the rate schedule: $1,192.50 + $4,386 + $3,635.50 = $9,214;
+   *           the Tax Table row $65,000–$65,050 prints $9,220)
    *   Line 7. Enter $48,350 (0% rate threshold for Single):         $48,350
    *   Line 8. Smaller of line 1 or line 7:                          $48,350
    *   Line 9. Smaller of line 5 or line 8:                          $48,350
@@ -67,30 +68,29 @@ describe('Worksheet 1: Qualified Dividends and Capital Gain Tax Worksheet', () =
    *   Line 20. Add lines 10 and 18:                                 $10,000
    *   Line 21. Subtract line 20 from line 11 (in 20% zone):        $0
    *   Line 22. Tax on line 21 at 20%:                               $0
-   *   Line 23. Add lines 6, 19, and 22 (total pref rate tax):      $10,714
-   *   Line 24. Tax on line 1 at regular rates:                      $11,714
-   *   Line 25. Tax (smaller of line 23 or line 24):                 $10,714
+   *   Line 23. Add lines 6, 19, and 22 (total pref rate tax):      $10,720
+   *   Line 24. Tax on line 1 (Tax Table row $75,000–$75,050):       $11,420
+   *   Line 25. Tax (smaller of line 23 or line 24):                 $10,720
    */
   it('Scenario A: Single, $75k income, $10k qualified dividends — all in 15% zone', () => {
     const result = calculatePreferentialRateTax(75000, 10000, 0, FilingStatus.Single);
 
     // Line 5: ordinary taxable income = $75,000 - $10,000 = $65,000
-    // Line 6: tax on $65,000 ordinary
-    const ordinaryCheck = calculateProgressiveTax(65000, FilingStatus.Single);
-    expect(ordinaryCheck.tax).toBe(9214); // Verify: 1192.50 + 4386 + 3635.50 = 9214
+    // Line 22: tax on $65,000 by the Tax Table (the schedule: 1192.50 + 4386 + 3635.50 = 9214)
+    expect(calculateProgressiveTax(65000, FilingStatus.Single).tax).toBe(9214);
+    expect(taxTable2025(65000, 'Single')).toBe(9220);
 
     // Engine result should match
-    expect(result.ordinaryTax).toBe(9214);
+    expect(result.ordinaryTax).toBe(9220);
 
     // Preferential: $10,000 all in 15% zone (stacked above $65k, threshold is $48,350)
     expect(result.preferentialTax).toBe(1500); // $10,000 × 15% = $1,500
 
-    // Total: $9,214 + $1,500 = $10,714
-    expect(result.totalTax).toBe(10714);
+    // Total: $9,220 + $1,500 = $10,720
+    expect(result.totalTax).toBe(10720);
 
-    // Verify this is less than full progressive tax on $75,000
-    const fullProgressiveTax = calculateProgressiveTax(75000, FilingStatus.Single);
-    expect(result.totalTax).toBeLessThan(fullProgressiveTax.tax);
+    // Verify this is less than line 24, the Tax Table tax on all $75,000
+    expect(result.totalTax).toBeLessThan(taxTable2025(75000, 'Single'));
   });
 
   /**
@@ -100,22 +100,22 @@ describe('Worksheet 1: Qualified Dividends and Capital Gain Tax Worksheet', () =
    *   Line 1. Taxable income:           $45,000
    *   Line 4. Total preferential:       $8,000  (QD only)
    *   Line 5. Ordinary income:          $37,000  ($45,000 - $8,000)
-   *   Line 6. Tax on $37,000 ordinary:  $3,966
-   *           [$23,850 × 10% = $2,385] + [($37,000-$23,850) × 12% = $1,578] → actually
-   *           [$23,850 × 10% = $2,385] + [($37,000-$23,850) × 12% = $1,578] = $3,963
+   *   Line 6. Tax on $37,000 ordinary:  $3,966 (Tax Table row $37,000–$37,050;
+   *           the rate schedule: $2,385 + $1,578 = $3,963)
    *   Line 7. 0% threshold (MFJ):      $96,700
    *   Line 8. min($45,000, $96,700):    $45,000
    *   Line 9. min($37,000, $45,000):    $37,000
    *   Line 10. $45,000 - $37,000:       $8,000  ← all QD in 0% zone!
    *   Line 19. 15% tax:                 $0
    *   Line 22. 20% tax:                 $0
-   *   Line 23. Total = $3,963 + $0 + $0 = $3,963
+   *   Line 23. Total = $3,966 + $0 + $0 = $3,966 (line 24, Tax Table on $45,000: $4,926)
    */
   it('Scenario B: MFJ, $45k income, $8k QD — all QD in 0% zone', () => {
     const result = calculatePreferentialRateTax(45000, 8000, 0, FilingStatus.MarriedFilingJointly);
 
     // Ordinary income = $45,000 - $8,000 = $37,000
-    const ordinaryCheck = calculateProgressiveTax(37000, FilingStatus.MarriedFilingJointly);
+    const ordinaryCheck = { tax: taxTable2025(37000, 'MFJ') };
+    expect(ordinaryCheck.tax).toBe(3966);
     expect(result.ordinaryTax).toBe(ordinaryCheck.tax);
 
     // All $8,000 QD falls within 0% zone (ordinary $37k + QD $8k = $45k < $96,700 threshold)
@@ -159,8 +159,8 @@ describe('Worksheet 1: Qualified Dividends and Capital Gain Tax Worksheet', () =
     const result = calculatePreferentialRateTax(30000, 5000, 0, FilingStatus.HeadOfHousehold);
 
     expect(result.preferentialTax).toBe(0);
-    const ordinaryCheck = calculateProgressiveTax(25000, FilingStatus.HeadOfHousehold);
-    expect(result.totalTax).toBe(ordinaryCheck.tax);
+    // Line 22 by the Tax Table: $2,663 (row $25,000–$25,050)
+    expect(result.totalTax).toBe(taxTable2025(25000, 'HOH'));
   });
 
   /**
@@ -191,8 +191,8 @@ describe('Worksheet 1: Qualified Dividends and Capital Gain Tax Worksheet', () =
    */
   it('Scenario F: Single, $60k income, $20k QD — straddles 0%/15% boundary', () => {
     const result = calculatePreferentialRateTax(60000, 20000, 0, FilingStatus.Single);
-
-    const ordinaryCheck = calculateProgressiveTax(40000, FilingStatus.Single);
+    // Line 22 by the Tax Table: $4,565 (row $40,000–$40,050)
+    const ordinaryCheck = { tax: taxTable2025(40000, 'Single') };
     expect(result.ordinaryTax).toBe(ordinaryCheck.tax);
 
     // $8,350 at 0% + $11,650 at 15% = $0 + $1,747.50 = $1,747.50
@@ -1024,7 +1024,8 @@ describe('Cross-Worksheet Integration', () => {
     // 0% zone: $48,350 - $42,000 = $6,350 at 0%
     // 15% zone: $50,000 - $48,350 = $1,650 at 15%
     expect(taxResult.preferentialTax).toBe(247.5); // $1,650 × 15%
-    expect(taxResult.ordinaryTax).toBe(calculateProgressiveTax(42000, FilingStatus.Single).tax);
+    // Line 22 by the Tax Table: $4,805 (row $42,000–$42,050)
+    expect(taxResult.ordinaryTax).toBe(taxTable2025(42000, 'Single'));
   });
 
   /**
