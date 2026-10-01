@@ -27,7 +27,7 @@ describe('caseStore', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     id = createReturn().id;
     updateReturn(id, {
-      firstName: 'Maya', lastName: 'Testpayer', ssn: '000123456', filingStatus: FilingStatus.Single,
+      firstName: 'Maya', lastName: 'Testpayer', ssn: '000123456', dateOfBirth: '1990-04-12', filingStatus: FilingStatus.Single,
       addressStreet: '815 Magnolia Ave', addressCity: 'Baton Rouge', addressState: 'LA', addressZip: '70802',
       w2Income: [{ id: 'w1', employerName: 'Riverbend Logistics LLC', wages: 52431.18, federalTaxWithheld: 5873.4 }],
     });

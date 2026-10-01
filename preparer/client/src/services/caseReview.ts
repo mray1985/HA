@@ -468,11 +468,21 @@ export function buildCaseReview(input: {
     ...(FIELD_FINDINGS[d.id] ? { action: { kind: 'return_field' as const, field: FIELD_FINDINGS[d.id]! } } : {}),
     ...(k1EntityField(d.id, input.taxReturn) ? { action: { kind: 'return_field' as const, field: k1EntityField(d.id, input.taxReturn)! } } : {}),
   }));
+  // No date of birth reads as under 65: an older client would lose the additional
+  // standard deduction and the senior deduction without anyone deciding it.
+  const birthDates: ReviewItem[] = ([
+    ['dateOfBirth', 'The taxpayer', true],
+    ['spouseDateOfBirth', 'The spouse', input.taxReturn.filingStatus === FilingStatus.MarriedFilingJointly],
+  ] as const).filter(([field, , applies]) => applies && !input.taxReturn[field]).map(([field, who]) => ({
+    id: `case:${field}`, category: 'REVIEW', group: 'personal', source: 'readiness', field,
+    message: `${who}'s date of birth is not entered: the return treats them as under 65 (no additional standard deduction for 65 or older, no senior deduction).`,
+    action: { kind: 'return_field' as const, field },
+  }));
   const identity: ReviewItem[] = planIdentity(input.taxReturn, input.documents).items.map((i) => ({
     id: i.id, category: 'REVIEW', group: 'personal', source: 'document', message: i.message,
     ...(i.documentId ? { documentId: i.documentId } : {}), ...(i.action ? { action: i.action } : {}),
   }));
-  const items = [...rolloverItems(record, input.taxReturn), ...identity, ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
+  const items = [...rolloverItems(record, input.taxReturn), ...identity, ...birthDates, ...documentItems(input.facts, input.documents, input.taxReturn), ...missingDocumentItems(input.missingDocuments ?? []), ...recordItems(input.facts, input.taxReturn), ...engineItems, ...answeredStateItems(input.taxReturn, input.calculation, engineItems)]
     .map((item) => {
       const resolution = RESOLVABLE.has(item.category) ? record.resolutions[item.id] : undefined;
       return resolution ? { ...item, resolution } : item;
