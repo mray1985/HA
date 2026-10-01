@@ -828,8 +828,9 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
     }
   }
   detectReceiptsRepeating1099(forms, issues);
-  detectDuplicateForms(forms, issues);
   checkReadings(forms, issues);
+  // Last: a copy held for any reason above never stands in for a complete one.
+  detectDuplicateForms(forms, issues);
 }
 
 /** A model reading below this agreement score goes to review (confirmed readings score 1). */
@@ -924,11 +925,14 @@ const DUPLICATE_KEYS: Readonly<Record<string, { required: readonly string[]; opt
 
 /**
  * The same form imported from two files (a PDF and a phone photo of it) has
- * different content hashes but identical identifying values. The later copy is
- * held so it is never counted twice; the preparer confirms which to keep.
+ * different content hashes but identical identifying values. One copy is kept —
+ * the first not already held for another reason (a misread photo never keeps
+ * the clean PDF off the return) — and the others are held so it is never
+ * counted twice; the preparer confirms which to keep.
  */
 function detectDuplicateForms(forms: Map<string, Map<string, TaxFact>>, issues: FactValidationIssue[]): void {
-  const seen = new Map<string, string>();
+  const heldAlready = new Set(issues.filter((i) => i.holdsForm && i.formKey).map((i) => i.formKey!));
+  const copies = new Map<string, { keys: string[]; formKeys: string[]; fields: Map<string, Map<string, TaxFact>> }>();
   for (const [formKey, fields] of forms) {
     const form = formOf(fields);
     const identityKeys = form ? DUPLICATE_KEYS[form] : undefined;
@@ -947,16 +951,23 @@ function detectDuplicateForms(forms: Map<string, Map<string, TaxFact>>, issues: 
     }
     const keys = [...identityKeys.required, ...(identityKeys.optional ?? [])];
     const identity = `${form}|${parts.join('|')}`;
-    const first = seen.get(identity);
-    if (!first) {
-      seen.set(identity, formKey);
-      continue;
+    const group = copies.get(identity) ?? { keys, formKeys: [] as string[], fields: new Map<string, Map<string, TaxFact>>() };
+    group.formKeys.push(formKey);
+    group.fields.set(formKey, fields);
+    copies.set(identity, group);
+  }
+  for (const [identity, { keys, formKeys, fields }] of copies) {
+    if (formKeys.length < 2) continue;
+    const form = identity.slice(0, identity.indexOf('|'));
+    const kept = formKeys.find((k) => !heldAlready.has(k)) ?? formKeys[0]!;
+    for (const formKey of formKeys) {
+      if (formKey === kept) continue;
+      issues.push(formIssue(fields.get(formKey)!, formKey, {
+        code: 'DUPLICATE_FORM',
+        severity: 'warning',
+        message: `This ${form} matches ${kept} (${keys.join(', ')}). Held so it is not counted twice.`,
+        holdsForm: true,
+      }));
     }
-    issues.push(formIssue(fields, formKey, {
-      code: 'DUPLICATE_FORM',
-      severity: 'warning',
-      message: `This ${form} matches ${first} (${keys.join(', ')}). Held so it is not counted twice.`,
-      holdsForm: true,
-    }));
   }
 }
