@@ -107,7 +107,7 @@ export const VARIABLE_DEFINITIONS: ScenarioVariable[] = [
   {
     key: 'w2_wages',
     label: 'W-2 Wages (Primary)',
-    description: 'Wages from your primary employer',
+    description: 'Wages from the primary employer',
     category: 'income_wage',
     inputType: 'slider',
     format: 'currency',
@@ -138,7 +138,7 @@ export const VARIABLE_DEFINITIONS: ScenarioVariable[] = [
   {
     key: 'w2_withholding',
     label: 'Federal Withholding',
-    description: 'Federal income tax withheld from your primary W-2',
+    description: 'Federal income tax withheld from the primary W-2',
     category: 'income_wage',
     inputType: 'slider',
     format: 'currency',
@@ -305,7 +305,7 @@ export const VARIABLE_DEFINITIONS: ScenarioVariable[] = [
   {
     key: 'se_net_profit',
     label: 'SE Net Profit',
-    description: 'Schedule C net profit from your primary business',
+    description: 'Schedule C net profit from the primary business',
     category: 'income_se',
     inputType: 'slider',
     format: 'currency',

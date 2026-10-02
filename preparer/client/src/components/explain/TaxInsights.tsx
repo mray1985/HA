@@ -59,7 +59,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
     if (pct > 50) {
       insights.push({
         icon: 'info',
-        text: `Your biggest income source is ${topSource.label} at $${topSource.amount.toLocaleString()} (${pct.toFixed(0)}% of total income).`,
+        text: `The biggest income source is ${topSource.label} at $${topSource.amount.toLocaleString()} (${pct.toFixed(0)}% of total income).`,
       });
     }
   }
@@ -70,7 +70,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
   if (marginalPct - effectivePct > 5 && effectivePct > 0) {
     insights.push({
       icon: 'info',
-      text: `Your effective rate (${effectivePct.toFixed(1)}%) is ${(marginalPct - effectivePct).toFixed(0)} percentage points below your ${marginalPct.toFixed(0)}% bracket. This is because only income above $${getBracketThreshold(marginalPct)} is taxed at the top rate.`,
+      text: `The effective rate (${effectivePct.toFixed(1)}%) is ${(marginalPct - effectivePct).toFixed(0)} percentage points below the ${marginalPct.toFixed(0)}% bracket. This is because only income above $${getBracketThreshold(marginalPct)} is taxed at the top rate.`,
     });
   }
 
@@ -80,7 +80,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
     const deductionType = f.deductionUsed === 'standard' ? 'standard deduction' : 'itemized deductions';
     insights.push({
       icon: 'savings',
-      text: `Your ${deductionType} of $${f.deductionAmount.toLocaleString()} saved you approximately $${taxSavings.toLocaleString()} in federal tax.`,
+      text: `The ${deductionType} of $${f.deductionAmount.toLocaleString()} saved approximately $${taxSavings.toLocaleString()} in federal tax.`,
     });
   }
 
@@ -88,7 +88,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
   if (f.totalCredits > 0) {
     insights.push({
       icon: 'savings',
-      text: `Tax credits reduced your bill by $${f.totalCredits.toLocaleString()} — credits are more valuable than deductions because they reduce tax dollar-for-dollar.`,
+      text: `Tax credits reduced the tax by $${f.totalCredits.toLocaleString()} — credits are more valuable than deductions because they reduce tax dollar-for-dollar.`,
     });
   }
 
@@ -105,7 +105,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
   if (f.qbiDeduction > 0) {
     insights.push({
       icon: 'savings',
-      text: `The Qualified Business Income (QBI) deduction lets you deduct 20% of qualifying business income — saving you $${Math.round(f.qbiDeduction * f.marginalTaxRate).toLocaleString()} in tax.`,
+      text: `The Qualified Business Income (QBI) deduction is 20% of qualifying business income — saving $${Math.round(f.qbiDeduction * f.marginalTaxRate).toLocaleString()} in tax.`,
     });
   }
 
@@ -115,14 +115,14 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
     if (diff > 0) {
       insights.push({
         icon: 'info',
-        text: `You're using the standard deduction because it's $${diff.toLocaleString()} more than your itemized deductions would be.`,
+        text: `The standard deduction is used because it's $${diff.toLocaleString()} more than itemized deductions would be.`,
       });
     }
   } else if (f.deductionUsed === 'itemized') {
     const diff = f.itemizedDeduction - f.standardDeduction;
     insights.push({
       icon: 'savings',
-      text: `Itemizing saved you $${diff.toLocaleString()} more than the standard deduction would have.`,
+      text: `Itemizing saved $${diff.toLocaleString()} more than the standard deduction would have.`,
     });
   }
 
@@ -133,12 +133,12 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
       const overwithheld = Math.round(f.totalWithholding - f.taxAfterCredits);
       insights.push({
         icon: 'opportunity',
-        text: `You overwithheld by $${overwithheld.toLocaleString()} this year. Consider adjusting your W-4 to keep more in each paycheck — you're essentially giving the IRS a 0% interest loan.`,
+        text: `Withholding was $${overwithheld.toLocaleString()} more than needed this year. A new W-4 would keep more in each paycheck — the overpayment is a 0% interest loan to the IRS.`,
       });
     } else if (ratio < 0.85 && f.amountOwed > 1000) {
       insights.push({
         icon: 'warning',
-        text: `You significantly underwithheld. Consider adjusting your W-4 or making estimated payments to avoid potential penalties next year.`,
+        text: `Withholding fell well short this year. A new W-4 or estimated payments would avoid potential penalties next year.`,
       });
     }
   }
@@ -147,7 +147,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
   if (f.amtAmount > 0) {
     insights.push({
       icon: 'warning',
-      text: `The Alternative Minimum Tax (AMT) adds $${f.amtAmount.toLocaleString()} to your bill. AMT recalculates your tax using a broader income base with fewer deductions.`,
+      text: `The Alternative Minimum Tax (AMT) adds $${f.amtAmount.toLocaleString()} to the tax. AMT recalculates the tax using a broader income base with fewer deductions.`,
     });
   }
 
@@ -158,7 +158,7 @@ function generateInsights(f: Form1040Result, calc: CalculationResult): Insight[]
       const carryforward = totalLoss - 3000;
       insights.push({
         icon: 'info',
-        text: `You can only deduct $3,000 of capital losses per year. The remaining $${carryforward.toLocaleString()} carries forward to reduce future taxes.`,
+        text: `Only $3,000 of capital losses can be deducted per year. The remaining $${carryforward.toLocaleString()} carries forward to reduce future taxes.`,
       });
     }
   }

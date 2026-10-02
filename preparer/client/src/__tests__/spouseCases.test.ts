@@ -182,7 +182,7 @@ describe('joining a spouse case never loses work', () => {
       return put(key, value);
     };
     const refused = await joinSpouseCase(maya, jordan);
-    expect(refused).toEqual({ ok: false, error: 'The source file w2-indiana-local.pdf could not be copied, so the cases are not joined. Unlock HATax and try again.' });
+    expect(refused).toEqual({ ok: false, error: 'The source file w2-indiana-local.pdf could not be copied, so the cases are not joined. Unlock HA Tax and try again.' });
     expect(listReturns()).toHaveLength(2);
     expect(getReturn(maya).spouseFirstName).toBeUndefined();
     expect(loadDocuments(maya)).toHaveLength(1);

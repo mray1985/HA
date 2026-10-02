@@ -2,9 +2,9 @@
   "name": "@hatax/local-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "Preparer-only AI intake: TaxFacts, schema-validated tax tools, document classification and reading, two-reader verification, and the approved local model manifest. Not part of the individual app.",
+  "description": "Preparer-only AI intake: TaxFacts, schema-validated tax tools, document classification and reading, two-reader verification, and the approved local model manifest.",
   "license": "MIT",
-  "author": "HATax",
+  "author": "HA Tax",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

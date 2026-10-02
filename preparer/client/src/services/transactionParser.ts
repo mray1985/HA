@@ -216,7 +216,7 @@ export function parseTransactionCSV(csvContent: string): ParseResult {
 
   return {
     transactions: [],
-    warnings: ['Could not detect date, description, and amount columns. Please check your CSV format.'],
+    warnings: ['Could not detect date, description, and amount columns. Please check the CSV format.'],
     detectedFormat: 'unknown',
   };
 }

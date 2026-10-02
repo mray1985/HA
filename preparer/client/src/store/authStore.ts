@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getActiveKey, encrypt as encryptStr, decrypt as decryptStr } from '../services/crypto';
 
-export type AccountRole = 'taxpayer' | 'preparer';
+/** The accounts HA Tax Preparer signs in: preparers (admins too). */
+export type AccountRole = 'preparer';
 
 function apiUrl(path: string): string {
   const base = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
@@ -12,15 +13,10 @@ function apiUrl(path: string): string {
 
 function roleAllowed(role: string, audience?: AccountRole): boolean {
   if (!audience) return true;
-  if (audience === 'taxpayer') return role === 'taxpayer';
   return role === 'preparer' || role === 'admin';
 }
 
-function wrongAudienceMessage(audience: AccountRole): string {
-  return audience === 'taxpayer'
-    ? 'This account belongs to the preparer app.'
-    : 'This account belongs to the taxpayer app.';
-}
+const NOT_A_PREPARER = 'This account is not a preparer account.';
 
 export interface User {
   id: number;
@@ -122,7 +118,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!roleAllowed(data.data.user.role, audience)) {
             await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
-            const message = wrongAudienceMessage(audience || 'taxpayer');
+            const message = NOT_A_PREPARER;
             set({ user: null, accessToken: null, isAuthenticated: false, error: message, isLoading: false });
             throw new Error(message);
           }

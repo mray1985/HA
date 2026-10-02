@@ -209,7 +209,7 @@ export default function FDXImportPanel({ onBack }: FDXImportPanelProps) {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-200">Import FDX File</h3>
           <p className="text-sm text-slate-400">
-            Upload an FDX (Financial Data Exchange) JSON file exported from your financial institution.
+            Upload an FDX (Financial Data Exchange) JSON file exported from the client's financial institution.
             FDX files can contain W-2, 1099-B, 1099-INT, 1099-DIV, 1099-R, 1099-NEC, 1099-MISC,
             1099-G, 1099-K, 1099-SA, and 1099-Q data.
           </p>

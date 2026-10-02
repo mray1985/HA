@@ -307,7 +307,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {/* Provider selector */}
           <div className="card bg-surface-800 border-slate-700">
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Which tax software did you use?
+              Which tax software prepared the return?
               <span className="text-slate-500 font-normal ml-1">(optional)</span>
             </label>
             <select
@@ -318,7 +318,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
               }}
               className="input-field w-full"
             >
-              <option value="">Select your provider...</option>
+              <option value="">Select the software...</option>
               {COMPETITOR_PROVIDERS.filter(p => p.id !== 'other').map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -333,7 +333,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
                   className="flex items-center gap-1.5 text-sm text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"
                 >
                   {showInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  How to download your return from {provider.name}
+                  How to download a return from {provider.name}
                 </button>
 
                 {showInstructions && (
@@ -353,7 +353,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           <FileDropZone
             accept=".pdf"
             onFile={handleFile}
-            label="Drop your completed 1040 PDF here"
+            label="Drop the completed 1040 PDF here"
             sublabel="Must be a digitally-generated PDF (not scanned)"
             maxSizeMB={25}
           />
@@ -361,7 +361,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           {/* Privacy note */}
           <div className="flex items-start gap-2 text-sm text-slate-500">
             <Shield className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Your PDF is processed entirely in your browser. No data is uploaded to any server.</span>
+            <span>The PDF is read on this computer. Nothing is uploaded.</span>
           </div>
         </div>
       )}
@@ -370,7 +370,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
       {state === 'extracting' && (
         <div className="card bg-surface-800 border-slate-700 text-center py-8">
           <Loader2 className="w-8 h-8 text-HATaxService-blue-400 animate-spin mx-auto mb-3" />
-          <p className="text-slate-300">Analyzing your tax return...</p>
+          <p className="text-slate-300">Reading the return...</p>
           <p className="text-sm text-slate-500 mt-1">Extracting personal info and financial data</p>
         </div>
       )}
@@ -614,7 +614,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
               </div>
 
               <p className="text-xs text-slate-500 mt-2">
-                Dependents will be added to your return. You can edit them later in the Personal Info step.
+                Dependents will be added to the return.
               </p>
             </div>
           )}
@@ -631,7 +631,7 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
             {importMode === 'current-year' && (
               <p className="text-xs text-slate-500 mb-3 flex items-start gap-1.5">
                 <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                These totals are shown as a reference while you enter income. They are not written to your return.
+                These totals are shown for reference only. They are not written to the return.
               </p>
             )}
 
@@ -693,8 +693,8 @@ export default function CompetitorImportPanel({ onBack }: CompetitorImportPanelP
           </p>
           <p className="text-sm text-slate-400 mt-1">
             {importMode === 'current-year'
-              ? 'Your name, address, and filing status have been pre-filled. Review them in the Personal Info step.'
-              : 'Your prior-year data is available for year-over-year comparison on the Review page.'}
+              ? 'The name, address and filing status have been filled in.'
+              : 'Last year\'s figures are available for the year-over-year comparison on the Documents tab.'}
           </p>
 
           <div className="flex justify-center gap-3 mt-4">

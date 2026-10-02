@@ -1,7 +1,7 @@
-# HATax Preparer
+# HA Tax Preparer
 
 Automated tax preparation for professional preparers, built on its own copy of
-the HATax engine and running entirely on the preparer's machine.
+the HA Tax engine and running entirely on the preparer's machine.
 
 ## What it does
 

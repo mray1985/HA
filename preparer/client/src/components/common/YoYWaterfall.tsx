@@ -60,8 +60,8 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
     y: priorNet,
     colorKey: priorNet >= 0 ? 'positive' : 'negative',
     description: priorNet >= 0
-      ? `You received a ${fmtDollars(priorNet)} refund in ${priorYear.taxYear}`
-      : `You owed ${fmtDollars(priorNet)} in ${priorYear.taxYear}`,
+      ? `A ${fmtDollars(priorNet)} refund in ${priorYear.taxYear}`
+      : `${fmtDollars(priorNet)} owed in ${priorYear.taxYear}`,
   });
 
   // Intermediate steps (skip near-zero)
@@ -71,8 +71,8 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
       y: taxStep,
       colorKey: taxStep >= 0 ? 'positive' : 'negative',
       description: taxStep >= 0
-        ? `Your total tax decreased by ${fmtDollars(taxStep)}`
-        : `Your total tax increased by ${fmtDollars(taxStep)}`,
+        ? `Total tax decreased by ${fmtDollars(taxStep)}`
+        : `Total tax increased by ${fmtDollars(taxStep)}`,
     });
   }
 
@@ -82,8 +82,8 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
       y: creditsStep,
       colorKey: creditsStep >= 0 ? 'positive' : 'negative',
       description: creditsStep >= 0
-        ? `You claimed ${fmtDollars(creditsStep)} more in credits`
-        : `You claimed ${fmtDollars(creditsStep)} less in credits`,
+        ? `${fmtDollars(creditsStep)} more in credits`
+        : `${fmtDollars(creditsStep)} less in credits`,
     });
   }
 
@@ -93,8 +93,8 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
       y: paymentsStep,
       colorKey: paymentsStep >= 0 ? 'positive' : 'negative',
       description: paymentsStep >= 0
-        ? `Your payments increased by ${fmtDollars(paymentsStep)}`
-        : `Your payments decreased by ${fmtDollars(paymentsStep)}`,
+        ? `Payments increased by ${fmtDollars(paymentsStep)}`
+        : `Payments decreased by ${fmtDollars(paymentsStep)}`,
     });
   }
 
@@ -109,8 +109,8 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
     sum: true,
     colorKey: currentNet >= 0 ? 'positive' : 'negative',
     description: currentNet >= 0
-      ? `Your 2025 refund is ${fmtDollars(currentNet)}`
-      : `You owe ${fmtDollars(currentNet)} for 2025`,
+      ? `The 2025 refund is ${fmtDollars(currentNet)}`
+      : `${fmtDollars(currentNet)} owed for 2025`,
   });
 
   const sumIndexes = steps.reduce<number[]>((acc, s, i) => s.sum ? [...acc, i] : acc, []);
@@ -156,7 +156,7 @@ export default function YoYWaterfall({ priorYear, current }: YoYWaterfallProps) 
   return (
     <div className="rounded-lg bg-slate-800/30 p-3 mb-3">
       <h4 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-        Why did your result change?
+        Why did the result change?
       </h4>
       <ChartComponent
         height={chartHeight}

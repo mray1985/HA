@@ -474,7 +474,7 @@ async function generateCoverPagePDF(
   const cursor: Cursor = { y: PAGE_H - MARGIN_T };
 
   // ── Header ────────────────────────────────────────────────────
-  page.drawText('HATax Filing Packet', {
+  page.drawText('HA Tax Filing Packet', {
     x: MARGIN_L,
     y: cursor.y,
     size: 18,

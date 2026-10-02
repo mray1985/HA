@@ -71,7 +71,7 @@ export default function ReturnContextSummary({ context, richness }: Props) {
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-HATaxService-blue-300" />
         <div className="flex-1">
           <div className="text-sm font-medium text-HATaxService-blue-300 mb-2">
-            What we know about your return
+            What the return shows
           </div>
 
       {chips.length > 0 ? (
@@ -89,14 +89,14 @@ export default function ReturnContextSummary({ context, richness }: Props) {
       {isSparse && (
         <p className="text-xs text-slate-400 mt-3 leading-relaxed">
           {chips.length === 0
-            ? "We don't have any info about your tax situation yet — that's fine! Answer the questions below so we can scan your transactions smarter."
-            : "We have some info, but the more you tell us, the more accurate the scan will be. Check the questions below to help us out."}
+            ? "The return has no tax information yet. Answer the questions below to focus the scan."
+            : "The return has some information. Answering the questions below makes the scan more accurate."}
         </p>
       )}
 
       {!isSparse && (
         <p className="text-xs text-slate-500 mt-2">
-          Based on your return, we've pre-selected the most relevant categories below.
+          The most relevant categories below are selected from the return.
         </p>
       )}
         </div>

@@ -173,7 +173,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const pages1040 = await find1040Pages(pdf);
   if (!pages1040) {
     throw new Error(
-      'Could not find Form 1040 in this PDF. Make sure you uploaded your completed federal tax return (not a state return or other document).',
+      'Could not find Form 1040 in this PDF. Make sure this is the completed federal tax return (not a state return or other document).',
     );
   }
 
@@ -181,7 +181,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const page1Blocks = await extractTextBlocksFromPages(pdf, [pages1040.page1]);
   if (page1Blocks.length < 10) {
     throw new Error(
-      'This PDF appears to be scanned or image-based. Please download the digitally-generated PDF from your tax software instead.',
+      'This PDF appears to be scanned or image-based. Please download the digitally-generated PDF from the tax software instead.',
     );
   }
 
@@ -189,7 +189,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const fullPage1Text = page1Blocks.map(b => b.text).join(' ').toLowerCase();
   if (fullPage1Text.includes('1040-x') || fullPage1Text.includes('amended')) {
     throw new Error(
-      'This appears to be an amended return (Form 1040-X). Please upload your original Form 1040 instead.',
+      'This appears to be an amended return (Form 1040-X). Please upload the original Form 1040 instead.',
     );
   }
 

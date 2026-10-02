@@ -69,10 +69,10 @@ export function generateICS(deadlines: TaxDeadline[]): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//HATax//Tax Calendar//EN',
+    'PRODID:-//HA Tax//Tax Calendar//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:HATax Deadlines',
+    'X-WR-CALNAME:HA Tax Deadlines',
     'X-WR-TIMEZONE:America/New_York',
     ...deadlines.map(d => buildVEvent(d, stamp)),
     'END:VCALENDAR',

@@ -162,13 +162,13 @@ export function calculateForm8615(input: Form8615Input): Form8615Result {
     unsupported.push({ ruleId: 'FED.8615.JOINT_RETURN', message: 'Form 8615 is marked as applying, but the child files a joint return, and a child who files jointly does not file Form 8615. Correct the filing status or the Form 8615 answer.' });
   }
   if (input.has28RateOr1250Gain) {
-    unsupported.push({ ruleId: 'FED.8615.SCHEDULE_D_WORKSHEET', message: 'Form 8615: the child has 28% rate gain or unrecaptured section 1250 gain, so lines 9, 15 and 17 come from the Schedule D Tax Worksheet, which HATax does not fill for Form 8615. Figure the child\'s tax by hand.' });
+    unsupported.push({ ruleId: 'FED.8615.SCHEDULE_D_WORKSHEET', message: 'Form 8615: the child has 28% rate gain or unrecaptured section 1250 gain, so lines 9, 15 and 17 come from the Schedule D Tax Worksheet, which HA Tax does not fill for Form 8615. Figure the child\'s tax by hand.' });
   }
   if (input.filesForm2555) {
-    unsupported.push({ ruleId: 'FED.8615.FORM2555', message: 'Form 8615 with the child\'s Form 2555 (foreign earned income exclusion) uses the Alternate Worksheet and the Foreign Earned Income Tax Worksheet, which HATax does not fill for Form 8615. Figure the child\'s tax by hand.' });
+    unsupported.push({ ruleId: 'FED.8615.FORM2555', message: 'Form 8615 with the child\'s Form 2555 (foreign earned income exclusion) uses the Alternate Worksheet and the Foreign Earned Income Tax Worksheet, which HA Tax does not fill for Form 8615. Figure the child\'s tax by hand.' });
   }
   if (info.parentSpecialComputation) {
-    unsupported.push({ ruleId: 'FED.8615.PARENT_WORKSHEET', message: 'Form 8615: the parent\'s tax used the Schedule D Tax Worksheet, Schedule J or the Foreign Earned Income Tax Worksheet (or another child has 28% rate or unrecaptured section 1250 gain), so line 9 follows that worksheet, which HATax does not fill for Form 8615. Figure the child\'s tax by hand.' });
+    unsupported.push({ ruleId: 'FED.8615.PARENT_WORKSHEET', message: 'Form 8615: the parent\'s tax used the Schedule D Tax Worksheet, Schedule J or the Foreign Earned Income Tax Worksheet (or another child has 28% rate or unrecaptured section 1250 gain), so line 9 follows that worksheet, which HA Tax does not fill for Form 8615. Figure the child\'s tax by hand.' });
   }
 
   const directlyConnected = input.itemizes ? Math.max(0, num(info.childDirectlyConnectedDeductions)) : 0;
@@ -200,7 +200,7 @@ export function calculateForm8615(input: Form8615Input): Form8615Result {
       ncg5 = clamp(round2(ncg - KIDDIE.UNEARNED_INCOME_THRESHOLD * r5), 0, round2(line5 - qd5));
     } else if (directlyConnected > 0) {
       // Worksheets #2 and #3 take the part of the directly connected deductions that produced the dividends and gain alone.
-      unsupported.push({ ruleId: 'FED.8615.DIRECTLY_CONNECTED', message: 'The child itemizes deductions directly connected with unearned income and has qualified dividends or capital gain: the Form 8615 Line 5 Worksheet needs the part connected with the dividends and gain, which HATax does not have. Figure the child\'s tax by hand.' });
+      unsupported.push({ ruleId: 'FED.8615.DIRECTLY_CONNECTED', message: 'The child itemizes deductions directly connected with unearned income and has qualified dividends or capital gain: the Form 8615 Line 5 Worksheet needs the part connected with the dividends and gain, which HA Tax does not have. Figure the child\'s tax by hand.' });
     } else {
       // Worksheet #3 (line 5 is less than line 3); with nothing directly connected its lines 5–7 are 0.
       line5Worksheet = 3;

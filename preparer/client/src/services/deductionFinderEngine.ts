@@ -163,8 +163,8 @@ export function scanForSignals(
     if (typeof pattern.gate === 'object' && pattern.gate.existingDataKeys) {
       const hasExisting = pattern.gate.existingDataKeys.some((key) => context[key] as boolean);
       if (hasExisting) {
-        existingDataNote = `You've already entered some ${pattern.title.toLowerCase().replace(/ deduction| credit/i, '')} data. ` +
-          `These are additional items found in your statement.`;
+        existingDataNote = `The return already has some ${pattern.title.toLowerCase().replace(/ deduction| credit/i, '')} data. ` +
+          `These are additional items found in the statement.`;
       }
     }
 

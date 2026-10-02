@@ -1,4 +1,4 @@
-# HATax Scope Matrix
+# HA Tax Preparer Scope Matrix
 
 **Tax Years:** 2024, 2025, and 2026 (federal) | **Engine Version:** 0.1.0 | **Last Updated:** 2026-09-27
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-HATax ships with **90+ implemented tax features** across **84 engine modules** (66 federal + 18 state), validated by **5,307 engine tests** spanning **112 test files** (`npm test` in `shared`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
+HA Tax Preparer ships with **90+ implemented tax features** across **84 engine modules** (66 federal + 18 state), validated by **5,396 engine tests** spanning **125 test files** (`npm test` in `shared`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 
@@ -22,9 +22,8 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Constants files | 103 |
 | IRS PDF templates | 41 |
 | State PDF templates | 43 |
-| Wizard step components | 105 |
-| Test files | 112 (`npm test` in `shared`) |
-| Total tests | 5,307 (`npm test` in `shared`) |
+| Test files | 125 (`npm test` in `shared`) |
+| Total tests | 5,396 (`npm test` in `shared`) |
 | Filing statuses | 5 (Single, MFJ, MFS, HoH, QSS) |
 | Federal tax years | 2024, 2025, 2026 |
 
@@ -236,12 +235,12 @@ All 43 income-tax states + DC have declarative field mapping templates in `share
 | Tax year 2025 | ✅ | Current year brackets, thresholds, and phaseouts (including OBBBA changes) |
 | All 50 states + DC | ✅ | Full coverage: 9 no-tax, 13 flat, 20 progressive, 9 custom calculators |
 | Schema migration system | ✅ | Lazy migration on read with version stamping |
-| AES-256-GCM encryption | ✅ | All localStorage data encrypted at rest; passphrase lock screen; auto-lock on inactivity |
+| AES-256-GCM encryption | ✅ | All case data encrypted at rest (case records and document files); passphrase lock screen; locks after 15 minutes idle or 30 seconds hidden |
 | PDF password protection | ✅ | Optional encryption for all export types (PDF, JSON, CSV) |
 | Prior year import | ✅ | JSON and PDF import with YoY comparison |
 | Data import parsers | ✅ | CSV, TXF, FDX formats; brokerage transaction import; duplicate detection |
 | Audit risk scoring | ✅ | 20-factor scoring model; every factor sourced from TIGTA reports, GAO studies, or IRS LB&I campaigns; 40 tests |
-| Smart Expense Scanner | ✅ | AI-powered transaction categorization and deduction discovery |
+| Smart Expense Scanner | ✅ | Rules-based transaction categorization and deduction discovery, on the preparer's computer |
 | Multi-year support | ❌ | Engine is single-year (2025); historical years require separate bracket/threshold constants |
 | E-filing (MeF XML) | ❌ | IRS Modernized e-File XML generation — **explicitly out of scope** |
 | Amended returns | ❌ | Form 1040-X not supported |

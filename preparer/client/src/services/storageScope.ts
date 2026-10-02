@@ -1,4 +1,4 @@
-/** Consumer and preparer share one site, so their saved returns use different keys. */
+/** Storage keys for saved cases: HA Tax Preparer's keys start hatax-preparer: (the page is marked data-app="preparer"). */
 export function isPreparerApp(): boolean {
   return typeof document !== 'undefined' && document.documentElement.dataset.app === 'preparer';
 }

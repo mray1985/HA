@@ -2,7 +2,7 @@
  * Missing-document engine (work order §23).
  *
  * Last year's documents — from last year's case for the same client, from an
- * imported prior-year HATax return, or, when only a prior-year return's
+ * imported prior-year HA Tax return, or, when only a prior-year return's
  * totals are known, from those totals — are compared with the documents this
  * year's case holds. Each one not matched is reported as *possibly* missing
  * ("Possible missing 1099-INT from Chase"), never as certainly missing: an
@@ -34,7 +34,7 @@ export interface ExpectedDocument {
 /** Where last year's documents come from. */
 export interface PriorYearEvidence {
   taxYear: number;
-  /** "the 2024 case", "the imported 2024 HATax return", "the 2024 return (TurboTax)" */
+  /** "the 2024 case", "the imported 2024 HA Tax return", "the 2024 return (TurboTax)" */
   label: string;
   documents: ExpectedDocument[];
   /** Only the prior return's totals are known: the documents name no payer. */
@@ -210,10 +210,10 @@ const INFORMATION_RETURN_MINIMUM = 10;
 
 /**
  * Last year's documents from an imported prior-year return: its documents when
- * the import kept them (a HATax return), otherwise what its totals imply.
+ * the import kept them (an HA Tax return), otherwise what its totals imply.
  */
 export function priorYearFromSummary(summary: PriorYearSummary): PriorYearEvidence | null {
-  const source = summary.source === 'hatax-json' ? 'imported HATax return' : summary.source === 'hatax-case' ? 'case' : summary.providerName ? `return (${summary.providerName})` : 'return';
+  const source = summary.source === 'hatax-json' ? 'imported HA Tax return' : summary.source === 'hatax-case' ? 'case' : summary.providerName ? `return (${summary.providerName})` : 'return';
   const label = `the ${summary.taxYear} ${source}`;
   if (summary.documents && summary.documents.length > 0) {
     const documents = summary.documents

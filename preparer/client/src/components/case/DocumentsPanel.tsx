@@ -51,7 +51,7 @@ function SourceDocument({ returnId, doc }: { returnId: string; doc: IngestedDocu
     void (async () => {
       const file = await loadDocumentFile(returnId, doc.documentId);
       if (!file) {
-        if (live) setView({ error: 'The original file was not kept with this case (it was added before HATax kept source files, or storage was not available). Check the client’s copy.' });
+        if (live) setView({ error: 'The original file was not kept with this case (it was added before HA Tax kept source files, or storage was not available). Check the client’s copy.' });
         return;
       }
       if (file.type.startsWith('image/') || IMAGE_FILE.test(file.name)) {

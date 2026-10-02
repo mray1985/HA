@@ -1,7 +1,7 @@
 {
   "name": "hatax-preparer",
   "private": true,
-  "description": "HATax preparer app: automated preparation with local AI, built on its own copy of the HATax engine.",
+  "description": "HA Tax preparer app: automated preparation with local AI, built on its own copy of the HA Tax engine.",
   "workspaces": [
     "shared",
     "local-ai",

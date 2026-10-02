@@ -1,6 +1,6 @@
-# Contributing to HATax
+# Contributing to HA Tax Preparer
 
-Thank you for your interest in contributing to HATax. This guide explains how to add features, write tests, and maintain the authority-backed standards that make this engine trustworthy.
+Thank you for your interest in contributing to HA Tax Preparer. This guide explains how to add features, write tests, and maintain the authority-backed standards that make its engine trustworthy.
 
 ## Code of Conduct
 
@@ -8,7 +8,7 @@ We are committed to providing a welcoming, inclusive, and harassment-free experi
 
 ## No Authority, No Merge
 
-Every tax computation in HATax must trace to a primary legal authority. If a calculation cannot cite an IRC section, Treasury Regulation, Revenue Procedure, or IRS Form/Worksheet, it will not be merged. This is the project's core integrity rule.
+Every tax computation in HA Tax must trace to a primary legal authority. If a calculation cannot cite an IRC section, Treasury Regulation, Revenue Procedure, or IRS Form/Worksheet, it will not be merged. This is the project's core integrity rule.
 
 Acceptable authority sources:
 
@@ -19,18 +19,21 @@ Acceptable authority sources:
 
 ## Project Structure
 
-HATax is a monorepo with three packages:
+HA Tax Preparer is a monorepo with four packages and the desktop app:
 
 ```
-tax-project/
-├── shared/          @hatax/engine — tax calculation engine (pure functions)
-├── client/          React + Vite frontend (wizard-based tax return UI)
-└── server/          Express backend (optional AI features: chat, OCR, expense scanning)
+preparer/
+├── shared/          @hatax/engine — tax calculation engine and return diagnostics (pure functions)
+├── local-ai/        @hatax/local-ai — TaxFacts, tax tools, document reading, two-reader verification
+├── client/          React + Vite — the case-based preparer UI
+├── server/          Express — sign-in, the season seat, the local model routes
+└── desktop/         Electron app and Windows installer
 ```
 
 - **`shared/`** is the core — all tax math lives here. No I/O, no side effects, no dependencies on client or server.
-- **`client/`** is the UI — wizard steps, form filling, PDF export, AI chat, tools.
-- **`server/`** is optional — provides BYOK API proxying for AI features. The app works fully offline without it.
+- **`local-ai/`** turns what the local models read into validated TaxFacts. A value it cannot confirm is held for the preparer, never guessed.
+- **`client/`** is the UI — the dashboard, cases (Review, Documents, Client, Return, Explain, Scenarios, Approve), form filling, PDF export, tools.
+- **`server/`** runs on the preparer's computer (inside the desktop app, on `127.0.0.1`): sign-in, and the routes that run the local models.
 
 ## Development Setup
 
@@ -43,8 +46,8 @@ tax-project/
 
 ```bash
 git clone <repo-url>
-cd tax-project
-npm install          # installs all three packages via workspaces
+cd <repo>/preparer
+npm install          # installs all four packages via workspaces
 ```
 
 ### Environment Variables
@@ -60,12 +63,11 @@ The client requires a **Syncfusion Community License key** in `client/.env` for 
 ### Running the App
 
 ```bash
-# Start the client dev server
-cd client && npm run dev
-
-# Start the server (optional, only needed for AI features)
-cd server && npm run dev
+# The server on 3002 and the client on http://127.0.0.1:5174/preparer
+npm run dev
 ```
+
+The server is needed for sign-in. Reading documents with the local models also needs the model files and llama.cpp; see the README's Desktop app section.
 
 ### Running Tests
 
@@ -73,14 +75,17 @@ cd server && npm run dev
 # Shared engine tests (fastest, most comprehensive — 5,000+ tests)
 cd shared && npx vitest run
 
-# Client unit/service tests (~1,000+ tests)
-cd client && npx vitest run
+# Client tests (~980 tests)
+cd client && npm test
+
+# Local AI tests (~460 tests)
+cd local-ai && npm test
 
 # Server tests
-cd server && npx vitest run
+cd server && npm test
 
 # E2E tests (requires browser binaries)
-cd client && npx playwright test
+cd client && npx playwright test --project=chromium
 
 # Watch mode (re-runs on file changes)
 cd shared && npx vitest
@@ -165,17 +170,14 @@ Every feature that varies by filing status must handle all five:
 
 Missing a filing status is a test failure.
 
-## Adding Wizard Steps (Client)
+## Adding to the Case UI (Client)
 
-All wizard step components live in `client/src/components/steps/`. Follow the **[Step Style Guide](./STEP_STYLE_GUIDE.md)** for required elements and ordering. Every data entry step must include:
+Case tabs live in `client/src/components/case/`, and what the review lists is built in `client/src/services/caseReview.ts`. A new check must:
 
-1. `<StepWarningsBanner stepId="..." />` — first element
-2. `<SectionIntro />` — icon + title + description
-3. `<CalloutCard />` — at least one
-4. Form content
-5. `<StepNavigation />` — last element
-
-See the [UI Color Reference](./STEP_STYLE_GUIDE.md#ui-color-reference) for color conventions.
+1. **Fail closed.** A situation the engine cannot compute to the official rules is a finding in `shared/src/engine/unsupported.ts`, which blocks approval and export — never an approximation.
+2. **Name the source.** Every value read from a document keeps its source document; a review item opens its own document.
+3. **Let the preparer settle it in place.** A missing return field is entered in the item itself; a warning can be decided with a note. Errors and blockers clear only by fixing the return.
+4. **Be in the audit trail.** Every correction and decision is recorded on the case.
 
 ## Test Requirements
 

@@ -695,7 +695,7 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
   };
   const hold = (itemId: string, message: string) => findings.push({
     ruleId: 'CA.YEAR.UNPUBLISHED', jurisdiction: 'CA', section: 'state', itemId,
-    message: `${message} Prepare the California return when the FTB publishes them, or outside HATax.`,
+    message: `${message} Prepare the California return when the FTB publishes them, or outside HA Tax.`,
   });
 
   // CalEITC / YCTC limit: the year's, or last year's recomputed by the CCPI change.
@@ -769,7 +769,7 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
   if (taxReturn.deductionMethod === 'itemized' && ii && ((calculation.investmentInterest?.carryforward || 0) > 0
       || ii.electToIncludeQualifiedDividends || ii.electToIncludeLTCG || (ii.priorYearDisallowed || 0) > 0)) {
     findings.push({ ruleId: 'CA.ADJUSTMENT', jurisdiction: 'CA', section: 'state', itemId: 'investmentInterest',
-      message: `California investment interest (FTB 3526) is not figured when the federal deduction is limited, a carryover is used or an election is made. Prepare the California return outside HATax.` });
+      message: `California investment interest (FTB 3526) is not figured when the federal deduction is limited, a carryover is used or an election is made. Prepare the California return outside HA Tax.` });
   }
 
   // ── Amounts not published for the year ──
@@ -895,7 +895,7 @@ function computeCACoreTax(
   const rentersCredit = calculateRentersCredit(caAGI, filingKey, isRenter, t.rentersCredit);
   const caDependentCareCredit = calculateCADependentCareCredit(taxReturn, caAGI);
   const seniorHoHCredit = calculateSeniorHoHCredit(taxReturn, caAGI, taxableIncome, t.seniorHoH, answers);
-  // Form 540 line 35: line 31 less line 32 (HATax has no Schedule G-1 or FTB 5870A tax for line 34).
+  // Form 540 line 35: line 31 less line 32 (HA Tax has no Schedule G-1 or FTB 5870A tax for line 34).
   const line35 = Math.max(0, baseTax - exemptionCredits);
   const dependentParentCredit = calculateDependentParentCredit(taxReturn, filingKey, line35, t.dependentParentMax, answers);
 

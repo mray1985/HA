@@ -1,13 +1,13 @@
-# HATax Engine: Design Principles
+# HA Tax Engine: Design Principles
 
-> Architecture and design philosophy for the HATax open-source tax engine.
+> Architecture and design philosophy for the tax engine behind HA Tax Preparer (open source, MIT).
 
 ---
 
 ## 1. Ground Truth Hierarchy
 
 Tax law is layered. Not all sources carry equal weight, and conflicts between
-sources must be resolved by deferring to the higher authority. The HATax
+sources must be resolved by deferring to the higher authority. The HA Tax
 engine follows a strict hierarchy when implementing any tax computation:
 
 1. **Internal Revenue Code (IRC)** -- Primary binding authority. Statutory text
@@ -49,7 +49,7 @@ be traceable upward through the hierarchy to its legal source.
 
 ## 2. Pure Function Architecture ("Option B")
 
-The HATax engine is built on a strict pure-function architecture. This was a
+The HA Tax engine is built on a strict pure-function architecture. This was a
 deliberate design choice (referred to internally as "Option B") that separates
 computation from persistence and side effects.
 
@@ -91,7 +91,7 @@ computation from persistence and side effects.
 
 A tax engine that produces correct numbers is necessary but not sufficient. Tax
 professionals, academics, and regulators need to verify *why* the engine
-produces those numbers. The HATax audit trail is designed to make every
+produces those numbers. The HA Tax audit trail is designed to make every
 computed value traceable to its legal authority.
 
 ### Authority References in Code
@@ -247,16 +247,16 @@ Revenue Procedure) can be incorporated by updating a single file.
 ## 7. Comparison with Existing Open-Source Tax Engines
 
 The landscape of open-source and publicly available tax computation tools is
-limited. HATax occupies a distinct position.
+limited. HA Tax occupies a distinct position.
 
 | Project                        | Nature                           | Scope                                    | Audit Trail       |
 | ------------------------------ | -------------------------------- | ---------------------------------------- | ------------------ |
 | **IRS Direct File**            | Government-built, closed-source  | Simple returns (W-2, SSA, limited credits) | Not applicable     |
 | **PSLmodels Tax-Calculator**   | Academic microsimulation (Python)| Policy analysis, aggregate statistics     | Policy parameters  |
 | **tax-logic-core**             | Minimal open-source engine       | Limited income types and credits          | Minimal            |
-| **HATax Engine**            | Open-source TypeScript library   | Complete individual return (~85-90% filer coverage) | Full authority chain |
+| **HA Tax Engine**            | Open-source TypeScript library   | Complete individual return (~85-90% filer coverage) | Full authority chain |
 
-### How HATax Differentiates
+### How HA Tax Differentiates
 
 - **Complete individual return coverage.** The engine handles the income types,
   deductions, and credits that cover an estimated 85-90% of individual filers,
@@ -281,12 +281,11 @@ limited. HATax occupies a distinct position.
 
 | Metric                              | Value          |
 | ----------------------------------- | -------------- |
-| Engine modules in `shared/src/engine/` | 80           |
-| Constants files in `shared/src/constants/` | 103      |
+| Engine modules in `shared/src/engine/` | 89           |
+| Constants files in `shared/src/constants/` | 113      |
 | Implemented tax features             | 90+           |
-| Total tests                          | 5,025 (`npm test`) |
-| Test files                           | 96 (`npm test`) |
-| Wizard step components               | 105           |
+| Total tests                          | 5,396 (`npm test`) |
+| Test files                           | 125 (`npm test`) |
 | IRS PDF templates                    | 41            |
 | State PDF templates                  | 43            |
 | State tax calculators                | All 50 states + DC |
@@ -297,7 +296,7 @@ limited. HATax occupies a distinct position.
 
 ## Contributing
 
-This document describes the principles that govern the HATax engine
+This document describes the principles that govern the HA Tax engine
 architecture. Contributors should ensure that new code adheres to these
 principles:
 

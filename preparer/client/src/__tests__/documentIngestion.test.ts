@@ -158,7 +158,7 @@ describe('documentIngestion client pipeline', () => {
   it('removes document metadata for one return and all current-app keys', () => {
     saveDocuments('ret-1', [baseDoc()]);
     saveDocuments('ret-2', [baseDoc({ returnId: 'ret-2', documentId: 'DOC-other' })]);
-    // Other app's document key must survive wipe of the current app prefix.
+    // A key outside this app's prefix survives the wipe.
     const otherAppKey = DOCUMENT_KEY_PREFIX.startsWith('hatax-preparer:')
       ? 'hatax:documents:other-1'
       : 'hatax-preparer:documents:other-1';

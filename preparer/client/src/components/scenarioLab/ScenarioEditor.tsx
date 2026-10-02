@@ -89,7 +89,7 @@ function VariableControl({ variable, taxReturn, scenario, dispatch }: VariableCo
               <button
                 onClick={handleNavigate}
                 className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-HATaxService-blue-500/10 text-HATaxService-blue-400 hover:bg-HATaxService-blue-500/20 transition-colors"
-                title="Edit this value in your return"
+                title="Edit this value on the return"
               >
                 <ExternalLink className="w-3 h-3" />
                 Edit in Return

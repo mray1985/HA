@@ -64,7 +64,7 @@ const STUDENT_LOAN_INTEREST_CAP = 2500;
 const SP = { unmarried: 6500, married: 13000, perDependent: 9500, step: 250, steps: 9 };
 /** States with a reciprocal compensation agreement with Pennsylvania. */
 const RECIPROCAL = new Set(['IN', 'MD', 'NJ', 'OH', 'VA', 'WV']);
-const OUTSIDE = 'Prepare the Pennsylvania return outside HATax.';
+const OUTSIDE = 'Prepare the Pennsylvania return outside HA Tax.';
 /** 1099-R codes that are not PA-taxable (booklet 1099-R filing tips; code D makes it interest). */
 const NOT_TAXABLE_CODES = new Set(['3', '4', '6', '7', 'G', 'H']);
 /** A dependent child for Schedule SP: a child, stepchild, grandchild or foster child. */
@@ -133,21 +133,21 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
 
   // ── What no answer here settles ──
   if ((taxReturn.incomeK1 ?? []).length > 0) {
-    find('k1', `Pennsylvania classifies partnership, S corporation, estate and trust income from its own schedules (PA RK-1, NRK-1, PA-41 RK-1); HATax does not. ${OUTSIDE}`);
+    find('k1', `Pennsylvania classifies partnership, S corporation, estate and trust income from its own schedules (PA RK-1, NRK-1, PA-41 RK-1); HA Tax does not. ${OUTSIDE}`);
   }
   const otherStateTax = (taxReturn.w2Income ?? []).filter((w) => w.state && w.state.toUpperCase() !== 'PA' && !RECIPROCAL.has(w.state.toUpperCase()) && (w.stateTaxWithheld ?? 0) > 0);
   if (otherStateTax.length > 0) {
-    find('resident-credit', `Pennsylvania resident credit (Schedule G-L): wages were taxed by ${[...new Set(otherStateTax.map((w) => w.state!.toUpperCase()))].join(', ')}, and HATax does not figure the credit for tax paid to another state. ${OUTSIDE}`);
+    find('resident-credit', `Pennsylvania resident credit (Schedule G-L): wages were taxed by ${[...new Set(otherStateTax.map((w) => w.state!.toUpperCase()))].join(', ')}, and HA Tax does not figure the credit for tax paid to another state. ${OUTSIDE}`);
   }
   const miscOther = (taxReturn.income1099MISC ?? []).reduce((s, m) => s + Math.max(0, m.otherIncome || 0), 0);
   if (miscOther > 0 || (taxReturn.otherIncome ?? 0) > 0 || (taxReturn.income1099C ?? []).length > 0) {
-    find('other-income', `Pennsylvania classifies other income, prizes and cancelled debt into its income classes by their facts; HATax does not. ${OUTSIDE}`);
+    find('other-income', `Pennsylvania classifies other income, prizes and cancelled debt into its income classes by their facts; HA Tax does not. ${OUTSIDE}`);
   }
   if ((taxReturn.income1099B ?? []).some((t) => (t.washSaleLossDisallowed ?? 0) > 0) || (taxReturn.income1099DA ?? []).some((t) => (t.washSaleLossDisallowed ?? 0) > 0)) {
-    find('wash-sales', `Pennsylvania gains (line 5): a sale has a wash sale adjustment, and HATax does not figure its Pennsylvania treatment. ${OUTSIDE}`);
+    find('wash-sales', `Pennsylvania gains (line 5): a sale has a wash sale adjustment, and HA Tax does not figure its Pennsylvania treatment. ${OUTSIDE}`);
   }
   if ((taxReturn.form4797Properties ?? []).length > 0 || (taxReturn.installmentSales ?? []).length > 0 || (taxReturn.rentalProperties ?? []).some((r) => r.disposedDuringYear)) {
-    find('property-sales', `Pennsylvania gains (line 5): sales of business, rental or installment property use Pennsylvania basis and PA Schedule D-1; HATax does not figure them. ${OUTSIDE}`);
+    find('property-sales', `Pennsylvania gains (line 5): sales of business, rental or installment property use Pennsylvania basis and PA Schedule D-1; HA Tax does not figure them. ${OUTSIDE}`);
   }
 
   const otherQ = ask({
@@ -155,7 +155,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
     prompt: 'Do any of these apply: unreimbursed employee business expenses (PA Schedule UE); income from a Pennsylvania lottery noncash prize; exempt-interest dividends from a fund, or dividends from a fund attributable to U.S. or Pennsylvania obligations; an employer retirement distribution before you qualified to retire; restricted credits (PA Schedule OC or DC); use tax owed on purchases; or income earned while a resident of another state?',
   });
   const other = answerOf(config, otherQ.key);
-  if (other === true) find('other-items', `Pennsylvania: an item HATax does not figure applies. ${OUTSIDE}`);
+  if (other === true) find('other-items', `Pennsylvania: an item HA Tax does not figure applies. ${OUTSIDE}`);
   else if (other !== false) find('other-items', 'Pennsylvania: some PA-40 items depend on facts the return does not hold.', otherQ);
 
   const joint = taxReturn.filingStatus === FilingStatus.MarriedFilingJointly;
@@ -260,7 +260,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
   if (home && home.salePrice > 0) {
     const gain = round2(home.salePrice - home.costBasis - (home.sellingExpenses || 0));
     if (home.ownedMonths >= 24 && home.usedAsResidenceMonths >= 24) excludedHomeGain = Math.max(0, gain);
-    else find('home-sale', `Pennsylvania gains (line 5): the home does not meet the two-of-five-years test, and a nonqualifying sale uses PA Schedule 19; HATax does not figure it. ${OUTSIDE}`);
+    else find('home-sale', `Pennsylvania gains (line 5): the home does not meet the two-of-five-years test, and a nonqualifying sale uses PA Schedule 19; HA Tax does not figure it. ${OUTSIDE}`);
   }
   if (joint && results.some((g) => g > 0) && results.some((g) => g < 0)) {
     const q = ask({
@@ -268,7 +268,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
       prompt: 'Were all these sales from accounts you and your spouse own jointly, or all from accounts one of you owns alone?',
     });
     const a = answerOf(config, q.key);
-    if (a === false) find('gains-owners', `Pennsylvania gains (line 5): one spouse's loss cannot reduce the other's gain, and HATax does not split the sales by owner. ${OUTSIDE}`);
+    if (a === false) find('gains-owners', `Pennsylvania gains (line 5): one spouse's loss cannot reduce the other's gain, and HA Tax does not split the sales by owner. ${OUTSIDE}`);
     else if (a !== true) find('gains-owners', "Pennsylvania gains (line 5): on a joint return one spouse's loss cannot reduce the other spouse's gain.", q);
   }
   const line5Loss = net5 < 0;
@@ -282,7 +282,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
   const winnings = (taxReturn.incomeW2G ?? []).reduce((s, g) => s + Math.max(0, g.grossWinnings || 0), 0);
   const gamblingLosses = Math.max(0, taxReturn.gamblingLosses || 0);
   if (joint && winnings > 0 && gamblingLosses > 0) {
-    find('gambling', `Pennsylvania gambling winnings (line 8): spouses report winnings and losses separately, and HATax does not split them by spouse. ${OUTSIDE}`);
+    find('gambling', `Pennsylvania gambling winnings (line 8): spouses report winnings and losses separately, and HA Tax does not split them by spouse. ${OUTSIDE}`);
   }
   const line8 = round2(Math.max(0, winnings - gamblingLosses));
 
@@ -306,7 +306,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
   }
   const deductions = round2(hsa + studentLoan + deduction529);
   if (joint && deductions > 0 && Math.min(ownCompensation.you, ownCompensation.spouse) < deductions) {
-    find('deductions', `Pennsylvania deductions (line 10) on a joint return cannot exceed each spouse's own income, and HATax does not assign the ${usd(deductions)} of deductions to a spouse. ${OUTSIDE}`);
+    find('deductions', `Pennsylvania deductions (line 10) on a joint return cannot exceed each spouse's own income, and HA Tax does not assign the ${usd(deductions)} of deductions to a spouse. ${OUTSIDE}`);
   }
   const line10 = Math.min(deductions, line9);
   const line11 = round2(line9 - line10);
@@ -323,7 +323,7 @@ export function assessPennsylvania(taxReturn: TaxReturn, federal?: CalculationRe
   const dependentOfAnother = taxReturn.canBeClaimedAsDependent === true || taxReturn.isClaimedAsDependent === true;
   if (line12 > 0 && knownEligibility <= ceiling) {
     if (dependentOfAnother) {
-      find('forgiveness', `Pennsylvania tax forgiveness (Schedule SP): a dependent may qualify only through the parents' Schedule SP; HATax does not figure it. ${OUTSIDE}`);
+      find('forgiveness', `Pennsylvania tax forgiveness (Schedule SP): a dependent may qualify only through the parents' Schedule SP; HA Tax does not figure it. ${OUTSIDE}`);
     } else {
       const q = ask({
         key: PA_ANSWER.otherEligibilityIncome, kind: 'amount',

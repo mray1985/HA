@@ -94,7 +94,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
       } else if (ext === 'pdf') {
         result = await importPriorYear1040PDF(file);
       } else {
-        setError('Please select a HATax JSON export (.json) or a 1040 PDF (.pdf).');
+        setError('Please select an HA Tax JSON export (.json) or a 1040 PDF (.pdf).');
         setLoading(false);
         return;
       }
@@ -175,7 +175,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
           <h3 className="font-medium text-slate-200">Year-over-Year Comparison</h3>
         </div>
         <p className="text-sm text-slate-400 mb-3">
-          Import last year's return to see how your taxes changed.
+          Import last year's return to see how the client's taxes changed.
         </p>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -196,7 +196,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
             {loading ? 'Importing...' : 'Drop a prior-year file here'}
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            HATax JSON export or IRS 1040 PDF
+            HA Tax JSON export or IRS 1040 PDF
           </p>
           <input
             ref={inputRef}
@@ -239,17 +239,17 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
   if (priorRefund && currentRefund) {
     const delta = current.refundAmount - priorYear.refundAmount;
     heroMessage = delta >= 0
-      ? `Your refund increased by $${Math.round(delta).toLocaleString()}`
-      : `Your refund decreased by $${Math.round(Math.abs(delta)).toLocaleString()}`;
+      ? `The refund increased by $${Math.round(delta).toLocaleString()}`
+      : `The refund decreased by $${Math.round(Math.abs(delta)).toLocaleString()}`;
   } else if (!priorRefund && !currentRefund) {
     const delta = current.amountOwed - priorYear.amountOwed;
     heroMessage = delta <= 0
-      ? `You owe $${Math.round(Math.abs(delta)).toLocaleString()} less than last year`
-      : `You owe $${Math.round(delta).toLocaleString()} more than last year`;
+      ? `The balance due is $${Math.round(Math.abs(delta)).toLocaleString()} less than last year`
+      : `The balance due is $${Math.round(delta).toLocaleString()} more than last year`;
   } else if (priorRefund && !currentRefund) {
-    heroMessage = `You went from a $${Math.round(priorHero).toLocaleString()} refund to owing $${Math.round(currentHero).toLocaleString()}`;
+    heroMessage = `From a $${Math.round(priorHero).toLocaleString()} refund to owing $${Math.round(currentHero).toLocaleString()}`;
   } else {
-    heroMessage = `You went from owing $${Math.round(priorHero).toLocaleString()} to a $${Math.round(currentHero).toLocaleString()} refund`;
+    heroMessage = `From owing $${Math.round(priorHero).toLocaleString()} to a $${Math.round(currentHero).toLocaleString()} refund`;
   }
 
   return (
@@ -293,7 +293,7 @@ export default function YoYComparisonCard({ priorYear, current }: YoYComparisonC
         </div>
       </div>
 
-      {/* YoY Waterfall — "Why did your result change?" */}
+      {/* YoY Waterfall — "Why did the result change?" */}
       <YoYWaterfall priorYear={priorYear} current={current} />
 
       {/* YoY Paired Bars — side-by-side metric comparison */}

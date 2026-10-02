@@ -3,9 +3,8 @@
  * eligibility, cross-form consistency, engine plausibility), each tied to the
  * return section and field it concerns.
  *
- * Carried over from HATax's client warning service. The checks are unchanged;
- * warnings are keyed by return section instead of wizard step, and every
- * year-dependent check uses the return's own tax year.
+ * Warnings are keyed by return section and field, and every year-dependent
+ * check uses the return's own tax year.
  *
  * HOW TO ADD A NEW WARNING:
  * 1. Add a validation function to dateValidation.ts (or inline if simple)

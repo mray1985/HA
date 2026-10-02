@@ -79,7 +79,7 @@ export function reviewForm(
     issues.push({
       severity: 'warning',
       fieldLabel: 'Overall',
-      message: `This form has ${editableCount} editable fields but none are filled. You may need to complete the corresponding interview steps first.`,
+      message: `This form has ${editableCount} editable fields but none are filled. Enter them on the return, or add the documents that fill them.`,
     });
   } else if (editableCount > 0 && filledCount < editableCount * 0.3) {
     issues.push({
@@ -165,7 +165,7 @@ export function searchForms(
         template,
         relevance: nameMatch && keywordMatch ? 'high' : nameMatch || keywordMatch ? 'medium' : 'low',
         reason: isApplicable
-          ? `${template.displayName} — applicable to your return`
+          ? `${template.displayName} — applies to this return`
           : `${template.displayName} — not currently applicable (may need more data)`,
       });
     }

@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, type AccountRole } from '../../store/authStore';
 
 const COPY: Record<AccountRole, { title: string; redirect: string; loginPath: string }> = {
-  taxpayer: { title: 'HATax', redirect: '/', loginPath: '/login' },
-  preparer: { title: 'HATax Preparer', redirect: '/preparer', loginPath: '/preparer/login' },
+  preparer: { title: 'HA Tax Preparer', redirect: '/preparer', loginPath: '/preparer/login' },
 };
 
 export default function RegisterPage({ audience = 'preparer' }: { audience?: AccountRole }) {

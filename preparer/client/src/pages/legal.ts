@@ -8,10 +8,10 @@
  */
 export const LEGAL = {
   /** TODO: the legal name of the company that licenses the app. */
-  company: 'HA Tax service',
+  company: 'HA Tax',
   /** TODO: the support and privacy address. */
   contactEmail: 'contact@example.com',
-  /** TODO: confirm the governing law (the consumer app's terms use the District of Columbia). */
+  /** TODO: confirm the governing law (the District of Columbia is a placeholder). */
   governingLaw: 'the District of Columbia',
   /** The date both pages take effect. */
   effective: 'October 1, 2026',

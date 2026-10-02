@@ -5,7 +5,7 @@
  * - The active form's interactive PdfFormViewer (when 0–1 forms selected)
  * - A read-only MergedPdfViewer (when 2+ forms selected in the sidebar)
  *
- * The sidebar is rendered separately by WizardLayout in the shared sidebar column.
+ * The form list (FormSidebar) is rendered beside it by the case's Return tab (case/ReturnPanel).
  */
 import '../../styles/pdfviewer.css';
 import { useMemo, useEffect, useState } from 'react';

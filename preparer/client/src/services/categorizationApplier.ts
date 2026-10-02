@@ -35,7 +35,7 @@ export interface FieldUpdate {
 
 export interface ApplyPreview {
   updates: FieldUpdate[];
-  /** Discovery keys that need to be enabled for the wizard steps to appear. */
+  /** Income and deduction types to mark as present on the return. */
   discoveryKeysToEnable: string[];
   /** Total dollar amount across all updates. */
   totalAmount: number;
@@ -242,7 +242,7 @@ export function buildApplyPreview(
       newValue: Math.round(total),
       mode: 'replace',
       category,
-      formLine: meta.targetForm || 'See wizard step',
+      formLine: meta.targetForm || 'Enter on the return',
       transactionCount: count,
     });
   }

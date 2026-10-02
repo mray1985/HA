@@ -366,7 +366,7 @@ export function deleteReturn(id: string): { success: boolean } {
 }
 
 /**
- * Wipe ALL HATax data: localStorage, sessionStorage, IndexedDB,
+ * Wipe ALL HA Tax data: localStorage, sessionStorage, IndexedDB,
  * service worker caches, and SW registrations.
  * Intended for privacy-critical "delete everything" scenarios.
  */
@@ -377,7 +377,7 @@ export async function wipeAllData(): Promise<void> {
   const ids = getReturnIds();
   for (const id of ids) writeVersions.set(id, Number.MAX_SAFE_INTEGER);
 
-  // 1. Remove all HATax localStorage keys (returns + encryption + chat + AI)
+  // 1. Remove all HA Tax localStorage keys (returns + encryption + chat + AI)
   for (const id of ids) localStorage.removeItem(returnKey(id));
   localStorage.removeItem(RETURNS_KEY);
   localStorage.removeItem('hatax:salt');
@@ -908,7 +908,7 @@ export interface ExpenseCategory {
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { schedule_c_line: 8,  category_key: 'advertising',         display_name: 'Advertising',                   description: 'Business advertising and marketing costs',         examples: 'Google Ads, Facebook ads, business cards, flyers' },
-  { schedule_c_line: 9,  category_key: 'car_truck',           display_name: 'Car & Truck Expenses',          description: 'Business use of your vehicle',                     examples: 'Gas, maintenance, insurance (business portion)' },
+  { schedule_c_line: 9,  category_key: 'car_truck',           display_name: 'Car & Truck Expenses',          description: 'Business use of a vehicle',                     examples: 'Gas, maintenance, insurance (business portion)' },
   { schedule_c_line: 10, category_key: 'commissions_fees',    display_name: 'Commissions & Fees',            description: 'Fees paid to agents, sales commissions',           examples: 'Platform fees (Fiverr, Upwork), agent commissions' },
   { schedule_c_line: 11, category_key: 'contract_labor',      display_name: 'Contract Labor',                description: 'Payments to non-employee contractors',             examples: 'Subcontractors, outside help' },
   { schedule_c_line: 12, category_key: 'depletion',           display_name: 'Depletion',                     description: 'Depletion of natural resources',                   examples: 'Rarely used by small businesses' },
@@ -919,16 +919,16 @@ const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { schedule_c_line: 16, category_key: 'interest_other',      display_name: 'Other Interest (16b)',           description: 'All other business interest not paid on a mortgage to a financial institution',  examples: 'Business credit card interest, business loan interest, line of credit' },
   { schedule_c_line: 17, category_key: 'legal_professional',  display_name: 'Legal & Professional Services', description: 'Fees for lawyers, accountants',                    examples: 'Tax prep fees, legal consultation' },
   { schedule_c_line: 18, category_key: 'office_expense',      display_name: 'Office Expenses',               description: 'Office supplies and postage',                      examples: 'Printer ink, paper, stamps' },
-  { schedule_c_line: 19, category_key: 'pension',             display_name: 'Pension & Profit-Sharing Plans', description: 'Contributions to plans for your employees (not yourself)',  examples: 'Employee 401(k) match, employee pension' },
-  { schedule_c_line: 20, category_key: 'rent_equipment',      display_name: 'Rent — Equipment (20a)',         description: 'Rent or lease payments for vehicles, machinery, and equipment used in your business',  examples: 'Equipment lease, vehicle lease, machinery rental' },
+  { schedule_c_line: 19, category_key: 'pension',             display_name: 'Pension & Profit-Sharing Plans', description: 'Contributions to plans for employees (not the owner)',  examples: 'Employee 401(k) match, employee pension' },
+  { schedule_c_line: 20, category_key: 'rent_equipment',      display_name: 'Rent — Equipment (20a)',         description: 'Rent or lease payments for vehicles, machinery, and equipment used in the business',  examples: 'Equipment lease, vehicle lease, machinery rental' },
   { schedule_c_line: 20, category_key: 'rent_property',       display_name: 'Rent — Business Property (20b)', description: 'Rent or lease payments for other business property such as office space or land',  examples: 'Office rent, coworking space, warehouse, studio' },
   { schedule_c_line: 21, category_key: 'repairs_maintenance', display_name: 'Repairs & Maintenance',         description: 'Repairs to business property',                     examples: 'Computer repair, equipment maintenance' },
-  { schedule_c_line: 22, category_key: 'supplies',            display_name: 'Supplies',                      description: 'Supplies used in your business',                   examples: 'Raw materials, packaging' },
+  { schedule_c_line: 22, category_key: 'supplies',            display_name: 'Supplies',                      description: 'Supplies used in the business',                   examples: 'Raw materials, packaging' },
   { schedule_c_line: 23, category_key: 'taxes_licenses',      display_name: 'Taxes & Licenses',              description: 'Business taxes and license fees',                  examples: 'Business license, professional license' },
   { schedule_c_line: 24, category_key: 'travel',              display_name: 'Travel',                        description: 'Business travel expenses (100% deductible)',       examples: 'Flights, hotels, rental cars, Uber to client' },
-  { schedule_c_line: 24, category_key: 'meals',               display_name: 'Business Meals (50%)',           description: 'Standard business meals \u2014 enter the full amount you spent and we\u2019ll apply the 50% limit automatically. This is the most common meals category and applies to the vast majority of filers.',  examples: 'Client dinners, meals while traveling, team lunches' },
-  { schedule_c_line: 24, category_key: 'meals_dot',            display_name: 'DOT Meals (80%)',                description: 'Meals during DOT hours-of-service \u2014 enter the full amount and we\u2019ll apply the 80% limit automatically. Only for workers subject to Dept. of Transportation hours-of-service limits (long-haul truckers, airline pilots, interstate bus drivers, railroad workers). If unsure, use Business Meals (50%) instead.', examples: 'Meals while on the road under DOT hours-of-service rules' },
-  { schedule_c_line: 24, category_key: 'meals_full',           display_name: 'Fully Deductible Meals (100%)',  description: 'Meals that are 100% deductible \u2014 rare situations only. Includes meals provided on your premises for employee convenience, company-wide recreational events (holiday parties, picnics), and meals sold to customers. Most self-employed filers will not use this category.', examples: 'Staff holiday party, company picnic, meals sold to customers' },
+  { schedule_c_line: 24, category_key: 'meals',               display_name: 'Business Meals (50%)',           description: 'Standard business meals \u2014 enter the full amount spent; the 50% limit is applied automatically. This is the most common meals category and applies to the vast majority of filers.',  examples: 'Client dinners, meals while traveling, team lunches' },
+  { schedule_c_line: 24, category_key: 'meals_dot',            display_name: 'DOT Meals (80%)',                description: 'Meals during DOT hours-of-service \u2014 enter the full amount; the 80% limit is applied automatically. Only for workers subject to Dept. of Transportation hours-of-service limits (long-haul truckers, airline pilots, interstate bus drivers, railroad workers). If unsure, use Business Meals (50%) instead.', examples: 'Meals while on the road under DOT hours-of-service rules' },
+  { schedule_c_line: 24, category_key: 'meals_full',           display_name: 'Fully Deductible Meals (100%)',  description: 'Meals that are 100% deductible \u2014 rare situations only. Includes meals provided on the business premises for employee convenience, company-wide recreational events (holiday parties, picnics), and meals sold to customers. Most self-employed filers will not use this category.', examples: 'Staff holiday party, company picnic, meals sold to customers' },
   { schedule_c_line: 25, category_key: 'utilities',           display_name: 'Utilities',                     description: 'Business utility costs',                           examples: 'Phone bill (business %), internet' },
   { schedule_c_line: 26, category_key: 'wages',               display_name: 'Wages',                         description: 'Wages paid to employees',                          examples: 'Employee salaries' },
   { schedule_c_line: 27, category_key: 'other_expenses',      display_name: 'Other Expenses',                description: 'Business expenses not listed above',               examples: 'Software subscriptions, education' },

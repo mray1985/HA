@@ -63,7 +63,7 @@ describe('what the engine cannot compute is reported, not approximated', () => {
     // The engine gives such a state a $0 result marked unavailable: that zero is not a figure to rely on.
     const noTable = calculateForm1040(makeTaxReturn({ taxYear: 2024, stateReturns: [state('MN')] }));
     expect(noTable.unsupported?.map((u) => u.ruleId)).toEqual(['STATE.YEAR.NOT_SUPPORTED']);
-    expect(noTable.stateResults?.[0]?.unsupported).toEqual(['Minnesota tax for 2024 is not calculated by HATax. Prepare this return outside HATax, or remove the state, until it is supported.']);
+    expect(noTable.stateResults?.[0]?.unsupported).toEqual(['Minnesota tax for 2024 is not calculated by HA Tax. Prepare this return outside HA Tax, or remove the state, until it is supported.']);
   });
 
   it('asks, or stops, Washington residents whose long-term gains may be over $278,000 (TAX-003; see wa-capital-gains.test.ts)', () => {

@@ -5,8 +5,7 @@
  * (blocks submission) and WARN (flags implausibility).
  *
  * These checks catch likely data-entry mistakes without blocking
- * calculation. They surface as yellow warnings in the wizard and
- * review summary.
+ * calculation. They surface as warnings in the case's review.
  *
  * @authority General — thresholds based on IRS audit triggers and
  *   statistical norms from SOI (Statistics of Income) data.

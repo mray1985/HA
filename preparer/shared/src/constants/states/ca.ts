@@ -371,7 +371,7 @@ const CA_TABLES_2026: CaliforniaYearTables = {
   ccpiChange: CA_CCPI_CHANGE_2026,
 };
 
-/** The year's tables, or undefined for a year HATax has no California amounts for. */
+/** The year's tables, or undefined for a year HA Tax has no California amounts for. */
 export function californiaTables(taxYear: number): CaliforniaYearTables | undefined {
   return taxYear === 2025 ? CA_TABLES_2025 : taxYear === 2026 ? CA_TABLES_2026 : undefined;
 }

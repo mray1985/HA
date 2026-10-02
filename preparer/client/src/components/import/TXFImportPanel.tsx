@@ -148,7 +148,7 @@ export default function TXFImportPanel({ onBack }: TXFImportPanelProps) {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-200">Import TXF File</h3>
           <p className="text-sm text-slate-400">
-            Upload a TXF (Tax Exchange Format) file exported from your brokerage or tax software.
+            Upload a TXF (Tax Exchange Format) file exported from a brokerage or tax software.
             TXF files can contain W-2, 1099-B, 1099-INT, 1099-DIV, and 1099-R data.
           </p>
           <FileDropZone

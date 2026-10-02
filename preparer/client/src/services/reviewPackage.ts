@@ -205,6 +205,6 @@ export async function generateReviewPackagePDF(input: ReviewPackageInput): Promi
     for (const m of missing) w.text(`${missingDocumentTitle(m)} — ${m.lastYear}`, { indent: 6 });
   }
   w.gap(10);
-  w.text('Every value above comes from the case’s documents, the preparer’s entries and decisions, and the HATax engine; the case’s audit trail records each one.', { size: 8, color: GRAY });
+  w.text('Every value above comes from the case’s documents, the preparer’s entries and decisions, and the HA Tax engine; the case’s audit trail records each one.', { size: 8, color: GRAY });
   return doc.save();
 }
