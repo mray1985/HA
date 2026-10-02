@@ -7,7 +7,7 @@ How HA Tax Preparer is tested: running the suites, what each one covers, and how
 | Engine | `shared/__tests__/` | 121 | 5,253 |
 | Client | `client/src/__tests__/` | 47 | 977 |
 | Local AI | `local-ai/__tests__/` | 26 | 456 |
-| Server | `server/__tests__/` | 2 | 13 |
+| Server | `server/__tests__/` | 3 | 15 |
 | End-to-end | `client/e2e/` | 5 specs | Playwright |
 
 ---
@@ -45,7 +45,7 @@ preparer/
 ├── client/e2e/                5 specs — Playwright: cases, review, the local models, the stress run, the walkthrough
 ├── local-ai/__tests__/       26 files — readers, page evidence, tax tools, validation, client replies
 ├── local-ai/gauntlet/        the model gauntlet and the stress run's documents (run by hand, with the models)
-└── server/__tests__/          2 files — sign-in and the model routes
+└── server/__tests__/          3 files — sign-in, the database, the model routes
 ```
 
 **Runners:**
@@ -281,7 +281,7 @@ cd client && npx playwright test --project=chromium
 
 ---
 
-## 5. Server Tests (2 files)
+## 5. Server Tests (3 files)
 
 ```bash
 cd server && npm test
@@ -290,6 +290,7 @@ cd server && npm test
 | File | Coverage |
 |------|----------|
 | `auth.test.ts` | Preparer-only registration and sign-in, the season seat, sessions and sign-out, the signing key |
+| `database.test.ts` | A database from an earlier release opens without its unused `user_data` table |
 | `models.test.ts` | The local model routes: signed-in preparers only, the runtime, page reading, reading text |
 
 ---

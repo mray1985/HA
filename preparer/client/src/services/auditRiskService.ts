@@ -505,8 +505,8 @@ export function assessAuditRisk(
       category: 'structural',
       points: pts,
       label: 'Unusual Values Flagged',
-      explanation: `This return has ${plausibilityWarnings.length} value${plausibilityWarnings.length !== 1 ? 's' : ''} outside typical ranges. The IRS DIF system compares every line item on a return to statistical norms for similar taxpayers — values that deviate significantly increase your DIF score and the likelihood of examination selection.`,
-      mitigation: 'Review each flagged item in the Warnings panel. If the amounts are correct, keep extra documentation readily available in case of inquiry.',
+      explanation: `This return has ${plausibilityWarnings.length} value${plausibilityWarnings.length !== 1 ? 's' : ''} outside typical ranges. The IRS DIF system compares every line item on a return to statistical norms for similar taxpayers — values that deviate significantly increase the return's DIF score and the likelihood of examination selection.`,
+      mitigation: 'Review each flagged item on the Review tab. If the amounts are correct, keep extra documentation readily available in case of inquiry.',
       triggered: true,
     });
   }

@@ -59,6 +59,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `);
 
+// Earlier releases created a user_data table that nothing ever wrote to.
+db.exec('DROP TABLE IF EXISTS user_data');
+
 // ─── Row types ─────────────────────────────────────
 
 export interface UserRow {

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +13,7 @@ process.env.JWT_SECRET = 'test-jwt-secret';
 const express = (await import('express')).default;
 const cookieParser = (await import('cookie-parser')).default;
 const { authRoutes } = await import('../src/routes/auth.js');
-const { closeDatabase, createUser } = await import('../src/database.js');
+const { closeDatabase, createSession, createUser } = await import('../src/database.js');
 const { resolveJwtSecret } = await import('../src/jwtSecret.js');
 const bcrypt = (await import('bcrypt')).default;
 const jwt = (await import('jsonwebtoken')).default;
@@ -86,6 +87,22 @@ describe('auth routes', () => {
     expect(login.res.status).toBe(403);
     expect(login.body.error.message).toBe('This account is not a preparer account.');
     expect(login.res.headers.get('set-cookie')).toBeNull();
+  });
+
+  it("refuses a session that account already had, on every signed-in route", async () => {
+    const created = createUser.run('earlier-household@example.com', await bcrypt.hash('password1', 4), 'Household', 'taxpayer');
+    const userId = Number(created.lastInsertRowid);
+    // A session issued before sign-in was for preparers only.
+    const sid = randomBytes(32).toString('hex');
+    const token = jwt.sign({ userId, email: 'earlier-household@example.com', role: 'taxpayer', sid }, 'test-jwt-secret', { expiresIn: '7d' });
+    createSession.run(sid, userId, createHash('sha256').update(token).digest('hex'), new Date(Date.now() + 60_000).toISOString());
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const me = await fetch(`${base}/api/auth/me`, { headers: auth });
+    expect(me.status).toBe(403);
+    expect((await me.json()).error.message).toBe('This account is not a preparer account.');
+    const seat = await fetch(`${base}/api/auth/subscription/activate`, { method: 'POST', headers: auth });
+    expect(seat.status).toBe(403);
   });
 
   it('logs a preparer in and rejects a bad password', async () => {

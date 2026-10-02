@@ -22,7 +22,7 @@ Federal tax law, regulations, revenue procedures, and IRS guidance change regula
 
 ## No Warranty
 
-This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. See the [MIT License](../LICENSE) for full terms, and the app's Terms of Service for the terms of its use.
+This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. See the [MIT License](../LICENSE) for full terms, and the app's Terms of Use for the terms of its use.
 
 ## Use at Your Own Risk
 
