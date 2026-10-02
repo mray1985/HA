@@ -26,7 +26,7 @@ import {
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
 import { deleteDocumentFiles } from '../services/documentFiles';
 import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
-import { clearRecordCache, hasPendingRecordWrites, loadRecords } from '../services/caseRecords';
+import { clearRecordCache, hasPendingRecordWrites, loadRecords, removeRecordsWithPrefix } from '../services/caseRecords';
 import { deleteAllCaseReviews, deleteCaseReview } from '../services/caseAudit';
 
 import {
@@ -364,6 +364,13 @@ export async function wipeAllData(): Promise<void> {
   localStorage.removeItem('hatax:verify');
   localStorage.removeItem('hatax:expense-scanner');
   localStorage.removeItem('hatax:expense-scanner-enc');
+  // Left by earlier builds that had AI settings and chat: the settings, an API
+  // key (hatax:ai-key-migrate may hold it in plain text) and each case's chat.
+  localStorage.removeItem('hatax:ai-settings');
+  localStorage.removeItem('hatax:ai-key-enc');
+  localStorage.removeItem('hatax:ai-key-migrate');
+  removeRecordsWithPrefix('hatax-preparer:chat:');
+  removeRecordsWithPrefix('hatax:chat:');
   deleteAllDocuments();
   deleteAllTaxFacts();
   deleteAllCaseReviews();
