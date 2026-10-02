@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { wipeAllData } from '../api/client';
+import { runBackgroundWork } from '../services/backgroundWork';
 
 function memoryStorage() {
   const store = new Map<string, string>();
@@ -45,6 +46,25 @@ describe('wipeAllData', () => {
     await wipeAllData();
 
     expect(storedKeys()).toEqual(['another-site:setting']);
+    expect(window.location.replace).toHaveBeenCalledWith('/');
+  });
+
+  it('waits for work the local AI is still doing, so what it saves is deleted too', async () => {
+    // Documents read after the screen locked: the batch saves when it ends.
+    let finish!: () => void;
+    const work = runBackgroundWork(async () => {
+      await new Promise<void>((done) => { finish = done; });
+      localStorage.setItem('hatax-preparer:documents:ret-9', 'enc');
+    });
+
+    const wiped = wipeAllData();
+    await Promise.resolve();
+    expect(window.location.replace).not.toHaveBeenCalled();
+
+    finish();
+    await work;
+    await wiped;
+    expect(storedKeys()).toEqual([]);
     expect(window.location.replace).toHaveBeenCalledWith('/');
   });
 });

@@ -9,6 +9,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { wipeAllData } from '../../api/client';
+import { backgroundWorkRunning } from '../../services/backgroundWork';
 
 /** What the preparer types to confirm deleting everything on this computer. */
 const RESET_WORD = 'DELETE';
@@ -61,6 +62,8 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
   const [resetting, setResetting] = useState(false);
   const [resetWord, setResetWord] = useState('');
   const [wiping, setWiping] = useState(false);
+  // Documents still being read when the screen locked: the wipe waits for them to save.
+  const [waitingForWork, setWaitingForWork] = useState(false);
 
   // Brute-force protection: exponential backoff after 3 failed attempts.
   // Persisted in sessionStorage so refreshing the page doesn't reset the counter.
@@ -89,7 +92,8 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
 
   const strength = useMemo(() => getPasswordStrength(passphrase), [passphrase]);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  // The passphrase field has focus, again when the reset panel is cancelled.
+  useEffect(() => { if (!resetting) inputRef.current?.focus(); }, [resetting]);
   useEffect(() => { setError(externalError ?? null); }, [externalError]);
 
   // Countdown timer for backoff
@@ -117,10 +121,12 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
   const startOver = async () => {
     if (resetWord !== RESET_WORD) return;
     setWiping(true);
+    setWaitingForWork(backgroundWorkRunning());
     try {
-      await wipeAllData(); // reloads the app at its first screen
+      await wipeAllData(); // waits for running work, then reloads the app at its first screen
     } catch {
       setWiping(false);
+      setWaitingForWork(false);
       setError('The data could not be deleted. Close the app and try again.');
     }
   };
@@ -218,6 +224,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
               onChange={(e) => setResetWord(e.target.value)}
               className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none"
               autoComplete="off"
+              autoFocus
               disabled={wiping}
             />
           </div>
@@ -239,7 +246,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
               className="flex-1 text-sm px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium"
               disabled={wiping || resetWord !== RESET_WORD}
             >
-              {wiping ? 'Deleting…' : 'Delete everything and start over'}
+              {wiping ? (waitingForWork ? 'Waiting for documents being read…' : 'Deleting…') : 'Delete everything and start over'}
             </button>
           </div>
         </div>

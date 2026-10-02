@@ -142,6 +142,7 @@ test('a forgotten passphrase: the lock screen deletes this computer\'s data and 
   await expect(page.getByRole('button', { name: /^Unlock$/i })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('button', { name: 'Forgot your passphrase?' }).click();
+  await expect(page.getByLabel('Type DELETE to confirm')).toBeFocused();
   const startOver = page.getByRole('button', { name: 'Delete everything and start over' });
   await expect(startOver).toBeDisabled();
   await page.getByLabel('Type DELETE to confirm').fill('delete');
