@@ -1,5 +1,5 @@
 /**
- * Date validation utilities for HATax.
+ * Date validation utilities for HA Tax.
  *
  * Provides context-specific validation for different date field types:
  *   - Date of birth (filer, spouse, dependent)
@@ -9,7 +9,7 @@
  * Returns warning messages (amber) rather than errors (red) because
  * edge cases exist — e.g. a corrected form with a prior-year date.
  *
- * Every check tied to the tax year takes the return's own year. (HATax's
+ * Every check tied to the tax year takes the return's own year. (HA Tax's
  * client copy fixed it at 2025, which would flag every date on a 2026
  * return as belonging to another year.)
  */

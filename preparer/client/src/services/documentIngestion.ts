@@ -313,10 +313,6 @@ export function applyExtractionToDocument(input: {
     .map((p) => p.classification.formType)
     .filter((t): t is NonNullable<typeof t> => Boolean(t));
   const anyOcr = piecesRaw.some((p) => p.ocrUsed === true);
-  const ocrEngine =
-    input.extracted.ocrEngine ??
-    piecesRaw.find((p) => p.ocrEngine)?.ocrEngine ??
-    null;
   const extractor =
     pieces.find((p) => p.facts[0]?.extractor)?.facts[0]?.extractor ??
     ocrExtractorLabel(anyOcr || input.extracted.ocrUsed === true);

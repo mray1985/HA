@@ -37,7 +37,7 @@ export default function BracketChart({ taxableIncome, filingStatus, incomeTax }:
     return (
       <div className="text-center py-4">
         <p className="text-sm text-slate-400">
-          Your deductions exceed your income, so no income tax applies to any bracket.
+          Deductions exceed income, so no income tax applies to any bracket.
         </p>
         <p className="text-xs text-slate-500 mt-1">
           Taxable income: $0

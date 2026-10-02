@@ -46,7 +46,7 @@ export const IN_ANSWER = {
 
 /** Schedule CT-40 code for no Indiana county on January 1 (military stationed outside Indiana). */
 const NO_COUNTY = '00';
-const OUTSIDE = 'Prepare the Indiana return outside HATax.';
+const OUTSIDE = 'Prepare the Indiana return outside HA Tax.';
 
 export interface IndianaExemptions {
   line1: number;
@@ -243,7 +243,7 @@ export function assessIndiana(taxReturn: TaxReturn, federalAGI?: number): Indian
   let countyCode: string | undefined;
   let perryKentuckyIncome = 0;
   if (!rates) {
-    find('county-rates', `Indiana county tax for ${year}: the Schedule CT-40 county rates for ${year} are not built in HATax. ${OUTSIDE}`);
+    find('county-rates', `Indiana county tax for ${year}: the Schedule CT-40 county rates for ${year} are not built in HA Tax. ${OUTSIDE}`);
   } else {
     const countyQ: Question = { key: IN_ANSWER.county, kind: 'choice', options, prompt: `Indiana county where you lived on January 1, ${year}` };
     relevant.push(countyQ);
@@ -259,7 +259,7 @@ export function assessIndiana(taxReturn: TaxReturn, federalAGI?: number): Indian
       if (!validCounty(spouse)) {
         find('spouse-county', `Indiana county tax (Schedule CT-40) on a joint return uses the county where each spouse lived on January 1, ${year}.`, spouseQ);
       } else if (validCounty(county) && spouse !== county) {
-        find('spouse-county', `Indiana county tax: the spouses lived in different counties on January 1, ${year}. Each spouse's share of IT-40 line 7 is taxed at their own county's rate, and HATax does not split the income and exemptions between spouses (Schedule CT-40, line 1). ${OUTSIDE}`);
+        find('spouse-county', `Indiana county tax: the spouses lived in different counties on January 1, ${year}. Each spouse's share of IT-40 line 7 is taxed at their own county's rate, and HA Tax does not split the income and exemptions between spouses (Schedule CT-40, line 1). ${OUTSIDE}`);
       }
     }
     if (validCounty(county) && (!joint || spouse === county)) {

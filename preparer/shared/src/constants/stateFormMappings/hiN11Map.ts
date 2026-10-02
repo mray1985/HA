@@ -7,7 +7,6 @@
  * HI N-11 AcroForm fields use short alphanumeric codes (e.g., "A1", "B1", "A14").
  * Field codes were correlated with the N-11 form lines via the extracted PDF.
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────

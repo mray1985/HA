@@ -147,7 +147,7 @@ function getAgeAtEndOfYear(dateOfBirth: string, taxYear: number): number | null 
     : dateOfBirth.split('/').map(Number);
   if (parts.length < 3) return null;
 
-  const [a, b, c] = parts;
+  const [a, , c] = parts;
   // YYYY-MM-DD vs MM/DD/YYYY
   const year = a > 1900 ? a : c;
   if (!year || isNaN(year)) return null;

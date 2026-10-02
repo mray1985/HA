@@ -38,7 +38,7 @@ export interface SyncfusionExtractionResult {
  *
  * Returns TextBlock[] compatible with the existing pdfExtractHelpers pipeline.
  * Form field values are injected as additional TextBlocks at each field's
- * position, so findLabelBlock() + findNearbyNumber() pick them up naturally.
+ * position, so findLabelBlock() + findNearbyAmount() pick them up naturally.
  */
 export function extractWithSyncfusion(
   pdfBytes: Uint8Array,
@@ -65,7 +65,7 @@ export function extractWithSyncfusion(
 
       // Prefer word-level blocks for finer granularity — matches the
       // per-item output pdfjs-dist's getTextContent() provides, which
-      // findLabelBlock() + findNearbyNumber() in pdfExtractHelpers expect.
+      // findLabelBlock() + findNearbyAmount() in pdfExtractHelpers expect.
       if (line.words && line.words.length > 0) {
         for (const word of line.words) {
           if (!word.text?.trim()) continue;

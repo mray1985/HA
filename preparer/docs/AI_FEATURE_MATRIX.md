@@ -1,44 +1,65 @@
-# AI Feature Availability Matrix
+# AI Feature Matrix
 
-Which features work in each AI mode. **All new features must be added to this matrix.**
+What HA Tax Preparer's local models do, what is deterministic, and what works without the models. **Every new feature that uses a model must be added to this matrix.**
 
-## Modes
+## The models
 
-| Mode | Data leaves device? | Cost | AI Provider |
-|------|-------------------|------|-------------|
-| **Private** | Never | Free | None (deterministic only) |
-| **BYOK** | PII-stripped text to user's chosen provider | Free (user pays provider) | User's API key |
+| Model | Job | Runs |
+|-------|-----|------|
+| **Qwen3.5-0.8B** | Identifies each document's form and fills its template; reads client replies, one question at a time under a grammar | On the preparer's CPU, through llama.cpp |
+| **GLM-OCR** | Second reader: re-reads only the values the page could not confirm | On the preparer's CPU, through llama.cpp |
+
+The models run one at a time, from files pinned by SHA-256 in `local-ai/src/modelManifest.ts` and bundled by the installer. There is no cloud model: no document, reply or return leaves the computer.
 
 ## Feature Matrix
 
-### Tax Engine & Calculation
+"Without the models" is a web deployment, or the desktop app before the model files are installed.
 
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Tax engine (calculateForm1040) | Yes | Yes | Deterministic, always local |
-| State tax calculations | Yes | Yes | All 50 states |
-| Live recalculation | Yes | Yes | 150ms debounce |
-| Scenario Lab (what-if) | Yes | Yes | Full engine re-run |
+### Tax engine and review
 
-### Warnings & Suggestions
+| Feature | With the models | Without | Notes |
+|---------|-----------------|---------|-------|
+| Tax engine (federal and state) | Yes | Yes | Deterministic |
+| Review checklist (diagnostics, held forms, decisions) | Yes | Yes | Deterministic; errors and blockers clear only by fixing the return |
+| Approval gate and filing packet | Yes | Yes | Deterministic |
+| Explain tab (flow, brackets, effective rate, trace) | Yes | Yes | Deterministic |
+| Scenarios tab (what-if, sensitivity) | Yes | Yes | Full engine re-run |
+| Audit risk, tax calendar (Approve tab) | Yes | Yes | Deterministic |
 
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Validation warnings | Yes | Yes | IRC-grounded thresholds |
-| Proactive nudges | Yes | Yes | Deterministic eligibility gate |
-| Suggestion engine | Yes | Yes | 14 detection rules |
-| AI-enriched nudge descriptions | No | Yes | Async LLM enhancement (Phase 3) |
+### Documents
 
-### Deduction & Credit Discovery
+| Feature | With the models | Without | Notes |
+|---------|-----------------|---------|-------|
+| PDF text layer | Yes | Yes | Read locally |
+| OCR (scans, photos) | Yes | Yes | Tesseract.js, self-hosted, local |
+| Form identification and template filling | Yes | No | Qwen3.5-0.8B |
+| Page evidence (each value confirmed on the page, checkboxes) | Yes | No | Text layer or OCR against the model's reading |
+| Second reading | Yes | No | GLM-OCR re-reads what the page could not confirm |
+| Reading from the text layer and OCR alone | — | Yes | The form is held for the preparer where a value is not read |
+| The taxpayer from the documents | Yes | Partial | The same two-reader check as the amounts |
+| Placing documents on cases | Yes | Yes | Confirmed SSN, or last four digits with the last name |
+| Prior-year returns (HA Tax and other software) | Yes | Yes | Deterministic import |
+| CSV, TXF and FDX imports | Yes | Yes | Deterministic |
 
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Pattern-based cross-validation | N/A | Yes | Used internally by expense scanner for confidence boosting |
-| AI transaction categorizer | No | Yes | Full transaction categorization with 17 tax categories |
-| AI + pattern cross-validation | No | Yes | Boosts confidence when AI and patterns agree |
-| Transaction review dashboard | No | Yes | Summary cards, batch approve, reclassify, split transactions |
-| Apply to return pipeline | No | Yes | Maps approved categories → wizard step fields |
-| Audit risk assessment | Yes | Yes | IRS/GAO/TIGTA sourced |
+A value no reader can read stays unknown — never zero — and readers that disagree hold the form for the preparer.
+
+### Clients
+
+| Feature | With the models | Without | Notes |
+|---------|-----------------|---------|-------|
+| Client questions (Client tab) | Yes | Yes | Only what the documents do not settle |
+| Possibly missing documents | Yes | Yes | Compared with last year's by form and payer |
+| Reading a client's reply | Yes | No | Recorded only when the model and a reading of the client's own words agree |
+| New facts a reply states (a dependent, a move, a payment) | Yes | No | Offered; added when the preparer accepts |
+| The reply in the audit trail | Yes | Yes | Kept word for word |
+
+### Expense scanner
+
+| Feature | With the models | Without | Notes |
+|---------|-----------------|---------|-------|
+| Transaction categorization | Yes | Yes | Rules on the preparer's machine (`transactionCrossValidator`); no model |
+| Deduction finder | Yes | Yes | Deterministic patterns and recurrence |
+| Apply to return | Yes | Yes | Shows each change before it is applied |
 
 ### Transaction Import Formats
 
@@ -55,84 +76,26 @@ Which features work in each AI mode. **All new features must be added to this ma
 | Apple Card CSV | Yes | Amount (USD) format, includes MCC |
 | Generic CSV | Yes | Fuzzy column matching fallback |
 
-### Document Import
+### Privacy and security
 
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Digital PDF extraction | Yes | Yes | Syncfusion, fully local |
-| OCR (scanned PDFs, photos) | Yes | Yes | Tesseract.js, fully local |
-| AI-enhanced extraction | No | Yes | PII-stripped OCR text sent to LLM |
-| Competitor return import | Yes | Yes | pdf-lib, fully local |
-| CSV import (brokerage) | Yes | Yes | Papaparse, fully local |
-| Transaction CSV import | Yes | Yes | Bank statement parsing, fully local |
-
-### AI Chat
-
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Chat conversations | No | Yes | Requires cloud LLM |
-| Voice data entry (dictation) | No | Yes | Speech-to-text is local, but chat required to process |
-| "Guide me" step walkthroughs | No | Yes | Requires chat |
-| Field explanations via chat | No | Yes | Right-click → Ask HA Tax service → chat |
-| Document attachment in chat | Partial | Yes | Extraction is local; AI review requires LLM |
-| Structured actions (add_income, etc.) | No | Yes | LLM parses natural language → JSON actions |
-| Local intent detection | Yes | Yes | Deterministic fast-path for deletion/navigation intents; no LLM round-trip |
-| Prompt caching | N/A | Yes | Static system prompts cached; ~90% input token discount on follow-ups |
-
-### Forms Mode
-
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| PDF form viewer | Yes | Yes | Syncfusion PDF Viewer |
-| Form field population | Yes | Yes | Deterministic from store |
-| Field explanations (AI picker) | No | Yes | Requires chat |
-| Click-to-explain tooltip | No | Yes | Requires chat |
-| Form review | No | Yes | Requires chat |
-| Read-only computed fields | Yes | Yes | DOM enforcement |
-
-### Interview View
-
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| All 82 wizard steps | Yes | Yes | Full UI |
-| Right-click → Ask HA Tax service | No | Yes | Requires chat |
-| Help content & callout cards | Yes | Yes | Static from helpContent.ts |
-| Step warnings banner | Yes | Yes | Deterministic |
-| Nudge cards | Yes | Yes | Deterministic (AI enrichment is additive) |
-
-### Sidebar Tools
-
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| Explain My Taxes | Yes | Yes | Waterfall chart, bracket chart, effective rate, trace tree — fully deterministic |
-| Year-over-Year Comparison | Yes | Yes | Prior-year vs. current delta breakdown — deterministic |
-| Tax Calendar | Yes | Yes | Key deadlines, contribution windows, estimated payment dates — deterministic |
-| Document Inventory | Yes | Yes | Forms checklist organized by type — deterministic |
-| File an Extension (Form 4868) | Yes | Yes | Pre-populated from return, generates PDF — deterministic |
-| Donation Valuation Lookup | Yes | Yes | 170-item FMV database (Salvation Army, Goodwill) — deterministic |
-
-### Privacy & Security
-
-| Feature | Private | BYOK | Notes |
-|---------|---------|-----------|-------|
-| AES-256-GCM encryption | Yes | Yes | localStorage encryption |
-| PII scanning (outbound) | N/A | Yes | Blocks SSNs, addresses, etc. |
-| Dollar amount rounding (context) | N/A | Yes | roundForPrivacy() |
-| Chat history encryption | N/A | Yes | Encrypted per-return |
-| Privacy audit log | N/A | Yes | Transparency panel showing every outbound AI request, blocked PII, and responses |
+| Feature | Notes |
+|---------|-------|
+| AES-256-GCM encryption | Every case, document file and audit trail, at rest |
+| No outbound AI requests | The models are local; there is nothing to strip or send |
+| Model run records | Each reading's model, file hash and result are kept with the case |
 
 ## Adding a New Feature
 
 When building a new feature, ask:
 
-1. **Does it need an LLM?** If yes, it only works in BYOK.
-2. **Can a deterministic fallback provide partial value?** If yes, build the fallback for Private mode.
-3. **What data would leave the browser?** Run through PII scanning. Document in this matrix.
-4. **Does the feature degrade gracefully?** Private mode users should see helpful messaging, not errors.
+1. **Does it need a model?** If yes, it runs on the local models only — never a cloud service.
+2. **What happens without the models?** Hold the work for the preparer with the reason; never guess a value.
+3. **Can a reading be checked?** Confirm it against the page, a second reader or the client's own words before it reaches the return.
+4. **Is it in the audit trail?** Every model reading that changes a case must be recorded.
 
 ## Design Principles
 
-- **Private mode is the default.** It must be a complete, useful tax preparation experience.
-- **AI features are additive, not required.** The app works without them.
-- **Deterministic gate first, LLM enhancement second.** No nudge/suggestion appears without passing the engine's eligibility checks.
-- **Be honest about tradeoffs.** Don't pretend Private mode has AI. Don't pretend cloud modes are private.
+- **The engine decides the tax.** Models read documents and replies; they never compute or choose a tax amount.
+- **Fail closed.** An unread or disputed value is held for the preparer, never zero and never assumed.
+- **The preparer decides.** Model readings are offered or held; the preparer accepts, corrects and approves.
+- **Be honest about tradeoffs.** Say what was not read, and why.

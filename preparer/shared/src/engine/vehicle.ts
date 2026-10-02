@@ -38,7 +38,6 @@ export function calculateVehicleDeduction(vehicle: VehicleInfo, taxYear: number 
  */
 export function calculateVehicleDetailed(vehicle: VehicleInfo, taxYear: number = 2025): VehicleResult {
   const VEHICLE = getVehicle(taxYear);
-  const VEHICLE_DEPRECIATION = getVehicleDepreciation(taxYear);
   if (!vehicle.method) {
     return { method: 'standard_mileage', businessUsePercentage: 0, totalDeduction: 0 };
   }

@@ -100,7 +100,7 @@ describe('last year against this year (§23)', () => {
     expect(missing[0]).not.toHaveProperty('issuer');
   });
 
-  it("uses an imported HATax return's documents when the import kept them", () => {
+  it("uses an imported HA Tax return's documents when the import kept them", () => {
     const summary = { source: 'hatax-json', taxYear: 2024, documents: documentsFromReturn(LAST_YEAR) } as PriorYearSummary;
     expect(priorYearFromSummary(summary)!.documents.map((d) => `${d.formType} ${d.issuer}`)).toEqual([
       'W-2 ACME CORP', '1099-INT JPMORGAN CHASE BANK NA', '1099-DIV Fidelity Investments',

@@ -1,5 +1,5 @@
 import { TaxReturn, ScheduleCResult, ScheduleCBusinessResult, CostOfGoodsSold, BusinessInfo } from '../types/index.js';
-import { calculateHomeOfficeDeduction, calculateHomeOfficeDetailed } from './homeOffice.js';
+import { calculateHomeOfficeDetailed } from './homeOffice.js';
 import { calculateVehicleDetailed } from './vehicle.js';
 import { calculateForm4562 } from './form4562.js';
 import { round2 } from './utils.js';

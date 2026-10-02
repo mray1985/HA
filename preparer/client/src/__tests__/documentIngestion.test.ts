@@ -155,13 +155,11 @@ describe('documentIngestion client pipeline', () => {
     expect(loadDocuments('ret-1')[0].status).toBe('extracted');
   });
 
-  it('removes document metadata for one return and all current-app keys', () => {
+  it('removes document metadata for one return and all of this app\'s keys', () => {
     saveDocuments('ret-1', [baseDoc()]);
     saveDocuments('ret-2', [baseDoc({ returnId: 'ret-2', documentId: 'DOC-other' })]);
-    // Other app's document key must survive wipe of the current app prefix.
-    const otherAppKey = DOCUMENT_KEY_PREFIX.startsWith('hatax-preparer:')
-      ? 'hatax:documents:other-1'
-      : 'hatax-preparer:documents:other-1';
+    // A key outside this app's prefix survives the wipe.
+    const otherAppKey = 'other-app:documents:other-1';
     localStorage.setItem(otherAppKey, JSON.stringify([baseDoc({ returnId: 'other-1' })]));
 
     deleteDocuments('ret-1');

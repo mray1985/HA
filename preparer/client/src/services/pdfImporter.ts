@@ -95,7 +95,6 @@ import { printedTaxYear,
   type TextBlock,
   type PDFExtractResult,
   type FieldSourceLocationValue,
-  type FormPageSpan,
 } from './pdfExtractHelpers';
 
 export type { OCRStage } from './ocrService';
@@ -524,7 +523,7 @@ export async function extractFromPDFWithOCR(
 
     // scaleFactor normalizes 300 DPI pixel coords → 72 DPI PDF-point space
     // BEFORE groupWordsToLines(), so yTolerance=5 operates in point space
-    // and findNearbyNumber(maxDistance=200) searches the expected range.
+    // and findNearbyAmount(maxDistance=200) searches the expected range.
     const textBlocks = await recognizeImages(canvases, onProgress, dpi / 72);
     const ocrEngine = getLastOcrEngine();
 
@@ -633,7 +632,7 @@ export async function extractFromImage(
     onProgress?.('loading', 10);
 
     // Normalize photo pixel coordinates to PDF-point space (letter page = 612pt wide).
-    // Without this, findNearbyNumber(maxDistance=200) would search only ~40 points
+    // Without this, findNearbyAmount(maxDistance=200) would search only ~40 points
     // on a 3000px-wide photo because coordinates are ~4.9× larger than expected.
     const PDF_LETTER_WIDTH = 612;
     const scaleFactor = imageBitmap.width > 0 ? imageBitmap.width / PDF_LETTER_WIDTH : 1;

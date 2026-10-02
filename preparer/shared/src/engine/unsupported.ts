@@ -24,7 +24,7 @@ import { assessWashingtonCapitalGains } from './state/wa.js';
 
 export type { UnsupportedPattern };
 
-const STATE_ONLY = 'Prepare this return outside HATax, or remove the state, until it is supported.';
+const STATE_ONLY = 'Prepare this return outside HA Tax, or remove the state, until it is supported.';
 
 /** What each figure Form 8615 needs is, for the finding that asks for it. */
 const FORM_8615_FIELDS: Record<Form8615Field, string> = {
@@ -57,20 +57,20 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     // TAX-008: part-year and nonresident returns would prorate all income by days
     // (allocation.ts); every state sources income by its own rules.
     if (taxed && (s.residencyType === 'part_year' || s.residencyType === 'nonresident')) {
-      add('TAX-008', code, 'state', `${name} ${s.residencyType === 'part_year' ? 'part-year' : 'nonresident'} return: ${name} income sourcing is not built — HATax would prorate all income by days lived in the state, which ${name}'s rules do not allow. ${STATE_ONLY}`);
+      add('TAX-008', code, 'state', `${name} ${s.residencyType === 'part_year' ? 'part-year' : 'nonresident'} return: ${name} income sourcing is not built — HA Tax would prorate all income by days lived in the state, which ${name}'s rules do not allow. ${STATE_ONLY}`);
     }
 
     // A state the engine has no calculator for this year: no result, or a $0 result marked unavailable.
     const result = calculation?.stateResults?.find((r) => r.stateCode === code);
     if (taxed && calculation && (!result || result.additionalLines?.unavailable === 1)) {
-      add('STATE.YEAR.NOT_SUPPORTED', code, 'state', `${name} tax for ${year} is not calculated by HATax. ${STATE_ONLY}`);
+      add('STATE.YEAR.NOT_SUPPORTED', code, 'state', `${name} tax for ${year} is not calculated by HA Tax. ${STATE_ONLY}`);
     }
 
     if (code === 'UT' && !flatTaxConfigFor('UT', year)?.utahTaxpayerCredit) {
-      add('UT.TC40.TAXPAYER_CREDIT', code, 'state', `Utah's ${year} taxpayer tax credit amounts are not published in HATax yet, so its phase-out cannot be applied. ${STATE_ONLY}`);
+      add('UT.TC40.TAXPAYER_CREDIT', code, 'state', `Utah's ${year} taxpayer tax credit amounts are not published in HA Tax yet, so its phase-out cannot be applied. ${STATE_ONLY}`);
     }
     if (code === 'DC' && calculation?.form1040.deductionUsed === 'itemized') {
-      add('DC.ITEMIZED', code, 'state', `DC itemized deductions are not calculated (HATax applies DC's standard deduction). ${STATE_ONLY}`);
+      add('DC.ITEMIZED', code, 'state', `DC itemized deductions are not calculated (HA Tax applies DC's standard deduction). ${STATE_ONLY}`);
     }
     if (code === 'CA') {
       // California credits: what the return does not say, and amounts the FTB has not published for the year.
@@ -142,7 +142,7 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
         message: 'Home office depreciation: enter the date the home was first used for business (Form 8829 line 41 depends on it).' });
     } else if (first < '1993-05-13') {
       out.push({ ruleId: 'FED.FORM8829.LINE41', jurisdiction: 'US', section: 'federal', itemId: 'homeOffice',
-        message: `Home office first used for business ${first}, before May 13, 1993: its depreciation percentage (Pub 946) is not figured by HATax.` });
+        message: `Home office first used for business ${first}, before May 13, 1993: its depreciation percentage (Pub 946) is not figured by HA Tax.` });
     }
   }
 
@@ -198,7 +198,7 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
   // outstanding at the end of the year are more than $5,000,000.
   const outstanding = installment.filter(({ sale }) => sale.sellingPrice > 150000).reduce((s, { result }) => s + result.outstandingAtYearEnd, 0);
   if (outstanding > 5000000) {
-    add('FED.453A', 'US', 'federal', `Installment sales: $${outstanding.toLocaleString('en-US')} is still owed on sales over $150,000, more than $5,000,000, so interest is due on the deferred tax (IRC §453A). HATax does not figure it.`);
+    add('FED.453A', 'US', 'federal', `Installment sales: $${outstanding.toLocaleString('en-US')} is still owed on sales over $150,000, more than $5,000,000, so interest is due on the deferred tax (IRC §453A). HA Tax does not figure it.`);
   }
 
   // Form 8615 (engine/form8615.ts): whether it applies, the parent's figures it takes, what it cannot figure.
@@ -217,10 +217,10 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     for (const u of form8615.result.unsupported) out.push({ ruleId: u.ruleId, jurisdiction: 'US', section: 'federal', message: u.message });
   }
   // A child's unearned income listed on this return was once estimated at a guessed
-  // parent rate; that is Form 8814's job, which HATax does not do.
+  // parent rate; that is Form 8814's job, which HA Tax does not do.
   const kiddieEntries = taxReturn.kiddieTaxEntries?.length ? taxReturn.kiddieTaxEntries : taxReturn.kiddieTax ? [taxReturn.kiddieTax] : [];
   if (kiddieEntries.some((e) => (e.childUnearnedIncome ?? 0) > 0)) {
-    add('FED.8814', 'US', 'federal', 'This return lists a child\'s unearned income for the kiddie tax. A child\'s Form 8615 is figured on the child\'s own return, and reporting the child\'s interest and dividends on the parent\'s return (Form 8814) is not supported, so nothing is added here. Prepare Form 8814 outside HATax, or remove the entry and figure Form 8615 on the child\'s return.');
+    add('FED.8814', 'US', 'federal', 'This return lists a child\'s unearned income for the kiddie tax. A child\'s Form 8615 is figured on the child\'s own return, and reporting the child\'s interest and dividends on the parent\'s return (Form 8814) is not supported, so nothing is added here. Prepare Form 8814 outside HA Tax, or remove the entry and figure Form 8615 on the child\'s return.');
   }
 
   // TAX-002: Pennsylvania's eight income classes (state/pa.ts) — what the return does not settle.

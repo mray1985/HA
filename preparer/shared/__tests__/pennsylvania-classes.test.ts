@@ -137,7 +137,7 @@ describe('what the PA-40 needs, or cannot figure', () => {
     const joint = { filingStatus: FilingStatus.MarriedFilingJointly, spouseFirstName: 'Pat', income1099B: [sale('a', 5000), sale('b', -2000)] };
     expect(run({ ...joint, stateReturns: [pa()] }).findings.map((f) => f.question?.key)).toEqual(['paGainsOneOwner']);
     expect(run({ ...joint, stateReturns: [pa({ paGainsOneOwner: true })] }).state).toMatchObject({ additionalLines: expect.objectContaining({ line5Gains: 3000 }) });
-    expect(run({ ...joint, stateReturns: [pa({ paGainsOneOwner: false })] }).findings[0]!.message).toContain('outside HATax');
+    expect(run({ ...joint, stateReturns: [pa({ paGainsOneOwner: false })] }).findings[0]!.message).toContain('outside HA Tax');
   });
 
   it('leaves part-year and nonresident returns to TAX-008', () => {

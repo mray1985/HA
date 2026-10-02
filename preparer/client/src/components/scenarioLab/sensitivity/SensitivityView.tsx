@@ -113,7 +113,7 @@ export default function SensitivityView({ taxReturn, config, dispatch, overrides
       {/* Config bar */}
       <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-700/50 bg-surface-800 p-4">
         <p className="w-full text-xs text-slate-400 mb-1">
-          See how changing <strong className="text-white">{varDef?.label ?? 'a variable'}</strong> affects your{' '}
+          See how changing <strong className="text-white">{varDef?.label ?? 'a variable'}</strong> affects the{' '}
           <strong className="text-white">{metricLabel}</strong>.
         </p>
 

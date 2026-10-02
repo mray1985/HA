@@ -76,7 +76,7 @@
  *   f2_76..f2_80: Lines 39-42 grand totals
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult, RentalProperty } from '../types/index.js';
+import type { TaxReturn, RentalProperty } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 const P2 = 'topmostSubform[0].Page2[0]';

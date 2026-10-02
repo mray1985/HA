@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 import type {
   TemplateImportManifest,
   TemplateItem,
-  BusinessTemplate,
 } from '../../services/priorYearTemplateBuilder';
 import { getTypeLabel } from '../../services/priorYearTemplateBuilder';
 
@@ -219,7 +218,7 @@ export default function PriorYearTemplatePanel({
         <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
         <h3 className="text-lg font-medium text-slate-200 mb-1">Templates Imported</h3>
         <p className="text-sm text-slate-400 mb-4">
-          {importedCount} item{importedCount !== 1 ? 's' : ''} created with $0 amounts from your {manifest.sourceYear} return.
+          {importedCount} item{importedCount !== 1 ? 's' : ''} created with $0 amounts from the {manifest.sourceYear} return.
           <br />
           Fill in this year&apos;s amounts on the income pages.
         </p>
@@ -245,7 +244,7 @@ export default function PriorYearTemplatePanel({
         <div>
           <h3 className="font-medium text-slate-200">Import as Template</h3>
           <p className="text-xs text-slate-400">
-            Pre-fill this year with payer names from your {manifest.sourceYear} return (all amounts set to $0)
+            Pre-fill this year with payer names from the {manifest.sourceYear} return (all amounts set to $0)
           </p>
         </div>
       </div>
@@ -255,7 +254,7 @@ export default function PriorYearTemplatePanel({
         <Copy className="w-4 h-4 text-HATaxService-blue-400 shrink-0 mt-0.5" />
         <p className="text-xs text-slate-300">
           Templates copy payer/employer names with zeroed amounts.
-          You&apos;ll update the amounts when you reach each income page.
+          Enter this year&apos;s amounts on the return.
         </p>
       </div>
 

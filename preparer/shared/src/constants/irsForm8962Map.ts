@@ -39,7 +39,6 @@
  *   f2_1..f2_36: Part IV and Part V (shared policy allocation, alternative calculation)
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 

@@ -1,31 +1,37 @@
-# HATax Testing Guide
+# HA Tax Preparer Testing Guide
 
-Comprehensive reference for running, understanding, and extending the HATax test suite.
+How HA Tax Preparer is tested: running the suites, what each one covers, and how to add to them.
 
-**Engine suite (`npm test`): 96 test files | 5,025 tests**
+| Suite | Where | Files | Tests |
+|-------|-------|-------|-------|
+| Engine | `shared/__tests__/` | 121 | 5,253 |
+| Client | `client/src/__tests__/` | 47 | 977 |
+| Local AI | `local-ai/__tests__/` | 26 | 456 |
+| Server | `server/__tests__/` | 3 | 15 |
+| End-to-end | `client/e2e/` | 5 specs | Playwright |
 
 ---
 
 ## Quick Start
 
 ```bash
-# Run all shared engine tests (fastest, most comprehensive)
+# The engine (fastest, most comprehensive)
 cd shared && npx vitest run
 
-# Run all client unit/service tests
-cd client && npx vitest run
+# The client: cases, document intake, review, tools
+cd client && npm test
 
-# Run all server tests
-cd server && npx vitest run
+# The local AI: document reading, tax tools, client replies
+cd local-ai && npm test
 
-# Run E2E tests (requires dev server or auto-starts via Playwright)
-cd client && npx playwright test
+# The server: sign-in and the model routes
+cd server && npm test
 
-# Run a specific test file
-cd shared && npx vitest run __tests__/irs-tax-table.test.ts
+# End-to-end (Playwright starts the dev server on port 5174)
+cd client && npx playwright test --project=chromium
 
-# Watch mode (re-runs on file changes)
-cd shared && npx vitest
+# One file
+cd shared && npx vitest run __tests__/form8615.test.ts
 ```
 
 ---
@@ -33,21 +39,22 @@ cd shared && npx vitest
 ## Test Architecture Overview
 
 ```
-tax-project/
-├── shared/__tests__/           96 files — Engine: brackets, forms, credits, states, fuzzing (`npm test`)
-├── client/src/__tests__/       30 files — Services: import, parsing, AI, audit risk
-├── client/e2e/                  9 files — Playwright: wizard flow, accessibility, fuzzer
-│   └── scenario-fuzzer/        13 archetypes, 8 generators, PRNG-seeded
-└── server/__tests__/            1 file  — PII stripping
+preparer/
+├── shared/__tests__/        121 files — the engine: forms, schedules, credits, states, the Tax Table, fuzzing
+├── client/src/__tests__/     47 files — cases, document intake, review, client replies, imports, tools
+├── client/e2e/                5 specs — Playwright: cases, review, the local models, the stress run, the walkthrough
+├── local-ai/__tests__/       26 files — readers, page evidence, tax tools, validation, client replies
+├── local-ai/gauntlet/        the model gauntlet and the stress run's documents (run by hand, with the models)
+└── server/__tests__/          3 files — sign-in, the database, the model routes
 ```
 
 **Runners:**
-- **Vitest** — shared, client unit, server (fast, TypeScript-native)
-- **Playwright** — client E2E (Chromium, Firefox, WebKit)
+- **Vitest** — engine, client, local AI, server
+- **Playwright** — end-to-end, in Chromium (the desktop app's browser engine)
 
 ---
 
-## 1. Shared Engine Tests (89 files, ~5,000 tests)
+## 1. Engine Tests (121 files, ~5,250 tests)
 
 The core of the test suite. Validates every tax calculation module against IRS rules.
 
@@ -78,7 +85,6 @@ cd shared && npx vitest run __tests__/amt.test.ts
 | `vehicle.test.ts` | ~32 | Standard mileage vs. actual expenses |
 | `solo401k.test.ts` | ~27 | Solo 401(k) contribution limits |
 | `foreignTaxCredit.test.ts` | ~21 | Foreign tax credit (Form 1116) |
-| `donationValuation.test.ts` | ~42 | FMV lookup, depreciation calculator |
 | `estimatedTax.test.ts` | ~6 | Quarterly voucher calculations |
 | `estimatedTaxPenalty.test.ts` | ~25 | Underpayment penalty, safe harbor |
 | `military.test.ts` | ~18 | Combat zone exclusion, moving expenses |
@@ -206,137 +212,110 @@ cd shared && npx vitest run __tests__/smoke-credits.test.ts
 
 ---
 
-## 2. Client Tests (30 files, ~1,000 tests)
-
-Service-layer tests validating import, parsing, AI, and business logic.
+## 2. Client Tests (47 files, ~980 tests)
 
 ```bash
-cd client && npx vitest run
+cd client && npm test
 ```
 
-### 2.1 Import & Parsing (10 files)
+### 2.1 Cases and review
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `pdfImporter.test.ts` | ~65 | PDF import via OCR, field detection, confidence scoring |
-| `csvParser.test.ts` | ~28 | CSV transaction parsing, bank statement import |
-| `txfParser.test.ts` | ~53 | TXF (tax interchange format) |
-| `fdxParser.test.ts` | ~44 | FDX (financial data exchange) |
-| `competitorReturnParser.test.ts` | ~45 | Commercial tax software export parsing |
-| `ocrService.test.ts` | ~36 | OCR character recognition |
-| `documentInventoryService.test.ts` | ~51 | Document cataloging, duplicate detection |
-| `duplicateDetection.test.ts` | ~55 | Duplicate transaction identification |
-| `priorYearImporter.test.ts` | ~30 | Prior year return import |
-| `transactionParser.test.ts` | ~20 | Generic transaction parsing |
+| Files | Coverage |
+|-------|----------|
+| `caseReview`, `reviewFlow`, `stateAnswer` | The review list: findings, return fields filled in place, decisions, approval |
+| `caseStore`, `caseRecords`, `sessionKey`, `backgroundWork` | The open case, encrypted records, the vault's session key, locks waiting for work |
+| `batchIntake`, `caseIdentity`, `spouseCases`, `caseRollover` | Placing documents on cases, the taxpayer from the documents, joint returns, last year's case |
+| `documentIngestion`, `documentFiles`, `returnApplier`, `recordTools`, `preparerDecisions` | Reading documents into facts, kept source files, applying forms to the return, preparer decisions |
+| `clientReplies`, `missingDocuments`, `reviewPackage`, `acquisitionDate` | Client replies, possibly missing documents, the review package |
 
-### 2.2 Services & Business Logic (12 files)
+### 2.2 Import and parsing
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `auditRiskService.test.ts` | ~59 | Audit risk scoring by IRS category |
-| `deductionFinderEngine.test.ts` | ~92 | Deduction recommendation, pattern matching |
-| `suggestionService.test.ts` | ~34 | Tax planning suggestions |
-| `warningService.test.ts` | ~26 | Red-flag detection |
-| `scenarioLab.test.ts` | ~19 | What-if analysis |
-| `sensitivityAnalysis.test.ts` | ~14 | Variable sensitivity |
-| `taxCalendarService.test.ts` | ~30 | Deadline calendar |
-| `chatContextBuilder.test.ts` | ~24 | AI chat context assembly |
-| `intentExecutor.test.ts` | ~54 | AI intent execution |
-| `exportReadiness.test.ts` | ~24 | Return readiness for PDF export |
+| Files | Coverage |
+|-------|----------|
+| `pdfImporter`, `pdfExtractHelpers`, `ocrService`, `pdfStandardFonts` | Reading PDFs and scans: text layer, OCR, field detection, pdf.js fonts |
+| `competitorReturnParser`, `priorYearImporter`, `priorYearTemplateBuilder` | Prior-year returns from other software and from HA Tax exports |
+| `txfParser`, `fdxParser`, `csvParser`, `pdfStatementParser`, `transactionParser`, `transactionParserDedup`, `duplicateDetection` | TXF, FDX, CSV and statement imports, duplicates |
+| `w2LocalBoxes`, `w2Identity`, `jaroWinkler` | W-2 local boxes and identity, name matching |
 
-### 2.3 Fuzzer (1 file)
+### 2.3 Tools
 
-```bash
-cd client && npx vitest run src/__tests__/fuzzerCalcValidation.test.ts
-```
-
-Generates 50 randomized TaxReturn objects from 13 archetypes, runs `calculateForm1040()` on each, validates no NaN/undefined/negative values in critical fields.
+| Files | Coverage |
+|-------|----------|
+| `deductionFinderEngine`, `deductionFinderContext`, `deductionFinderRecurrence`, `mccTaxMap` | The expense scanner's deduction finder |
+| `auditRiskService`, `taxCalendarService`, `scenarioLab`, `sensitivityAnalysis`, `explainCharts` | Audit risk, the tax calendar, Scenario Lab, the Explain tab's charts |
+| `fuzzerCalcValidation` | Randomized returns (50 by default, `FUZZER_COUNT`) from 13 archetypes through the engine: no crash, NaN or impossible values |
 
 ---
 
-## 3. E2E Tests (9 files, Playwright)
-
-Browser-based end-to-end tests across Chromium, Firefox, and WebKit.
+## 3. Local AI Tests (26 files, ~460 tests)
 
 ```bash
-# Run all E2E tests
-cd client && npx playwright test
-
-# Run with UI (interactive mode)
-cd client && npx playwright test --ui
-
-# Run specific spec
-cd client && npx playwright test e2e/wizard-flow.spec.ts
+cd local-ai && npm test
 ```
 
-### 3.1 Core Wizard Tests
+| Area | Files |
+|------|-------|
+| Reading documents | `documentReader`, `secondReading`, `pageEvidence`, `formEvidence`, `documentOcr`, `documentClassifier`, `structuredExtraction`, `identity` |
+| Tax tools and facts | `taxTools`, `toolDefinitions`, `toolCaller`, `groundedToolCall`, `taxFact`, `formSchemas`, `section16Forms`, `w2Corrections`, `recordTools`, `preparerChoices` |
+| Validation | `factValidation`, `formValidation` |
+| Client replies | `clientAnswers`, `clientNotes`, `missingDocuments` |
+| Models and intake | `modelRuntime`, `modelManifest`, `documentIngestion` |
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `wizard-flow.spec.ts` | 13 | Step navigation, filing status, auto-save, sidebar |
-| `dashboard.spec.ts` | ~8 | Dashboard rendering, return creation |
-| `form-validation.spec.ts` | ~30 | Input validation, error messages |
-| `navigation.spec.ts` | ~6 | Page navigation, breadcrumbs |
-| `import-data.spec.ts` | ~22 | File upload, data parsing |
-
-### 3.2 Feature Tests
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `chat.spec.ts` | ~30 | AI chat interface, context persistence |
-| `cross-browser.spec.ts` | ~16 | Chromium, Firefox, WebKit compatibility |
-| `accessibility.spec.ts` | ~24 | axe-core, keyboard navigation, screen reader |
-
-### 3.3 Scenario Fuzzer
-
-```bash
-cd client && npx playwright test e2e/scenario-fuzzer/
-```
-
-The E2E fuzzer generates 20 diverse TaxReturn objects from 13 archetypes, injects them via localStorage, walks every visible wizard step, and validates UI health and calculation results.
-
-**13 Archetypes:**
-`simple-w2` | `self-employed-single` | `self-employed-couple` | `gig-worker` | `investor` | `dual-income-family` | `multi-state` | `rental-landlord` | `retiree` | `high-income-itemizer` | `crypto-trader` | `low-income-credits` | `kitchen-sink`
-
-**8 Generator Modules:**
-`base` | `income` | `self-employment` | `credits` | `deductions` | `dependents` | `discovery` | `state`
-
-Uses a deterministic PRNG seed for reproducible random generation.
+The model gauntlet (`local-ai/gauntlet/`) reads synthetic IRS forms with the real models and is run by hand; see its README.
 
 ---
 
-## 4. Server Tests (2 files)
+## 4. End-to-End Tests (Playwright)
 
 ```bash
-cd server && npx vitest run
+cd client && npx playwright test --project=chromium
 ```
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `piiStripper.test.ts` | ~68 | PII detection: SSN, phone, email, address, dollar amounts |
+| Spec | Coverage |
+|------|----------|
+| `case-flow.spec.ts` | A new case, the dashboard, the Explain and Return tabs, a 1099-Q decision, a W-2c, the Client tab, possibly missing documents |
+| `review-flow.spec.ts` | A W-2 dropped on the Review tab, the next case, a review item's document, a returning client, several clients' documents at once, a new season |
+| `local-models.spec.ts` | Opt-in (`E2E_MODELS=1`): a W-2 read by the local models, client replies read by the local reader |
+| `stress-ai.spec.ts` | Opt-in (`E2E_MODELS=1`, `STRESS_DIR`): seven households and 23 documents; see `local-ai/gauntlet/stress/README.md` |
+| `walkthrough-ai.spec.ts` | Opt-in (`E2E_MODELS=1`): a preparer from sign-up to an approved case, with screenshots |
+
+---
+
+## 5. Server Tests (3 files)
+
+```bash
+cd server && npm test
+```
+
+| File | Coverage |
+|------|----------|
+| `auth.test.ts` | Preparer-only registration and sign-in, the season seat, sessions and sign-out, the signing key |
+| `database.test.ts` | A database from an earlier release opens without its unused `user_data` table |
+| `models.test.ts` | The local model routes: signed-in preparers only, the runtime, page reading, reading text |
 
 ---
 
 ## Testing Methodologies
 
-### Fuzz Testing (3 layers)
+### Fuzz Testing
 
 | Layer | File | Approach |
 |-------|------|----------|
-| Engine | `shared/__tests__/fuzzing.test.ts` | 111 tests: boundary values, extreme inputs, negative numbers, pathological combos |
-| Client | `client/src/__tests__/fuzzerCalcValidation.test.ts` | 50 randomized returns from 13 archetypes |
-| E2E | `client/e2e/scenario-fuzzer/` | 20 full-stack scenarios through the UI |
+| Engine | `shared/__tests__/fuzzing.test.ts` | Boundary values, extreme inputs, negative numbers, pathological combinations |
+| Client | `client/src/__tests__/fuzzerCalcValidation.test.ts` | Randomized returns from 13 archetypes |
+| The app, with the models | `client/e2e/stress-ai.spec.ts` | Synthetic households' documents through intake, replies and review, scored against `truth.json` |
 
-### Cross-Validation (2 sources)
+### Cross-Validation
 
 | Source | File | Method |
 |--------|------|--------|
-| Independent Oracle | `irs-tax-table.test.ts` | The IRS's 2025 Tax Table below $100,000, hard-coded brackets above, 588 tests |
-| IRS Constants | `rev-proc-2024-40.test.ts` | 700+ constants from Rev. Proc. 2024-40 |
+| The IRS Tax Table | `tax-table-2025.test.ts` | All 8,248 values of the 2025 Tax Table (Publication 1040) |
+| Independent oracle | `irs-tax-table.test.ts` | The Tax Table below $100,000, the rate schedules above |
+| IRS constants | `rev-proc-2024-40.test.ts` | 700+ constants from Rev. Proc. 2024-40 |
 
 ### Adversarial Testing
 
-Multi-model AI-generated scenarios designed to break the engine through:
+Scenarios designed to break the engine through:
 - Multi-provision interactions
 - Ordering hazards
 - Circular dependencies
@@ -346,7 +325,6 @@ Multi-model AI-generated scenarios designed to break the engine through:
 
 - **Property-based:** fast-check PRNG with automatic shrinking finds minimal failing inputs
 - **Metamorphic:** validates structural relationships between outputs without needing an oracle (e.g., doubling income should roughly double tax in a flat bracket)
-- **Mutation:** modifies engine code and verifies tests catch the mutation (test suite effectiveness)
 
 ---
 
@@ -389,9 +367,9 @@ describe('My New Test', () => {
 });
 ```
 
-### Adding a new E2E archetype
+### Adding a household to the stress run
 
-Create a new generator in `client/e2e/scenario-fuzzer/generators/` and register it in the archetype list.
+Add its documents and true values to `local-ai/gauntlet/stress/make-docs.mjs`, regenerate `docs/` and `truth.json` with `node make-docs.mjs`, and run the stress spec with the models.
 
 ---
 
@@ -399,14 +377,16 @@ Create a new generator in `client/e2e/scenario-fuzzer/generators/` and register 
 
 ```bash
 # Full local validation (recommended before pushing)
-cd shared && npx vitest run          # ~18s, 4,500+ tests
-cd client && npx vitest run          # ~8s, 1,000+ tests
-cd server && npx vitest run          # ~2s, 80+ tests
+cd shared && npm test       # engine
+cd client && npm test       # client
+cd local-ai && npm test     # local AI (type-checks its tests first)
+cd server && npm test       # server
 
-# E2E (slower, requires browser binaries)
-cd client && npx playwright test     # ~45s, 320+ tests across 3 browsers
-
+# End-to-end (needs Playwright's Chromium)
+cd client && npx playwright test --project=chromium
 ```
+
+CI (`.github/workflows/ci.yml`) runs the engine, local-AI and server tests, the type checks, the end-to-end tests and the production build, and bundles the desktop app's main process. The client's unit tests run locally.
 
 ---
 
@@ -414,12 +394,12 @@ cd client && npx playwright test     # ~45s, 320+ tests across 3 browsers
 
 | What | Path |
 |------|------|
-| IRS tax table oracle | `shared/__tests__/irs-tax-table.test.ts` |
+| The IRS's 2025 Tax Table | `shared/__tests__/fixtures/irs-tax-table-2025.json`, `shared/__tests__/tax-table-2025.test.ts` |
 | IRS constants validation | `shared/__tests__/rev-proc-2024-40.test.ts` |
 | Integration scenarios | `shared/__tests__/integration.test.ts` |
 | Boundary values | `shared/__tests__/boundary-values.test.ts` |
 | Fuzz testing | `shared/__tests__/fuzzing.test.ts` |
-| E2E wizard flow | `client/e2e/wizard-flow.spec.ts` |
-| E2E scenario fuzzer | `client/e2e/scenario-fuzzer/scenario-fuzzer.spec.ts` |
+| Client fuzzer archetypes | `client/src/__tests__/scenarioFixtures/` |
+| End-to-end cases and review | `client/e2e/case-flow.spec.ts`, `client/e2e/review-flow.spec.ts` |
+| The stress run | `client/e2e/stress-ai.spec.ts`, `local-ai/gauntlet/stress/` |
 | Playwright config | `client/playwright.config.ts` |
-| Audit report | `docs/AUDIT_REPORT.md` |

@@ -13,7 +13,7 @@ import ExpenseScannerSetup from './ExpenseScannerSetup';
 import ApplyToReturnModal from './ApplyToReturnModal';
 import SectionIntro from '../common/SectionIntro';
 import FileDropZone from '../import/FileDropZone';
-import { Sparkles, Loader2, ArrowLeft, ScanSearch, Upload, FileText, X } from 'lucide-react';
+import { Sparkles, Loader2, ArrowLeft, ScanSearch, FileText, X } from 'lucide-react';
 import { useDeductionFinder } from '../../hooks/useDeductionFinder';
 import { useDeductionFinderStore } from '../../store/deductionFinderStore';
 import { useCaseStore } from '../../store/caseStore';
@@ -144,14 +144,14 @@ export default function ExpenseScannerToolView() {
           <div className="flex items-center gap-2.5 mb-4">
             <ScanSearch className="w-5 h-5 text-HATaxService-blue-400 shrink-0" />
             <div>
-              <h3 className="font-medium text-slate-200">Scan your 2025 transactions</h3>
+              <h3 className="font-medium text-slate-200">Scan the client's 2025 transactions</h3>
               {hasTransactions ? (
                 <p className="text-xs text-slate-400 mt-0.5">
                   {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} · {allTransactions.length.toLocaleString()} transactions loaded
                 </p>
               ) : (
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Upload your transactions to find tax-relevant expenses and deductions
+                  Upload the client's transactions to find tax-relevant expenses and deductions
                 </p>
               )}
             </div>
@@ -230,7 +230,7 @@ export default function ExpenseScannerToolView() {
         <div className="flex flex-col items-center gap-3 py-10 rounded-xl border border-violet-500/20 bg-violet-600/5 mt-2">
           <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
           <div className="text-center">
-            <div className="text-sm text-violet-300 font-medium">Scanning your transactions...</div>
+            <div className="text-sm text-violet-300 font-medium">Scanning the transactions...</div>
             {categorizationProgress && (
               <div className="text-xs text-slate-400 mt-1">{categorizationProgress}</div>
             )}

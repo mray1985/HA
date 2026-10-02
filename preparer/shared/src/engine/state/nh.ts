@@ -11,11 +11,10 @@
 
 import {
   TaxReturn, CalculationResult, StateCalculationResult, StateReturnConfig,
-  FilingStatus, CalculationTrace,
+  FilingStatus,
 } from '../../types/index.js';
-import { getTaxConstants } from '../../constants/taxConstants.js';
 import { TraceBuilder } from '../traceBuilder.js';
-import { getStateEstimatedPayments, getStateWithholding, getStateFilingKey, getStateName } from './index.js';
+import { getStateEstimatedPayments, getStateWithholding } from './index.js';
 import type { StateCalculator } from './stateRegistry.js';
 
 function countPersons(filingStatus: FilingStatus | undefined): number {
@@ -36,13 +35,9 @@ export function createNHCalculator(): StateCalculator {
       stateConfig: StateReturnConfig,
     ): StateCalculationResult {
       const taxYear = taxReturn.taxYear || 2025;
-      const filingKey = getStateFilingKey(taxReturn.filingStatus);
       const filingStatus = taxReturn.filingStatus;
-      const numDependents = taxReturn.dependents?.length || 0;
       const numPersons = countPersons(filingStatus);
       const tb = new TraceBuilder();
-      const sName = getStateName('NH');
-      const refs = { totalTaxLine: 'NH DP-10 Line 14' }; // NH DP-10 form
 
       // NH I&D tax fully repealed effective 1/1/2025
       if (taxYear >= 2025) {

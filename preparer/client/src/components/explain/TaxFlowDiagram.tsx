@@ -42,7 +42,7 @@ const COLORS: Record<string, string> = {
   owed:           '#F59E0B', // amber-500
 };
 
-// Map each bar's colorKey to the most relevant wizard step
+// Map each bar's colorKey to the return section it opens in the Review tab
 const STEP_MAP: Record<string, string> = {
   totalIncome:   'income_overview',
   adjustments:   'deductions_summary',
@@ -124,7 +124,7 @@ export default function TaxFlowDiagram({ form1040: f }: TaxFlowDiagramProps) {
   }
 
   steps.push({
-    x: isRefund ? 'Your Refund' : 'Amount You Owe',
+    x: isRefund ? 'Refund' : 'Amount Owed',
     y: 0,
     sum: true,
     colorKey: isRefund ? 'refund' : 'owed',
@@ -146,7 +146,7 @@ export default function TaxFlowDiagram({ form1040: f }: TaxFlowDiagramProps) {
     }
   };
 
-  // Navigate to the relevant wizard step on click
+  // A click opens the Review tab at that section
   const pointClick = (args: IPointEventArgs): void => {
     const step = steps[args.pointIndex];
     if (!step || step.colorKey === 'reset') return;

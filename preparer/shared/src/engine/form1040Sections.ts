@@ -39,7 +39,7 @@ import { getStandardDeduction, getTaxBrackets, getTaxConstants } from '../consta
 import { calculateScheduleC } from './scheduleC.js';
 import { calculateScheduleSE } from './scheduleSE.js';
 import { calculateScheduleA } from './scheduleA.js';
-import { calculateTaxTableTax, TAX_TABLE_LIMIT, traceProgressiveTax, getMarginalRate } from './brackets.js';
+import { calculateTaxTableTax, TAX_TABLE_LIMIT, traceProgressiveTax } from './brackets.js';
 import { calculatePreferentialRateTax } from './capitalGains.js';
 import { calculateCredits } from './credits.js';
 import { calculateQBIDeduction, calculateMultiBusinessQBIDeduction } from './qbi.js';
@@ -1241,7 +1241,6 @@ export function calculatePreliminaryIncomeSection(ctx: Form1040Context): void {
     hsaDed +
     earlyWdPenaltyForPrelim,
   );
-  const prelimAGI = round2(totalIncomePreScheduleE - prelimAdjustments);
 
   // IRC §469(i)(3)(F): MAGI for passive loss $25k allowance must exclude:
   //   taxable SS, student loan interest, IRA deduction, and passive losses themselves.

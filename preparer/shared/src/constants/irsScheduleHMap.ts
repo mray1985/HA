@@ -33,7 +33,6 @@
  *     (Additional fields for schedule filing details)
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

@@ -2,8 +2,8 @@
  * Discovery flag derivation — inspects populated TaxReturn data and
  * sets the matching incomeDiscovery keys to 'yes'.
  *
- * This is critical: wizard step visibility depends on these flags
- * (see dcDiscovery() conditions in taxReturnStore.ts).
+ * The engine's diagnostics read these flags (documentInventory,
+ * returnWarnings, suggestions), so the fixtures set them as a return would.
  */
 
 import type { FuzzerTaxReturn } from './base';

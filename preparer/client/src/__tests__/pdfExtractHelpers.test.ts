@@ -579,9 +579,9 @@ describe('extract1099DIVFields with phrase-level blocks', () => {
   });
 });
 
-// ── findNearbyNumber pure-numeric guard ────────────────
+// ── findNearbyAmount pure-numeric guard ────────────────
 
-describe('findNearbyNumber rejects non-numeric blocks', () => {
+describe('findNearbyAmount rejects non-numeric blocks', () => {
   it('does not parse "2 Federal income tax withheld" as the number 2', () => {
     // This tests the PURE_NUMERIC_RE guard: a phrase block that starts with
     // a digit but contains letters should NOT be parsed as a number.

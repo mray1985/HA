@@ -10,7 +10,7 @@ function cspPlugin(): Plugin {
       order: 'pre',
       handler(html, ctx) {
         const apiOrigin = process.env.VITE_API_ORIGIN || process.env.VITE_API_BASE || '';
-        // Always keep blob: (PDF/worker fetch). Dev allows optional local BYOK server.
+        // Always keep blob: (PDF/worker fetch). Dev also allows the app's own server on port 3002.
         // Production defaults to local-first ('self' + blob); add API origin only when set.
         const connectSrc = ctx.server
           ? "'self' blob: http://localhost:3002 http://127.0.0.1:3002"
@@ -74,7 +74,7 @@ export default defineConfig({
       ],
       manifest: {
         name: 'HA Tax Preparer',
-        short_name: 'HA Preparer',
+        short_name: 'HA Tax Preparer',
         description: "Automated tax preparation that runs on the preparer's own machine.",
         theme_color: '#0F172A',
         background_color: '#0F172A',

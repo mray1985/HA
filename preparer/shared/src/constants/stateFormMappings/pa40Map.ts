@@ -6,7 +6,6 @@
  *
  * PA-40 AcroForm field names are human-readable strings (not nested XFA paths).
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────

@@ -59,18 +59,8 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `);
 
-db.exec(`
-CREATE TABLE IF NOT EXISTS user_data (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  key TEXT NOT NULL,
-  encrypted_value BLOB NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE(user_id, key)
-);
-`);
+// Earlier releases created a user_data table that nothing ever wrote to.
+db.exec('DROP TABLE IF EXISTS user_data');
 
 // ─── Row types ─────────────────────────────────────
 
@@ -149,33 +139,9 @@ export const deleteExpiredSessions = db.prepare<[]>(`
   DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')
 `);
 
-/** Removes the user; their sessions and data go with them (ON DELETE CASCADE). */
+/** Removes the user; their sessions go with them (ON DELETE CASCADE). */
 export const deleteUser = db.prepare<[number]>(`
   DELETE FROM users WHERE id = ?
-`);
-
-export const setUserData = db.prepare(`
-  INSERT INTO user_data (user_id, key, encrypted_value)
-  VALUES (?, ?, ?)
-  ON CONFLICT(user_id, key) DO UPDATE SET
-    encrypted_value = excluded.encrypted_value,
-    updated_at = CURRENT_TIMESTAMP
-`);
-
-export const getUserData = db.prepare(`
-  SELECT key, encrypted_value FROM user_data WHERE user_id = ?
-`);
-
-export const getUserDataByKey = db.prepare(`
-  SELECT encrypted_value FROM user_data WHERE user_id = ? AND key = ?
-`);
-
-export const deleteUserData = db.prepare(`
-  DELETE FROM user_data WHERE user_id = ? AND key = ?
-`);
-
-export const getAllUsers = db.prepare(`
-  SELECT id, email, name, role, created_at, last_login FROM users
 `);
 
 export function closeDatabase(): void {

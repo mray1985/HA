@@ -46,12 +46,9 @@
  *   f4_01..f4_21 = Lines 26-30+: Additional calculations, prior year credits
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 const P3 = 'topmostSubform[0].Page3[0]';
-const P4 = 'topmostSubform[0].Page4[0]';
-
 export const FORM_5695_FIELDS: IRSFieldMapping[] = [
   // ══════════════════════════════════════════════════════════════
   // Header

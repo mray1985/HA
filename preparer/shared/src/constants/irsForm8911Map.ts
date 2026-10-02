@@ -34,7 +34,6 @@
  *   f1_15 = Line 13: Total credit (personal + business, goes to Schedule 3 or Form 3800)
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

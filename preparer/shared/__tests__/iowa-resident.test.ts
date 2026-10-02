@@ -155,7 +155,7 @@ describe('what the IA 1040 needs from the preparer', () => {
   });
 
   it('stops the return when an item it does not figure applies, and for a year not built', () => {
-    expect(run({ stateReturns: [iowa({ ...polk(), iaOtherItems: true })] }).findings).toEqual([expect.objectContaining({ itemId: 'other-items', message: expect.stringContaining('outside HATax') })]);
+    expect(run({ stateReturns: [iowa({ ...polk(), iaOtherItems: true })] }).findings).toEqual([expect.objectContaining({ itemId: 'other-items', message: expect.stringContaining('outside HA Tax') })]);
     expect(run({ taxYear: 2026, stateReturns: [iowa(polk())] }).findings.map((f) => f.itemId)).toEqual(['year']);
   });
 

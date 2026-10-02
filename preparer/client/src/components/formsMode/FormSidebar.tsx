@@ -18,7 +18,7 @@ import type { IRSFormTemplate } from '@hatax/engine';
 
 /** Group labels for sidebar organization */
 function getFormGroup(template: IRSFormTemplate): string {
-  if (template.formId === 'f1040') return 'Your Return';
+  if (template.formId === 'f1040') return 'Return';
   if (template.formId.startsWith('f1040s')) return 'Schedules';
   return 'Additional Forms';
 }
@@ -114,7 +114,7 @@ export default function FormSidebar() {
 
       if (selCount > 0) {
         pdfBytes = await generateSelectedFormsPDF(getSelections(), taxReturn, calculation);
-        filename = 'HATax_Selected_Forms.pdf';
+        filename = 'HA_Tax_Selected_Forms.pdf';
       } else {
         if (!activeTemplate) return;
         pdfBytes = await generateSinglePdf();
@@ -164,7 +164,7 @@ export default function FormSidebar() {
 
       if (selCount > 0) {
         pdfBytes = await generateSelectedFormsPDF(getSelections(), taxReturn, calculation);
-        fallbackFilename = 'HATax_Selected_Forms.pdf';
+        fallbackFilename = 'HA_Tax_Selected_Forms.pdf';
       } else {
         if (!activeTemplate) { win?.close(); return; }
         pdfBytes = await generateSinglePdf();
@@ -212,7 +212,7 @@ export default function FormSidebar() {
     return groups;
   }, [applicableTemplates, searchResults, taxReturn, calculation]);
 
-  const groupOrder = searchResults ? ['Search Results'] : ['Your Return', 'Schedules', 'Additional Forms'];
+  const groupOrder = searchResults ? ['Search Results'] : ['Return', 'Schedules', 'Additional Forms'];
 
   const printTitle = selCount > 0 ? `Print ${selCount} forms` : activeTemplate ? `Print ${activeTemplate.displayName}` : 'Print';
   const downloadTitle = selCount > 0 ? `Download ${selCount} forms` : activeTemplate ? `Download ${activeTemplate.displayName}` : 'Download';

@@ -32,7 +32,7 @@ export interface SankeyData {
   links: SankeyLink[];
 }
 
-// Map nodes to wizard steps for click navigation
+// Map nodes to the return sections a click opens in the Review tab
 const STEP_MAP: Record<string, string> = {
   wages:          'w2_income',
   interest:       '1099int_income',
@@ -319,7 +319,7 @@ export function buildSankeyData(
   // ── Column 6: Final Result ──────────────────────────────────
   const isRefund = f.refundAmount > 0;
   const resultId = isRefund ? 'refund' : 'owed';
-  const resultLabel = isRefund ? 'Your Refund' : 'Amount You Owe';
+  const resultLabel = isRefund ? 'Refund' : 'Amount Owed';
   const resultValue = isRefund ? f.refundAmount : f.amountOwed;
 
   nodes.push(node({

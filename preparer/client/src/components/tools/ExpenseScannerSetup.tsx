@@ -56,14 +56,14 @@ interface QuickBundle {
 }
 
 const QUICK_BUNDLES: QuickBundle[] = [
-  { question: 'Were you self-employed or freelancing in 2025?', key: 'isSelfEmployed', categories: ['business_expense', 'vehicle', 'health_insurance_se'] },
-  { question: 'Did you work from home in 2025?', key: 'worksFromHome', categories: ['home_office'] },
-  { question: 'Did you have children under 13 in 2025?', key: 'hasKids', categories: ['childcare'] },
-  { question: 'Did you have medical or dental expenses in 2025?', key: 'hasMedical', categories: ['medical', 'hsa'] },
-  { question: 'Did you make charitable donations in 2025?', key: 'hasCharitable', categories: ['charitable'] },
-  { question: 'Were you a student or paying student loans in 2025?', key: 'isStudent', categories: ['education', 'student_loan'] },
-  { question: 'Did you have investment accounts in 2025?', key: 'hasInvestments', categories: ['investment'] },
-  { question: 'Did you own rental property in 2025?', key: 'hasRentalProperty', categories: ['rental_property'] },
+  { question: 'Was the client self-employed or freelancing in 2025?', key: 'isSelfEmployed', categories: ['business_expense', 'vehicle', 'health_insurance_se'] },
+  { question: 'Did the client work from home in 2025?', key: 'worksFromHome', categories: ['home_office'] },
+  { question: 'Did the client have children under 13 in 2025?', key: 'hasKids', categories: ['childcare'] },
+  { question: 'Did the client have medical or dental expenses in 2025?', key: 'hasMedical', categories: ['medical', 'hsa'] },
+  { question: 'Did the client make charitable donations in 2025?', key: 'hasCharitable', categories: ['charitable'] },
+  { question: 'Was the client a student or paying student loans in 2025?', key: 'isStudent', categories: ['education', 'student_loan'] },
+  { question: 'Did the client have investment accounts in 2025?', key: 'hasInvestments', categories: ['investment'] },
+  { question: 'Did the client own rental property in 2025?', key: 'hasRentalProperty', categories: ['rental_property'] },
 ];
 
 // ─── Auto-Enable Logic ─────────────────────────────

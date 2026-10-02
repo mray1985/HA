@@ -15,16 +15,12 @@ import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit'; // Ensure worker is co
 import { FilingStatus } from '@hatax/engine';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
-  extractTextBlocks,
   extractTextBlocksFromPages,
-  parseDollarValue,
   detectTaxYear,
   find1040Pages,
   type TextBlock,
 } from './pdfTextUtils';
 import {
-  FORM_1040_TEXT_KEYWORDS,
-  FORM_1040_EXTRACT_FIELDS,
   extractAcroFormFinancials,
   extractFinancialsFromText,
 } from './priorYearImporter';
@@ -173,7 +169,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const pages1040 = await find1040Pages(pdf);
   if (!pages1040) {
     throw new Error(
-      'Could not find Form 1040 in this PDF. Make sure you uploaded your completed federal tax return (not a state return or other document).',
+      'Could not find Form 1040 in this PDF. Make sure this is the completed federal tax return (not a state return or other document).',
     );
   }
 
@@ -181,7 +177,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const page1Blocks = await extractTextBlocksFromPages(pdf, [pages1040.page1]);
   if (page1Blocks.length < 10) {
     throw new Error(
-      'This PDF appears to be scanned or image-based. Please download the digitally-generated PDF from your tax software instead.',
+      'This PDF appears to be scanned or image-based. Please download the digitally-generated PDF from the tax software instead.',
     );
   }
 
@@ -189,7 +185,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   const fullPage1Text = page1Blocks.map(b => b.text).join(' ').toLowerCase();
   if (fullPage1Text.includes('1040-x') || fullPage1Text.includes('amended')) {
     throw new Error(
-      'This appears to be an amended return (Form 1040-X). Please upload your original Form 1040 instead.',
+      'This appears to be an amended return (Form 1040-X). Please upload the original Form 1040 instead.',
     );
   }
 
@@ -391,9 +387,6 @@ function extractPersonalInfoFromText(blocks: TextBlock[], page1Num: number): Tex
   const p1Blocks = blocks.filter(b => b.page === page1Num);
   if (p1Blocks.length === 0) return result;
 
-  // Sort by y position (top to bottom)
-  const sortedByY = [...p1Blocks].sort((a, b) => a.y - b.y);
-
   // ── Address extraction: anchor on ZIP pattern ──
   // ZIP codes are highly reliable anchors — \b\d{5}(-\d{4})?\b
   // Instruction text like "more than half of 2025" contains digits — must be filtered out.
@@ -500,8 +493,6 @@ function extractPersonalInfoFromText(blocks: TextBlock[], page1Num: number): Tex
   const FORM_LABEL_BLOCKLIST = /^(deceased|spouse|combat\s*zone|see\s+(separate\s+)?instructions|your\s+social|social\s+security|filing\s+status|check\s+(only|here|if)|standard\s+deduction|head\s+of|qualifying|married|single|other|apt\.?\s*no|state|zip\s*code|foreign|presidential|city|town|post\s+office)$/i;
 
   const isFormLabel = (text: string) => FORM_LABEL_BLOCKLIST.test(text.trim());
-
-  const headerBlocks = sortedByY.filter(b => b.y < (result.addressZip ? getBlockByText(p1Blocks, result.addressZip)?.y ?? 200 : 200));
 
   // Look for name labels
   const firstNameLabel = p1Blocks.find(b =>
@@ -914,9 +905,4 @@ export function sanitizeSsnToLastFour(raw: string): string | undefined {
     return digits.slice(-4);
   }
   return undefined;
-}
-
-/** Find a block by its text content */
-function getBlockByText(blocks: TextBlock[], text: string): TextBlock | undefined {
-  return blocks.find(b => b.text.includes(text));
 }

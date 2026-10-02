@@ -1,4 +1,4 @@
-import { EVRefuelingCreditInfo, EVRefuelingCreditResult, EVRefuelingProperty } from '../types/index.js';
+import { EVRefuelingCreditInfo, EVRefuelingCreditResult } from '../types/index.js';
 import { getEvRefueling } from '../constants/taxConstants.js';
 import { round2 } from './utils.js';
 

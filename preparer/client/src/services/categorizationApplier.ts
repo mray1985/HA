@@ -35,7 +35,7 @@ export interface FieldUpdate {
 
 export interface ApplyPreview {
   updates: FieldUpdate[];
-  /** Discovery keys that need to be enabled for the wizard steps to appear. */
+  /** Income and deduction types to mark as present on the return. */
   discoveryKeysToEnable: string[];
   /** Total dollar amount across all updates. */
   totalAmount: number;
@@ -242,7 +242,7 @@ export function buildApplyPreview(
       newValue: Math.round(total),
       mode: 'replace',
       category,
-      formLine: meta.targetForm || 'See wizard step',
+      formLine: meta.targetForm || 'Enter on the return',
       transactionCount: count,
     });
   }
@@ -289,32 +289,4 @@ function buildBusinessSubCategoryTotals(
     }
   }
   return map;
-}
-
-/**
- * Build ExpenseEntry objects from approved business_expense transactions.
- * Used by the apply handler to create Schedule C expense entries.
- */
-export function buildScheduleCExpenses(
-  transactions: CategorizedTransaction[],
-): Array<{ scheduleCLine: number; category: string; description: string; amount: number }> {
-  const subTotals = buildBusinessSubCategoryTotals(transactions);
-  const entries: Array<{ scheduleCLine: number; category: string; description: string; amount: number }> = [];
-
-  for (const [subCat, { total }] of subTotals) {
-    const lineMapping = SUB_CATEGORY_TO_SCHEDULE_C[subCat];
-    if (!lineMapping) continue;
-
-    const subMeta = BUSINESS_SUB_CATEGORY_META[subCat];
-    const rate = subMeta?.deductibilityRate ?? 1.0;
-
-    entries.push({
-      scheduleCLine: lineMapping.scheduleCLine,
-      category: lineMapping.expenseCategory,
-      description: `Smart Expense Scanner: ${subMeta?.label ?? subCat}`,
-      amount: Math.round(total * rate),
-    });
-  }
-
-  return entries;
 }

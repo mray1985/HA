@@ -1,7 +1,6 @@
 /**
  * The open case: its return, calculation, document evidence, review and audit
- * trail. Replaces HATax's wizard store — return data, autosave and form-view
- * state stay; step navigation is gone.
+ * trail, with autosave and the form view's state.
  *
  * Every change to the return is saved (debounced, encrypted by api/client),
  * recalculated by the engine, and re-reviewed. A change a preparer makes by

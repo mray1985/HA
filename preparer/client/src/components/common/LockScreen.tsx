@@ -285,7 +285,7 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold">
-            HA Preparer
+            HA Tax Preparer
           </h1>
           <p className="text-slate-400 text-sm mt-1">Client returns stay on this computer, encrypted with your passphrase.</p>
         </div>

@@ -102,7 +102,7 @@ describe('return warnings use the return\'s own tax year', () => {
     id: 'b1', brokerName: 'Broker', description: '10 sh XYZ', dateAcquired: '2020-01-02', dateSold, proceeds: 1000, costBasis: 800, isLongTerm: true,
   });
 
-  it('does not flag a 2026 sale on a 2026 return (HATax\'s client copy was fixed at 2025)', () => {
+  it('does not flag a 2026 sale on a 2026 return (HA Tax\'s client copy was fixed at 2025)', () => {
     const w = getReturnWarnings(makeTaxReturn({ income1099B: [sale('2026-03-02')] }));
     expect(w.filter((x) => x.field.includes('dateSold'))).toEqual([]);
   });

@@ -41,7 +41,6 @@
  *   calc.feie: { incomeExclusion: number; housingExclusion: number }
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { getFeie } from './taxConstants.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

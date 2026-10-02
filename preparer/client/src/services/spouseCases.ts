@@ -121,7 +121,7 @@ async function joinNow(intoId: string, fromId: string): Promise<{ ok: true; move
     const copy = await copyDocumentFile(fromId, intoId, doc.documentId);
     if (copy === 'failed') {
       for (const id of copied) await deleteDocumentFile(intoId, id);
-      return { ok: false, error: `The source file ${doc.fileName} could not be copied, so the cases are not joined. Unlock HATax and try again.` };
+      return { ok: false, error: `The source file ${doc.fileName} could not be copied, so the cases are not joined. Unlock HA Tax and try again.` };
     }
     if (copy === 'copied') copied.push(doc.documentId);
   }

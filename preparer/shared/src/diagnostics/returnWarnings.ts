@@ -3,9 +3,8 @@
  * eligibility, cross-form consistency, engine plausibility), each tied to the
  * return section and field it concerns.
  *
- * Carried over from HATax's client warning service. The checks are unchanged;
- * warnings are keyed by return section instead of wizard step, and every
- * year-dependent check uses the return's own tax year.
+ * Warnings are keyed by return section and field, and every year-dependent
+ * check uses the return's own tax year.
  *
  * HOW TO ADD A NEW WARNING:
  * 1. Add a validation function to dateValidation.ts (or inline if simple)
@@ -137,7 +136,6 @@ export function getReturnWarnings(taxReturn: TaxReturn, calculation?: Calculatio
 
     // Qualifying relative residency: non-relatives must live with you all year
     const isChildRelationship = ['Son', 'Daughter', 'Stepson', 'Stepdaughter', 'Foster Child', 'Grandchild', 'Brother', 'Sister', 'Half Brother', 'Half Sister', 'Stepbrother', 'Stepsister', 'Niece', 'Nephew'].includes(dep.relationship);
-    const isParentRelationship = ['Parent', 'Mother', 'Father', 'Stepmother', 'Stepfather', 'Grandparent'].includes(dep.relationship);
     if (dep.relationship === 'None (not related)' && (dep.monthsLivedWithYou ?? 12) < 12) {
       warnings.push({
         section: 'dependents',

@@ -113,7 +113,7 @@ describe('what the return does not settle is asked, or stops the return', () => 
     }]);
     expect(state?.unsupported).toEqual([findings[0]!.message]);
     expect(run({ stateReturns: [wa({ waSpecialItems: true })], income1099B: [sale(300000)] }).findings)
-      .toEqual([expect.objectContaining({ itemId: 'special-items', message: expect.stringContaining('outside HATax') })]);
+      .toEqual([expect.objectContaining({ itemId: 'special-items', message: expect.stringContaining('outside HA Tax') })]);
     expect(run({ stateReturns: [wa({ waSpecialItems: true })], income1099B: [sale(300000)] }).findings[0]!.question).toBeUndefined();
   });
 
@@ -131,7 +131,7 @@ describe('what the return does not settle is asked, or stops the return', () => 
     })]);
     expect(run({ ...mfs, stateReturns: [wa({ waSpousesWithinDeduction: true })] })).toMatchObject({ findings: [], state: { totalStateTax: 0 } });
     const over = run({ ...mfs, stateReturns: [wa({ waSpousesWithinDeduction: false })] }).findings;
-    expect(over).toEqual([expect.objectContaining({ itemId: 'separate-return', message: expect.stringContaining('outside HATax') })]);
+    expect(over).toEqual([expect.objectContaining({ itemId: 'separate-return', message: expect.stringContaining('outside HA Tax') })]);
     expect(over[0]!.question).toBeUndefined();
   });
 

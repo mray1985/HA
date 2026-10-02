@@ -695,7 +695,7 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
   };
   const hold = (itemId: string, message: string) => findings.push({
     ruleId: 'CA.YEAR.UNPUBLISHED', jurisdiction: 'CA', section: 'state', itemId,
-    message: `${message} Prepare the California return when the FTB publishes them, or outside HATax.`,
+    message: `${message} Prepare the California return when the FTB publishes them, or outside HA Tax.`,
   });
 
   // CalEITC / YCTC limit: the year's, or last year's recomputed by the CCPI change.
@@ -769,7 +769,7 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
   if (taxReturn.deductionMethod === 'itemized' && ii && ((calculation.investmentInterest?.carryforward || 0) > 0
       || ii.electToIncludeQualifiedDividends || ii.electToIncludeLTCG || (ii.priorYearDisallowed || 0) > 0)) {
     findings.push({ ruleId: 'CA.ADJUSTMENT', jurisdiction: 'CA', section: 'state', itemId: 'investmentInterest',
-      message: `California investment interest (FTB 3526) is not figured when the federal deduction is limited, a carryover is used or an election is made. Prepare the California return outside HATax.` });
+      message: `California investment interest (FTB 3526) is not figured when the federal deduction is limited, a carryover is used or an election is made. Prepare the California return outside HA Tax.` });
   }
 
   // ── Amounts not published for the year ──
@@ -797,11 +797,6 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
     hold('dependentParent', `Dependent parent credit: the ${year} maximum is not published yet.`);
   }
   return { findings, questions };
-}
-
-/** Earned income for CalEITC and YCTC (FTB 3514 line 19), for this return. */
-export function caEarnedIncome(taxReturn: TaxReturn, federalResult: CalculationResult): number {
-  return caEitcFacts(taxReturn, federalResult, federalResult.form1040.agi, 0).earnedIncome;
 }
 
 /** The federal Standard Deduction Worksheet for Dependents' line 2: earned income plus the year's amount. */
@@ -895,7 +890,7 @@ function computeCACoreTax(
   const rentersCredit = calculateRentersCredit(caAGI, filingKey, isRenter, t.rentersCredit);
   const caDependentCareCredit = calculateCADependentCareCredit(taxReturn, caAGI);
   const seniorHoHCredit = calculateSeniorHoHCredit(taxReturn, caAGI, taxableIncome, t.seniorHoH, answers);
-  // Form 540 line 35: line 31 less line 32 (HATax has no Schedule G-1 or FTB 5870A tax for line 34).
+  // Form 540 line 35: line 31 less line 32 (HA Tax has no Schedule G-1 or FTB 5870A tax for line 34).
   const line35 = Math.max(0, baseTax - exemptionCredits);
   const dependentParentCredit = calculateDependentParentCredit(taxReturn, filingKey, line35, t.dependentParentMax, answers);
 
@@ -935,7 +930,6 @@ function calculate540NR(
   const originalAGI = stateData._originalFederalAGI as number;
   const ratio = Math.min(1, Math.max(0, (stateData._allocationRatio as number) || 0));
   const allocatedAGI = federalResult.form1040.agi; // Already allocated by index.ts
-  const filingKey = getStateFilingKey(taxReturn.filingStatus);
 
   // Column A: Full-year resident tax on ALL income
   // NOTE: federalResult here is the allocated version from index.ts, but
@@ -1055,7 +1049,6 @@ export function calculateCalifornia(
   config: StateReturnConfig,
 ): StateCalculationResult {
   const f = federalResult.form1040;
-  const filingKey = getStateFilingKey(taxReturn.filingStatus);
   const federalAGI = f.agi;
   const tb = new TraceBuilder();
   const refs = STATE_FORM_REFS['CA'];

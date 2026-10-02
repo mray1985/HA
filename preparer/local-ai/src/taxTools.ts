@@ -784,21 +784,6 @@ export function fieldSchemaFor(tool: DocumentToolName | RecordToolName): z.ZodOb
   return isRecordTool(tool) ? RECORD_FIELD_SCHEMAS[tool] : TOOL_FIELD_SCHEMAS[tool];
 }
 
-/** Keep only schema-known keys (for OCR bridges). Direct tool calls still reject unknowns. */
-export function pickToolFieldArgs(
-  tool: DocumentToolName | RecordToolName,
-  args: Record<string, unknown>,
-): Record<string, unknown> {
-  const shape = fieldSchemaFor(tool).shape as Record<string, unknown>;
-  const picked: Record<string, unknown> = {};
-  for (const key of Object.keys(shape)) {
-    if (Object.prototype.hasOwnProperty.call(args, key)) {
-      picked[key] = args[key];
-    }
-  }
-  return picked;
-}
-
 const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_w2: 'W2',
   add_1099_int: '1099INT',
@@ -1019,18 +1004,6 @@ export function addW2(args: Record<string, unknown>, context: TaxToolCallContext
   return invokeTaxTool({ tool: 'add_w2', args, context });
 }
 
-export function add1099Int(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_1099_int', args, context });
-}
-
-export function add1099Div(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_1099_div', args, context });
-}
-
-export function add1099Nec(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_1099_nec', args, context });
-}
-
 export function add1099R(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
   return invokeTaxTool({ tool: 'add_1099_r', args, context });
 }
@@ -1044,21 +1017,4 @@ export function setFilingStatusCandidate(
   context: TaxToolCallContext,
 ): TaxToolResult {
   return invokeTaxTool({ tool: 'set_filing_status_candidate', args, context });
-}
-
-export function addDependent(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_dependent', args, context });
-}
-
-export function addScheduleCIncome(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_schedule_c_income', args, context });
-}
-
-export function addEstimatedPayment(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'add_estimated_payment', args, context });
-}
-
-/** Records the taxpayer's residency in one state; the applier sets that state's return from every source. */
-export function setStateResidency(args: Record<string, unknown>, context: TaxToolCallContext): TaxToolResult {
-  return invokeTaxTool({ tool: 'set_state_residency', args, context });
 }

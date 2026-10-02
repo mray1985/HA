@@ -101,7 +101,7 @@ export interface DeductionInsight {
   title: string;
   description: string;
   statutoryMax: string;           // e.g. "up to $2,500"
-  actionStepId: string;           // Wizard step to navigate to
+  actionStepId: string;           // Return section the finding opens
   signalCount: number;            // Number of matching transactions
   sampleDescriptions: string[];   // Up to 5 sample transaction descriptions (sorted by amount desc)
   compositeScore: number;         // 0-1 ranking score

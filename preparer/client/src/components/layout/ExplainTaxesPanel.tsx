@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useCaseStore } from '../../store/caseStore';
-import { ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import type { CalculationTrace } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
 import TraceDisclosure from '../common/TraceDisclosure';
 
 interface ExplainTaxesPanelProps {
-  /** Controlled open state (from WizardLayout). */
+  /** Controlled open state (the case's Explain tab shows it open). */
   open: boolean;
   /** Called when the user dismisses the panel (e.g. close button). */
   onClose?: () => void;
@@ -50,7 +50,7 @@ export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelPr
             </div>
             {/* Income Breakdown */}
             <div className="bg-surface-900 rounded-lg p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Your Income</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Income</h4>
               <div className="space-y-2">
                 {f.totalWages > 0 && (
                   <ExplainRow label="W-2 Wages" amount={f.totalWages} />
@@ -117,7 +117,7 @@ export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelPr
             {f.totalAdjustments > 0 && (
               <div className="bg-surface-900 rounded-lg p-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                  Adjustments <span className="text-HATaxService-orange-500">(reduce your income)</span>
+                  Adjustments <span className="text-HATaxService-orange-500">(reduce income)</span>
                 </h4>
                 <div className="space-y-2">
                   {f.seDeduction > 0 && (
@@ -211,7 +211,7 @@ export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelPr
             {f.totalCredits > 0 && (
               <div className="bg-surface-900 rounded-lg p-4">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-                  Credits <span className="text-emerald-500">(reduce your tax)</span>
+                  Credits <span className="text-emerald-500">(reduce tax)</span>
                 </h4>
                 <div className="space-y-2">
                   {(() => {
@@ -340,7 +340,7 @@ export default function ExplainTaxesPanel({ open, onClose }: ExplainTaxesPanelPr
 
             {/* Helpful context */}
             <p className="text-xs text-slate-400 text-center">
-              This estimate updates in real-time as you enter data. Your final tax may differ slightly.
+              This estimate updates as the return changes. The final tax may differ slightly.
             </p>
           </div>
       </div>

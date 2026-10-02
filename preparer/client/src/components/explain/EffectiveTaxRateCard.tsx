@@ -27,14 +27,14 @@ export default function EffectiveTaxRateCard({ form1040: f }: EffectiveTaxRateCa
         <div className="bg-surface-900 rounded-lg p-4 text-center border border-slate-700">
           <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Effective Rate</p>
           <p className="text-3xl font-bold text-HATaxService-blue-400">{effectivePct.toFixed(1)}%</p>
-          <p className="text-[10px] text-slate-400 mt-1">What you actually pay</p>
+          <p className="text-[10px] text-slate-400 mt-1">What is actually paid</p>
         </div>
 
         {/* Marginal rate */}
         <div className="bg-surface-900 rounded-lg p-4 text-center border border-slate-700">
           <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Marginal Rate</p>
           <p className="text-3xl font-bold text-slate-300">{marginalPct.toFixed(0)}%</p>
-          <p className="text-[10px] text-slate-400 mt-1">Your top bracket</p>
+          <p className="text-[10px] text-slate-400 mt-1">Top bracket</p>
         </div>
       </div>
 
@@ -62,15 +62,15 @@ export default function EffectiveTaxRateCard({ form1040: f }: EffectiveTaxRateCa
       {/* Plain English */}
       <div className="bg-HATaxService-blue-600/10 border border-HATaxService-blue-600/20 rounded-lg p-3">
         <p className="text-sm text-HATaxService-blue-200 leading-relaxed">
-          You're in the <strong>{marginalPct.toFixed(0)}% tax bracket</strong>, but your effective
+          The client is in the <strong>{marginalPct.toFixed(0)}% tax bracket</strong>, but the effective
           federal tax rate is only <strong>{effectivePct.toFixed(1)}%</strong>.
           {effectivePct > 0 && (
-            <> That means you keep about <strong>{keepRate.toFixed(0)} cents</strong> of every dollar earned.</>
+            <> That means the client keeps about <strong>{keepRate.toFixed(0)} cents</strong> of every dollar earned.</>
           )}
         </p>
         {f.totalIncome > 0 && totalFederalTax > 0 && (
           <p className="text-xs text-slate-400 mt-2">
-            On ${f.totalIncome.toLocaleString()} of total income, your federal tax is ${totalFederalTax.toLocaleString()}.
+            On ${f.totalIncome.toLocaleString()} of total income, the federal tax is ${totalFederalTax.toLocaleString()}.
           </p>
         )}
       </div>

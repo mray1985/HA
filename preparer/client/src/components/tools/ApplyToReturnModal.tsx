@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { X, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useCaseStore } from '../../store/caseStore';
 import { buildApplyPreview, type ApplyPreview, type FieldUpdate } from '../../services/categorizationApplier';
 import type { CategorizedTransaction } from '../../services/transactionCategorizerTypes';
@@ -36,7 +36,7 @@ export default function ApplyToReturnModal({ transactions, onConfirm, onCancel }
       <div className="w-full max-w-lg mx-4 rounded-xl bg-surface-800 border border-slate-700 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-600">
-          <h2 className="text-base font-semibold text-slate-200">Apply to your return</h2>
+          <h2 className="text-base font-semibold text-slate-200">Apply to the return</h2>
           <button
             onClick={onCancel}
             className="p-1 text-slate-400 hover:text-white rounded-md hover:bg-surface-700 transition-colors"
@@ -68,7 +68,7 @@ export default function ApplyToReturnModal({ transactions, onConfirm, onCancel }
                 Needs manual entry
               </h3>
               <p className="text-xs text-slate-400 mb-2">
-                These categories don't have a direct field mapping yet. Navigate to the relevant wizard step to enter these amounts.
+                These categories don't map to a return field yet. Enter these amounts on the return by hand.
               </p>
               <div className="space-y-2">
                 {manualUpdates.map((u) => (
@@ -82,9 +82,8 @@ export default function ApplyToReturnModal({ transactions, onConfirm, onCancel }
           {preview.discoveryKeysToEnable.length > 0 && (
             <div className="rounded-lg border border-HATaxService-blue-500/20 bg-HATaxService-blue-500/5 p-3">
               <p className="text-xs text-HATaxService-blue-300">
-                This will also enable {preview.discoveryKeysToEnable.length} wizard{' '}
-                {preview.discoveryKeysToEnable.length === 1 ? 'step' : 'steps'} that{' '}
-                {preview.discoveryKeysToEnable.length === 1 ? 'wasn\'t' : 'weren\'t'} previously visible.
+                This will also mark {preview.discoveryKeysToEnable.length} income or deduction{' '}
+                {preview.discoveryKeysToEnable.length === 1 ? 'type' : 'types'} as present on the return.
               </p>
             </div>
           )}

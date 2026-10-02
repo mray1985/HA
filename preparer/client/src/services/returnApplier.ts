@@ -242,7 +242,7 @@ function applySpouse(returnId: string, formKey: string): ApplyOutcome {
   return { kind: 'spouse', applied: true };
 }
 
-/** Where one extracted form goes: its tool's application, or a return item when HATax reads the type deterministically. */
+/** Where one extracted form goes: its tool's application, or a return item when HA Tax reads the type deterministically. */
 function applicationFor(incomeType: string | null): TaxToolApplication | null {
   const tool = formToolForIncomeType(incomeType);
   if (tool) return TOOL_APPLICATION[tool];

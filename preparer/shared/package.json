@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Open-source federal tax calculation engine for the 2025 tax year. Pure TypeScript.",
   "license": "MIT",
-  "author": "HATax",
+  "author": "HA Tax",
   "repository": {
     "type": "git",
     "url": "https://github.com/hatax/engine"

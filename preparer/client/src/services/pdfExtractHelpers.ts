@@ -731,21 +731,6 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
 }
 
 /**
- * Find the nearest numeric value near a label text.
- * Searches to the right and below the label.
- *
- * Only considers blocks whose text is a pure number (after stripping $ and whitespace).
- * This prevents parsing labels like "2 Federal income tax withheld" as the number 2.
- *
- * Uses closest-point distance from the label (not just right edge) so values
- * under wide merged labels are still found. Adds a below-bias: on IRS forms,
- * box values are always below their labels, so values above get a 20px penalty.
- */
-function findNearbyNumber(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): number | undefined {
-  return findNearbyAmount(textBlocks, labelBlock, maxDistance)?.value;
-}
-
-/**
  * Extract a number associated with a box label (e.g., "Box 1", "1 Wages").
  * Returns undefined when the box/label or nearby value is absent, or when the
  * token is amount-shaped but unreadable (raw token is still recorded when asked).
@@ -954,8 +939,8 @@ interface LocatedText {
 
 /**
  * Find the nearest raw text value near a label.
- * Like findNearbyNumber but preserves the string — use for tax codes, not amounts.
- * Uses closest-point distance and below-bias (same as findNearbyNumber).
+ * Like findNearbyAmount but preserves the string — use for tax codes, not amounts.
+ * Uses closest-point distance and below-bias (same as findNearbyAmount).
  * Candidates are restricted to the label's page.
  */
 function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): LocatedText {
@@ -1153,7 +1138,7 @@ export function extractW2Fields(
   //
   // The W-2 state section has boxes 15-20 on the same Y line with tiny X gaps
   // (5-15px), which causes groupWordsToPhrases to merge labels into one huge
-  // phrase. The keyword→findNearbyNumber pipeline fails because the merged
+  // phrase. The keyword→findNearbyAmount pipeline fails because the merged
   // label is wider than maxDistance=200. Instead, find the 2-letter state code
   // directly, then pick up numeric values to its right on the same line.
   const page1Blocks = textBlocks.filter(b => b.page === 1);

@@ -1,6 +1,6 @@
 /**
  * Archetype: Kitchen Sink — every income/credit/deduction type enabled.
- * The ultimate stress test for the wizard.
+ * The broadest stress test for the engine and the case review.
  */
 
 import type { Rng } from '../generators/random';

@@ -17,7 +17,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import {
   parseCompetitorReturn,
   sanitizeSsnToLastFour,
-  type CompetitorExtractResult,
 } from '../services/competitorReturnParser';
 import { detectProvider, getProvider } from '../data/competitorProviders';
 import { parseDollarValue, findLineValue, type TextBlock } from '../services/pdfTextUtils';

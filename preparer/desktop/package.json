@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "HA Tax Preparer: automated preparation with local AI, as an installable Windows application.",
-  "author": "HATax",
+  "author": "HA Tax",
   "license": "UNLICENSED",
   "main": "dist/main.cjs",
   "scripts": {

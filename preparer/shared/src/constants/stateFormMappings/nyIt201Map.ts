@@ -6,9 +6,7 @@
  *
  * NY IT-201 AcroForm fields use descriptive names (e.g., "TP_first_name", "Line2").
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
-import { FilingStatus } from '../../types/index.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────
 

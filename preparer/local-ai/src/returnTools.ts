@@ -22,10 +22,6 @@ export const RETURN_TOOL_NAMES = ['calculate_return', 'run_diagnostics'] as cons
 
 export type ReturnToolName = (typeof RETURN_TOOL_NAMES)[number];
 
-export function isReturnTool(name: string): name is ReturnToolName {
-  return (RETURN_TOOL_NAMES as readonly string[]).includes(name);
-}
-
 /** Both return tools take no arguments; anything passed is rejected. */
 export const ReturnToolArgsSchema = z.object({}).strict();
 

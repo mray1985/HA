@@ -2,7 +2,7 @@
  * Prior Year Importer — imports prior-year tax data for YoY comparison.
  *
  * Two import paths:
- * 1. HATax JSON export — re-runs calculateForm1040() for full computed results
+ * 1. HA Tax JSON export — re-runs calculateForm1040() for full computed results
  * 2. IRS 1040 PDF — extracts key line items via AcroForm fields (with text fallback)
  *
  * All processing runs client-side. Data never leaves the browser.
@@ -136,13 +136,13 @@ export async function importPriorYearJSON(file: File): Promise<PriorYearImportRe
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('Invalid JSON file. Please select a valid HATax export (.json).');
+    throw new Error('Invalid JSON file. Please select a valid HA Tax export (.json).');
   }
 
   // Validate it's a TaxReturn
   const tr = data as Partial<TaxReturn>;
   if (!tr.id || !tr.taxYear || tr.schemaVersion === undefined) {
-    throw new Error('This doesn\'t appear to be a HATax export. Missing required fields (id, taxYear, schemaVersion).');
+    throw new Error('This doesn\'t appear to be an HA Tax export. Missing required fields (id, taxYear, schemaVersion).');
   }
 
   if (tr.taxYear >= 2025) {

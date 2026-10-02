@@ -70,7 +70,7 @@ function makeFile(content: string, name = 'return.json'): File {
 // ─── JSON Import Tests ───────────────────────────
 
 describe('importPriorYearJSON', () => {
-  it('imports a valid HATax JSON export', async () => {
+  it('imports a valid HA Tax JSON export', async () => {
     const tr = makeTaxReturn();
     const file = makeFile(JSON.stringify(tr));
 

@@ -4,7 +4,7 @@
  * Generates a personalized list of forward-looking tax deadlines based on
  * a taxpayer's return data. Pure function, no side effects.
  *
- * Context: HATax handles the 2025 tax year. Users file in early 2026.
+ * Context: HA Tax handles the 2025 tax year. Users file in early 2026.
  * All deadlines shown are forward-looking — filing deadlines, contribution
  * deadlines, and 2026 estimated payments derived from the 2025 return.
  */
@@ -64,7 +64,7 @@ export function calculateTaxCalendar(
     type: 'filing',
     status: extended ? 'completed' : getStatus(FILING_DEADLINE, today),
     notes: extended
-      ? 'Extension granted — your new deadline is October 15, 2026. Taxes owed were still due by this date.'
+      ? 'Extension granted — the new deadline is October 15, 2026. Taxes owed were still due by this date.'
       : 'File Form 1040 or request an extension (Form 4868)',
     applicable: true,
   });
@@ -150,7 +150,7 @@ export function calculateTaxCalendar(
     type: extended ? 'filing' : 'extension',
     status: getStatus(EXTENSION_DEADLINE, today),
     notes: extended
-      ? 'You must file your return by this date. This is your final deadline.'
+      ? 'The return must be filed by this date. This is the final deadline.'
       : 'File Form 4868 by April 15 for an automatic 6-month extension to this date',
     applicable: true,
   });

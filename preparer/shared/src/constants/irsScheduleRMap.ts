@@ -41,7 +41,7 @@
  *   f2_15 = Line 20: Multiply line 19 by 15% (credit)
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
+import type { TaxReturn } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

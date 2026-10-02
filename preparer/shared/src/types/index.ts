@@ -1272,7 +1272,7 @@ export interface Form8615Info {
    * The parent's tax used the Schedule D Tax Worksheet (28% rate or unrecaptured
    * section 1250 gain), Schedule J or the Foreign Earned Income Tax Worksheet,
    * or another child has 28% rate or unrecaptured section 1250 gain: lines 9 and
-   * 10 then follow worksheets HATax does not fill for Form 8615.
+   * 10 then follow worksheets HA Tax does not fill for Form 8615.
    */
   parentSpecialComputation?: boolean;
 }
@@ -1755,7 +1755,7 @@ export interface PriorYearSummary {
   iraDistributions?: number;      // Line 4b — taxable IRA distributions
   pensionsAnnuities?: number;     // Line 5b — taxable pensions/annuities
   socialSecurityBenefits?: number; // Line 6b — taxable Social Security
-  /** The tax documents the prior-year return shows (a HATax import), for the missing-document check. */
+  /** The tax documents the prior-year return shows (an HA Tax import), for the missing-document check. */
   documents?: PriorYearDocument[];
 }
 

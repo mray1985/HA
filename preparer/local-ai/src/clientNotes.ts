@@ -30,8 +30,6 @@ import {
 import type { JsonSchema } from './toolDefinitions.js';
 
 export type NoteKind = 'dependents' | 'states' | 'payments' | 'spouse' | 'expenses';
-export const NOTE_KINDS: readonly NoteKind[] = ['dependents', 'states', 'payments', 'spouse', 'expenses'];
-
 export type NoteTool = 'add_dependent' | 'set_state_residency' | 'add_estimated_payment' | 'set_spouse' | 'add_business_expense';
 
 export interface NoteProposal {

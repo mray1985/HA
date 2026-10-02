@@ -79,20 +79,6 @@ async function getWorker(
   return workerInitPromise;
 }
 
-/** Terminate the OCR worker to free memory. Call on panel unmount. */
-export async function terminateWorker(): Promise<void> {
-  if (workerInstance) {
-    try {
-      await workerInstance.terminate();
-    } catch {
-      // Ignore termination errors
-    }
-    workerInstance = null;
-  }
-  workerInitPromise = null;
-  activeProgressCallback = undefined;
-}
-
 // ─── Pure Logic Functions (testable without WASM) ────
 
 /**
@@ -103,7 +89,7 @@ export async function terminateWorker(): Promise<void> {
  * source pixel space (e.g. 300 DPI or photo resolution) to PDF-point
  * space (72 DPI, ~612×792 for letter). This ensures groupWordsToLines()
  * operates in point space where yTolerance=5 is correctly calibrated,
- * and findNearbyNumber(maxDistance=200) searches the expected range.
+ * and findNearbyAmount(maxDistance=200) searches the expected range.
  */
 export function mapTesseractWordToTextBlock(
   word: TesseractWord,
@@ -133,7 +119,7 @@ export function mapTesseractWordToTextBlock(
  * Group word-level TextBlocks into line-level TextBlocks.
  *
  * Tesseract returns individual words. The existing findLabelBlock() and
- * findNearbyNumber() work better with line-level blocks that contain
+ * findNearbyAmount() work better with line-level blocks that contain
  * multi-word labels like "wages, tips" as a single block.
  *
  * Groups words that are on the same page and have similar Y coordinates

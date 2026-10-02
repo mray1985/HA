@@ -78,7 +78,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </div>
       <h1 className="text-3xl font-bold text-white mb-3">Tax Scenario Lab</h1>
       <p className="text-lg text-slate-400 mb-6">
-        See how changes to your income, deductions, or filing status would affect your refund — without touching your actual return.
+        See how changes to income, deductions, or filing status would affect the refund — without touching the actual return.
       </p>
 
       <div className="grid grid-cols-3 gap-4 mb-10 text-left">
@@ -99,7 +99,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         onClick={onAdd}
         className="px-6 py-3 bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded-lg text-base font-medium transition-colors"
       >
-        Create Your First Scenario
+        Create a Scenario
       </button>
     </div>
   );
@@ -118,11 +118,11 @@ function BaselineInfo({ baseResult }: { baseResult: import('@hatax/engine').Calc
       <div className={`rounded-lg border p-5 text-center ${
         isRefund ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'
       }`}>
-        <p className="text-xs text-slate-400 mb-1">{isRefund ? 'Your Current Refund' : 'You Currently Owe'}</p>
+        <p className="text-xs text-slate-400 mb-1">{isRefund ? 'Current Refund' : 'Currently Owed'}</p>
         <p className={`text-3xl font-bold ${isRefund ? 'text-emerald-400' : 'text-amber-400'}`}>
           ${(isRefund ? f.refundAmount : f.amountOwed).toLocaleString()}
         </p>
-        <p className="text-xs text-slate-400 mt-1">This is your baseline — create a scenario to compare</p>
+        <p className="text-xs text-slate-400 mt-1">This is the baseline — create a scenario to compare</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -196,7 +196,7 @@ function ScenarioLabInner({ taxReturn }: { taxReturn: import('@hatax/engine').Ta
             ) : (
               <div className="rounded-lg border border-slate-700/50 bg-surface-800 p-6 text-center">
                 <p className="text-sm text-slate-400">
-                  Select a scenario tab to edit variables, or view your baseline results.
+                  Select a scenario tab to edit variables, or view the baseline results.
                 </p>
               </div>
             )}

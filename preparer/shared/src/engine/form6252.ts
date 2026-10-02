@@ -47,7 +47,7 @@ export function calculateForm6252(info: InstallmentSaleInfo, taxYear?: number): 
   } else if (kind === 'business_real') {
     const acquired = info.dateAcquired ? parseDateString(info.dateAcquired) : null;
     if (line9 > 0 && acquired && acquired.year < 1987) {
-      problems.push('Real property acquired before 1987 may have section 1250 recapture of accelerated depreciation, which HATax does not figure.');
+      problems.push('Real property acquired before 1987 may have section 1250 recapture of accelerated depreciation, which HA Tax does not figure.');
     }
   } else if (kind === 'capital_asset' && line9 > 0) {
     problems.push('A capital asset has no depreciation; property you depreciated is trade or business property.');
@@ -56,7 +56,7 @@ export function calculateForm6252(info: InstallmentSaleInfo, taxYear?: number): 
   const line13 = round2(line10 + line11 + line12);
   const line14 = round2(line5 - line13);
   if (line14 <= 0) problems.push('The sale has no gain, so it is not an installment sale: report it in full on Form 8949 or Form 4797.');
-  if (info.mainHome) problems.push("The sale of a main home uses Form 6252 line 15's excluded gain, which HATax does not figure.");
+  if (info.mainHome) problems.push("The sale of a main home uses Form 6252 line 15's excluded gain, which HA Tax does not figure.");
   const line16 = Math.max(0, line14);
   const line17 = round2(Math.max(0, line6 - line13));
   const line18 = round2(line7 + line17);
@@ -67,7 +67,7 @@ export function calculateForm6252(info: InstallmentSaleInfo, taxYear?: number): 
   if (saleYear === undefined) problems.push('Enter the date of sale.');
   else if (taxYear !== undefined && saleYear > taxYear) problems.push(`The sale is dated ${saleYear}, after ${taxYear}.`);
   else if (saleYear < 1984 || (saleYear === 1984 && info.dateOfSale < '1984-06-07')) {
-    problems.push('A sale before June 7, 1984 can carry recapture into later years (line 25), which HATax does not figure.');
+    problems.push('A sale before June 7, 1984 can carry recapture into later years (line 25), which HA Tax does not figure.');
   }
 
   const line20 = yearOfSale ? line17 : 0;
@@ -83,7 +83,7 @@ export function calculateForm6252(info: InstallmentSaleInfo, taxYear?: number): 
   const line26 = line24;
 
   if (info.relatedParty === true) {
-    problems.push('A sale to a related party has its own rules (Part III, and no installment method for depreciable property), which HATax does not figure.');
+    problems.push('A sale to a related party has its own rules (Part III, and no installment method for depreciable property), which HA Tax does not figure.');
   } else if (info.relatedParty === undefined) {
     problems.push('Answer whether the property was sold to a related party (line 3).');
   }

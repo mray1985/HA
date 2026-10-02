@@ -29,7 +29,7 @@ export async function parsePDFStatement(file: File): Promise<ParseResult> {
     const transactions = parseTransactionLines(lines, warnings);
 
     if (transactions.length === 0) {
-      warnings.push('No transactions could be extracted from this PDF. Try exporting as CSV from your bank instead.');
+      warnings.push('No transactions could be extracted from this PDF. Try a CSV export from the bank instead.');
     }
 
     return {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TrendingUp, TrendingDown, ArrowDown, ArrowUp, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CalculationResult, FilingStatus } from '@hatax/engine';
 import type { DeltaMap, DeltaEntry, ScenarioColor } from './types';
-import { formatCurrency, formatPercent } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 import DeltaWaterfall from './charts/DeltaWaterfall';
 import BracketComparison from './charts/BracketComparison';
 
@@ -104,7 +104,7 @@ export default function ScenarioResultPanel({ baseResult, scenarioResult, delta,
             ? 'bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/20'
             : 'bg-surface-800 border-slate-700/50'
       }`}>
-        <p className="text-xs text-slate-400 mb-1">Impact on your return</p>
+        <p className="text-xs text-slate-400 mb-1">Impact on the return</p>
         <div className="flex items-center justify-center gap-2">
           {isBetter && <TrendingUp className="w-5 h-5 text-emerald-400" />}
           {isWorse && <TrendingDown className="w-5 h-5 text-amber-400" />}
@@ -121,7 +121,7 @@ export default function ScenarioResultPanel({ baseResult, scenarioResult, delta,
           </p>
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          {isBetter ? 'More in your pocket' : isWorse ? 'Additional cost' : ''}
+          {isBetter ? 'More for the client' : isWorse ? 'Additional cost' : ''}
         </p>
       </div>
 

@@ -19,7 +19,7 @@
 
 import {
   TaxReturn, CalculationResult, StateCalculationResult,
-  StateReturnConfig, FilingStatus, CalculationTrace,
+  StateReturnConfig, CalculationTrace,
 } from '../../types/index.js';
 import {
   CT_BRACKETS, CT_PERSONAL_EXEMPTION, CT_EXEMPTION_PHASEOUT_START,
@@ -254,8 +254,6 @@ export function calculateConnecticut(
   ).length || (taxReturn.dependents?.length || 0);
   const ctEITC = calculateCTEITC(federalEITC, qualifyingChildren);
 
-  // CT EITC is refundable; personal tax credit already applied above
-  const nonrefundableCredits = 0;
   const refundableCredits = ctEITC;
 
   const creditChildren: CalculationTrace[] = [];

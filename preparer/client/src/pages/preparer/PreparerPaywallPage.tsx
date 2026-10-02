@@ -9,7 +9,7 @@ export default function PreparerPaywallPage() {
         <p className="text-xs uppercase tracking-wide text-HATaxService-orange-400 mb-2">Preparer seat</p>
         <h1 className="text-2xl font-bold text-white mb-3">Start this tax season</h1>
         <p className="text-slate-300 text-sm leading-relaxed mb-4">
-          HA Preparer is the paid product. A seat lasts through April 15. Client returns stay on this computer, encrypted with your passphrase. The free household app does not use this seat.
+          HA Tax Preparer is the paid product. A seat lasts through April 15. Client returns stay on this computer, encrypted with your passphrase.
         </p>
         <p className="text-slate-400 text-sm leading-relaxed mb-6">
           Card checkout is not connected on this server yet. Starting the season records {user?.email ? `${user.email}'s` : 'your'} seat here so you can prepare returns.

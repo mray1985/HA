@@ -40,7 +40,6 @@
  *   f1_34 = Line 13: Total from prior pages (if multiple pages)
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 import { getForm4137 } from './taxConstants.js';
 

@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +13,7 @@ process.env.JWT_SECRET = 'test-jwt-secret';
 const express = (await import('express')).default;
 const cookieParser = (await import('cookie-parser')).default;
 const { authRoutes } = await import('../src/routes/auth.js');
-const { closeDatabase, createUser } = await import('../src/database.js');
+const { closeDatabase, createSession, createUser } = await import('../src/database.js');
 const { resolveJwtSecret } = await import('../src/jwtSecret.js');
 const bcrypt = (await import('bcrypt')).default;
 const jwt = (await import('jsonwebtoken')).default;
@@ -50,33 +51,58 @@ async function post(path: string, body: unknown) {
 }
 
 describe('auth routes', () => {
-  it('registers a taxpayer, rejects admin, and reads /me from the token', async () => {
+  it('registers a preparer, rejects any other account, and reads /me from the token', async () => {
     const created = await post('/api/auth/register', {
-      email: 'Taxpayer@Example.com',
+      email: 'New.Preparer@Example.com',
       password: 'password1',
-      name: 'Tax Payer',
-      role: 'taxpayer',
+      name: 'New Preparer',
     });
     expect(created.res.status).toBe(201);
-    expect(created.body.data.user.email).toBe('taxpayer@example.com');
-    expect(created.body.data.user.role).toBe('taxpayer');
+    expect(created.body.data.user.email).toBe('new.preparer@example.com');
+    expect(created.body.data.user.role).toBe('preparer');
     expect(created.res.headers.get('set-cookie')).toContain('access_token');
 
-    const rejected = await post('/api/auth/register', {
-      email: 'admin@example.com',
-      password: 'password1',
-      name: 'Admin',
-      role: 'admin',
-    });
-    expect(rejected.res.status).toBe(400);
+    for (const role of ['admin', 'taxpayer']) {
+      const rejected = await post('/api/auth/register', {
+        email: `${role}-signup@example.com`,
+        password: 'password1',
+        name: role,
+        role,
+      });
+      expect(rejected.res.status).toBe(400);
+    }
 
     const me = await fetch(`${base}/api/auth/me`, {
       headers: { Authorization: `Bearer ${created.body.data.accessToken}` },
     });
     expect(me.status).toBe(200);
     const meBody = await me.json();
-    expect(meBody.data.user.role).toBe('taxpayer');
-    expect(meBody.data.user.name).toBe('Tax Payer');
+    expect(meBody.data.user.role).toBe('preparer');
+    expect(meBody.data.user.name).toBe('New Preparer');
+  });
+
+  it('refuses to sign in an account that is not a preparer account', async () => {
+    createUser.run('household@example.com', await bcrypt.hash('password1', 4), 'Household', 'taxpayer');
+    const login = await post('/api/auth/login', { email: 'household@example.com', password: 'password1' });
+    expect(login.res.status).toBe(403);
+    expect(login.body.error.message).toBe('This account is not a preparer account.');
+    expect(login.res.headers.get('set-cookie')).toBeNull();
+  });
+
+  it("refuses a session that account already had, on every signed-in route", async () => {
+    const created = createUser.run('earlier-household@example.com', await bcrypt.hash('password1', 4), 'Household', 'taxpayer');
+    const userId = Number(created.lastInsertRowid);
+    // A session issued before sign-in was for preparers only.
+    const sid = randomBytes(32).toString('hex');
+    const token = jwt.sign({ userId, email: 'earlier-household@example.com', role: 'taxpayer', sid }, 'test-jwt-secret', { expiresIn: '7d' });
+    createSession.run(sid, userId, createHash('sha256').update(token).digest('hex'), new Date(Date.now() + 60_000).toISOString());
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const me = await fetch(`${base}/api/auth/me`, { headers: auth });
+    expect(me.status).toBe(403);
+    expect((await me.json()).error.message).toBe('This account is not a preparer account.');
+    const seat = await fetch(`${base}/api/auth/subscription/activate`, { method: 'POST', headers: auth });
+    expect(seat.status).toBe(403);
   });
 
   it('logs a preparer in and rejects a bad password', async () => {
@@ -161,7 +187,7 @@ describe('auth routes', () => {
     createUser.run('admin@example.com', await bcrypt.hash('password1', 4), 'Admin', 'admin');
     const admin = await post('/api/auth/login', { email: 'admin@example.com', password: 'password1' });
     const adminAuth = { Authorization: `Bearer ${admin.body.data.accessToken}` };
-    const target = await post('/api/auth/register', { email: 'leaving@example.com', password: 'password1', name: 'L', role: 'taxpayer' });
+    const target = await post('/api/auth/register', { email: 'leaving@example.com', password: 'password1', name: 'L', role: 'preparer' });
     const targetId = target.body.data.user.id;
 
     const self = await fetch(`${base}/api/auth/user/${admin.body.data.user.id}`, { method: 'DELETE', headers: adminAuth });

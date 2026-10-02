@@ -87,7 +87,7 @@ const EITC_RATE = 0.15;
 /** Child and dependent care credit worksheet: Iowa taxable income below each limit → rate. */
 const CHILD_CARE: ReadonlyArray<readonly [number, number]> = [[10000, 0.75], [20000, 0.65], [25000, 0.55], [35000, 0.5], [40000, 0.4], [90000, 0.3]];
 
-const OUTSIDE = 'Prepare the Iowa return outside HATax.';
+const OUTSIDE = 'Prepare the Iowa return outside HA Tax.';
 
 type Question = Omit<StateQuestion, 'stateCode'>;
 
@@ -173,7 +173,7 @@ export function assessIowa(taxReturn: TaxReturn, federal?: CalculationResult | n
   const params = IA_YEARS[year];
   const surtaxTable = IA_SURTAX[year];
   if (!params || !surtaxTable) {
-    find('year', `Iowa ${year}: the IA 1040 tax rates, thresholds and school district surtax rates for ${year} are not built in HATax. ${OUTSIDE}`);
+    find('year', `Iowa ${year}: the IA 1040 tax rates, thresholds and school district surtax rates for ${year} are not built in HA Tax. ${OUTSIDE}`);
     return done();
   }
 
@@ -190,7 +190,7 @@ export function assessIowa(taxReturn: TaxReturn, federal?: CalculationResult | n
   });
   const other = answerOf(config, otherQ.key);
   if (other === true) {
-    find('other-items', `Iowa: an Iowa modification or credit that HATax does not figure applies. ${OUTSIDE}`);
+    find('other-items', `Iowa: an Iowa modification or credit that HA Tax does not figure applies. ${OUTSIDE}`);
     return done();
   }
   if (other !== false) find('other-items', 'Iowa: some Schedule 1 modifications and credits depend on facts the return does not hold.', otherQ);
@@ -274,7 +274,7 @@ export function assessIowa(taxReturn: TaxReturn, federal?: CalculationResult | n
     const adjusted = forms.filter((r) => eligible.get(r.isSpouse === true) === true)
       .filter((r) => r.useSimplifiedMethod || (r.isRothIRA && (r.rothContributionBasis ?? 0) > 0) || (r.qcdAmount ?? 0) > 0);
     if (adjusted.length > 0 || (taxReturn.form8606 && [...eligible.values()].some((v) => v === true))) {
-      find('retirement-split', `Iowa retirement exclusion: only one spouse qualifies, and a distribution's federal taxable amount is adjusted (simplified method, Roth basis, QCD or Form 8606), so HATax cannot split it by recipient. ${OUTSIDE}`);
+      find('retirement-split', `Iowa retirement exclusion: only one spouse qualifies, and a distribution's federal taxable amount is adjusted (simplified method, Roth basis, QCD or Form 8606), so HA Tax cannot split it by recipient. ${OUTSIDE}`);
     }
     retirementExclusion = round2(forms
       .filter((r) => eligible.get(r.isSpouse === true) === true && !isRollover(r.distributionCode) && !(r.distributionCode || '').toUpperCase().includes('D'))
@@ -292,7 +292,7 @@ export function assessIowa(taxReturn: TaxReturn, federal?: CalculationResult | n
     const a = amountAnswer(config, q.key);
     if (a === undefined) find('health-insurance', 'Iowa deducts health and dental premiums paid with after-tax money at 65 or older when income is under $100,000 (Schedule 1, line 15).', q);
     else if (a > 0 && f.deductionUsed === 'itemized' && (taxReturn.itemizedDeductions?.medicalExpenses ?? 0) > 0) {
-      find('health-insurance', `Iowa health insurance deduction: medical expenses are itemized on the federal return, so the deduction is the premiums' share of the disallowed medical expenses; HATax does not split it. ${OUTSIDE}`);
+      find('health-insurance', `Iowa health insurance deduction: medical expenses are itemized on the federal return, so the deduction is the premiums' share of the disallowed medical expenses; HA Tax does not split it. ${OUTSIDE}`);
     } else healthInsurance = a;
   }
 

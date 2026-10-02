@@ -6,7 +6,6 @@
  *
  * WI Form 1 AcroForm fields use short names (e.g., "fname", "lname", "7").
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────

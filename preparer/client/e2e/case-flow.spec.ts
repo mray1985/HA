@@ -116,18 +116,18 @@ test("last year's documents the case lacks are possibly missing, and the client 
   await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/w2-basic-single.pdf');
   await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 30000 });
 
-  // Last year's HATax return: the same employer's W-2, and a 1099-INT from Chase.
+  // Last year's HA Tax return: the same employer's W-2, and a 1099-INT from Chase.
   await page.getByRole('button', { name: 'Other imports' }).click();
   await page.locator('input[type="file"][accept=".json,.pdf"]').setInputFiles('e2e/fixtures/prior-year-2024.json');
   await expect(page.getByText(/2024/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Tax forms' }).click();
   const missing = page.getByRole('region', { name: 'Possibly missing documents' });
   await expect(missing).toContainText('Possible missing 1099-INT from JPMORGAN CHASE BANK NA');
-  await expect(missing).toContainText('the 2024 imported HATax return has one for $123.45');
+  await expect(missing).toContainText('the 2024 imported HA Tax return has one for $123.45');
   await expect(missing).not.toContainText('W-2');
 
   await page.getByRole('link', { name: 'Client' }).click();
   await expect(page.getByLabel('Message to the client')).toContainText('Did you receive an interest statement (Form 1099-INT) from JPMORGAN CHASE BANK NA for 2025?');
   await page.getByRole('link', { name: /^Review/ }).click();
-  await expect(page.getByText(/Possible missing 1099-INT from JPMORGAN CHASE BANK NA: the 2024 imported HATax return/)).toBeVisible();
+  await expect(page.getByText(/Possible missing 1099-INT from JPMORGAN CHASE BANK NA: the 2024 imported HA Tax return/)).toBeVisible();
 });

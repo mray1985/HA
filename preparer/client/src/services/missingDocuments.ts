@@ -5,7 +5,7 @@
  * Last year comes from, in order: last year's case for the same client in this
  * app (the same SSN; or, where either has none, the same name and date of
  * birth), then the prior-year return imported on this case — its documents
- * when it was a HATax return, its totals otherwise.
+ * when it was an HA Tax return, its totals otherwise.
  */
 
 import {

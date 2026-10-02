@@ -1,20 +1,20 @@
 # Legal Disclaimer
 
-## This Software Is Not Tax Advice
+## A Tool for Tax Professionals
 
-HATax is a tax calculation engine provided for educational, research, and software development purposes. It does **not** constitute tax advice, legal advice, financial advice, or any other form of professional counsel.
+HA Tax Preparer is software for tax professionals. It reads documents, computes returns and lists what needs review; it does **not** constitute tax advice, legal advice, financial advice, or any other form of professional counsel.
 
-## Consult a Qualified Tax Professional
+## The Preparer Is Responsible for the Return
 
-You should consult a qualified tax professional (CPA, Enrolled Agent, or tax attorney) before making any tax filing decisions based on output from this software. Tax situations vary, and no automated system can substitute for professional judgment applied to your specific circumstances.
+Every return prepared with HA Tax Preparer is the preparer's work. The preparer reviews the documents, the facts read from them and the return, decides every open item, and approves the return. The app holds what it cannot read or settle for the preparer, but it cannot know what a client did not provide.
 
 ## No Responsibility for Filing Errors
 
-The authors, contributors, and maintainers of HATax are **not responsible** for any errors, omissions, or inaccuracies in tax calculations produced by this software. If you use this engine's output in a tax return, you do so entirely at your own risk.
+The authors, contributors, and maintainers of HA Tax are **not responsible** for any errors, omissions, or inaccuracies in returns, calculations or document readings produced by this software. Using its output in a tax return is at the preparer's own risk.
 
 ## Not Certified for E-Filing
 
-This engine has **not** been certified, approved, or authorized by the Internal Revenue Service (IRS) for electronic filing (e-filing). It is not an IRS-approved tax preparation product.
+HA Tax Preparer has **not** been certified, approved, or authorized by the Internal Revenue Service (IRS) for electronic filing (e-filing). It is not an IRS-approved e-file product.
 
 ## Tax Laws Change
 
@@ -22,8 +22,8 @@ Federal tax law, regulations, revenue procedures, and IRS guidance change regula
 
 ## No Warranty
 
-This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. See the [MIT License](../LICENSE) for full terms.
+This software is provided "as is" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. See the [MIT License](../LICENSE) for full terms, and the app's Terms of Use for the terms of its use.
 
 ## Use at Your Own Risk
 
-By using this software, you acknowledge that you bear sole responsibility for any consequences arising from its use, including but not limited to incorrect tax calculations, missed deductions, penalties, or interest assessed by taxing authorities.
+By using this software, you acknowledge that you bear sole responsibility for any consequences arising from its use, including but not limited to incorrect tax calculations, misread documents, missed deductions, penalties, or interest assessed by taxing authorities.

@@ -15,7 +15,6 @@
  */
 
 import { FilingStatus, TaxReturn, CalculationResult } from '../types/index.js';
-import { HoHValidationResult, DeceasedSpouseValidationResult } from '../types/index.js';
 import { validateHeadOfHousehold } from './filingStatusValidation.js';
 import { validateDeceasedSpouse } from './deceasedSpouse.js';
 import { calculateStateTaxes } from './state/index.js';

@@ -353,7 +353,7 @@ export function assessAuditRisk(
         category: 'deduction',
         points: 8,
         label: 'Large Charitable Deductions',
-        explanation: 'Your charitable deductions exceed 30% of your AGI. Average charitable giving is 3–5% of AGI for most income brackets per IRS Statistics of Income data. The IRS DIF system flags line items that deviate significantly from statistical norms.',
+        explanation: 'Charitable deductions exceed 30% of AGI. Average charitable giving is 3–5% of AGI for most income brackets per IRS Statistics of Income data. The IRS DIF system flags line items that deviate significantly from statistical norms.',
         mitigation: 'Keep written acknowledgments from charities for all donations of $250 or more (IRC §170(f)(8)). For noncash donations over $500, file Form 8283. For noncash donations over $5,000, obtain a qualified appraisal.',
         triggered: true,
       });
@@ -477,7 +477,7 @@ export function assessAuditRisk(
         category: 'deduction',
         points: 4,
         label: 'High Meal Expenses',
-        explanation: 'Your meal expenses exceed 10% of your business gross receipts. The IRS DIF system compares deduction patterns to statistical norms for businesses in your industry. Business meals are 50% deductible under IRC §274(n); entertainment expenses are fully nondeductible after the 2017 Tax Cuts and Jobs Act.',
+        explanation: 'Meal expenses exceed 10% of the business gross receipts. The IRS DIF system compares deduction patterns to statistical norms for businesses in the same industry. Business meals are 50% deductible under IRC §274(n); entertainment expenses are fully nondeductible after the 2017 Tax Cuts and Jobs Act.',
         mitigation: 'Keep detailed records for every business meal: date, amount, business purpose, attendees, and business relationship (IRC §274(d)).',
         triggered: true,
       });
@@ -505,8 +505,8 @@ export function assessAuditRisk(
       category: 'structural',
       points: pts,
       label: 'Unusual Values Flagged',
-      explanation: `Your return has ${plausibilityWarnings.length} value${plausibilityWarnings.length !== 1 ? 's' : ''} outside typical ranges. The IRS DIF system compares every line item on your return to statistical norms for similar taxpayers — values that deviate significantly increase your DIF score and the likelihood of examination selection.`,
-      mitigation: 'Review each flagged item in the Warnings panel. If the amounts are correct, keep extra documentation readily available in case of inquiry.',
+      explanation: `This return has ${plausibilityWarnings.length} value${plausibilityWarnings.length !== 1 ? 's' : ''} outside typical ranges. The IRS DIF system compares every line item on a return to statistical norms for similar taxpayers — values that deviate significantly increase the return's DIF score and the likelihood of examination selection.`,
+      mitigation: 'Review each flagged item on the Review tab. If the amounts are correct, keep extra documentation readily available in case of inquiry.',
       triggered: true,
     });
   }
@@ -930,12 +930,12 @@ export function assessAuditRisk(
 function buildSummary(level: RiskLevel, factorCount: number): string {
   switch (level) {
     case 'low':
-      return 'Your return has minimal audit risk factors. Standard recordkeeping should be sufficient.';
+      return 'This return has minimal audit risk factors. Standard recordkeeping should be sufficient.';
     case 'moderate':
-      return `Your return has ${factorCount} characteristic${factorCount !== 1 ? 's' : ''} associated with higher IRS examination rates. Keep organized records for your major deductions.`;
+      return `This return has ${factorCount} characteristic${factorCount !== 1 ? 's' : ''} associated with higher IRS examination rates. Keep organized records for the major deductions.`;
     case 'elevated':
-      return `Your return has ${factorCount} factors associated with increased IRS scrutiny. Ensure you have documentation for every deduction claimed.`;
+      return `This return has ${factorCount} factors associated with increased IRS scrutiny. Make sure every deduction claimed is documented.`;
     case 'high':
-      return `Your return has ${factorCount} significant audit-risk indicators. We strongly recommend thorough documentation and consider having a tax professional review your return.`;
+      return `This return has ${factorCount} significant audit-risk indicators. Document every item thoroughly before filing.`;
   }
 }

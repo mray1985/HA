@@ -87,7 +87,7 @@ export interface WashingtonCapitalGains {
 }
 
 const RULE = 'TAX-003';
-const OUTSIDE = 'Prepare the Washington capital gains return outside HATax.';
+const OUTSIDE = 'Prepare the Washington capital gains return outside HA Tax.';
 const usd = (n: number) => `$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 type Question = Omit<StateQuestion, 'stateCode'>;
@@ -252,20 +252,20 @@ export function assessWashingtonCapitalGains(taxReturn: TaxReturn, federal: Calc
   }
   if (separate) {
     if (spousesAnswer === false) {
-      return blocked('separate-return', `the spouses' Washington long-term gains together are over the standard deduction. On separate returns the spouses allocate their gains and the one deduction between them (RCW 82.87.120(4)); HATax does not make that allocation. ${OUTSIDE}`);
+      return blocked('separate-return', `the spouses' Washington long-term gains together are over the standard deduction. On separate returns the spouses allocate their gains and the one deduction between them (RCW 82.87.120(4)); HA Tax does not make that allocation. ${OUTSIDE}`);
     }
-    find('separate-return', "spouses share one standard deduction and the $1,000,000 threshold, even on separate returns (RCW 82.87.120(4)). HATax cannot see the other spouse's gains.", QUESTION.spouses(fullDeduction));
+    find('separate-return', "spouses share one standard deduction and the $1,000,000 threshold, even on separate returns (RCW 82.87.120(4)). HA Tax cannot see the other spouse's gains.", QUESTION.spouses(fullDeduction));
     return done({ ...none, ...settled, findings, noTaxPossible: false });
   }
   if (!amounts) {
-    return blocked('year', `the ${year} standard deduction is not built in HATax (the Department of Revenue publishes each year's amounts by October 31), and the long-term gains may be over the latest one published (${usd(WA_LATEST_STANDARD_DEDUCTION)}). ${OUTSIDE}`);
+    return blocked('year', `the ${year} standard deduction is not built in HA Tax (the Department of Revenue publishes each year's amounts by October 31), and the long-term gains may be over the latest one published (${usd(WA_LATEST_STANDARD_DEDUCTION)}). ${OUTSIDE}`);
   }
   if (residency === 'part_year') {
-    return blocked('part-year', `a part-year resident's gains on stocks and other intangible property are Washington's only for sales made while domiciled in Washington (RCW 82.87.100). HATax does not source sales by date. ${OUTSIDE}`);
+    return blocked('part-year', `a part-year resident's gains on stocks and other intangible property are Washington's only for sales made while domiciled in Washington (RCW 82.87.100). HA Tax does not source sales by date. ${OUTSIDE}`);
   }
   const special = answerOf(config, WA_ANSWER.specialItems);
   if (special === true) {
-    return blocked('special-items', `an exemption, deduction or credit that HATax does not figure applies to the gains. ${OUTSIDE}`);
+    return blocked('special-items', `an exemption, deduction or credit that HA Tax does not figure applies to the gains. ${OUTSIDE}`);
   }
 
   // What an answer settles.

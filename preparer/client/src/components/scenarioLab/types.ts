@@ -20,11 +20,11 @@ export interface ScenarioVariable {
   options?: { value: string; label: string }[];
   isRelevant?: (tr: TaxReturn) => boolean;
   /** Whether this variable can be applied directly to the real tax return.
-   *  'direct' = safe scalar write, 'navigate' = must go to wizard step. */
+   *  'direct' = safe scalar write, 'navigate' = entered on the return ("Edit in Return"). */
   applyMode?: 'direct' | 'navigate';
-  /** Wizard step ID to navigate to (for 'navigate' mode) or to link as reference (for 'direct' mode). */
+  /** The return section to open (for 'navigate' mode) or to link as reference (for 'direct' mode). */
   targetStepId?: string;
-  /** Icon matching the corresponding wizard step. */
+  /** Icon for the variable's return section. */
   icon?: LucideIcon;
 }
 
@@ -126,10 +126,3 @@ export interface UseScenarioLabReturn {
 // ---------------------------------------------------------------------------
 // Quick Presets
 // ---------------------------------------------------------------------------
-
-export interface QuickPreset {
-  id: string;
-  label: string;
-  description: string;
-  getOverrides: (tr: TaxReturn) => Map<string, unknown>;
-}

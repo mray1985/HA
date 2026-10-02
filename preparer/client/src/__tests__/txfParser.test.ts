@@ -8,7 +8,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseTXF } from '../services/txfParser';
-import type { TXFParseResult } from '../services/txfParser';
 
 // ─── Helpers ─────────────────────────────────────────
 

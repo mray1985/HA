@@ -1,6 +1,6 @@
 /**
- * Last year's totals and documents, from a HATax return and its calculation:
- * an imported HATax export, or last year's case in this app.
+ * Last year's totals and documents, from an HA Tax return and its calculation:
+ * an imported HA Tax export, or last year's case in this app.
  */
 
 import { FilingStatus, type CalculationResult, type PriorYearSummary, type TaxReturn } from '@hatax/engine';
