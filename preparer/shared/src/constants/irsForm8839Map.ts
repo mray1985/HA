@@ -31,7 +31,6 @@
  * and Part III summary credit. Fields without engine data are left unmapped.
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { getAdoptionCredit } from './taxConstants.js';
 
 const fmtDollar = (v: number | undefined): string => {

@@ -43,7 +43,6 @@ export function calculateTaxableSocialSecurity(
     return { totalBenefits: 0, taxableBenefits: 0, taxablePercentage: 0, provisionalIncome: 0 };
   }
 
-  const SOCIAL_SECURITY = getSocialSecurity(taxYear);
 
   // Provisional income = other income + tax-exempt interest + 50% of SS benefits
   const halfBenefits = totalBenefits * 0.5;

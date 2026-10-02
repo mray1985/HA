@@ -136,7 +136,6 @@ export function getReturnWarnings(taxReturn: TaxReturn, calculation?: Calculatio
 
     // Qualifying relative residency: non-relatives must live with you all year
     const isChildRelationship = ['Son', 'Daughter', 'Stepson', 'Stepdaughter', 'Foster Child', 'Grandchild', 'Brother', 'Sister', 'Half Brother', 'Half Sister', 'Stepbrother', 'Stepsister', 'Niece', 'Nephew'].includes(dep.relationship);
-    const isParentRelationship = ['Parent', 'Mother', 'Father', 'Stepmother', 'Stepfather', 'Grandparent'].includes(dep.relationship);
     if (dep.relationship === 'None (not related)' && (dep.monthsLivedWithYou ?? 12) < 12) {
       warnings.push({
         section: 'dependents',

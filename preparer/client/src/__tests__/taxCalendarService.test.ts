@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateTaxCalendar,
   formatDeadlineDate,
-  type TaxDeadline,
 } from '../services/taxCalendarService';
 import { FilingStatus } from '@hatax/engine';
 import type { TaxReturn, CalculationResult } from '@hatax/engine';

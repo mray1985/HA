@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useCaseStore } from '../../store/caseStore';
-import { ChevronDown, ChevronUp, ArrowRight, X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import type { CalculationTrace } from '@hatax/engine';
 import { formatCurrency, formatPercent } from '../../utils/format';
 import TraceDisclosure from '../common/TraceDisclosure';

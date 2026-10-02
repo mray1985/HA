@@ -9,7 +9,7 @@
 
 import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import {
-  TrendingUp, TrendingDown, ArrowRight, FileInput, X, Trash2, History, Copy,
+  TrendingUp, TrendingDown, ArrowRight, FileInput, Trash2, History, Copy,
 } from 'lucide-react';
 import type { PriorYearSummary, TaxReturn } from '@hatax/engine';
 import type { Form1040Result } from '@hatax/engine';

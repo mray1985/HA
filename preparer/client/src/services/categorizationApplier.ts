@@ -290,31 +290,3 @@ function buildBusinessSubCategoryTotals(
   }
   return map;
 }
-
-/**
- * Build ExpenseEntry objects from approved business_expense transactions.
- * Used by the apply handler to create Schedule C expense entries.
- */
-export function buildScheduleCExpenses(
-  transactions: CategorizedTransaction[],
-): Array<{ scheduleCLine: number; category: string; description: string; amount: number }> {
-  const subTotals = buildBusinessSubCategoryTotals(transactions);
-  const entries: Array<{ scheduleCLine: number; category: string; description: string; amount: number }> = [];
-
-  for (const [subCat, { total }] of subTotals) {
-    const lineMapping = SUB_CATEGORY_TO_SCHEDULE_C[subCat];
-    if (!lineMapping) continue;
-
-    const subMeta = BUSINESS_SUB_CATEGORY_META[subCat];
-    const rate = subMeta?.deductibilityRate ?? 1.0;
-
-    entries.push({
-      scheduleCLine: lineMapping.scheduleCLine,
-      category: lineMapping.expenseCategory,
-      description: `Smart Expense Scanner: ${subMeta?.label ?? subCat}`,
-      amount: Math.round(total * rate),
-    });
-  }
-
-  return entries;
-}

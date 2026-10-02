@@ -6,7 +6,6 @@ import type { Rng } from '../generators/random';
 import type { FuzzerTaxReturn } from '../generators/base';
 import { generateW2 } from '../generators/income';
 import { generateItemizedDeductions, generateAMTData, applyAdjustments } from '../generators/deductions';
-import { pickState } from '../generators/state';
 
 export function buildHighIncomeItemizer(rng: Rng, tr: FuzzerTaxReturn): void {
   tr.filingStatus = rng.weighted([[1, 4], [2, 4], [3, 2]]); // Single, MFJ, or MFS

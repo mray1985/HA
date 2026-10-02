@@ -8,7 +8,6 @@ import { describe, it, expect } from 'vitest';
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import type { TaxReturn } from '@hatax/engine';
 import { applyOverrides } from '../components/scenarioLab/useScenarioLab';
-import { VARIABLE_DEFINITIONS } from '../components/scenarioLab/variableDefinitions';
 import type { SensitivityConfig } from '../components/scenarioLab/types';
 
 // ---------------------------------------------------------------------------

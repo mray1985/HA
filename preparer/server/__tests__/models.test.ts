@@ -36,7 +36,7 @@ beforeAll(async () => {
   const res = await fetch(`${base}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'preparer@example.com', password: 'password1', name: 'Preparer', role: 'taxpayer' }),
+    body: JSON.stringify({ email: 'preparer@example.com', password: 'password1', name: 'Preparer', role: 'preparer' }),
   });
   token = ((await res.json()) as { data: { accessToken: string } }).data.accessToken;
 });

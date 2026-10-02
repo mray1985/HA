@@ -26,7 +26,7 @@ import CurrencyInput from '../common/CurrencyInput';
 import { flushCaseSave, useCaseStore } from '../../store/caseStore';
 import { recordPriorYearDependents } from '../../services/recordTools';
 import { FilingStatus } from '@hatax/engine';
-import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
+import type { PriorYearSummary } from '@hatax/engine';
 import {
   parseCompetitorReturn,
   type CompetitorExtractResult,
@@ -36,7 +36,6 @@ import {
 import {
   COMPETITOR_PROVIDERS,
   getProvider,
-  type CompetitorProvider,
 } from '../../data/competitorProviders';
 
 // ─── Types ─────────────────────────────────────────

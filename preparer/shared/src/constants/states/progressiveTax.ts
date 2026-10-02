@@ -34,7 +34,7 @@
 
 import type { ProgressiveTaxStateConfig } from '../../engine/state/progressiveTax.js';
 import { countExemptions } from '../../engine/state/progressiveTax.js';
-import { type TaxReturn, type CalculationResult, type StateReturnConfig, FilingStatus } from '../../types/index.js';
+import { type TaxReturn, type CalculationResult, type StateReturnConfig } from '../../types/index.js';
 
 // ═══════════════════════════════════════════════════════════════════
 // HELPERS
@@ -47,16 +47,6 @@ function uniformBrackets(brackets: { min: number; max: number; rate: number }[])
     married_joint: brackets,
     married_separate: brackets,
     head_of_household: brackets,
-  } as const;
-}
-
-/** Same deduction for all filing statuses. */
-function uniformDeduction(amount: number) {
-  return {
-    single: amount,
-    married_joint: amount,
-    married_separate: amount,
-    head_of_household: amount,
   } as const;
 }
 

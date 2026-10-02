@@ -27,12 +27,6 @@ import {
 
 export type ChoiceTool = 'add_education_expense' | 'add_1099_q' | 'add_1099_sa' | 'add_1099_s';
 
-export const CHOICE_TOOLS: readonly ChoiceTool[] = ['add_education_expense', 'add_1099_q', 'add_1099_sa', 'add_1099_s'];
-
-export function isChoiceTool(tool: string): tool is ChoiceTool {
-  return (CHOICE_TOOLS as readonly string[]).includes(tool);
-}
-
 const money = z.number().finite().nonnegative();
 const months = z.number().int().min(0).max(60);
 

@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { X, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useCaseStore } from '../../store/caseStore';
 import { buildApplyPreview, type ApplyPreview, type FieldUpdate } from '../../services/categorizationApplier';
 import type { CategorizedTransaction } from '../../services/transactionCategorizerTypes';

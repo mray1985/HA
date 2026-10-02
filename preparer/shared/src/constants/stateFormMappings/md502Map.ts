@@ -6,7 +6,6 @@
  *
  * MD-502 AcroForm fields use descriptive names (e.g., "Enter your first name").
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────

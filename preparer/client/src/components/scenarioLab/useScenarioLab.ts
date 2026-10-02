@@ -217,26 +217,6 @@ const INITIAL_STATE: ScenarioLabState = {
 // Keyed to tax return ID so switching returns invalidates stale scenarios.
 let cachedState: ScenarioLabState | null = null;
 let cachedTaxReturnId: string | null = null;
-let cachedDeltas: Map<string, DeltaMap> | null = null;
-
-/**
- * Read-only snapshot of the current scenario lab state for external consumers
- * (e.g., chat context builder). Returns null if no scenarios exist.
- */
-export function getScenarioLabSnapshot(): {
-  scenarios: Array<{ id: string; name: string; overrideCount: number }>;
-  deltas: Map<string, DeltaMap>;
-} | null {
-  if (!cachedState || cachedState.scenarios.length === 0) return null;
-  return {
-    scenarios: cachedState.scenarios.map(s => ({
-      id: s.id,
-      name: s.name,
-      overrideCount: s.overrides.size,
-    })),
-    deltas: cachedDeltas ?? new Map(),
-  };
-}
 
 export function useScenarioLab(taxReturn: TaxReturn): UseScenarioLabReturn {
   // Invalidate cache when tax return identity changes
@@ -292,8 +272,6 @@ export function useScenarioLab(taxReturn: TaxReturn): UseScenarioLabReturn {
     return deltaMap;
   }, [baseResult, scenarioResults]);
 
-  // Cache deltas for external consumers (chat context builder)
-  useEffect(() => { cachedDeltas = deltas; }, [deltas]);
 
   return { state, dispatch, baseResult, scenarioResults, deltas };
 }

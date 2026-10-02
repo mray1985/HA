@@ -55,7 +55,6 @@
  *       f2_29 = Line 40: Result used as TMT when Part III applies
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

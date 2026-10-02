@@ -144,7 +144,6 @@ export function calculateSolo401kLimits(input: Solo401kInput, taxYear: number = 
   // For the §415(c) test, separate catch-up from the base deferral
   // (catch-up contributions are NOT counted toward the §415(c) limit)
   const baseDeferralPortion = round2(Math.min(appliedEmployeeDeferral, remainingDeferralLimit));
-  const catchUpPortion = round2(appliedEmployeeDeferral - baseDeferralPortion);
   const combinedWithoutCatchUp = round2(baseDeferralPortion + appliedEmployerContribution);
 
   // §415(c)(1)(B): 100% of compensation — for self-employed, compensation = adjusted net SE income

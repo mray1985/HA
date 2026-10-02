@@ -27,9 +27,7 @@ import { FORM_8936_TEMPLATE } from '@hatax/engine';
 import { SCHEDULE_A_TEMPLATE } from '@hatax/engine';
 import { SCHEDULE_B_TEMPLATE } from '@hatax/engine';
 import { FORM_4562_TEMPLATE } from '@hatax/engine';
-import { FORM_1040_ES_TEMPLATE } from '@hatax/engine';
 import { FORM_1040V_TEMPLATE } from '@hatax/engine';
-import { FORM_4868_TEMPLATE } from '@hatax/engine';
 import { FORM_7206_TEMPLATE } from '@hatax/engine';
 import { SCHEDULE_F_TEMPLATE } from '@hatax/engine';
 import { SCHEDULE_H_TEMPLATE } from '@hatax/engine';
@@ -221,38 +219,6 @@ export async function fillIRSForm(
 
   if (options.flatten) form.flatten();
   return doc.save();
-}
-
-// ─── Estimated Tax Voucher Generation ────────────────────────────
-
-/**
- * Generate a 1040-ES voucher PDF: fill the official template, then extract
- * only the voucher pages (discarding the worksheet/instruction pages).
- */
-export async function generateEstimatedTaxVouchersPDF(
-  taxReturn: TaxReturn,
-  calc: CalculationResult,
-): Promise<Uint8Array> {
-  const template = FORM_1040_ES_TEMPLATE;
-  const filledBytes = await fillIRSForm(template, taxReturn, calc);
-  const filledDoc = await PDFDocument.load(filledBytes);
-  const voucherDoc = await PDFDocument.create();
-  const pages = await voucherDoc.copyPages(filledDoc, template.voucherPageIndices);
-  for (const page of pages) voucherDoc.addPage(page);
-  return voucherDoc.save();
-}
-
-// ─── Form 4868 Extension Generation ─────────────────────────────
-
-/**
- * Generate a pre-filled Form 4868 (Automatic Extension of Time to File).
- * Standalone — not part of the filing packet.
- */
-export async function generateForm4868PDF(
-  taxReturn: TaxReturn,
-  calc: CalculationResult,
-): Promise<Uint8Array> {
-  return fillIRSForm(FORM_4868_TEMPLATE, taxReturn, calc);
 }
 
 // ─── Full Return Generation ─────────────────────────────────────

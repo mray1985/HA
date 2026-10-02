@@ -13,7 +13,6 @@ import {
   parseDateString,
   parseHoldingPeriod,
   inferHoldingPeriod,
-  validateRequiredFields,
 } from './importHelpers';
 
 // ─── Types ─────────────────────────────────────────

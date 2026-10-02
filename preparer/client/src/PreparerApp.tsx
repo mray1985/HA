@@ -154,8 +154,8 @@ export default function PreparerApp() {
   if (isPublicPage) {
     return (
       <Routes>
-        <Route path="/preparer/login" element={<LoginPage audience="preparer" />} />
-        <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
+        <Route path="/preparer/login" element={<LoginPage />} />
+        <Route path="/preparer/register" element={<RegisterPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
@@ -212,8 +212,8 @@ export default function PreparerApp() {
       </a>
       <main id="main-content">
         <Routes>
-          <Route path="/preparer/login" element={<LoginPage audience="preparer" />} />
-          <Route path="/preparer/register" element={<RegisterPage audience="preparer" />} />
+          <Route path="/preparer/login" element={<LoginPage />} />
+          <Route path="/preparer/register" element={<RegisterPage />} />
           <Route
             path="/preparer"
             element={protectedPage(<CaseDashboardPage />)}

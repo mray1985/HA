@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, ChevronDown, ChevronUp, Copy, FileCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { useCaseStore } from '../../store/caseStore';
 import { batchAddIncomeItems, getReturn } from '../../api/client';
 import { parseTXF, TXFParseResult } from '../../services/txfParser';

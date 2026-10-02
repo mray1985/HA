@@ -492,8 +492,3 @@ export function classificationAllowsIncomeWrite(
   // case — it is never written as income (that would double-count wages).
   return classification.status === 'classified';
 }
-
-export function isClassifiableFormType(value: string | null | undefined): value is ClassifiableFormType {
-  if (!value) return false;
-  return (CLASSIFIABLE_FORM_TYPES as readonly string[]).includes(value);
-}

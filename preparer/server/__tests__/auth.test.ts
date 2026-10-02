@@ -50,33 +50,42 @@ async function post(path: string, body: unknown) {
 }
 
 describe('auth routes', () => {
-  it('registers a taxpayer, rejects admin, and reads /me from the token', async () => {
+  it('registers a preparer, rejects any other account, and reads /me from the token', async () => {
     const created = await post('/api/auth/register', {
-      email: 'Taxpayer@Example.com',
+      email: 'New.Preparer@Example.com',
       password: 'password1',
-      name: 'Tax Payer',
-      role: 'taxpayer',
+      name: 'New Preparer',
     });
     expect(created.res.status).toBe(201);
-    expect(created.body.data.user.email).toBe('taxpayer@example.com');
-    expect(created.body.data.user.role).toBe('taxpayer');
+    expect(created.body.data.user.email).toBe('new.preparer@example.com');
+    expect(created.body.data.user.role).toBe('preparer');
     expect(created.res.headers.get('set-cookie')).toContain('access_token');
 
-    const rejected = await post('/api/auth/register', {
-      email: 'admin@example.com',
-      password: 'password1',
-      name: 'Admin',
-      role: 'admin',
-    });
-    expect(rejected.res.status).toBe(400);
+    for (const role of ['admin', 'taxpayer']) {
+      const rejected = await post('/api/auth/register', {
+        email: `${role}-signup@example.com`,
+        password: 'password1',
+        name: role,
+        role,
+      });
+      expect(rejected.res.status).toBe(400);
+    }
 
     const me = await fetch(`${base}/api/auth/me`, {
       headers: { Authorization: `Bearer ${created.body.data.accessToken}` },
     });
     expect(me.status).toBe(200);
     const meBody = await me.json();
-    expect(meBody.data.user.role).toBe('taxpayer');
-    expect(meBody.data.user.name).toBe('Tax Payer');
+    expect(meBody.data.user.role).toBe('preparer');
+    expect(meBody.data.user.name).toBe('New Preparer');
+  });
+
+  it('refuses to sign in an account that is not a preparer account', async () => {
+    createUser.run('household@example.com', await bcrypt.hash('password1', 4), 'Household', 'taxpayer');
+    const login = await post('/api/auth/login', { email: 'household@example.com', password: 'password1' });
+    expect(login.res.status).toBe(403);
+    expect(login.body.error.message).toBe('This account is not a preparer account.');
+    expect(login.res.headers.get('set-cookie')).toBeNull();
   });
 
   it('logs a preparer in and rejects a bad password', async () => {
@@ -161,7 +170,7 @@ describe('auth routes', () => {
     createUser.run('admin@example.com', await bcrypt.hash('password1', 4), 'Admin', 'admin');
     const admin = await post('/api/auth/login', { email: 'admin@example.com', password: 'password1' });
     const adminAuth = { Authorization: `Bearer ${admin.body.data.accessToken}` };
-    const target = await post('/api/auth/register', { email: 'leaving@example.com', password: 'password1', name: 'L', role: 'taxpayer' });
+    const target = await post('/api/auth/register', { email: 'leaving@example.com', password: 'password1', name: 'L', role: 'preparer' });
     const targetId = target.body.data.user.id;
 
     const self = await fetch(`${base}/api/auth/user/${admin.body.data.user.id}`, { method: 'DELETE', headers: adminAuth });

@@ -7,7 +7,6 @@
  * CA-540 AcroForm fields use numeric IDs like "540_form_XYYY" where X = page, YYY = field id.
  * The mapping below was derived by visually correlating the PDF form with the field listing.
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 import { FilingStatus } from '../../types/index.js';
 

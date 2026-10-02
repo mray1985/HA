@@ -799,11 +799,6 @@ export function assessCalifornia(taxReturn: TaxReturn, calculation: CalculationR
   return { findings, questions };
 }
 
-/** Earned income for CalEITC and YCTC (FTB 3514 line 19), for this return. */
-export function caEarnedIncome(taxReturn: TaxReturn, federalResult: CalculationResult): number {
-  return caEitcFacts(taxReturn, federalResult, federalResult.form1040.agi, 0).earnedIncome;
-}
-
 /** The federal Standard Deduction Worksheet for Dependents' line 2: earned income plus the year's amount. */
 function dependentWorksheetLine2(taxReturn: TaxReturn, federalResult: CalculationResult): number {
   const f = federalResult.form1040;
@@ -935,7 +930,6 @@ function calculate540NR(
   const originalAGI = stateData._originalFederalAGI as number;
   const ratio = Math.min(1, Math.max(0, (stateData._allocationRatio as number) || 0));
   const allocatedAGI = federalResult.form1040.agi; // Already allocated by index.ts
-  const filingKey = getStateFilingKey(taxReturn.filingStatus);
 
   // Column A: Full-year resident tax on ALL income
   // NOTE: federalResult here is the allocated version from index.ts, but
@@ -1055,7 +1049,6 @@ export function calculateCalifornia(
   config: StateReturnConfig,
 ): StateCalculationResult {
   const f = federalResult.form1040;
-  const filingKey = getStateFilingKey(taxReturn.filingStatus);
   const federalAGI = f.agi;
   const tb = new TraceBuilder();
   const refs = STATE_FORM_REFS['CA'];

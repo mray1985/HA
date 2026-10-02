@@ -13,7 +13,7 @@ import ExpenseScannerSetup from './ExpenseScannerSetup';
 import ApplyToReturnModal from './ApplyToReturnModal';
 import SectionIntro from '../common/SectionIntro';
 import FileDropZone from '../import/FileDropZone';
-import { Sparkles, Loader2, ArrowLeft, ScanSearch, Upload, FileText, X } from 'lucide-react';
+import { Sparkles, Loader2, ArrowLeft, ScanSearch, FileText, X } from 'lucide-react';
 import { useDeductionFinder } from '../../hooks/useDeductionFinder';
 import { useDeductionFinderStore } from '../../store/deductionFinderStore';
 import { useCaseStore } from '../../store/caseStore';

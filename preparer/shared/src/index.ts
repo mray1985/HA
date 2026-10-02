@@ -51,7 +51,6 @@ export * from './engine/form4562.js';
 export * from './engine/unsupported.js';
 export * from './engine/form4797.js';
 export * from './engine/form4684.js';
-export * from './engine/form4835.js';
 export * from './engine/form6252.js';
 export * from './engine/form4137.js';
 export * from './engine/scheduleF.js';
@@ -78,18 +77,6 @@ export * from './engine/state/pa.js';
 export * from './constants/states/ia.js';
 export * from './constants/states/in.js';
 export * from './constants/states/wa.js';
-
-// Chat types (AI assistant)
-export * from './types/chat.js';
-
-// AI settings types (three-tier AI mode system)
-export * from './types/aiSettings.js';
-
-// LLM response parser (shared between server and client LocalTransport)
-export * from './utils/llmResponseParser.js';
-
-// PII scanner (client primary gate + server defense-in-depth)
-export * from './utils/piiScanner.js';
 
 // IRS fillable PDF form mappings
 export * from './types/irsFormMappings.js';
@@ -133,40 +120,17 @@ export * from './constants/irsForm2555Map.js';
 export * from './constants/irsForm3903Map.js';
 export * from './constants/irsForm982Map.js';
 export * from './constants/irsMailingAddresses.js';
-export * from './constants/estimatedTaxMailingAddresses.js';
 export * from './constants/stateMailingAddresses.js';
 export * from './constants/filingInstructions.js';
-export * from './constants/irsForm1040ESMap.js';
-export * from './constants/irsForm4868Map.js';
 export * from './constants/irsForm5500EZMap.js';
 
 // Forms Mode — field editability classifier
 export * from './engine/formFieldClassifier.js';
-
-// NAICS business code lookup (Schedule C Line B + SSTB auto-detection)
-export * from './constants/naicsCodes.js';
-
-// Donation valuation tool (charitable contribution FMV lookup + depreciation)
-export * from './constants/donationValuationDb.js';
-export * from './engine/donationValuation.js';
-
-// Filing options service (eligibility + Transfer Guide)
-export * from './services/filingOptionsService.js';
-
-// Dynamic IRS reference data for AI chat
-export * from './services/buildIrsReferenceData.js';
 
 // Calculation trace engine (inspired by IRS Direct File Fact Graph)
 export * from './engine/traceBuilder.js';
 export * from './engine/plausibility.js';
 export * from './diagnostics/index.js';
 
-// SSN utilities
-export * from './utils/ssn.js';
-
 // Schema migration system
 export * from './migrations/index.js';
-
-// Declarative wizard conditions (inspired by Direct File's condition-driven flow)
-export * from './wizard/conditionTypes.js';
-export * from './wizard/conditionEvaluator.js';

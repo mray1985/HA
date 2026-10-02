@@ -166,19 +166,6 @@ function issue(
   };
 }
 
-function byDocAndField(facts: TaxFact[]): Map<string, Map<string, TaxFact>> {
-  const docs = new Map<string, Map<string, TaxFact>>();
-  for (const fact of facts) {
-    let fields = docs.get(fact.sourceDocumentId);
-    if (!fields) {
-      fields = new Map();
-      docs.set(fact.sourceDocumentId, fields);
-    }
-    fields.set(fact.sourceField, fact);
-  }
-  return docs;
-}
-
 /** One map per form (document + position in a multi-form file), keyed by field. */
 function byFormAndField(facts: TaxFact[]): Map<string, Map<string, TaxFact>> {
   const forms = new Map<string, Map<string, TaxFact>>();

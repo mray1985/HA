@@ -3,16 +3,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getActiveKey, encrypt as encryptStr, decrypt as decryptStr } from '../services/crypto';
 
-/** The accounts HA Tax Preparer signs in: preparers (admins too). */
-export type AccountRole = 'preparer';
-
 function apiUrl(path: string): string {
   const base = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
   return `${base}${path}`;
 }
 
-function roleAllowed(role: string, audience?: AccountRole): boolean {
-  if (!audience) return true;
+/** The accounts HA Tax Preparer signs in: preparers, and admins who manage their accounts. */
+function isPreparerAccount(role: string): boolean {
   return role === 'preparer' || role === 'admin';
 }
 
@@ -42,8 +39,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (email: string, password: string, audience?: AccountRole) => Promise<void>;
-  register: (email: string, password: string, name: string, role: AccountRole) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   activateSeason: () => Promise<void>;
   fetchMe: () => Promise<void>;
@@ -101,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email: string, password: string, audience?: AccountRole) => {
+      login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
           const res = await fetch(apiUrl('/api/auth/login'), {
@@ -116,11 +113,10 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(data.error?.message || 'Login failed');
           }
 
-          if (!roleAllowed(data.data.user.role, audience)) {
+          if (!isPreparerAccount(data.data.user.role)) {
             await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
-            const message = NOT_A_PREPARER;
-            set({ user: null, accessToken: null, isAuthenticated: false, error: message, isLoading: false });
-            throw new Error(message);
+            set({ user: null, accessToken: null, isAuthenticated: false, error: NOT_A_PREPARER, isLoading: false });
+            throw new Error(NOT_A_PREPARER);
           }
 
           const newState = {
@@ -143,14 +139,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email: string, password: string, name: string, role: AccountRole) => {
+      register: async (email: string, password: string, name: string) => {
         set({ isLoading: true, error: null });
         try {
           const res = await fetch(apiUrl('/api/auth/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ email, password, name, role }),
+            body: JSON.stringify({ email, password, name }),
           });
 
           const data = await res.json();

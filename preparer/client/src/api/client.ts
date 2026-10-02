@@ -1,15 +1,14 @@
 /**
- * Local-only data layer — all tax data stays in the browser's localStorage.
- * No server, no network requests, no tracking. Your data never leaves your computer.
+ * Local-only data layer — every case stays in this computer's storage.
+ * No server, no network requests, no tracking.
  *
- * Storage key layout:
- *   hatax:returns          → string[] of return IDs
- *   hatax:return:{id}      → encrypted TaxReturn JSON (or plaintext for unencrypted)
- *   hatax:chat:{id}        → encrypted chat history JSON (per-return)
- *   …:facts:{id}           → encrypted TaxFacts for a case (services/caseRecords)
- *   …:documents:{id}       → encrypted document provenance for a case
- *   hatax:salt             → PBKDF2 salt for key derivation
- *   hatax:verify           → encrypted verification token
+ * Storage key layout (services/storageScope):
+ *   hatax-preparer:returns          → string[] of return IDs
+ *   hatax-preparer:return:{id}      → encrypted TaxReturn JSON
+ *   hatax-preparer:facts:{id}       → encrypted TaxFacts for a case (services/caseRecords)
+ *   hatax-preparer:documents:{id}   → encrypted document provenance for a case
+ *   hatax:salt                      → PBKDF2 salt for key derivation
+ *   hatax:verify                    → encrypted verification token
  *
  * Encryption: When active, returns are encrypted with AES-256-GCM before storage.
  * An in-memory cache holds decrypted returns after unlock for synchronous access.
@@ -22,7 +21,6 @@ import {
   isEncryptedPayload,
   encrypt as encryptStr,
   decrypt as decryptStr,
-  isEncryptionSetup,
   lock,
 } from '../services/crypto';
 import { deleteAllDocuments, deleteDocuments } from '../services/documentIngestion';
@@ -108,10 +106,6 @@ function getArrayField(tr: TaxReturn, field: keyof TaxReturn): Record<string, un
 
 function setArrayField(tr: TaxReturn, field: keyof TaxReturn, arr: Record<string, unknown>[]): void {
   (tr as unknown as Record<string, unknown>)[field] = arr;
-}
-
-function setField(tr: TaxReturn, key: string, value: unknown): void {
-  (tr as unknown as Record<string, unknown>)[key] = value;
 }
 
 function getReturnIds(): string[] {
@@ -234,20 +228,6 @@ export function createReturn(taxYear = 2025): TaxReturn {
   const ids = getReturnIds();
   ids.push(id);
   saveReturnIds(ids);
-  return tr;
-}
-
-/** Import a fully-formed TaxReturn (e.g. from a .hatax file). Saves to localStorage. */
-export function importReturn(tr: TaxReturn): TaxReturn {
-  if (isEncryptionSetup() && !getActiveKey()) {
-    throw new Error('Cannot import while the vault is locked. Please unlock first.');
-  }
-  writeReturn(tr);
-  const ids = getReturnIds();
-  if (!ids.includes(tr.id)) {
-    ids.push(tr.id);
-    saveReturnIds(ids);
-  }
   return tr;
 }
 
@@ -377,15 +357,12 @@ export async function wipeAllData(): Promise<void> {
   const ids = getReturnIds();
   for (const id of ids) writeVersions.set(id, Number.MAX_SAFE_INTEGER);
 
-  // 1. Remove all HA Tax localStorage keys (returns + encryption + chat + AI)
+  // 1. Remove all HA Tax localStorage keys (returns, encryption, expense scanner)
   for (const id of ids) localStorage.removeItem(returnKey(id));
   localStorage.removeItem(RETURNS_KEY);
   localStorage.removeItem('hatax:salt');
   localStorage.removeItem('hatax:verify');
-  localStorage.removeItem('hatax:ai-settings');
   localStorage.removeItem('hatax:expense-scanner');
-  localStorage.removeItem('hatax:ai-key-enc');
-  localStorage.removeItem('hatax:ai-key-migrate');
   localStorage.removeItem('hatax:expense-scanner-enc');
   deleteAllDocuments();
   deleteAllTaxFacts();
@@ -502,97 +479,6 @@ export function batchAddIncomeItems(
   return { ids, count: ids.length };
 }
 
-export function updateIncomeItem<T extends object>(
-  returnId: string,
-  type: string,
-  itemId: string,
-  body: T,
-): { id: string; [key: string]: unknown } {
-  const tr = getReturn(returnId);
-  const field = ARRAY_FIELD_MAP[type];
-  if (!field) throw new Error(`Unknown item type: ${type}`);
-
-  const arr = getArrayField(tr, field);
-  const idx = arr.findIndex((i) => i.id === itemId);
-  if (idx === -1) throw new Error(`Item ${itemId} not found`);
-  const updatedItem = { ...arr[idx], ...sanitizePatch(body), id: itemId };
-  // Clone to avoid mutating the shared reference held by the Zustand store
-  const updatedTR = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  setArrayField(updatedTR, field, arr.map((item, i) => i === idx ? updatedItem : item));
-  writeReturn(updatedTR);
-  return updatedItem;
-}
-
-export function deleteIncomeItem(
-  returnId: string,
-  type: string,
-  itemId: string,
-): { success: boolean } {
-  const tr = getReturn(returnId);
-  const field = ARRAY_FIELD_MAP[type];
-  if (!field) throw new Error(`Unknown item type: ${type}`);
-
-  // Clone to avoid mutating the shared reference held by the Zustand store
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  setArrayField(updated, field, getArrayField(tr, field).filter((i) => i.id !== itemId));
-  writeReturn(updated);
-  return { success: true };
-}
-
-// ─── Business ───────────────────────────────────
-
-/** Fields that belong to each sub-object, used to prevent data pollution. */
-const BUSINESS_FIELDS = new Set(['businessName', 'businessEin', 'accountingMethod', 'didStartThisYear', 'naicsCode', 'businessType']);
-const HOME_OFFICE_FIELDS = new Set(['homeOfficeMethod', 'method', 'squareFeet', 'totalHomeSqFt', 'homeExpenses', 'hoursUsed', 'monthsUsed']);
-const VEHICLE_FIELDS = new Set(['vehicleMethod', 'businessMiles', 'commutingMiles', 'otherMiles', 'totalMiles', 'dateInService', 'availableForPersonalUse']);
-
-function pickFields(body: Record<string, unknown>, allowedKeys: Set<string>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const key of allowedKeys) {
-    if (body[key] !== undefined) result[key] = body[key];
-  }
-  return result;
-}
-
-export function upsertBusiness(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  // Clone to avoid mutating the shared reference held by the Zustand store
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  // Body may contain business fields, homeOffice fields, or vehicle fields.
-  // Only spread the relevant subset into each sub-object to prevent data pollution.
-  const businessPatch = pickFields(body, BUSINESS_FIELDS);
-  if (Object.keys(businessPatch).length > 0) {
-    updated.business = {
-      ...(tr.business || { id: generateId(), accountingMethod: 'cash', didStartThisYear: false }),
-      ...businessPatch,
-    } as TaxReturn['business'];
-  }
-  const homeOfficePatch = pickFields(body, HOME_OFFICE_FIELDS);
-  if (Object.keys(homeOfficePatch).length > 0) {
-    updated.homeOffice = { ...(tr.homeOffice || { method: null }), ...homeOfficePatch } as TaxReturn['homeOffice'];
-  }
-  const vehiclePatch = pickFields(body, VEHICLE_FIELDS);
-  if (Object.keys(vehiclePatch).length > 0) {
-    updated.vehicle = { ...(tr.vehicle || { method: null }), ...vehiclePatch } as TaxReturn['vehicle'];
-  }
-  // Also allow direct top-level fields (sanitize nested objects)
-  const topLevelKeys = ['business', 'homeOffice', 'vehicle', 'costOfGoodsSold', 'returnsAndAllowances'];
-  for (const key of topLevelKeys) {
-    if (body[key] !== undefined) {
-      const raw = body[key];
-      const sanitized = typeof raw === 'object' && raw !== null
-        ? sanitizePatch(raw as Record<string, unknown>)
-        : raw;
-      setField(updated, key, sanitized);
-    }
-  }
-  writeReturn(updated);
-  return updated;
-}
-
 // ─── Itemized Deductions ────────────────────────
 
 export function upsertItemized(
@@ -609,22 +495,6 @@ export function upsertItemized(
     }),
     ...sanitizePatch(body),
   } as TaxReturn['itemizedDeductions'];
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Child Tax Credit ───────────────────────────
-
-export function upsertChildTaxCredit(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.childTaxCredit = {
-    ...(tr.childTaxCredit || { qualifyingChildren: 0, otherDependents: 0 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['childTaxCredit'];
   writeReturn(updated);
   return updated;
 }
@@ -648,250 +518,6 @@ export function upsertSSA1099(
 export function deleteSSA1099(returnId: string): TaxReturn {
   const tr = getReturn(returnId);
   const updated = { ...tr, incomeSSA1099: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Dependent Care Credit ──────────────────────
-
-export function upsertDependentCare(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.dependentCare = {
-    ...(tr.dependentCare || { totalExpenses: 0, qualifyingPersons: 1 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['dependentCare'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteDependentCare(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, dependentCare: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Saver's Credit ─────────────────────────────
-
-export function upsertSaversCredit(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.saversCredit = {
-    ...(tr.saversCredit || { totalContributions: 0 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['saversCredit'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteSaversCredit(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, saversCredit: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Clean Energy Credit ────────────────────────
-
-export function upsertCleanEnergy(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.cleanEnergy = {
-    ...(tr.cleanEnergy || {
-      solarElectric: 0, solarWaterHeating: 0, smallWindEnergy: 0,
-      geothermalHeatPump: 0, batteryStorage: 0, fuelCell: 0, fuelCellKW: 0,
-    }),
-    ...sanitizePatch(body),
-  } as TaxReturn['cleanEnergy'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteCleanEnergy(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, cleanEnergy: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── EV Credit ─────────────────────────────────
-
-export function upsertEVCredit(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.evCredit = {
-    ...(tr.evCredit || {
-      vehicleDescription: '', vehicleMSRP: 0, purchasePrice: 0,
-      isNewVehicle: true, finalAssemblyUS: true,
-      meetsBatteryComponentReq: true, meetsMineralReq: true,
-    }),
-    ...sanitizePatch(body),
-  } as TaxReturn['evCredit'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteEVCredit(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, evCredit: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Energy Efficiency Credit ──────────────────
-
-export function upsertEnergyEfficiency(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.energyEfficiency = {
-    ...(tr.energyEfficiency || {
-      heatPump: 0, centralAC: 0, waterHeater: 0, furnaceBoiler: 0,
-      insulation: 0, windows: 0, doors: 0, electricalPanel: 0, homeEnergyAudit: 0,
-    }),
-    ...sanitizePatch(body),
-  } as TaxReturn['energyEfficiency'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteEnergyEfficiency(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, energyEfficiency: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Adoption Credit ───────────────────────────
-
-export function upsertAdoptionCredit(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.adoptionCredit = {
-    ...(tr.adoptionCredit || { qualifiedExpenses: 0, numberOfChildren: 1, isSpecialNeeds: false }),
-    ...sanitizePatch(body),
-  } as TaxReturn['adoptionCredit'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteAdoptionCredit(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, adoptionCredit: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Premium Tax Credit ────────────────────────
-
-export function upsertPremiumTaxCredit(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.premiumTaxCredit = {
-    ...(tr.premiumTaxCredit || { forms1095A: [], familySize: 1 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['premiumTaxCredit'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deletePremiumTaxCredit(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, premiumTaxCredit: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Schedule R (Elderly/Disabled Credit) ──────
-
-export function upsertScheduleR(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.scheduleR = {
-    ...(tr.scheduleR || {
-      isAge65OrOlder: false, isSpouseAge65OrOlder: false,
-      isDisabled: false, isSpouseDisabled: false,
-      nontaxableSocialSecurity: 0, nontaxablePensions: 0,
-    }),
-    ...sanitizePatch(body),
-  } as TaxReturn['scheduleR'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteScheduleR(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, scheduleR: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Form 8801 (Prior Year Minimum Tax Credit) ──
-
-export function upsertForm8801(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.form8801 = {
-    ...(tr.form8801 || { netPriorYearMinimumTax: 0, priorYearCreditCarryforward: 0 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['form8801'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteForm8801(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, form8801: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
-  writeReturn(updated);
-  return updated;
-}
-
-// ─── Archer MSA (Form 8853) ─────────────────────
-
-export function upsertArcherMSA(
-  returnId: string,
-  body: Record<string, unknown>,
-): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, updatedAt: new Date().toISOString() } as TaxReturn;
-  updated.archerMSA = {
-    ...(tr.archerMSA || { coverageType: 'self_only', hdhpDeductible: 0, personalContributions: 0, coverageMonths: 12 }),
-    ...sanitizePatch(body),
-  } as TaxReturn['archerMSA'];
-  writeReturn(updated);
-  return updated;
-}
-
-export function deleteArcherMSA(returnId: string): TaxReturn {
-  const tr = getReturn(returnId);
-  const updated = { ...tr, archerMSA: undefined, updatedAt: new Date().toISOString() } as TaxReturn;
   writeReturn(updated);
   return updated;
 }
@@ -953,18 +579,6 @@ export function calculateReturn(returnId: string) {
 
 // ─── PDF (client-side via pdf-lib) ──────────────
 
-export async function downloadPDF(returnId: string, password?: string): Promise<Blob> {
-  const { generateFullReturnPDF } = await import('../services/pdfService');
-  const tr = getReturn(returnId);
-  const calc = calculateReturn(returnId);
-  let pdfBytes = await generateFullReturnPDF(tr, calc);
-  if (password) {
-    const { encryptPDF } = await import('@pdfsmaller/pdf-encrypt-lite');
-    pdfBytes = await encryptPDF(new Uint8Array(pdfBytes), password);
-  }
-  return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
-}
-
 export async function downloadIRSFormsPDF(returnId: string, password?: string): Promise<Blob> {
   const { generateFilingPacketPDF } = await import('../services/irsFormFiller');
   const tr = getReturn(returnId);
@@ -977,4 +591,3 @@ export async function downloadIRSFormsPDF(returnId: string, password?: string): 
   return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 }
 
-export default {};

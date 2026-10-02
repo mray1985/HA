@@ -361,7 +361,6 @@ export function getSuggestions(
     const hasTips = (taxReturn.w2Income || []).some(
       (w2: any) => (w2.socialSecurityTips || 0) > 0 || (w2.allocatedTips || 0) > 0
     );
-    const hasOvertimeSignal = (taxReturn.schedule1A?.qualifiedOvertimePay || 0) > 0;
     const hasTipSignal = (taxReturn.schedule1A?.qualifiedTips || 0) > 0;
     if (hasTips && !hasTipSignal) {
       suggestions.push({

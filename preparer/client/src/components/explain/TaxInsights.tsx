@@ -6,7 +6,7 @@
  */
 
 import type { Form1040Result, CalculationResult } from '@hatax/engine';
-import { Lightbulb, TrendingDown, TrendingUp, Shield, AlertTriangle } from 'lucide-react';
+import { Lightbulb, TrendingDown, Shield, AlertTriangle } from 'lucide-react';
 
 interface TaxInsightsProps {
   form1040: Form1040Result;

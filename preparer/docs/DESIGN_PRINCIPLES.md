@@ -281,12 +281,12 @@ limited. HA Tax occupies a distinct position.
 
 | Metric                              | Value          |
 | ----------------------------------- | -------------- |
-| Engine modules in `shared/src/engine/` | 89           |
-| Constants files in `shared/src/constants/` | 113      |
+| Engine modules in `shared/src/engine/` | 87           |
+| Constants files in `shared/src/constants/` | 108      |
 | Implemented tax features             | 90+           |
-| Total tests                          | 5,396 (`npm test`) |
-| Test files                           | 125 (`npm test`) |
-| IRS PDF templates                    | 41            |
+| Total tests                          | 5,253 (`npm test`) |
+| Test files                           | 121 (`npm test`) |
+| IRS PDF templates                    | 38            |
 | State PDF templates                  | 43            |
 | State tax calculators                | All 50 states + DC |
 | Authority YAML files                 | 45            |

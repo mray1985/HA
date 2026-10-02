@@ -1,43 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle2, Loader2, HardDrive } from 'lucide-react';
 
 type SaveState = 'idle' | 'saving' | 'saved';
 
 /**
- * A hook that provides auto-save state tracking.
- * Call `markSaving()` when a save begins and `markSaved()` when it completes.
- * The "saved" state auto-clears after 2 seconds back to "idle".
- */
-export function useSaveIndicator() {
-  const [saveState, setSaveState] = useState<SaveState>('idle');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const markSaving = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setSaveState('saving');
-  }, []);
-
-  const markSaved = useCallback(() => {
-    setSaveState('saved');
-    timerRef.current = setTimeout(() => setSaveState('idle'), 2000);
-  }, []);
-
-  const markError = useCallback(() => {
-    setSaveState('idle');
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return { saveState, markSaving, markSaved, markError };
-}
-
-/**
  * Visual save indicator — shows saving/saved/idle states.
- * Place in the top-right of any form step for persistent feedback.
+ * Shown in the case header while the case saves.
  */
 export default function SaveIndicator({ state }: { state: SaveState }) {
   return (

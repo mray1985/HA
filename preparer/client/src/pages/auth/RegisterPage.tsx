@@ -1,12 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore, type AccountRole } from '../../store/authStore';
+import { useAuthStore } from '../../store/authStore';
 
-const COPY: Record<AccountRole, { title: string; redirect: string; loginPath: string }> = {
-  preparer: { title: 'HA Tax Preparer', redirect: '/preparer', loginPath: '/preparer/login' },
-};
-
-export default function RegisterPage({ audience = 'preparer' }: { audience?: AccountRole }) {
+export default function RegisterPage() {
   const navigate = useNavigate();
   const { register, error, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
@@ -15,7 +11,6 @@ export default function RegisterPage({ audience = 'preparer' }: { audience?: Acc
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const copy = COPY[audience];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +22,8 @@ export default function RegisterPage({ audience = 'preparer' }: { audience?: Acc
     }
 
     try {
-      await register(email, password, name, audience);
-      navigate(copy.redirect);
+      await register(email, password, name);
+      navigate('/preparer');
     } catch {
       // Error handled by store
     }
@@ -38,7 +33,7 @@ export default function RegisterPage({ audience = 'preparer' }: { audience?: Acc
     <div className="min-h-screen bg-surface-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{copy.title}</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">HA Tax Preparer</h1>
           <p className="text-slate-400">Create your account</p>
         </div>
 
@@ -140,7 +135,7 @@ export default function RegisterPage({ audience = 'preparer' }: { audience?: Acc
 
           <p className="mt-6 text-center text-slate-400 text-sm">
             Already have an account?{' '}
-            <Link to={copy.loginPath} className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
+            <Link to="/preparer/login" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400 font-medium">
               Sign in
             </Link>
           </p>

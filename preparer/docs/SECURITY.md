@@ -26,7 +26,7 @@ Cases never reach the server:
 
 The server keeps only what sign-in needs, in a SQLite database in the user's app-data folder:
 
-- **Accounts** — email, name, role, password hash (bcrypt, 12 rounds), the season seat
+- **Accounts** — preparers only: registration creates a preparer account, and any other account is refused at sign-in. Each holds an email, name, role, password hash (bcrypt, 12 rounds) and the season seat. An admin account, which can remove users, is added to the database directly.
 - **Sessions** — each sign-in's token hash and expiry; signing out ends the session, so the token stops working
 - **Signing key** — `JWT_SECRET` when set, otherwise one random key per install that survives restarts
 

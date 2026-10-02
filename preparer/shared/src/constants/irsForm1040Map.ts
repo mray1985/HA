@@ -8,7 +8,7 @@
  * Total fields: 199
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult, Dependent } from '../types/index.js';
+import type { Dependent } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 import { parseDateString } from '../engine/utils.js';
 import { isAge65OrOlder } from '../engine/form1040Sections.js';
@@ -24,12 +24,6 @@ function isDepUnder17(dep: Dependent | undefined): boolean {
   const endOfYear = new Date(TAX_YEAR, 11, 31); // Dec 31 of tax year
   const turns17 = new Date(dob.year + 17, dob.month, dob.day);
   return turns17 > endOfYear;
-}
-
-// ─── Helper: format dollar amount as whole number string ───
-function dollarStr(val: number | undefined): string {
-  if (val === undefined || val === null || val === 0) return '';
-  return Math.round(val).toString();
 }
 
 // ─── Page 1 field name prefix ───

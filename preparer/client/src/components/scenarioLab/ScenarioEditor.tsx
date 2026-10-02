@@ -259,7 +259,6 @@ export default function ScenarioEditor({ taxReturn, scenario, dispatch, expanded
         {categoryOrder.map(cat => {
           const vars = grouped.get(cat);
           if (!vars || vars.length === 0) return null;
-          const hasOverrides = vars.some(v => scenario.overrides.has(v.key));
           return (
             <CategoryAccordion
               key={cat}

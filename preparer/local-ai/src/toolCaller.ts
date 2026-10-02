@@ -28,9 +28,7 @@ import {
   FORM_TOOL_NAMES,
   formToolForIncomeType,
   invokeTaxTool,
-  TAX_TOOL_INCOME_TYPE,
   type TaxToolCallContext,
-  type TaxToolIncomeName,
   type TaxToolName,
   type TaxToolResult,
 } from './taxTools.js';
@@ -308,9 +306,4 @@ export function callIncomeToolFromStructuredFields(input: {
     facts: input.facts,
     validation: input.validation,
   });
-}
-
-/** Type guard for the form tools whose result is an engine income item. */
-export function isToolCallerIncomeTool(tool: string): tool is TaxToolIncomeName {
-  return tool !== 'add_schedule_c_income' && tool in TAX_TOOL_INCOME_TYPE;
 }

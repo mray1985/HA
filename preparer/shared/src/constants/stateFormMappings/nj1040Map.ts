@@ -7,7 +7,6 @@
  * NJ-1040 has 814 AcroForm fields. We map the core identity, income, and tax lines.
  * Many NJ fields use descriptive names for page 1 and generic "Text##" or line numbers for pages 2+.
  */
-import type { TaxReturn, CalculationResult, StateCalculationResult } from '../../types/index.js';
 import type { StateFieldMapping, StateFormTemplate } from '../../types/stateFormMappings.js';
 
 // ─── Field Mappings ──────────────────────────────────────────────

@@ -4,10 +4,10 @@ How HA Tax Preparer is tested: running the suites, what each one covers, and how
 
 | Suite | Where | Files | Tests |
 |-------|-------|-------|-------|
-| Engine | `shared/__tests__/` | 125 | 5,396 |
+| Engine | `shared/__tests__/` | 121 | 5,253 |
 | Client | `client/src/__tests__/` | 47 | 977 |
 | Local AI | `local-ai/__tests__/` | 26 | 456 |
-| Server | `server/__tests__/` | 2 | 12 |
+| Server | `server/__tests__/` | 2 | 13 |
 | End-to-end | `client/e2e/` | 5 specs | Playwright |
 
 ---
@@ -40,7 +40,7 @@ cd shared && npx vitest run __tests__/form8615.test.ts
 
 ```
 preparer/
-├── shared/__tests__/        125 files — the engine: forms, schedules, credits, states, the Tax Table, fuzzing
+├── shared/__tests__/        121 files — the engine: forms, schedules, credits, states, the Tax Table, fuzzing
 ├── client/src/__tests__/     47 files — cases, document intake, review, client replies, imports, tools
 ├── client/e2e/                5 specs — Playwright: cases, review, the local models, the stress run, the walkthrough
 ├── local-ai/__tests__/       26 files — readers, page evidence, tax tools, validation, client replies
@@ -54,7 +54,7 @@ preparer/
 
 ---
 
-## 1. Engine Tests (125 files, ~5,400 tests)
+## 1. Engine Tests (121 files, ~5,250 tests)
 
 The core of the test suite. Validates every tax calculation module against IRS rules.
 
@@ -85,7 +85,6 @@ cd shared && npx vitest run __tests__/amt.test.ts
 | `vehicle.test.ts` | ~32 | Standard mileage vs. actual expenses |
 | `solo401k.test.ts` | ~27 | Solo 401(k) contribution limits |
 | `foreignTaxCredit.test.ts` | ~21 | Foreign tax credit (Form 1116) |
-| `donationValuation.test.ts` | ~42 | FMV lookup, depreciation calculator |
 | `estimatedTax.test.ts` | ~6 | Quarterly voucher calculations |
 | `estimatedTaxPenalty.test.ts` | ~25 | Underpayment penalty, safe harbor |
 | `military.test.ts` | ~18 | Combat zone exclusion, moving expenses |
@@ -290,7 +289,7 @@ cd server && npm test
 
 | File | Coverage |
 |------|----------|
-| `auth.test.ts` | Registration, sign-in, the season seat, sessions and sign-out, the signing key |
+| `auth.test.ts` | Preparer-only registration and sign-in, the season seat, sessions and sign-out, the signing key |
 | `models.test.ts` | The local model routes: signed-in preparers only, the runtime, page reading, reading text |
 
 ---

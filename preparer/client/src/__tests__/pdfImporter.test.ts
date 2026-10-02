@@ -835,7 +835,7 @@ describe('edge cases', () => {
       makeBlock('social security', 30, 300),
     ];
     const data = extractW2Fields(blocks);
-    // findNearbyNumber strips $ and commas
+    // findNearbyAmount strips $ and commas
     expect(data.wages).toBe(75000);
   });
 

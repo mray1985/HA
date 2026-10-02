@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TrendingUp, TrendingDown, ArrowDown, ArrowUp, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CalculationResult, FilingStatus } from '@hatax/engine';
 import type { DeltaMap, DeltaEntry, ScenarioColor } from './types';
-import { formatCurrency, formatPercent } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 import DeltaWaterfall from './charts/DeltaWaterfall';
 import BracketComparison from './charts/BracketComparison';
 

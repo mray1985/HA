@@ -137,24 +137,6 @@ export function parseHoldingPeriod(value: string | null | undefined): boolean | 
   return null;
 }
 
-/**
- * Validate that required fields are present and non-empty.
- * Returns list of missing field names.
- */
-export function validateRequiredFields(
-  item: Record<string, unknown>,
-  requiredKeys: string[],
-): string[] {
-  const missing: string[] = [];
-  for (const key of requiredKeys) {
-    const val = item[key];
-    if (val === undefined || val === null || val === '' || (typeof val === 'number' && isNaN(val))) {
-      missing.push(key);
-    }
-  }
-  return missing;
-}
-
 /** Max file sizes */
 export const MAX_CSV_SIZE = 10 * 1024 * 1024;  // 10 MB
 export const MAX_PDF_SIZE = 25 * 1024 * 1024;   // 25 MB

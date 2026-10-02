@@ -46,7 +46,6 @@
  *   f1_24 = Line 20: Total income from failure to maintain HDHP coverage
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 import { FilingStatus } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';

@@ -2,7 +2,7 @@ import type { TaxReturn, FilingStatus } from '@hatax/engine';
 import { HSA, IRA, SOLO_401K, STUDENT_LOAN_INTEREST, EDUCATOR_EXPENSES } from '@hatax/engine';
 import {
   Users, Baby, Building2, Landmark, TrendingUp, BarChart3, Wallet, Briefcase,
-  Sliders, Scissors, ListChecks, Laptop, PersonStanding, GraduationCap,
+  Scissors, ListChecks, Laptop, PersonStanding, GraduationCap,
   PiggyBank, HeartPulse, PencilRuler,
 } from 'lucide-react';
 import { getAgeAtEndOfYear } from '@hatax/engine';

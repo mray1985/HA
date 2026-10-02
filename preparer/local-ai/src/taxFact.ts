@@ -7,8 +7,6 @@
  * Coordinates are never invented.
  */
 
-export type TaxFactStatus = 'extracted' | 'unknown';
-
 /** Scalar or nested structured values (W-2 box12/box13, simplified method, etc.). */
 export type TaxFactValue =
   | string

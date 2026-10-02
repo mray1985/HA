@@ -60,7 +60,6 @@ export function calculateForm8582(
   misc1099Rents: number = 0,
   taxYear: number = 2025,
 ): Form8582Result {
-  const FORM_8582 = getForm8582(taxYear);
   const warnings: string[] = [];
 
   // Collect all passive activities with their current-year net income
@@ -219,8 +218,6 @@ export function calculateForm8582(
   // ── Allocate allowed loss to activities (pro rata) ──
   allocateAllowedLoss(nonDisposed, totalAllowedLoss, specialAllowanceUsed);
 
-  // Calculate the net effect: allowed loss is negative, flowing to Schedule E
-  const totalAllowedNegative = -round2(totalAllowedLoss);
   const totalSuspended = round2(totalLoss - totalAllowedLoss);
 
   if (totalSuspended > 0) {

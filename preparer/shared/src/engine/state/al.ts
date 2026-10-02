@@ -21,7 +21,7 @@
 
 import {
   TaxReturn, CalculationResult, StateCalculationResult,
-  StateReturnConfig, FilingStatus, CalculationTrace,
+  StateReturnConfig, CalculationTrace,
 } from '../../types/index.js';
 import {
   AL_BRACKETS, AL_STANDARD_DEDUCTION,

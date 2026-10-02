@@ -1,96 +1,13 @@
 /**
  * Forms service — deterministic helpers for the form viewer:
- * 1. Form review / audit (what is wrong or missing on a form)
- * 2. Form search by name or description
- * 3. Field completeness (sidebar badges)
+ * 1. Form search by name or description
+ * 2. Field completeness (sidebar badges)
  */
 
-import type { IRSFormTemplate, TaxReturn, CalculationResult, ClassifiedField } from '@hatax/engine';
+import type { IRSFormTemplate, TaxReturn, CalculationResult } from '@hatax/engine';
 import { classifyFields } from '@hatax/engine';
 import { resolveFieldValue } from './formFieldResolver';
 import { ALL_TEMPLATES } from './irsFormFiller';
-
-// ─── Form Review / Audit ───────────────────────────
-
-export interface FormReviewIssue {
-  severity: 'error' | 'warning' | 'info';
-  fieldLabel: string;
-  message: string;
-}
-
-/**
- * Analyze a form for issues: empty required fields, suspicious values,
- * math inconsistencies.
- */
-export function reviewForm(
-  template: IRSFormTemplate,
-  taxReturn: TaxReturn,
-  calculation: CalculationResult,
-  instanceIndex: number = 0,
-): FormReviewIssue[] {
-  const issues: FormReviewIssue[] = [];
-  const fields = template.fieldsForInstance
-    ? template.fieldsForInstance(instanceIndex, taxReturn, calculation)
-    : template.fields;
-  const classified = classifyFields(fields);
-
-  let filledCount = 0;
-  let editableCount = 0;
-
-  for (const cf of classified) {
-    const { rawValue, displayValue } = resolveFieldValue(cf.mapping, taxReturn, calculation);
-    const label = cf.mapping.formLabel || cf.mapping.pdfFieldName;
-
-    if (cf.isEditable) {
-      editableCount++;
-      if (rawValue != null && rawValue !== '' && rawValue !== 0) {
-        filledCount++;
-      }
-    }
-
-    // Check for negative values where they shouldn't be
-    if (typeof rawValue === 'number' && rawValue < 0 && cf.mapping.format !== 'string') {
-      issues.push({
-        severity: 'warning',
-        fieldLabel: label,
-        message: `Negative value (${displayValue}) — verify this is correct.`,
-      });
-    }
-
-    // Check for suspiciously large values (over $1M on non-total fields)
-    if (
-      typeof rawValue === 'number' &&
-      rawValue > 1_000_000 &&
-      cf.isEditable &&
-      !label.toLowerCase().includes('total') &&
-      !label.toLowerCase().includes('agi') &&
-      !label.toLowerCase().includes('income')
-    ) {
-      issues.push({
-        severity: 'info',
-        fieldLabel: label,
-        message: `Large value ($${rawValue.toLocaleString()}) — double-check this amount.`,
-      });
-    }
-  }
-
-  // Check overall completeness
-  if (editableCount > 0 && filledCount === 0) {
-    issues.push({
-      severity: 'warning',
-      fieldLabel: 'Overall',
-      message: `This form has ${editableCount} editable fields but none are filled. Enter them on the return, or add the documents that fill them.`,
-    });
-  } else if (editableCount > 0 && filledCount < editableCount * 0.3) {
-    issues.push({
-      severity: 'info',
-      fieldLabel: 'Overall',
-      message: `Only ${filledCount} of ${editableCount} editable fields are filled (${Math.round(filledCount / editableCount * 100)}%).`,
-    });
-  }
-
-  return issues;
-}
 
 // ─── Form Search ───────────────────────────────────
 
@@ -232,5 +149,3 @@ export function getFormCompleteness(
 
   return { formId: template.formId, totalEditable, filled, percent, status, hasIssues };
 }
-
-// ─── Full Return Review ────────────────────────────

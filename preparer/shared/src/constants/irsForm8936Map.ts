@@ -33,7 +33,6 @@
  *   f1_30-f1_31 = Lines 23-24: Additional fields
  */
 import type { IRSFieldMapping, IRSFormTemplate } from '../types/irsFormMappings.js';
-import type { TaxReturn, CalculationResult } from '../types/index.js';
 
 const P1 = 'topmostSubform[0].Page1[0]';
 

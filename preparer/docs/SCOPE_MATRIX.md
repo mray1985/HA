@@ -8,7 +8,7 @@
 
 ## Summary
 
-HA Tax Preparer ships with **90+ implemented tax features** across **84 engine modules** (66 federal + 18 state), validated by **5,396 engine tests** spanning **125 test files** (`npm test` in `shared`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
+HA Tax Preparer ships with **90+ implemented tax features** across **87 engine modules** (68 federal + 19 state), validated by **5,253 engine tests** spanning **121 test files** (`npm test` in `shared`). The federal engine supports all five filing statuses (Single, MFJ, MFS, HoH, QSS) for tax years 2024, 2025, and 2026, with state tax coverage for **all 50 states + DC**.
 
 This document exists to prevent scope confusion. If a feature is listed as unsupported below, it was **intentionally deferred** with a documented rationale -- not forgotten. Open an issue only if you believe the rationale is wrong, not to report it as missing.
 
@@ -17,13 +17,13 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Metric | Value |
 |---|---|
 | Implemented features | 90+ |
-| Engine modules (federal) | 66 |
-| Engine modules (state) | 18 (covering all 50 states + DC; `wa.ts`, `in.ts`, `ia.ts`, `pa.ts` added for TY2025 stop-ship rules) |
-| Constants files | 103 |
-| IRS PDF templates | 41 |
+| Engine modules (federal) | 68 |
+| Engine modules (state) | 19 (covering all 50 states + DC; `wa.ts`, `in.ts`, `ia.ts`, `pa.ts` added for TY2025 stop-ship rules) |
+| Constants files | 108 |
+| IRS PDF templates | 38 |
 | State PDF templates | 43 |
-| Test files | 125 (`npm test` in `shared`) |
-| Total tests | 5,396 (`npm test` in `shared`) |
+| Test files | 121 (`npm test` in `shared`) |
+| Total tests | 5,253 (`npm test` in `shared`) |
 | Filing statuses | 5 (Single, MFJ, MFS, HoH, QSS) |
 | Federal tax years | 2024, 2025, 2026 |
 
@@ -154,7 +154,6 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Qualified Opportunity Zones | ✅ | Form 8997 | Informational tracking only |
 | Nondeductible IRA and Roth conversions | ✅ | Form 8606 | Pro-rata rule for basis tracking |
 | Form 8283 (Non-Cash Charitable) | ✅ | Form 8283 | Section A (≤$5,000) and Section B (>$5,000) classification; category-specific AGI limits (60% cash, 50% ordinary, 30% capital gain); 5-year FIFO carryforward |
-| Donation Valuation Tool | ✅ | Form 8283 | 170-item database from Salvation Army + Goodwill guides; condition-based FMV (Good/Very Good/Like New); depreciation calculator with fractional year interpolation; slide-over panel integrated into Form 8283 step |
 | Business property sales | ✅ | Form 4797 | Section 1231/1245/1250 depreciation recapture; netting with K-1 box 10; five-year §1231(c) lookback when prior-year nets are entered; flows to Form 1040 and Schedule D |
 | HoH Filing Status Validation | ✅ | | Qualifying person, residency, household cost checks (non-blocking); IRC §2(b), §7703(b) |
 | Deceased Spouse Handling | ✅ | | MFJ for year of death, QSS for 2 subsequent years; non-blocking validation; IRC §6013(a)(2), §2(a) |
@@ -176,7 +175,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 
 ---
 
-## IRS PDF Generation (40 Templates)
+## IRS PDF Generation (38 Templates)
 
 | Form | Condition |
 |---|---|
@@ -194,14 +193,12 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Schedule R | Credit for elderly/disabled |
 | Schedule SE | Self-employment tax |
 | Form 1040-V | Payment voucher (balance due) |
-| Form 1040-ES | Estimated tax vouchers |
 | Form 2210 | Estimated tax penalty |
 | Form 2555 | Foreign earned income exclusion |
 | Form 3903 | Moving expenses (military) |
 | Form 4137 | Unreported tip income |
 | Form 4562 | Depreciation and amortization |
 | Form 4797 | Sale of business property |
-| Form 4868 | Extension of time to file |
 | Form 4952 | Investment interest expense |
 | Form 5329 | Additional taxes on qualified plans |
 | Form 5695 | Energy credits |

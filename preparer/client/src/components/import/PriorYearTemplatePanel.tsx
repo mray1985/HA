@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 import type {
   TemplateImportManifest,
   TemplateItem,
-  BusinessTemplate,
 } from '../../services/priorYearTemplateBuilder';
 import { getTypeLabel } from '../../services/priorYearTemplateBuilder';
 

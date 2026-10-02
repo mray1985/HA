@@ -126,10 +126,3 @@ export interface UseScenarioLabReturn {
 // ---------------------------------------------------------------------------
 // Quick Presets
 // ---------------------------------------------------------------------------
-
-export interface QuickPreset {
-  id: string;
-  label: string;
-  description: string;
-  getOverrides: (tr: TaxReturn) => Map<string, unknown>;
-}

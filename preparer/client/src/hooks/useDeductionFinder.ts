@@ -9,10 +9,10 @@
  * Only dismissed/addressed IDs are persisted to the TaxReturn via updateField.
  */
 
-import { useMemo, useCallback, useRef, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useCaseStore } from '../store/caseStore';
 import { useDeductionFinderStore } from '../store/deductionFinderStore';
-import { parseTransactionCSV, transactionHash, deduplicateTransactions } from '../services/transactionParser';
+import { parseTransactionCSV, deduplicateTransactions } from '../services/transactionParser';
 import { parsePDFStatement } from '../services/pdfStatementParser';
 import { scanForSignals } from '../services/deductionFinderEngine';
 import { buildReturnContext } from '../services/deductionFinderContext';
@@ -89,7 +89,6 @@ export function useDeductionFinder(): UseDeductionFinderResult {
 
   // Local UI state (OK to reset on remount)
   const [showDismissed, setShowDismissed] = useState(false);
-  const latestRequestIdRef = useRef(0);
 
   // Read persisted state from TaxReturn
   const addressedIds = useMemo(

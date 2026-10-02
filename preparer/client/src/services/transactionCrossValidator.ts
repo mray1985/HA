@@ -1,15 +1,9 @@
 /**
- * Transaction Cross-Validator
+ * Transaction rules — categorizes transactions with the deterministic pattern
+ * engine (categorizeByRules); a transaction no rule matches is left for the
+ * preparer to review.
  *
- * Runs the deterministic pattern engine against AI-categorized transactions
- * to boost or reduce confidence:
- *
- *   AI + Pattern agree    → confidence: HIGH
- *   AI only (no pattern)  → confidence: unchanged (MEDIUM or as AI said)
- *   AI and Pattern differ → confidence: LOW (flagged for review)
- *   Pattern says X, AI says PERSONAL → confidence: LOW (flag)
- *
- * Also applies deterministic gates from the tax context:
+ * Applies deterministic gates from the tax context:
  *   - Childcare requires minorDependentCount > 0
  *   - Medical itemized requires deductionMethod = 'itemized' (or warns)
  *   - Home office requires hasScheduleC or hasHomeOffice flag
@@ -19,7 +13,7 @@
 import type { NormalizedTransaction, ReturnContext } from './deductionFinderTypes';
 import type { CategorizedTransaction, TransactionCategory } from './transactionCategorizerTypes';
 import { scanForSignals } from './deductionFinderEngine';
-import type { DeductionInsight, InsightCategory } from './deductionFinderTypes';
+import type { InsightCategory } from './deductionFinderTypes';
 
 // ─── Category Mapping ──────────────────────────────
 
@@ -166,67 +160,4 @@ export function categorizeByRules(
     }
     return { ...base, category, confidence: 'medium' as const, reasoning: gate.reason ?? `Matched the ${insight!.replace(/_/g, ' ')} merchant pattern.` };
   });
-}
-
-// ─── Cross-Validation ──────────────────────────────
-
-/**
- * Cross-validate AI-categorized transactions against the pattern engine.
- * Modifies confidence levels in place and returns gate warnings.
- *
- * @param contextHints - User-provided hints from setup screen (overrides return context for gating)
- */
-export function crossValidate(
-  categorized: CategorizedTransaction[],
-  allTransactions: NormalizedTransaction[],
-  context: ReturnContext,
-  contextHints?: Record<string, boolean>,
-): { gateWarnings: Map<number, string> } {
-  const patternMatches = patternCategories(allTransactions, context);
-
-  const gateWarnings = new Map<number, string>();
-
-  for (const ct of categorized) {
-    const idx = ct.transactionIndex;
-
-    // 1. Apply deterministic gates (respecting user context hints)
-    const gate = checkGate(ct.category, context, contextHints);
-    if (gate.blocked) {
-      // Reclassify to personal if gate blocks it
-      ct.originalCategory = ct.category;
-      ct.category = 'personal';
-      ct.confidence = 'low';
-      ct.reasoning = gate.reason || 'Blocked by tax context';
-      continue;
-    }
-    if (gate.reason) {
-      gateWarnings.set(idx, gate.reason);
-    }
-
-    // 2. Cross-validate with pattern engine
-    const patternCategory = patternMatches.get(idx);
-    if (!patternCategory) {
-      // AI only — no pattern match. Keep AI confidence as-is.
-      continue;
-    }
-
-    const mappedPatternCategory = INSIGHT_TO_CATEGORY[patternCategory];
-    if (!mappedPatternCategory) continue;
-
-    if (mappedPatternCategory === ct.category) {
-      // AI and pattern agree — boost to HIGH
-      ct.confidence = 'high';
-      ct.source = 'both';
-    } else if (ct.category === 'personal' && mappedPatternCategory !== 'personal') {
-      // Pattern found something but AI said personal — flag for review
-      ct.confidence = 'low';
-      ct.reasoning = `Pattern engine suggests "${mappedPatternCategory}" but AI classified as personal — please review`;
-    } else {
-      // AI and pattern disagree — lower confidence
-      ct.confidence = 'low';
-      ct.reasoning = `AI says "${ct.category}" but pattern engine suggests "${mappedPatternCategory}" — please review`;
-    }
-  }
-
-  return { gateWarnings };
 }

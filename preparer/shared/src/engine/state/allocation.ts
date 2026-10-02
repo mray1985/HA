@@ -1,4 +1,4 @@
-import { TaxReturn, CalculationResult, StateReturnConfig, StateCalculationResult } from '../../types/index.js';
+import { TaxReturn, CalculationResult, StateReturnConfig } from '../../types/index.js';
 import { round2 } from '../utils.js';
 
 /**
@@ -140,18 +140,6 @@ function getWagesForState(taxReturn: TaxReturn, stateCode: string): number {
       .filter(w => w.state?.toUpperCase() === stateCode)
       .reduce((sum, w) => sum + (w.stateWages ?? w.wages ?? 0), 0),
   );
-}
-
-/**
- * Get rental income attributable to a specific state.
- * RentalProperty does not currently have a stateCode field, so this reads
- * from `stateSpecificData.sourceRentalIncome` on the StateReturnConfig.
- * Returns 0 unless overridden — this will be enhanced when stateCode is added to RentalProperty.
- */
-function getRentalIncomeForState(_taxReturn: TaxReturn, _stateCode: string): number {
-  // Placeholder: RentalProperty lacks stateCode. Nonresident rental income
-  // should be specified via config.stateSpecificData.sourceRentalIncome.
-  return 0;
 }
 
 /**

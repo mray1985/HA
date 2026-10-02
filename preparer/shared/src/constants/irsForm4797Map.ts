@@ -207,7 +207,6 @@ function buildInstanceFields(
   calc: CalculationResult,
 ): IRSFieldMapping[] {
   const fields: IRSFieldMapping[] = [];
-  const form4797 = calc.form4797!;
 
   // ============================================================
   // Header

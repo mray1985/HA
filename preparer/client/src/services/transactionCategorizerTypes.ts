@@ -8,7 +8,7 @@
  *   3. Disagreements flagged for user review
  */
 
-import type { NormalizedTransaction, ReturnContext } from './deductionFinderTypes';
+import type { NormalizedTransaction } from './deductionFinderTypes';
 
 // ─── Tax Categories ────────────────────────────────
 
@@ -91,24 +91,6 @@ export interface CategorizedTransaction {
   originalCategory?: TransactionCategory;
   /** For split transactions: what % is tax-relevant (0-100). Default 100. */
   businessUsePercent: number;
-}
-
-// ─── Deduplicated Merchant ─────────────────────────
-
-/** Aggregated merchant data sent to the AI (not individual transactions). */
-export interface MerchantAggregate {
-  /** Cleaned merchant name. */
-  merchant: string;
-  /** Total amount across all transactions. */
-  totalAmount: number;
-  /** Number of transactions. */
-  transactionCount: number;
-  /** Months with transactions (e.g., "Jan-Dec" or "Mar, Jun, Sep"). */
-  monthRange: string;
-  /** Average transaction amount. */
-  averageAmount: number;
-  /** Indices into the original transaction array. */
-  transactionIndices: number[];
 }
 
 // ─── Category Summary ──────────────────────────────

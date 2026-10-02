@@ -14,7 +14,7 @@ import {
   TaxReturn, CalculationResult, StateCalculationResult,
   StateReturnConfig, FilingStatus, StateTaxBracket, StateBracketDetail,
 } from '../../types/index.js';
-import { getStateCalculator, StateCalculator, NO_INCOME_TAX_STATES } from './stateRegistry.js';
+import { getStateCalculator, NO_INCOME_TAX_STATES } from './stateRegistry.js';
 import { allocateStateIncome, calculateOtherStateCredit } from './allocation.js';
 import { calculateWashington } from './wa.js';
 import { round2 } from '../utils.js';

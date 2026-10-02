@@ -24,6 +24,10 @@ const TOKEN_EXPIRY = '7d';
 const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 const BCRYPT_ROUNDS = 12;
 
+/** HA Tax Preparer signs in preparers, and admins who manage their accounts. */
+const ACCOUNT_ROLES = new Set(['preparer', 'admin']);
+const NOT_A_PREPARER = 'This account is not a preparer account.';
+
 interface TokenPayload {
   userId: number;
   email: string;
@@ -97,6 +101,10 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
     res.status(401).json({ error: { message: 'Invalid or expired token', code: 'INVALID_TOKEN' } });
     return;
   }
+  if (!ACCOUNT_ROLES.has(payload.role)) {
+    res.status(403).json({ error: { message: NOT_A_PREPARER, code: 'FORBIDDEN' } });
+    return;
+  }
 
   (req as any).user = payload;
   next();
@@ -161,10 +169,10 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(409).json({ error: { message: 'Email already registered', code: 'EMAIL_EXISTS' } });
     }
 
-    const userRole = role === 'taxpayer' || role === 'preparer' ? role : null;
-    if (!userRole) {
-      return res.status(400).json({ error: { message: 'Role must be taxpayer or preparer', code: 'VALIDATION_ERROR' } });
+    if (role !== undefined && role !== 'preparer') {
+      return res.status(400).json({ error: { message: 'Only preparer accounts can be registered', code: 'VALIDATION_ERROR' } });
     }
+    const userRole = 'preparer';
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const result = createUser.run(normalizedEmail, passwordHash, name || '', userRole);
@@ -209,6 +217,9 @@ router.post('/login', async (req: Request, res: Response) => {
     if (!valid) {
       return res.status(401).json({ error: { message: 'Invalid credentials', code: 'INVALID_CREDENTIALS' } });
     }
+    if (!ACCOUNT_ROLES.has(user.role)) {
+      return res.status(403).json({ error: { message: NOT_A_PREPARER, code: 'FORBIDDEN' } });
+    }
 
     updateUserLastLogin.run(user.id);
     const accessToken = startSession(res, user);
@@ -244,11 +255,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
 });
 
 router.post('/subscription/activate', requireAuth, (req: Request, res: Response) => {
-  const payload = (req as any).user as { userId: number; role: string };
-  if (payload.role !== 'preparer' && payload.role !== 'admin') {
-    return res.status(403).json({ error: { message: 'A preparer seat is required', code: 'FORBIDDEN' } });
-  }
-
+  const payload = (req as any).user as { userId: number };
   const until = seasonEnd();
   activateSubscription.run(until, payload.userId);
   const user = getUserById.get(payload.userId);
