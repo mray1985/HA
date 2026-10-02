@@ -51,7 +51,8 @@ for (const doc of truth.documents) {
     const r = c.taxReturn;
     const onRight = name(r).toUpperCase() === doc.household.toUpperCase();
     out(`  case ${name(r)}${onRight ? '' : '  <-- not the household case'} | status ${d.status} | forms ${JSON.stringify(d.formTypes ?? d.classifications?.map((x: any) => x.formType))} | applied ${JSON.stringify(d.appliedAs)} | years ${JSON.stringify(d.taxYearsPrinted)}`);
-    if (!onRight && doc.person !== 'spouse') problems.push(`${doc.file}: placed on ${name(r)}`);
+    // The household's case, the spouse's documents too (a joint return).
+    if (!onRight) problems.push(`${doc.file}: placed on ${name(r)}`);
     const arr = ARRAY[doc.tool];
     const items = arr ? (r[arr] ?? []).filter((it: any) => String(it.sourceFormKey ?? '').startsWith(`${d.documentId}#`)) : [];
     if (doc.tool === 'add_mortgage_interest') {

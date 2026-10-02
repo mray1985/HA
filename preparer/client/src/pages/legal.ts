@@ -15,4 +15,10 @@ export const LEGAL = {
   governingLaw: 'the District of Columbia',
   /** The date both pages take effect. */
   effective: 'October 1, 2026',
+  /**
+   * TODO: true once every value above is the business's own and counsel has
+   * reviewed both pages. The installer refuses a release build until then
+   * (desktop/scripts/check-client.mjs), since sign-up accepts these terms.
+   */
+  confirmed: false,
 } as const;

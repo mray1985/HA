@@ -224,12 +224,22 @@ function onlyThisPersonBefore(firstName: string, lastName: string, sentence: str
  * other names, "and", and parentheses ("Noah, who moved out, and Lily lived
  * with us" says it of Lily alone).
  */
+/** Parenthesized words that only give a person's birth date, SSN or age ("born April 12, 2016, SSN 000-55-1201"). */
+function isPersonDetails(inside: string): boolean {
+  const rest = inside
+    .replace(/\bborn(\s+on)?\s+([a-z]+\.?\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|\d{4})/g, ' ')
+    .replace(/\bssn\s*(ending\s+(in\s+)?)?[\d-]+/g, ' ')
+    .replace(/\b(age\s+\d{1,2}|\d{1,2}\s+years?\s+old)\b/g, ' ');
+  return /^[\s,;]*$/.test(rest);
+}
+
 function listedBefore(firstName: string, sentence: string, at: number, people: Set<string>): boolean {
   const before = sentence.slice(0, at);
   const mentions = [...before.matchAll(new RegExp(`(?<![a-z])${escape(firstName.toLowerCase())}(?![a-z])`, 'g'))];
   const last = mentions[mentions.length - 1];
   if (!last) return false;
-  const between = before.slice(last.index! + firstName.length).replace(/\([^()]*\)/g, ' ');
+  // Parentheses that give a person's birth date, SSN or age go; any other words in them ("(who moved out in March)") stay and break the list.
+  const between = before.slice(last.index! + firstName.length).replace(/\(([^()]*)\)/g, (whole, inside: string) => (isPersonDetails(inside) ? ' ' : whole));
   if (/[^a-z\s,'-]/.test(between)) return false;
   const words: string[] = between.match(/[a-z][a-z'-]+/g) ?? [];
   return words.includes('and') && words.every((w) => w === 'and' || people.has(w));

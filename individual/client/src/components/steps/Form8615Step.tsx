@@ -8,7 +8,7 @@ import SectionIntro from '../common/SectionIntro';
 import CalloutCard from '../common/CalloutCard';
 import StepWarningsBanner from '../common/StepWarningsBanner';
 import { Baby, ExternalLink } from 'lucide-react';
-import { FilingStatus, type Form8615Info, type Form8615Result } from '@hatax/engine';
+import { FilingStatus, getTaxConstants, type Form8615Info, type Form8615Result } from '@hatax/engine';
 
 const PARENT_STATUS: Array<{ value: FilingStatus; label: string }> = [
   { value: FilingStatus.Single, label: 'Single' },
@@ -21,10 +21,10 @@ const PARENT_STATUS: Array<{ value: FilingStatus; label: string }> = [
 const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 
 /** The form's lines, as the IRS prints them. */
-function Lines({ r }: { r: Form8615Result }) {
+function Lines({ r, threshold }: { r: Form8615Result; threshold: number }) {
   const rows: Array<[string, string, number | undefined]> = [
     ['1', 'Your unearned income', r.line1],
-    ['2', '$2,700, or your itemized amount', r.line2],
+    ['2', `${money(threshold)}, or your itemized amount`, r.line2],
     ['3', 'Line 1 minus line 2', r.line3],
   ];
   if (r.line3 > 0) rows.push(['4', 'Your taxable income', r.line4], ['5', 'The smaller of line 3 or line 4 (your net unearned income)', r.line5]);
@@ -61,7 +61,8 @@ function Lines({ r }: { r: Form8615Result }) {
 }
 
 /**
- * Form 8615: a child's unearned income over $2,700 taxed at the parent's
+ * Form 8615: a child's unearned income over the year's amount ($2,700 for
+ * 2025, $2,600 for 2024) taxed at the parent's
  * rate. Whether it applies is the filer's answer; the parent's figures come
  * from the parent's own return. The engine figures the form line by line
  * (engine/form8615.ts) once every figure is in, and holds the return until
@@ -76,6 +77,7 @@ export default function Form8615Step() {
   const outcome = calculation?.form8615;
   const itemizes = calculation?.form1040.deductionUsed === 'itemized';
   const result = outcome?.status === 'figured' ? outcome.result : undefined;
+  const threshold = getTaxConstants(taxReturn.taxYear || 2025).KIDDIE_TAX.UNEARNED_INCOME_THRESHOLD;
 
   const save = async () => {
     await updateReturn(returnId, { form8615: taxReturn.form8615 });
@@ -105,18 +107,18 @@ export default function Form8615Step() {
       <SectionIntro
         icon={<Baby className="w-8 h-8" />}
         title="Form 8615 (kiddie tax)"
-        description="A child's interest, dividends and other unearned income over $2,700 is taxed at the parent's rate."
+        description={`A child's interest, dividends and other unearned income over ${money(threshold)} is taxed at the parent's rate.`}
       />
 
       <CalloutCard variant="info" title="Who files Form 8615" irsUrl="https://www.irs.gov/forms-pubs/about-form-8615">
-        You file it with your return if you must file a return, your unearned income was more than $2,700 and, at the end of {taxReturn.taxYear}, you were under 18, or 18 or a full-time student under 24 whose earned income was not more than half of your support — and at least one of your parents was alive and you don't file a joint return.
+        You file it with your return if you must file a return, your unearned income was more than {money(threshold)} and, at the end of {taxReturn.taxYear}, you were under 18, or 18 or a full-time student under 24 whose earned income was not more than half of your support — and at least one of your parents was alive and you don't file a joint return.
       </CalloutCard>
 
       {outcome === undefined && info.applies !== true && (
         <div className="card mt-6 text-sm text-slate-300">
           {info.applies === false
             ? 'You said Form 8615 does not apply to you.'
-            : `Form 8615 is not needed: your unearned income is not more than $2,700, or you are 24 or older or file jointly${calculation ? '' : ' (enter your income first)'}.`}
+            : `Form 8615 is not needed: your unearned income is not more than ${money(threshold)}, or you are 24 or older or file jointly${calculation ? '' : ' (enter your income first)'}.`}
           {info.applies === false && (
             <button type="button" onClick={() => set('applies', undefined)} className="ml-2 text-HATaxService-blue-400 hover:text-HATaxService-blue-300">Change</button>
           )}
@@ -212,7 +214,7 @@ export default function Form8615Step() {
                 ? 'Line 3 is zero or less, so the form stops there: your tax is figured as usual. The form is still attached to your return.'
                 : 'Line 5 is zero, so the form stops there: your tax is figured as usual. The form is still attached to your return.'}
           </p>
-          <Lines r={result} />
+          <Lines r={result} threshold={threshold} />
           <a href="https://www.irs.gov/forms-pubs/about-form-8615" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-xs text-HATaxService-blue-400 hover:text-HATaxService-blue-300 transition-colors"><ExternalLink className="w-3 h-3" />Form 8615 instructions on IRS.gov</a>
         </div>
       )}

@@ -12,7 +12,7 @@ import { useState } from 'react';
 import type { Dependent, KiddieTaxInfo } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validateDateOfBirth } from '../../utils/dateValidation';
-import { maskSSN } from '@hatax/engine';
+import { getTaxConstants, maskSSN } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import SSNInput from '../common/SSNInput';
 import { useItemWarnings } from '../../hooks/useWarnings';
@@ -336,7 +336,7 @@ export default function DependentsStep() {
 
 // ─── A child's unearned income ───────────────────────────────────────
 /**
- * Form 8615 taxes a child's unearned income over $2,700 at the parent's rate
+ * Form 8615 taxes a child's unearned income over the year's amount at the parent's rate
  * on the child's own return (its Form 8615 step); reporting the child's
  * interest and dividends on this return instead (Form 8814) is not
  * supported. Entries kept from before, which once estimated the tax at a
@@ -360,7 +360,7 @@ function ChildUnearnedIncomeNote() {
         <h3 className="font-medium text-slate-200">A child's investment income (kiddie tax)</h3>
       </div>
       <p className="text-sm text-slate-400">
-        If your child had more than $2,700 of interest, dividends or other unearned income, the tax on it is figured on Form 8615 with your child's own return, using figures from your return (your taxable income and tax). Reporting your child's income on your return instead (Form 8814) is not supported.
+        If your child had more than ${getTaxConstants(taxReturn.taxYear || 2025).KIDDIE_TAX.UNEARNED_INCOME_THRESHOLD.toLocaleString('en-US')} of interest, dividends or other unearned income, the tax on it is figured on Form 8615 with your child's own return, using figures from your return (your taxable income and tax). Reporting your child's income on your return instead (Form 8814) is not supported.
       </p>
 
       {entries.length > 0 && (

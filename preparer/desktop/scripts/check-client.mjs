@@ -40,6 +40,17 @@ if (info.syncfusionLicensed !== true) {
   );
 }
 
+if (info.apiOrigin) {
+  problem(`the client was built with an API origin (${info.apiOrigin}); the desktop app's API is its own server. Unset VITE_API_BASE and VITE_API_ORIGIN and rebuild.`);
+}
+
+// The Terms of Use and Privacy Policy state the business's facts from
+// client/src/pages/legal.ts: a release waits until they are filled and reviewed.
+const legal = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'src', 'pages', 'legal.ts'), 'utf8');
+if (!/\bconfirmed:\s*true\b/.test(legal) || /contact@example\.com/.test(legal)) {
+  problem('client/src/pages/legal.ts is not confirmed: fill in the company, contact address and governing law, have counsel review the Terms and Privacy pages, then set confirmed: true and rebuild.');
+}
+
 /** Stylesheets and pages that load from another host: a remote @import, or a <link> to one. */
 function remoteLoads(dir) {
   const found = [];

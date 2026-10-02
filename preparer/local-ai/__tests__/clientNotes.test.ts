@@ -58,6 +58,16 @@ describe("a note's proposals keep only what its words give", () => {
     const apartByName = Object.fromEntries(apart.proposals.map((p) => [p.args.firstName, p]));
     expect(apartByName.Lily!.args).toMatchObject({ monthsLivedWithYou: 12 });
     expect(apartByName.Noah?.args ?? {}).not.toHaveProperty('monthsLivedWithYou');
+    // Words in parentheses other than a birth date, SSN or age break the list too.
+    const aside = confirmNoteProposals('dependents', 'Our kids Noah Okafor (who moved out in March) and Lily Okafor (born September 30, 2019) lived with us all year.', {
+      people: [
+        { quote: 'Noah Okafor (who moved out in March)', firstName: 'Noah', lastName: 'Okafor', relationship: '', dateOfBirth: '' },
+        { quote: 'Lily Okafor (born September 30, 2019)', firstName: 'Lily', lastName: 'Okafor', relationship: '', dateOfBirth: '2019-09-30' },
+      ],
+    }, 2025);
+    const asideByName = Object.fromEntries(aside.proposals.map((p) => [p.args.firstName, p]));
+    expect(asideByName.Lily!.args).toMatchObject({ monthsLivedWithYou: 12 });
+    expect(asideByName.Noah?.args ?? {}).not.toHaveProperty('monthsLivedWithYou');
     // A dependent who is the taxpayer is never offered, whatever sentence named him.
     const ben = { tool: 'add_dependent' as const, args: { firstName: 'Ben', lastName: 'Okafor' }, quote: 'Ben', sentence: 'ben', dropped: [] };
     expect(namesSomeoneOnTheReturn(ben, [{ firstName: 'Ben', lastName: 'Okafor' }])).toBe(true);

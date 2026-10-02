@@ -237,6 +237,24 @@ describe('Form 8615 (2025)', () => {
     expect(plain).toMatchObject({ applies: true, line2: 3_350, line3: 6_650, line5: 6_000, unsupported: [] });
   });
 
+  it("uses each year's amounts: $2,600 for 2024 (Form 8615 (2024) line 2), $2,700 for 2025", () => {
+    // 2024: $10,000 of interest, the dependent standard deduction $1,300, taxable $8,700.
+    const r2024 = calculateForm8615({
+      info: PARENT, taxYear: 2024, childFilingStatus: FilingStatus.Single, totalIncome: 10_000, agi: 10_000, taxableIncome: 8_700,
+      deduction: 1_300, itemizes: false, wages: 0, businessIncome: 0, farmIncome: 0, earlyWithdrawalPenalty: 0, nolDeduction: 0,
+      qualifiedDividends: 0, netCapitalGain: 0, has28RateOr1250Gain: false, filesForm2555: false,
+    });
+    expect(r2024).toMatchObject({ line1: 10_000, line2: 2_600, line3: 7_400, line4: 8_700, line5: 7_400 });
+    // $2,650 of unearned income is over 2024's amount, not 2025's.
+    const small = {
+      taxYear: 2024, childFilingStatus: FilingStatus.Single, totalIncome: 2_650, agi: 2_650, taxableIncome: 1_350,
+      deduction: 1_300, itemizes: false, wages: 0, businessIncome: 0, farmIncome: 0, earlyWithdrawalPenalty: 0, nolDeduction: 0,
+      qualifiedDividends: 0, netCapitalGain: 0, has28RateOr1250Gain: false, filesForm2555: false, age: 14,
+    };
+    expect(figureForm8615(small)).toMatchObject({ status: 'ask', unearnedIncome: 2_650 });
+    expect(figureForm8615({ ...small, taxYear: 2025 })).toBeUndefined();
+  });
+
   it('uses the Alternate Worksheet for line 1 with a net loss from self-employment', () => {
     // Line 9 total income 9,000 (interest 10,000, Schedule C loss 1,000): A + B = 10,000; earned income 0.
     const r = calculateForm8615({
