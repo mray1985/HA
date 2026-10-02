@@ -1,235 +1,219 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { LEGAL } from './legal';
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-white mt-6 mb-3">{title}</h2>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+const COMPONENTS: Array<[string, string]> = [
+  ['llama.cpp (runs the local models)', 'MIT'],
+  ['Qwen3.5-0.8B (reader model)', 'Apache-2.0'],
+  ['GLM-OCR (second reader model)', 'MIT'],
+  ['Tesseract.js (text recognition)', 'Apache-2.0'],
+  ['PDF.js and pdf-lib (reading and filling PDFs)', 'Apache-2.0 and MIT'],
+  ['Syncfusion Essential Studio (PDF viewer and charts)', 'Commercial license held by us; not licensed to you for other use'],
+];
 
 export default function TermsPage() {
   const navigate = useNavigate();
+  const privacy = (
+    <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button>
+  );
+  const mail = <a href={`mailto:${LEGAL.contactEmail}`} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">{LEGAL.contactEmail}</a>;
 
   return (
     <div className="min-h-screen bg-surface-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8"
-        >
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back</span>
         </button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-HATaxService-blue-500/10 rounded-lg">
-            <FileText className="w-6 h-6 text-HATaxService-blue-400" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">HA Tax Preparer — Terms of Use</h1>
+        <p className="text-slate-400 text-xs mb-8">Effective {LEGAL.effective}</p>
+
+        <div className="space-y-6 text-slate-300 text-sm leading-relaxed">
+          <div className="card bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
+            <h3 className="text-base font-semibold text-HATaxService-blue-300 mb-2">The short version</h3>
+            <p>
+              HA Tax Preparer is a tool for tax professionals. You are the preparer: you review and sign every return, you keep
+              your clients&apos; information safe on your computer, and you meet the rules for preparers. The app keeps that information
+              on your computer and never sends it to us. It holds back what it cannot read or compute with confidence, rather than
+              guessing — and it can still be wrong, so check its work.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Terms of Service</h1>
-        </div>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-slate-300 text-sm leading-relaxed">
-          <p className="text-slate-400 text-xs">Last updated: March 22, 2026</p>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What HATax Is</h2>
+          <Section title="1. This agreement">
             <p>
-              HATax is a free, open-source tax preparation tool that helps you estimate your federal
-              and state income tax liability for all 50 states and the District of Columbia. It runs
-              entirely in your web browser. All calculations are performed on your device using the
-              open-source <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">@hatax/engine</code> library.
+              These terms are an agreement between {LEGAL.company} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) and the tax professional or firm that
+              installs or uses HA Tax Preparer (&ldquo;you&rdquo;). By creating an account or using the app you accept them. If you accept
+              for a firm, you confirm you may bind it, and the firm is responsible for its staff&apos;s use. The {privacy} is part of
+              these terms.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2. What HATax Is Not</h2>
+          <Section title="2. Who may use the app">
             <p>
-              HATax is <strong className="text-white">not</strong> a tax preparer, tax advisor, CPA,
-              enrolled agent, or attorney. It does not provide tax advice, legal advice, or financial
-              advice of any kind. It is a tool that performs mathematical calculations based on
-              information you provide and IRS-published tax rules.
+              The app is licensed for preparing tax returns in the course of a tax practice. Each person who uses it needs their own
+              seat and sign-in, and must hold any credential the law requires of them — a preparer who prepares returns for
+              compensation needs a Preparer Tax Identification Number (PTIN).
             </p>
-            <p>
-              HATax does not file tax returns with the IRS or any state tax authority. In Private
-              Mode (the default), it does not transmit your data to any third party. In BYOK Mode,
-              PII-stripped messages are relayed to Anthropic for AI-powered features (see Section 7a
-              below). It generates documents for your personal review and records only.
-            </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">3. Your Responsibility</h2>
-            <p>You are solely responsible for:</p>
-            <ul className="list-disc list-inside space-y-1 text-slate-400">
-              <li>The accuracy of the information you enter</li>
-              <li>Verifying any tax calculations before relying on them</li>
-              <li>Filing your actual tax return with the IRS (if required)</li>
-              <li>Consulting a qualified tax professional for advice specific to your situation</li>
-              <li>Understanding your tax obligations under federal, state, and local law</li>
-              <li>Verifying data pulled from imported documents — imports are approximate, not perfect</li>
-              <li>Setting and remembering your encryption passphrase (there is no "forgot password" option)</li>
-              <li>Keeping a backup of your data via export in case you clear your browser or lose your device</li>
+          <Section title="3. Your license">
+            <p>
+              While your seat is active we grant you a non-exclusive, non-transferable license to install and use the app for your
+              practice. A seat runs through April 15 following the season in which it is activated. {/* TODO: the seat price and refund policy. */}
+              You may not resell, sublicense or share the app or a seat; copy it except for backups; or reverse engineer it except
+              as the law allows despite this limit. We keep all rights not granted here.
+            </p>
+            <p>The app includes third-party components under their own licenses:</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <tbody>
+                  {COMPONENTS.map(([name, license]) => (
+                    <tr key={name} className="border-b border-slate-800 align-top">
+                      <td className="py-2 pr-4">{name}</td>
+                      <td className="py-2 text-slate-400">{license}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          <Section title="4. You are the preparer">
+            <ul className="list-disc pl-5 space-y-1">
+              <li>The app is software, not a tax advisor, and does not give tax, legal or accounting advice. Every return is yours: you apply your professional judgment, review it, and sign it as its preparer.</li>
+              <li>Your professional duties stay yours, including Circular 230 if you practice before the IRS, and the due-diligence requirements for the credits and head-of-household status the law lists (IRC §6695(g), Form 8867).</li>
+              <li>IRC §6107 requires you to give each client a completed copy of the return by the time it is presented for signature, and to keep a copy, or a list of the taxpayers&apos; names and identifying numbers, for 3 years after the close of the return period.</li>
+              <li>The app does not file returns. You file each return by the method you choose.</li>
             </ul>
-            <p className="mt-3">
-              Tax law is complex and changes frequently. HATax implements the rules as we understand
-              them for the 2025 tax year, but we make no guarantee that our implementation is complete,
-              current, or correct for every situation.
-            </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">4. No Warranty</h2>
-            <p>
-              HATax is provided <strong className="text-white">"as is"</strong> and <strong className="text-white">"as available"</strong> without
-              warranty of any kind, either express or implied, including but not limited to the implied
-              warranties of merchantability, fitness for a particular purpose, and non-infringement.
-            </p>
-            <p>
-              We do not warrant that the tax calculations will be accurate, complete, or suitable for
-              filing with the IRS. We do not warrant that the software will be free of errors, bugs,
-              or interruptions.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">5. Limitation of Liability</h2>
-            <p>
-              To the maximum extent permitted by applicable law, HATax and its contributors shall
-              not be liable for any indirect, incidental, special, consequential, or punitive damages,
-              including but not limited to: loss of profits, data, or goodwill; tax penalties or
-              interest; IRS audit costs; or any other intangible losses resulting from your use of or
-              inability to use HATax.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">6. Open Source</h2>
-            <p>
-              The HATax calculation engine is released under the MIT License. You may inspect, modify,
-              and redistribute the source code in accordance with that license. The open-source nature
-              of the engine means you can independently verify every calculation it performs.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">7. Local Data Storage</h2>
-            <p>
-              All tax data you enter is stored exclusively in your browser's local storage on your
-              device, encrypted with your passphrase when one is set. Documents you import (PDFs, CSVs,
-              photos, and other files) are processed entirely in your browser and never uploaded. We have
-              no servers that receive, store, or process your tax information. See
-              our <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button> for
-              full details.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">7a. AI Features (BYOK Mode)</h2>
-            <p>
-              HATax includes optional AI-powered features that require you to provide your own
-              Anthropic API key ("BYOK Mode"). These features are disabled by default.
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-slate-400 mt-3">
+          <Section title="5. What the app does, and its limits">
+            <ul className="list-disc pl-5 space-y-1">
               <li>
-                <strong className="text-slate-300">Your API key, your account.</strong> AI usage is
-                billed directly to your Anthropic account. HATax does not charge for AI features
-                and receives no payment from Anthropic.
+                <span className="text-white">Local AI.</span> Documents and client replies are read by AI models running on your computer. A value is used only when the
+                document&apos;s own text or a second reading confirms it; anything else is held for you. Readings can still be wrong: check each value against the
+                document before you approve a return.
               </li>
               <li>
-                <strong className="text-slate-300">HATax is not responsible for Anthropic's service.</strong> We
-                relay your messages but have no control over Anthropic's availability, pricing,
-                rate limits, or model behavior. Anthropic's terms of service govern your use of
-                their API.
+                <span className="text-white">Fails closed.</span> When the app cannot compute something to the official rules — a form, a worksheet, a state rule —
+                it says so and holds the return instead of estimating. Prepare those parts outside the app.
               </li>
               <li>
-                <strong className="text-slate-300">AI responses are not tax advice.</strong> The AI
-                assistant can explain tax concepts and help with data entry, but all tax calculations
-                are performed by our deterministic engine. HATax is not responsible for the accuracy,
-                completeness, or reliability of AI-generated responses. You should not rely on AI
-                responses as a substitute for professional tax advice.
-              </li>
-              <li>
-                <strong className="text-slate-300">You are responsible for your API key.</strong> Your
-                key is stored in your browser's encrypted localStorage. We never store it on our
-                server. If your key is compromised, revoke it from your Anthropic account.
+                <span className="text-white">Coverage.</span> The forms, schedules and states the app supports, and the tax years it computes, are listed with the app.
+                Tax law changes; install the updates we publish for the season.
               </li>
             </ul>
-            <p className="mt-3">
-              See our <button onClick={() => navigate('/privacy')} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Privacy Policy</button> (Section 13) for
-              full details on what data is sent, how PII is blocked, and how our relay server works.
-            </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">8. Eligibility</h2>
-            <p>
-              You must be at least 18 years old (or the age of majority in your jurisdiction) to use
-              HATax. By using this software, you represent that you meet this requirement.
-            </p>
-          </section>
+          <Section title="6. Your clients' information">
+            <p>The app keeps your clients&apos; information on your computer. Protecting it is your duty under federal law:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <span className="text-white">Safeguards Rule.</span> As a tax preparer you are a financial institution under the FTC Safeguards Rule (16 CFR Part 314).
+                You must keep a written information security program: a qualified individual to run it, a risk assessment, access controls,
+                encryption of customer information, multi-factor authentication for anyone accessing it, secure disposal no later than two years
+                after last use (unless needed for business or required by law), staff training, and an incident response plan. Firms with
+                information on fewer than 5,000 consumers are exempt from some of these elements (16 CFR 314.6). The app&apos;s encryption, locks and
+                local-only storage help; your program must also cover this computer, its backups and every file you export. IRS Publications 4557
+                and 5708 explain how.
+              </li>
+              <li>
+                <span className="text-white">Privacy notices.</span> Give your clients the privacy notices Regulation P requires (12 CFR Part 1016).
+              </li>
+              <li>
+                <span className="text-white">IRC §7216.</span> You may not disclose your clients&apos; tax return information, or use it for anything but preparing their returns,
+                without their written consent, except as Treas. Reg. §301.7216-2 permits. A consent must be obtained before the disclosure or use, signed and dated,
+                and carry the statements Rev. Proc. 2013-14 prescribes; without a stated duration it lasts one year. Knowing or reckless violation is a misdemeanor
+                (a fine of up to $1,000 and up to a year in prison), and IRC §6713 adds a civil penalty of $250 for each disclosure or use, up to $10,000 a year
+                (higher where identity theft is involved).
+              </li>
+              <li>
+                <span className="text-white">Data theft.</span> If client information is stolen, report it at once to your IRS Stakeholder Liaison and to the state tax agencies,
+                notify the FTC within 30 days of discovering an event involving the unencrypted information of 500 or more people (16 CFR 314.4(j)), and follow your
+                state&apos;s breach-notice laws.
+              </li>
+            </ul>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">9. Indemnification</h2>
+          <Section title="7. Our handling of tax return information">
             <p>
-              To the maximum extent permitted by applicable law, you agree to indemnify and hold
-              harmless HATax, its author, and its contributors from any claims, losses, damages,
-              liabilities, or expenses (including reasonable attorneys&apos; fees) arising from your use
-              of the software, including but not limited to penalties, interest, or audit costs
-              assessed by any taxing authority, or any misuse of the AI features.
+              Treasury regulations treat a company that develops software used to prepare returns as a tax return preparer for §7216 purposes
+              (Treas. Reg. §301.7216-1(b)(2)(i)(B)). The app is built so that we never receive your clients&apos; information. If any reaches us — in a support
+              request, for example — we use it only to help you, never disclose it, sell it or use it for marketing, and delete it once the request is closed.
+              Do not send us client information; mask identifying numbers in anything you must send.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">10. Governing Law &amp; Dispute Resolution</h2>
+          <Section title="8. Your passphrase and your data">
             <p>
-              These terms are governed by the laws of the District of Columbia, without regard to
-              conflict of law principles. Any dispute arising under these terms shall be resolved
-              exclusively in the courts located in the District of Columbia, and you consent to
-              personal jurisdiction in those courts.
+              Your cases are encrypted with a key made from your passphrase, on your computer. We cannot recover a lost passphrase or restore deleted or lost
+              data. Keep your passphrase safe and download the encrypted case file regularly.
             </p>
-            <p>
-              To the fullest extent permitted by law, any dispute shall be resolved on an individual
-              basis. You waive any right to participate in a class action, class arbitration, or other
-              representative proceeding against HATax or its contributors.
-            </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">11. Changes to These Terms</h2>
+          <Section title="9. Warranty disclaimer">
             <p>
-              We may update these terms from time to time. Changes will be reflected on this page
-              with an updated &ldquo;Last updated&rdquo; date. Your continued use of HATax after changes
-              constitutes acceptance of the revised terms.
+              The app is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo;. To the extent the law allows, we disclaim all warranties, express or implied,
+              including merchantability, fitness for a particular purpose, accuracy and non-infringement. We do not warrant that the app is error-free, that
+              it computes every situation, or that its readings of documents are correct.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">12. Severability</h2>
+          <Section title="10. Limitation of liability">
             <p>
-              If any provision of these terms is found to be unenforceable or invalid, that provision
-              shall be limited or eliminated to the minimum extent necessary, and the remaining
-              provisions shall remain in full force and effect.
+              To the extent the law allows, we are not liable for indirect, incidental, special, consequential or punitive damages, or for lost profits, lost data,
+              or tax, penalties or interest assessed on any return; and our total liability for any claim about the app is limited to the fees you paid for it in the
+              12 months before the claim. Some jurisdictions do not allow these limits, so they may not apply to you in full.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">13. Contact</h2>
+          <Section title="11. Indemnification">
             <p>
-              If you have questions about these terms, find a calculation error, or want to contribute
-              to the project, email us at {/* TODO: replace stub contact link */}<a href="mailto:contact@example.com" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">contact@example.com</a> or
-              visit our {/* TODO: replace stub contact link */}<a href="#" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Source</a>.
+              You will defend and indemnify us against claims by your clients or others arising from the returns you prepare, your practice, or your breach of
+              these terms or of the laws in Section 6, except to the extent a claim is caused by our breach of these terms.
             </p>
-          </section>
+          </Section>
+
+          <Section title="12. Ending the license">
+            <p>
+              You may stop using the app at any time. We may suspend or end your license if you breach these terms. When it ends, stop using the app; your data stays
+              on your computer and remains yours, and Sections 4, 6, 7 and 9 to 14 continue.
+            </p>
+          </Section>
+
+          <Section title="13. Governing law">
+            <p>
+              These terms are governed by the laws of {LEGAL.governingLaw}, without regard to its conflict-of-laws rules, and disputes will be resolved in its courts.
+            </p>
+          </Section>
+
+          <Section title="14. General">
+            <p>
+              We may change these terms for a new version of the app; the version you install shows the terms that apply, with their effective date. If a provision
+              is unenforceable, the rest stays in effect. These terms and the Privacy Policy are the whole agreement about the app.
+            </p>
+          </Section>
+
+          <Section title="15. Contact">
+            <p>Questions about these terms: {mail}.</p>
+          </Section>
         </div>
 
-        {/* Footer */}
-        <div className="text-xs text-slate-600 mt-12 text-center leading-relaxed">
-          <p>This tool is for informational purposes only and does not constitute tax advice.</p>
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <button onClick={() => navigate('/pledge')} className="text-slate-400 hover:text-slate-300 transition-colors">About</button>
-            <span className="text-slate-700">&middot;</span>
-            <button onClick={() => navigate('/privacy')} className="text-slate-400 hover:text-slate-300 transition-colors">Privacy</button>
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            &larr; Back to dashboard
-          </button>
+        <div className="text-xs text-slate-500 mt-12 flex items-center justify-center gap-3">
+          <button onClick={() => navigate('/privacy')} className="text-slate-400 hover:text-slate-300 transition-colors">Privacy Policy</button>
+          <span className="text-slate-700">&middot;</span>
+          <button onClick={() => navigate('/preparer')} className="text-slate-400 hover:text-slate-300 transition-colors">Back to the cases</button>
         </div>
       </div>
     </div>

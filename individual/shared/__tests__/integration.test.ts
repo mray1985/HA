@@ -14,7 +14,7 @@
  *   - Home sale + capital gains
  *   - Form 8606 Roth conversion pro-rata
  *   - Premium Tax Credit reconciliation
- *   - Kiddie Tax at parent's rate
+ *   - Kiddie tax entries are not estimated (Form 8615 is figured on the child's return)
  *   - Estimated Tax Penalty
  *   - Energy credits stacking
  *   - Schedule F farm + SE
@@ -997,23 +997,15 @@ describe('I8 — ACA Family: Premium Tax Credit Reconciliation', () => {
 
 
 // ═════════════════════════════════════════════════════════════════════════════
-// I9 — Kiddie Tax
+// I9 — Kiddie Tax Entry
 //
-// Profile: Child (age 14) with $5,000 unearned income (dividends from
-//          custodial account).  Parent's marginal rate is 32%.
-//
-// Hand calculation:
-//   Child's unearned income = 5,000
-//   Kiddie tax threshold = 2,700 (2025)
-//   Excess above threshold = 5,000 − 2,700 = 2,300
-//
-//   Additional tax = excess × (parent rate − child rate)
-//                  = 2,300 × (0.32 − 0.10) = 2,300 × 0.22 = 506
-//
-//   This tests the kiddie tax calculation flows through the pipeline.
+// Profile: a kiddie tax entry for a child (age 14) with $5,000 of unearned
+//          income and a 32% parent rate. A guessed rate is never applied: the
+//          entry adds nothing and is reported unsupported (Form 8814). Form 8615
+//          on the child's own return is tested in form8615.test.ts.
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('I9 — Kiddie Tax: Child Unearned Income at Parent Rate', () => {
+describe('I9 — Kiddie Tax Entry: Not Estimated', () => {
   const taxReturn = makeTaxReturn({
     filingStatus: FilingStatus.Single,
     income1099DIV: [{
@@ -1033,21 +1025,15 @@ describe('I9 — Kiddie Tax: Child Unearned Income at Parent Rate', () => {
   const result = calculateForm1040(taxReturn);
   const f = result.form1040;
 
-  it('triggers kiddie tax', () => {
-    expect(result.kiddieTax).toBeDefined();
-    expect(result.kiddieTax!.additionalTax).toBeGreaterThan(0);
+  // A guessed parent rate is never applied: Form 8615 is figured line by line
+  // from the parent's figures (form8615.test.ts), and Form 8814 is not supported.
+  it('adds no kiddie tax estimate', () => {
+    expect(result.kiddieTax).toBeUndefined();
+    expect(f.kiddieTaxAmount).toBe(0);
   });
 
-  it('calculates correct additional tax at parent rate', () => {
-    // Excess = 5000 − 2700 = 2300
-    // Additional = 2300 × (0.32 − 0.10) = 506
-    expect(result.kiddieTax!.additionalTax).toBe(506);
-  });
-
-  it('includes kiddie tax in total tax', () => {
-    expect(f.kiddieTaxAmount).toBe(506);
-    // Child's standard deduction covers earned income; total tax may be just kiddie tax
-    expect(f.totalTax).toBeGreaterThanOrEqual(506);
+  it('reports the entry unsupported', () => {
+    expect(result.unsupported?.map((u) => u.ruleId)).toContain('FED.8814');
   });
 });
 

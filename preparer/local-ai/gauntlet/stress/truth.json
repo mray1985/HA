@@ -1,0 +1,477 @@
+{
+  "taxYear": 2025,
+  "documents": [
+    {
+      "file": "ava-w2.pdf",
+      "household": "Ava Lindqvist",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "CAPITOL CITY ANALYTICS INC",
+        "employerEin": "94-3216540",
+        "wages": 68250,
+        "federalTaxWithheld": 7120,
+        "socialSecurityWages": 71000,
+        "socialSecurityTax": 4402,
+        "medicareWages": 71000,
+        "medicareTax": 1029.5,
+        "state": "CA",
+        "stateWages": 68250,
+        "stateTaxWithheld": 3050,
+        "box12": [
+          {
+            "code": "D",
+            "amount": 2750
+          },
+          {
+            "code": "DD",
+            "amount": 6400
+          }
+        ],
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": true,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "ava-w2-photo.png",
+      "household": "Ava Lindqvist",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "CAPITOL CITY ANALYTICS INC",
+        "employerEin": "94-3216540",
+        "wages": 68250,
+        "federalTaxWithheld": 7120,
+        "socialSecurityWages": 71000,
+        "socialSecurityTax": 4402,
+        "medicareWages": 71000,
+        "medicareTax": 1029.5,
+        "state": "CA",
+        "stateWages": 68250,
+        "stateTaxWithheld": 3050,
+        "box12": [
+          {
+            "code": "D",
+            "amount": 2750
+          },
+          {
+            "code": "DD",
+            "amount": 6400
+          }
+        ],
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": true,
+          "thirdPartySickPay": false
+        }
+      },
+      "expect": "the same W-2 as ava-w2.pdf: must not count twice"
+    },
+    {
+      "file": "ava-w2-2024.pdf",
+      "household": "Ava Lindqvist",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2024,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "CAPITOL CITY ANALYTICS INC",
+        "employerEin": "94-3216540",
+        "wages": 64100,
+        "federalTaxWithheld": 6640,
+        "socialSecurityWages": 66600,
+        "socialSecurityTax": 4129.2,
+        "medicareWages": 66600,
+        "medicareTax": 965.7,
+        "state": "CA",
+        "stateWages": 64100,
+        "stateTaxWithheld": 2810,
+        "box12": [
+          {
+            "code": "D",
+            "amount": 2500
+          }
+        ],
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": true,
+          "thirdPartySickPay": false
+        }
+      },
+      "expect": "a 2024 W-2: warned, not on the 2025 return"
+    },
+    {
+      "file": "ava-1099int.pdf",
+      "household": "Ava Lindqvist",
+      "person": "taxpayer",
+      "form": "1099-INT",
+      "year": 2025,
+      "tool": "add_1099_int",
+      "args": {
+        "payerName": "GOLDEN STATE CREDIT UNION",
+        "amount": 412.38
+      }
+    },
+    {
+      "file": "ben-w2.pdf",
+      "household": "Ben Okafor",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "PRAIRIE RAIL SYSTEMS LLC",
+        "employerEin": "36-4455661",
+        "wages": 84300,
+        "federalTaxWithheld": 9850,
+        "socialSecurityWages": 84300,
+        "socialSecurityTax": 5226.6,
+        "medicareWages": 84300,
+        "medicareTax": 1222.35,
+        "state": "IL",
+        "stateWages": 84300,
+        "stateTaxWithheld": 4172.85,
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": false,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "cara-w2.pdf",
+      "household": "Ben Okafor",
+      "person": "spouse",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "LAKESIDE PEDIATRIC CLINIC",
+        "employerEin": "36-7788990",
+        "wages": 47900,
+        "federalTaxWithheld": 3960,
+        "socialSecurityWages": 50900,
+        "socialSecurityTax": 3155.8,
+        "medicareWages": 50900,
+        "medicareTax": 738.05,
+        "state": "IL",
+        "stateWages": 47900,
+        "stateTaxWithheld": 2371.05,
+        "box12": [
+          {
+            "code": "E",
+            "amount": 3000
+          }
+        ],
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": true,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "okafor-1099div.pdf",
+      "household": "Ben Okafor",
+      "person": "taxpayer",
+      "form": "1099-DIV",
+      "year": 2025,
+      "tool": "add_1099_div",
+      "args": {
+        "payerName": "LAKEFRONT INDEX FUNDS",
+        "ordinaryDividends": 1845.2,
+        "qualifiedDividends": 1610.75,
+        "capitalGainDistributions": 225
+      }
+    },
+    {
+      "file": "okafor-1098.pdf",
+      "household": "Ben Okafor",
+      "person": "taxpayer",
+      "form": "1098",
+      "year": 2025,
+      "tool": "add_mortgage_interest",
+      "args": {
+        "lenderName": "PRAIRIE HOME MORTGAGE CO",
+        "lenderTin": "36-9900112",
+        "mortgageInterest": 11240.66,
+        "outstandingPrincipal": 289400,
+        "originationDate": "06/01/2020",
+        "propertyAddressSameAsBorrower": true,
+        "numberOfProperties": 1
+      }
+    },
+    {
+      "file": "dana-w2.pdf",
+      "household": "Dana Whitfield",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "ALLEGHENY GROCERS INC",
+        "employerEin": "25-3344556",
+        "wages": 39750,
+        "federalTaxWithheld": 2310,
+        "socialSecurityWages": 39750,
+        "socialSecurityTax": 2464.5,
+        "medicareWages": 39750,
+        "medicareTax": 576.38,
+        "state": "PA",
+        "stateWages": 39750,
+        "stateTaxWithheld": 1220.33,
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": false,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "dana-1099g.pdf",
+      "household": "Dana Whitfield",
+      "person": "taxpayer",
+      "form": "1099-G",
+      "year": 2025,
+      "tool": "add_1099_g",
+      "args": {
+        "payerName": "PA DEPT OF LABOR AND INDUSTRY",
+        "unemploymentCompensation": 3600,
+        "federalTaxWithheld": 360
+      }
+    },
+    {
+      "file": "dana-1098t.pdf",
+      "household": "Dana Whitfield",
+      "person": "taxpayer",
+      "form": "1098-T",
+      "year": 2025,
+      "tool": "add_education_expense",
+      "args": {
+        "institutionName": "STEEL CITY COMMUNITY COLLEGE",
+        "institutionEin": "25-1010101",
+        "studentName": "DANA WHITFIELD",
+        "tuitionPaid": 4200,
+        "scholarships": 0,
+        "includesNextPeriod": false,
+        "halfTimeStudent": true,
+        "graduateStudent": false
+      }
+    },
+    {
+      "file": "eli-1099r.pdf",
+      "household": "Eli Brandt",
+      "person": "taxpayer",
+      "form": "1099-R",
+      "year": 2025,
+      "tool": "add_1099_r",
+      "args": {
+        "payerName": "GULF COAST RETIREMENT SERVICES",
+        "grossDistribution": 24000,
+        "taxableAmount": 24000,
+        "federalTaxWithheld": 2400,
+        "distributionCode": "7",
+        "isIRA": true
+      }
+    },
+    {
+      "file": "eli-1099int.pdf",
+      "household": "Eli Brandt",
+      "person": "taxpayer",
+      "form": "1099-INT",
+      "year": 2025,
+      "tool": "add_1099_int",
+      "args": {
+        "payerName": "SUNSHINE SAVINGS BANK",
+        "amount": 2310.4
+      }
+    },
+    {
+      "file": "eli-1099div.pdf",
+      "household": "Eli Brandt",
+      "person": "taxpayer",
+      "form": "1099-DIV",
+      "year": 2025,
+      "tool": "add_1099_div",
+      "args": {
+        "payerName": "PELICAN DIVIDEND FUND",
+        "ordinaryDividends": 3120,
+        "qualifiedDividends": 2880,
+        "capitalGainDistributions": 640
+      }
+    },
+    {
+      "file": "fay-1099nec-brewing.pdf",
+      "household": "Fay Moreno",
+      "person": "taxpayer",
+      "form": "1099-NEC",
+      "year": 2025,
+      "tool": "add_1099_nec",
+      "args": {
+        "payerName": "HILL COUNTRY BREWING CO",
+        "payerEin": "74-3322110",
+        "amount": 28400
+      }
+    },
+    {
+      "file": "fay-1099nec-events.pdf",
+      "household": "Fay Moreno",
+      "person": "taxpayer",
+      "form": "1099-NEC",
+      "year": 2025,
+      "tool": "add_1099_nec",
+      "args": {
+        "payerName": "LONGHORN EVENTS LLC",
+        "payerEin": "74-5566778",
+        "amount": 12750
+      }
+    },
+    {
+      "file": "fay-1099misc.pdf",
+      "household": "Fay Moreno",
+      "person": "taxpayer",
+      "form": "1099-MISC",
+      "year": 2025,
+      "tool": "add_1099_misc",
+      "args": {
+        "payerName": "AUSTIN DESIGN AWARDS FOUNDATION",
+        "otherIncome": 1200
+      }
+    },
+    {
+      "file": "gus-w2.pdf",
+      "household": "Gus Petrov",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "HUDSON VALLEY SOFTWARE CORP",
+        "employerEin": "14-6677889",
+        "wages": 112000,
+        "federalTaxWithheld": 17400,
+        "socialSecurityWages": 112000,
+        "socialSecurityTax": 6944,
+        "medicareWages": 112000,
+        "medicareTax": 1624,
+        "state": "NY",
+        "stateWages": 112000,
+        "stateTaxWithheld": 6050,
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": false,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "gus-1099b.pdf",
+      "household": "Gus Petrov",
+      "person": "taxpayer",
+      "form": "1099-B",
+      "year": 2025,
+      "tool": "add_1099_b",
+      "args": {
+        "brokerName": "EMPIRE BROKERAGE LLC",
+        "description": "60 sh. BETA INDUSTRIES",
+        "dateAcquired": "06/14/2020",
+        "dateSold": "08/22/2025",
+        "proceeds": 18250,
+        "costBasis": 11400,
+        "isLongTerm": true,
+        "basisReportedToIRS": true
+      }
+    },
+    {
+      "file": "gus-1099oid.pdf",
+      "household": "Gus Petrov",
+      "person": "taxpayer",
+      "form": "1099-OID",
+      "year": 2025,
+      "tool": "add_1099_oid",
+      "args": {
+        "payerName": "CAPITAL DISTRICT SECURITIES",
+        "originalIssueDiscount": 210.55,
+        "description": "ZERO COUPON NOTE 2030"
+      }
+    },
+    {
+      "file": "hana-w2-scan.png",
+      "household": "Hana Sato",
+      "person": "taxpayer",
+      "form": "W-2",
+      "year": 2025,
+      "tool": "add_w2",
+      "args": {
+        "employerName": "BUCKEYE MEDICAL SUPPLY INC",
+        "employerEin": "31-5566778",
+        "wages": 51200,
+        "federalTaxWithheld": 4980,
+        "socialSecurityWages": 51200,
+        "socialSecurityTax": 3174.4,
+        "medicareWages": 51200,
+        "medicareTax": 742.4,
+        "state": "OH",
+        "stateWages": 51200,
+        "stateTaxWithheld": 1150,
+        "box12": [
+          {
+            "code": "W",
+            "amount": 1200
+          }
+        ],
+        "box13": {
+          "statutoryEmployee": false,
+          "retirementPlan": false,
+          "thirdPartySickPay": false
+        }
+      }
+    },
+    {
+      "file": "hana-1099c.pdf",
+      "household": "Hana Sato",
+      "person": "taxpayer",
+      "form": "1099-C",
+      "year": 2025,
+      "tool": "add_1099_c",
+      "args": {
+        "payerName": "OHIO VALLEY CARD SERVICES",
+        "dateOfCancellation": "09/30/2025",
+        "amountCancelled": 2150,
+        "debtDescription": "CREDIT CARD",
+        "identifiableEventCode": "G",
+        "personallyLiable": true
+      }
+    },
+    {
+      "file": "hana-1099sa.pdf",
+      "household": "Hana Sato",
+      "person": "taxpayer",
+      "form": "1099-SA",
+      "year": 2025,
+      "tool": "add_1099_sa",
+      "args": {
+        "payerName": "BUCKEYE HSA BANK",
+        "grossDistribution": 1350,
+        "distributionCode": "1",
+        "accountType": "HSA"
+      }
+    }
+  ],
+  "replies": {
+    "Ava Lindqvist": "Hi! I'm single with no dependents and lived in California all of 2025. The 2024 W-2 got mixed in by mistake, and the photo is the same W-2 as the PDF.",
+    "Ben Okafor": "Ben and I (Cara Okafor, SSN 000-31-5502, born July 19, 1988) are married and file jointly. Ben was born March 2, 1986. Our kids Noah Okafor (born April 12, 2016, SSN 000-55-1201) and Lily Okafor (born September 30, 2019, SSN 000-55-1202) lived with us all year. We all live in Illinois.",
+    "Dana Whitfield": "I'm filing as head of household. My son Marcus Whitfield (born February 3, 2014, SSN 000-66-3001) lived with me all year and I paid all the household costs. The 1098-T is for my own classes at the community college.",
+    "Eli Brandt": "I'm single, born May 20, 1957, retired and a Florida resident all year. No dependents.",
+    "Fay Moreno": "I'm single with no dependents, a Texas resident. I'm a freelance designer; my business expenses were $3,200 for software and equipment.",
+    "Gus Petrov": "I'm single with no dependents and lived in New York all year.",
+    "Hana Sato": "I'm single, no dependents, Ohio resident. The HSA distribution paid doctor bills. The credit card debt was cancelled and I was not insolvent."
+  }
+}

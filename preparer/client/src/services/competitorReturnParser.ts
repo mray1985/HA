@@ -11,7 +11,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
-import './pdfWorkerInit'; // Ensure worker is configured
+import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit'; // Ensure worker is configured
 import { FilingStatus } from '@hatax/engine';
 import { MAX_PDF_SIZE } from './importHelpers';
 import {
@@ -160,7 +160,7 @@ export async function parseCompetitorReturn(file: File): Promise<CompetitorExtra
   let pdf: pdfjsLib.PDFDocumentProxy;
   try {
     const arrayBuffer = await file.arrayBuffer();
-    pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    pdf = await pdfjsLib.getDocument({ data: arrayBuffer, ...PDFJS_DOCUMENT_OPTIONS }).promise;
   } catch (err: unknown) {
     // Detect password-protected PDFs
     if (err && typeof err === 'object' && 'name' in err && (err as { name: string }).name === 'PasswordException') {

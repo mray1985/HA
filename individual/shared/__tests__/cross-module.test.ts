@@ -426,22 +426,13 @@ describe('CM5 — Schedule E at Phase-Out Ceiling: Full Loss Disallowance', () =
 
 
 // ═════════════════════════════════════════════════════════════════════════════
-// CM6 — Kiddie Tax + Capital Gains: Preferential Rates Preserved
+// CM6 — Kiddie Tax Entry + Capital Gains: Preferential Rates Preserved
 //
-// Profile: Parent claims kiddie tax for child with unearned income.
-//          Child has $5,000 in qualified dividends (LTCG-rate eligible).
-//          Verifies kiddie tax is ADDITIVE and doesn't override preferential rates.
-//
-// Hand calculation:
-//   Child unearned income = $5,000 (qualified dividends)
-//   Kiddie tax threshold = $2,700 (2025)
-//   Excess = $5,000 − $2,700 = $2,300
-//   Parent marginal rate = 32% (assumed)
-//   Child rate = 10%
-//   Additional kiddie tax = $2,300 × (32% − 10%) = $2,300 × 22% = $506
-//
-//   Note: The $5,000 in qualified dividends should STILL get preferential
-//   rates in the main tax computation. Kiddie tax is a separate addition.
+// Profile: a kiddie tax entry for a child with $5,000 of qualified dividends.
+//          The old estimate (excess × a guessed parent rate) is gone: Form 8615
+//          is figured on the child's return (form8615.test.ts) and Form 8814 is
+//          not supported, so the entry adds nothing and is reported unsupported.
+//          The dividends still get preferential rates.
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('CM6 — Kiddie Tax + Capital Gains: Preferential Rates Preserved', () => {
@@ -460,9 +451,9 @@ describe('CM6 — Kiddie Tax + Capital Gains: Preferential Rates Preserved', () 
   const result = calculateForm1040(taxReturn);
   const f = result.form1040;
 
-  it('computes kiddie tax as additional tax', () => {
-    expect(result.kiddieTax).toBeDefined();
-    expect(result.kiddieTax!.additionalTax).toBeGreaterThan(0);
+  it('adds no kiddie tax estimate: the entry is reported unsupported (Form 8814)', () => {
+    expect(result.kiddieTax).toBeUndefined();
+    expect(result.unsupported?.map((u) => u.ruleId)).toContain('FED.8814');
   });
 
   it('preserves preferential rate on qualified dividends', () => {
@@ -474,9 +465,8 @@ describe('CM6 — Kiddie Tax + Capital Gains: Preferential Rates Preserved', () 
     expect(f.totalIncome).toBeCloseTo(7000, 0);
   });
 
-  it('adds kiddie tax to total tax', () => {
-    // Kiddie tax should be present in total tax calculation
-    expect(f.kiddieTaxAmount).toBeGreaterThan(0);
+  it('adds nothing to total tax for the entry', () => {
+    expect(f.kiddieTaxAmount).toBe(0);
   });
 });
 

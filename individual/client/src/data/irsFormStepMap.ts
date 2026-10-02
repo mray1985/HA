@@ -100,7 +100,7 @@ export const IRS_FORM_STEP_MAP: IrsFormEntry[] = [
   // Missing forms with templates
   { terms: ['form 2210', '2210', 'underpayment penalty', 'estimated tax penalty'], label: 'Form 2210 — Underpayment of Estimated Tax', stepId: 'estimated_payments', formId: 'f2210' },
   { terms: ['form 3903', '3903', 'moving expenses', 'military move'], label: 'Form 3903 — Moving Expenses (Military)', stepId: 'other_income', formId: 'f3903' },
-  { terms: ['form 8615', '8615', 'kiddie tax', 'child unearned income'], label: 'Form 8615 — Tax for Certain Children (Kiddie Tax)', stepId: 'tax_summary', formId: 'f8615' },
+  { terms: ['form 8615', '8615', 'kiddie tax', 'child unearned income'], label: 'Form 8615 — Tax for Certain Children (Kiddie Tax)', stepId: 'form_8615', formId: 'f8615' },
   { terms: ['form 8889', '8889', 'hsa form', 'hsa contributions', 'hsa deduction'], label: 'Form 8889 — Health Savings Accounts', stepId: 'hsa_contributions', formId: 'f8889' },
   { terms: ['form 982', '982', 'cod exclusion', 'insolvency', 'cancellation of debt exclusion'], label: 'Form 982 — Reduction of Tax Attributes (COD)', stepId: '1099c_income', formId: 'f982' },
 

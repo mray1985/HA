@@ -802,8 +802,12 @@ function validateForms(facts: TaxFact[], issues: FactValidationIssue[]): void {
         if (code?.status === 'extracted' && typeof code.value === 'string' && !(IDENTIFIABLE_EVENT_CODES as readonly string[]).includes(code.value.trim().toUpperCase())) {
           hold('C_INVALID_EVENT_CODE', `1099-C box 6 "${code.value}" is not an identifiable event code (A–H). Form held.`, 'identifiableEventCode', undefined);
         }
-        if (fields.get('personallyLiable')?.status === 'extracted' && fields.get('personallyLiable')!.value === false) {
+        const liable = fields.get('personallyLiable');
+        if (liable?.status === 'extracted' && liable.value === false) {
           warn('C_NOT_PERSONALLY_LIABLE', '1099-C box 5 is not checked: for a nonrecourse debt the amount may not be cancellation-of-debt income (Pub. 4681).', 'personallyLiable', false);
+        } else if (liable?.status !== 'extracted') {
+          // Unread is not "checked": an unchecked box 5 changes what the cancelled amount is.
+          warn('C_LIABILITY_UNREAD', '1099-C box 5 (the debtor was personally liable) was not read: check it on the form. If it is not checked, the debt is nonrecourse and the amount may not be cancellation-of-debt income (Pub. 4681).', 'personallyLiable');
         }
         break;
       }

@@ -116,7 +116,7 @@ export const FORM_8615_FIELDS: IRSFieldMapping[] = [
 
   // Part I: the child's net unearned income
   money('f1_5[0]', "Line 1: Child's unearned income", partOne(1)),
-  money('f1_6[0]', 'Line 2: $2,700, or the itemized deduction amount', partOne(2)),
+  money('f1_6[0]', "Line 2: the year's amount, or the itemized deduction amount", partOne(2)),
   money('f1_7[0]', 'Line 3: Subtract line 2 from line 1', partOne(3)),
   money('f1_8[0]', "Line 4: Child's taxable income", partOne(4)),
   money('f1_9[0]', 'Line 5: Smaller of line 3 or line 4', partOne(5)),

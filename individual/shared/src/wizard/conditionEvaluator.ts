@@ -62,6 +62,9 @@ export function evaluateCondition(
       return agi <= threshold;
     }
 
+    case 'calculation_has':
+      return calculation ? getNestedValue(calculation, condition.field) != null : false;
+
     case 'any':
       return condition.conditions.some((c) => evaluateCondition(c, taxReturn, calculation));
 
@@ -102,6 +105,9 @@ export function describeCondition(condition: StepCondition): string {
 
     case 'agi_lte':
       return `AGI is at or below $${condition.thresholds.single.toLocaleString()} (single) / $${condition.thresholds.mfj.toLocaleString()} (MFJ)`;
+
+    case 'calculation_has':
+      return `the calculation has "${condition.field}"`;
 
     case 'any':
       return `any of: (${condition.conditions.map(describeCondition).join(' OR ')})`;

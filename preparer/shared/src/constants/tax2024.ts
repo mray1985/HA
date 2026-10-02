@@ -851,8 +851,8 @@ export const ESTIMATED_TAX_PENALTY = {
 // ──────────────────────────────────────────────────
 
 export const KIDDIE_TAX = {
-  UNEARNED_INCOME_THRESHOLD: 2700,     // Rev. Proc. 2023-34 §3.03 — 2× $1,350 threshold
-  STANDARD_DEDUCTION_UNEARNED: 1350,   // Rev. Proc. 2023-34 §3.03 — $1,350 per tier
+  UNEARNED_INCOME_THRESHOLD: 2600,     // 2× $1,300 — Form 8615 (2024) line 2 "enter $2,600"
+  STANDARD_DEDUCTION_UNEARNED: 1300,   // Rev. Proc. 2023-34 — $1,300 per tier (§1(g)(4)(A)(ii)(I))
   AGE_LIMIT: 19,                        // IRC §1(g)(2)(A)(i) — Under 19
   STUDENT_AGE_LIMIT: 24,               // IRC §1(g)(2)(A)(ii)(II) — Under 24 if student
 };

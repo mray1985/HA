@@ -12,7 +12,7 @@ import { useState } from 'react';
 import type { Dependent, KiddieTaxInfo } from '@hatax/engine';
 import { HELP_CONTENT } from '../../data/helpContent';
 import { validateDateOfBirth } from '../../utils/dateValidation';
-import { maskSSN } from '@hatax/engine';
+import { getTaxConstants, maskSSN } from '@hatax/engine';
 import ItemWarningBadge from '../common/ItemWarningBadge';
 import SSNInput from '../common/SSNInput';
 import { useItemWarnings } from '../../hooks/useWarnings';
@@ -318,194 +318,66 @@ export default function DependentsStep() {
         )
       )}
 
-      {/* Kiddie Tax (Form 8615) — per-child entries */}
-      {taxReturn.dependents.length > 0 && (
-        <KiddieTaxSection />
+      {/* A child's unearned income (kiddie tax): Form 8615 is on the child's own return */}
+      {(taxReturn.dependents.length > 0 || (taxReturn.kiddieTaxEntries?.length ?? 0) > 0 || taxReturn.kiddieTax) && (
+        <ChildUnearnedIncomeNote />
       )}
         </>
       )}
 
       <StepNavigation onContinue={async () => {
-        const entries = taxReturn.kiddieTaxEntries;
-        if (entries && entries.length > 0) {
-          await updateReturn(returnId, { kiddieTaxEntries: entries });
+        if (taxReturn.kiddieTaxEntries !== undefined || taxReturn.kiddieTax !== undefined) {
+          await updateReturn(returnId, { kiddieTaxEntries: taxReturn.kiddieTaxEntries, kiddieTax: taxReturn.kiddieTax });
         }
       }} />
     </div>
   );
 }
 
-// ─── Kiddie Tax Section (extracted for clarity) ───────────────────────
-const EMPTY_KIDDIE: Omit<KiddieTaxInfo, 'id'> = {
-  childUnearnedIncome: 0,
-  childEarnedIncome: 0,
-  childAge: 0,
-  isFullTimeStudent: false,
-  childName: '',
-  dependentId: '',
-};
-
-function KiddieTaxSection() {
+// ─── A child's unearned income ───────────────────────────────────────
+/**
+ * Form 8615 taxes a child's unearned income over the year's amount at the parent's rate
+ * on the child's own return (its Form 8615 step); reporting the child's
+ * interest and dividends on this return instead (Form 8814) is not
+ * supported. Entries kept from before, which once estimated the tax at a
+ * guessed rate, add nothing now and hold the return until they are removed.
+ */
+function ChildUnearnedIncomeNote() {
   const { taxReturn, updateField } = useTaxReturnStore();
   if (!taxReturn) return null;
-
-  const entries = taxReturn.kiddieTaxEntries || [];
-  const dependents = taxReturn.dependents || [];
-
-  const [addingKiddie, setAddingKiddie] = useState(false);
-  const [editingKiddieId, setEditingKiddieId] = useState<string | null>(null);
-  const [kiddieForm, setKiddieForm] = useState({ ...EMPTY_KIDDIE });
-
-  const cancelKiddie = () => { setKiddieForm({ ...EMPTY_KIDDIE }); setAddingKiddie(false); setEditingKiddieId(null); };
-
-  const persistEntries = (next: KiddieTaxInfo[]) => {
-    updateField('kiddieTaxEntries', next);
+  const entries: KiddieTaxInfo[] = taxReturn.kiddieTaxEntries?.length
+    ? taxReturn.kiddieTaxEntries
+    : taxReturn.kiddieTax ? [{ id: 'legacy', ...taxReturn.kiddieTax }] : [];
+  const remove = (id: string) => {
+    if (id === 'legacy') updateField('kiddieTax', undefined);
+    else updateField('kiddieTaxEntries', (taxReturn.kiddieTaxEntries ?? []).filter((e) => e.id !== id));
   };
-
-  const addKiddieEntry = () => {
-    persistEntries([...entries, { id: crypto.randomUUID(), ...kiddieForm }]);
-    cancelKiddie();
-  };
-
-  const saveKiddieEdit = () => {
-    if (!editingKiddieId) return;
-    persistEntries(entries.map(e => e.id === editingKiddieId ? { ...e, ...kiddieForm } : e));
-    cancelKiddie();
-  };
-
-  const removeKiddieEntry = (id: string) => {
-    persistEntries(entries.filter(e => e.id !== id));
-    if (editingKiddieId === id) cancelKiddie();
-  };
-
-  const startKiddieEdit = (entry: KiddieTaxInfo) => {
-    setAddingKiddie(false);
-    setEditingKiddieId(entry.id);
-    setKiddieForm({
-      childName: entry.childName || '',
-      dependentId: entry.dependentId || '',
-      childUnearnedIncome: entry.childUnearnedIncome,
-      childEarnedIncome: entry.childEarnedIncome || 0,
-      childAge: entry.childAge,
-      isFullTimeStudent: !!entry.isFullTimeStudent,
-    });
-  };
-
-  const handleDependentSelect = (depId: string) => {
-    const dep = dependents.find(d => d.id === depId);
-    if (dep) {
-      const age = dep.dateOfBirth
-        ? Math.floor((new Date(2025, 11, 31).getTime() - new Date(dep.dateOfBirth).getTime()) / 31557600000)
-        : kiddieForm.childAge;
-      setKiddieForm(prev => ({
-        ...prev,
-        dependentId: depId,
-        childName: `${dep.firstName} ${dep.lastName}`.trim(),
-        childAge: age,
-      }));
-    } else {
-      setKiddieForm(prev => ({ ...prev, dependentId: '', childName: '' }));
-    }
-  };
-
-  const renderKiddieForm = (onSave: () => void, label: string) => (
-    <div className="card mt-4">
-      <FormField label="Dependent" optional helpText="Select a dependent or enter manually">
-        <select
-          className="input-field"
-          value={kiddieForm.dependentId || ''}
-          onChange={(e) => handleDependentSelect(e.target.value)}
-        >
-          <option value="">Select a dependent...</option>
-          {dependents.map(d => (
-            <option key={d.id} value={d.id}>{d.firstName} {d.lastName}</option>
-          ))}
-        </select>
-      </FormField>
-      {!kiddieForm.dependentId && (
-        <FormField label="Child's Name" optional>
-          <input className="input-field" value={kiddieForm.childName || ''} onChange={(e) => setKiddieForm({ ...kiddieForm, childName: e.target.value })} placeholder="Child's full name" />
-        </FormField>
-      )}
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <FormField label="Unearned Income" helpText="Interest, dividends, capital gains">
-            <CurrencyInput value={kiddieForm.childUnearnedIncome} onChange={(v) => setKiddieForm({ ...kiddieForm, childUnearnedIncome: v })} />
-          </FormField>
-        </div>
-        <div className="flex-1">
-          <FormField label="Earned Income" optional helpText="Wages, salary">
-            <CurrencyInput value={kiddieForm.childEarnedIncome} onChange={(v) => setKiddieForm({ ...kiddieForm, childEarnedIncome: v })} />
-          </FormField>
-        </div>
-      </div>
-      <div className="flex gap-3">
-        <div className="w-32">
-          <FormField label="Age" optional>
-            <input type="number" className="input-field" value={kiddieForm.childAge || ''} onChange={(e) => setKiddieForm({ ...kiddieForm, childAge: Number(e.target.value) })} min={0} max={24} />
-          </FormField>
-        </div>
-        <div className="flex-1 flex items-end pb-2">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="accent-HATaxService-orange-400" checked={!!kiddieForm.isFullTimeStudent} onChange={(e) => setKiddieForm({ ...kiddieForm, isFullTimeStudent: e.target.checked })} />
-            <span className="text-sm text-slate-300">Full-time student (extends age limit to 24)</span>
-          </label>
-        </div>
-      </div>
-      {kiddieForm.childUnearnedIncome > 2500 && (
-        <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-          Unearned income exceeds $2,500 threshold — Form 8615 applies.
-        </div>
-      )}
-      <div className="flex gap-3 mt-2">
-        <button onClick={onSave} disabled={!kiddieForm.childUnearnedIncome} className="btn-primary text-sm">{label}</button>
-        <button onClick={cancelKiddie} className="btn-secondary text-sm">Cancel</button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="card mt-6">
       <div className="flex items-center gap-3 mb-3">
         <AlertTriangle className="w-5 h-5 text-amber-400" />
-        <h3 className="font-medium text-slate-200">Kiddie Tax (Form 8615)</h3>
+        <h3 className="font-medium text-slate-200">A child's investment income (kiddie tax)</h3>
       </div>
-      <p className="text-sm text-slate-400 mb-4">
-        If a dependent child under 19 (or under 24 if a full-time student) has unearned income over $2,500, the excess may be taxed at the parent's rate. Add an entry for each qualifying child.
+      <p className="text-sm text-slate-400">
+        If your child had more than ${getTaxConstants(taxReturn.taxYear || 2025).KIDDIE_TAX.UNEARNED_INCOME_THRESHOLD.toLocaleString('en-US')} of interest, dividends or other unearned income, the tax on it is figured on Form 8615 with your child's own return, using figures from your return (your taxable income and tax). Reporting your child's income on your return instead (Form 8814) is not supported.
       </p>
 
-      {entries.map((entry) =>
-        editingKiddieId === entry.id ? (
-          <div key={entry.id}>{renderKiddieForm(saveKiddieEdit, 'Save Changes')}</div>
-        ) : (
-          <div
-            key={entry.id}
-            className="mt-3 rounded-lg border border-slate-700 bg-surface-800 p-4 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-500 transition-colors"
-            onClick={() => startKiddieEdit(entry)}
-          >
-            <div>
-              <div className="font-medium text-sm">{entry.childName || 'Unnamed Child'}</div>
-              <div className="text-xs text-slate-400">
-                Age {entry.childAge ?? '?'} &middot; Unearned: ${(entry.childUnearnedIncome ?? 0).toLocaleString()}
-                {entry.childUnearnedIncome > 2500 && <span className="text-amber-400 ml-1">(Form 8615 applies)</span>}
+      {entries.length > 0 && (
+        <>
+          <p className="text-sm text-amber-300 mt-3">
+            These kiddie tax entries from before add no tax to your return, and it cannot be filed until they are removed:
+          </p>
+          {entries.map((entry) => (
+            <div key={entry.id} className="mt-2 rounded-lg border border-slate-700 bg-surface-800 p-3 flex items-center justify-between gap-3">
+              <div className="text-sm">
+                {entry.childName || 'Unnamed child'}
+                <span className="text-xs text-slate-400 ml-2">Unearned: ${(entry.childUnearnedIncome ?? 0).toLocaleString()}</span>
               </div>
+              <button onClick={() => remove(entry.id)} className="p-2 text-slate-400 hover:text-red-400" title="Remove" aria-label={`Remove the kiddie tax entry for ${entry.childName || 'the child'}`}><Trash2 className="w-4 h-4" /></button>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={(e) => { e.stopPropagation(); startKiddieEdit(entry); }} className="p-2 text-slate-400 hover:text-HATaxService-blue-400" title="Edit"><Pencil className="w-4 h-4" /></button>
-              <button onClick={(e) => { e.stopPropagation(); removeKiddieEntry(entry.id); }} className="p-2 text-slate-400 hover:text-red-400" title="Remove"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          </div>
-        )
-      )}
-
-      {!editingKiddieId && (
-        addingKiddie ? (
-          renderKiddieForm(addKiddieEntry, 'Save Entry')
-        ) : (
-          <button onClick={() => { cancelKiddie(); setAddingKiddie(true); }} className="mt-3 w-full rounded-lg border border-dashed border-slate-600 hover:border-slate-500 p-3 text-sm text-slate-400 hover:text-slate-300 transition-colors">
-            + Add Child for Kiddie Tax
-          </button>
-        )
+          ))}
+        </>
       )}
 
       <a

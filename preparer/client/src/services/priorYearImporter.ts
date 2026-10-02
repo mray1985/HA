@@ -9,7 +9,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
-import './pdfWorkerInit'; // Ensure worker is configured
+import { PDFJS_DOCUMENT_OPTIONS } from './pdfWorkerInit'; // Ensure worker is configured
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 import type { TaxReturn, PriorYearSummary } from '@hatax/engine';
 import { priorYearSummaryFromReturn } from './priorYearSummary';
@@ -187,7 +187,7 @@ export async function importPriorYear1040PDF(file: File): Promise<PriorYearImpor
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, ...PDFJS_DOCUMENT_OPTIONS }).promise;
 
   // Strategy 1: Try AcroForm field extraction
   const acroFormValues = await extractAcroFormFinancials(pdf);

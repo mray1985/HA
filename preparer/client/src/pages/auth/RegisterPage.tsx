@@ -132,6 +132,11 @@ export default function RegisterPage({ audience = 'preparer' }: { audience?: Acc
             >
               {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
+            <p className="text-xs text-slate-400 text-center">
+              By creating an account you accept the{' '}
+              <Link to="/terms" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400">Terms of Use</Link> and the{' '}
+              <Link to="/privacy" className="text-HATaxService-orange-500 hover:text-HATaxService-orange-400">Privacy Policy</Link>.
+            </p>
           </form>
 
           <p className="mt-6 text-center text-slate-400 text-sm">

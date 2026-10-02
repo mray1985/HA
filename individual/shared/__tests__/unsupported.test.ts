@@ -68,9 +68,11 @@ describe('what the engine cannot compute is reported, not approximated', () => {
 
   it('asks, or stops, Washington residents whose long-term gains may be over $278,000 (TAX-003; see wa-capital-gains.test.ts)', () => {
     const gains = (amount: number) => [{ id: 'b', description: 'Stock', proceeds: amount + 10000, costBasis: 10000, isLongTerm: true, basisReportedToIRS: true }];
-    expect(rules(makeTaxReturn({ addressState: 'WA', income1099B: gains(100000) } as Partial<TaxReturn>))).toEqual([]);
-    expect(rules(makeTaxReturn({ addressState: 'WA', income1099B: gains(300000) } as Partial<TaxReturn>))).toEqual(['TAX-003:WA']);
-    expect(rules(makeTaxReturn({ stateReturns: [state('WA')], income1099B: gains(300000) } as Partial<TaxReturn>))).toEqual(['TAX-003:WA']);
+    // An adult (with no date of birth, Form 8615 would also be asked about).
+    const adult = { dateOfBirth: '1980-01-01' };
+    expect(rules(makeTaxReturn({ ...adult, addressState: 'WA', income1099B: gains(100000) } as Partial<TaxReturn>))).toEqual([]);
+    expect(rules(makeTaxReturn({ ...adult, addressState: 'WA', income1099B: gains(300000) } as Partial<TaxReturn>))).toEqual(['TAX-003:WA']);
+    expect(rules(makeTaxReturn({ ...adult, stateReturns: [state('WA')], income1099B: gains(300000) } as Partial<TaxReturn>))).toEqual(['TAX-003:WA']);
   });
 
   it("marks the state's own result", () => {

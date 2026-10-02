@@ -188,6 +188,19 @@ describe('evaluateCondition — nested dot-path access', () => {
   });
 });
 
+describe('evaluateCondition — calculation_has', () => {
+  const condition: StepCondition = { type: 'calculation_has', field: 'form8615' };
+  const taxReturn = makeTaxReturn();
+
+  it('is true when the calculation has the value, false when it has not or there is none', () => {
+    expect(evaluateCondition(condition, taxReturn, { form8615: { status: 'ask', unearnedIncome: 10000 } } as unknown as CalculationResult)).toBe(true);
+    expect(evaluateCondition(condition, taxReturn, {} as CalculationResult)).toBe(false);
+    expect(evaluateCondition(condition, taxReturn, null)).toBe(false);
+    expect(evaluateCondition(condition, taxReturn)).toBe(false);
+    expect(describeCondition(condition)).toBe('the calculation has "form8615"');
+  });
+});
+
 describe('evaluateCondition — agi_lte', () => {
   const condition: StepCondition = {
     type: 'agi_lte',

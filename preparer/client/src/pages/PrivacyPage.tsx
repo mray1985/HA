@@ -1,361 +1,192 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { LEGAL } from './legal';
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-white mt-6 mb-3">{title}</h2>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+const STORED: Array<[string, string]> = [
+  ['Your sign-in account: email, name, password (stored only as a bcrypt hash), role, seat status and sign-in sessions', "A database in the app's data folder in your Windows user profile"],
+  ["Your clients' cases: names, SSNs and ITINs, dates of birth, addresses, income, deductions, dependents, refund bank accounts, your review decisions and each case's audit trail", "The app's local storage, encrypted with your vault key"],
+  ['The documents you drop on a case (PDFs, scans, photos)', "The app's local database, encrypted with your vault key, so the review can show the page a value came from"],
+  ["The local AI's readings: each value read, the page and box it came from, and which model read it, when and how fast", 'With the case, encrypted with your vault key'],
+  ['The unlocked vault key, while a session lasts', 'Kept as a key that cannot be read back out, and forgotten when you lock, sign out or close the app, and after 12 hours'],
+  ["The case file you download from the dashboard (every case's return)", 'Wherever you save it, encrypted with the download password you choose'],
+  ['Filing packets, form PDFs and review packages you download', 'Wherever you save them, as ordinary files: the app does not encrypt them'],
+];
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
+  const mail = <a href={`mailto:${LEGAL.contactEmail}`} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">{LEGAL.contactEmail}</a>;
 
   return (
     <div className="min-h-screen bg-surface-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8"
-        >
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back</span>
         </button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <span className="font-bold text-4xl">HA Tax service</span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Privacy Policy</h1>
-        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">HA Tax Preparer — Privacy Policy</h1>
+        <p className="text-slate-400 text-xs mb-8">Effective {LEGAL.effective}</p>
 
-        <div className="prose prose-invert max-w-none space-y-6 text-slate-300 text-sm leading-relaxed">
-          <p className="text-slate-400 text-xs">Last updated: March 22, 2026</p>
-
-          {/* TL;DR box */}
+        <div className="space-y-6 text-slate-300 text-sm leading-relaxed">
           <div className="card bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">
             <h3 className="text-base font-semibold text-HATaxService-blue-300 mb-2">The short version</h3>
-            <p className="text-slate-300">
-              Your tax data never leaves your computer. We don't collect data. We don't use cookies.
-              We don't track you. Your tax return exists only on your device, encrypted with a
-              passphrase only you know. If you enable AI features (BYOK mode), only PII-stripped
-              messages pass through our relay server — and nothing is stored.
+            <p>
+              HA Tax Preparer is desktop software for tax professionals. Everything you and your clients&apos; documents put into it
+              stays on the computer it is installed on, encrypted with a key made from your passphrase. Documents are read by AI
+              models that run on that computer. The app sends nothing to us or to anyone else, so we never receive your clients&apos;
+              tax return information.
             </p>
           </div>
 
-          {/* Prototype warning */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-amber-300 mb-1.5">Important: This is a prototype</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  This tool is for informational purposes only and does not constitute tax advice.
-                  Do not use this app to file your taxes without having your return carefully reviewed
-                  by a qualified tax professional. HATax needs vetting by tax experts and human
-                  coders, which is why it&apos;s available as a free, open-source project. The tax engine
-                  may contain errors. If you&apos;re a tax professional or developer who&apos;d like to help
-                  stress-test the app, please get in touch.
-                </p>
-              </div>
-            </div>
-          </div>
+          <p>
+            This policy covers the HA Tax Preparer application (&ldquo;the app&rdquo;) licensed by {LEGAL.company} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) to tax
+            professionals and their firms (&ldquo;you&rdquo;). Your clients&apos; information is yours to hold and protect: as a tax
+            preparer you are a &ldquo;financial institution&rdquo; under the Gramm-Leach-Bliley Act, and the app is a tool you use to do it.
+            Section 6 lists what the law asks of you.
+          </p>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">1. What Tax Data We Collect</h2>
-            <p className="font-semibold text-HATaxService-orange-300">None.</p>
-            <p>
-              HATax runs entirely in your web browser. When you enter tax information — names,
-              income, deductions, Social Security Numbers — that data is stored in your browser's <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">localStorage</code> on
-              your device. It is never transmitted over the internet.
-            </p>
-            <p>
-              There is no HATax server that receives, processes, or stores your information. The
-              application is static HTML, CSS, and JavaScript files served to your browser. After those
-              files load, all operations happen locally.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2. Data Storage</h2>
+          <Section title="1. What the app keeps, and where">
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-700">
-                    <th className="text-left py-2 pr-4 text-slate-400 font-medium">Data Type</th>
-                    <th className="text-left py-2 pr-4 text-slate-400 font-medium">Where Stored</th>
-                    <th className="text-left py-2 text-slate-400 font-medium">Transmitted?</th>
+                    <th className="text-left py-2 pr-4 text-slate-400 font-medium">Information</th>
+                    <th className="text-left py-2 text-slate-400 font-medium">Where it is kept (always on this computer)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">Everything you enter (name, address, income, deductions)</td>
-                    <td className="py-2 pr-4">Browser localStorage, encrypted when a passphrase is set</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">Social Security Number (last 4 digits only)</td>
-                    <td className="py-2 pr-4">Browser localStorage (AES-256-GCM encrypted)</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">Imported documents (PDFs, CSVs, photos)</td>
-                    <td className="py-2 pr-4">Read in your browser and discarded after extraction</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">Tax calculation results</td>
-                    <td className="py-2 pr-4">Browser memory (RAM)</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">PDF, CSV, JSON, and .hatax exports</td>
-                    <td className="py-2 pr-4">Generated in browser, saved to your device</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">AI chat conversations (BYOK mode)</td>
-                    <td className="py-2 pr-4">Browser localStorage (AES-256-GCM encrypted)</td>
-                    <td className="py-2 text-slate-400">PII-stripped messages sent to Anthropic via our relay server</td>
-                  </tr>
-                  <tr className="border-b border-slate-800">
-                    <td className="py-2 pr-4">Installed app cache (PWA)</td>
-                    <td className="py-2 pr-4">Static files only — never tax data</td>
-                    <td className="py-2 text-HATaxService-orange-300">Never</td>
-                  </tr>
+                  {STORED.map(([what, where]) => (
+                    <tr key={what} className="border-b border-slate-800 align-top">
+                      <td className="py-2 pr-4">{what}</td>
+                      <td className="py-2">{where}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2a. Passphrase Protection</h2>
+          <Section title="2. What leaves the computer">
+            <p className="font-semibold text-HATaxService-orange-300">Nothing.</p>
             <p>
-              When you set a passphrase, HATax encrypts your saved data with AES-256-GCM — the same
-              standard banks and governments use. Your passphrase is never saved to disk; it is held in
-              memory only while the app is unlocked.
+              The app&apos;s server runs inside the app and accepts connections only from this computer (127.0.0.1). The AI models
+              that read documents and client replies (Qwen3.5-0.8B and GLM-OCR) run on this computer through llama.cpp; no
+              document, reply or value is sent to an AI service. Text recognition, the IRS and state form PDFs, fonts and the
+              PDF viewer all ship with the app.
             </p>
             <p>
-              After 15 minutes of inactivity the app locks itself automatically and your passphrase is
-              cleared from memory. You will need to re-enter it to continue.
+              The app does not send analytics, telemetry or crash reports, does not check for updates or download models, and
+              uses no cookies for tracking. Its content security policy lets its pages connect only to the app itself.
             </p>
             <p>
-              There is no "forgot password" option because we never have your passphrase. We recommend
-              exporting a backup of your data (see Section 6) so you always have a copy.
+              A link to an outside site, such as IRS.gov, opens in your web browser; that site&apos;s own privacy policy applies
+              there.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">2b. Document Import</h2>
+          <Section title="3. What we receive">
             <p>
-              HATax can read data from PDFs, scanned documents, photos, broker CSV files, TXF files,
-              FDX files, and popular tax software exports. Every one of these imports is processed
-              entirely in your browser — nothing is uploaded to any server.
+              Through the app: nothing about you or your clients. We cannot see, recover or restore anything in your vault.
             </p>
             <p>
-              Optical character recognition (OCR) for scanned documents and photos runs locally using
-              self-hosted open-source software bundled with the app.
+              If you write to us, we receive what you send. Do not send us your clients&apos; information. If a support question
+              needs part of a return, send it with Social Security numbers and other identifying numbers masked. Anything of a
+              client&apos;s that reaches us anyway is tax return information under IRC §7216: we use it only to answer you, never
+              disclose it or use it for anything else, and delete it once your question is answered.
             </p>
             <p>
-              If an imported document contains a full Social Security Number, it is immediately truncated
-              to the last four digits before being stored.
+              {/* TODO: describe the seat purchase once billing is chosen: what the payment processor receives, and what we keep. */}
+              Buying a seat: the purchase details you give us (name, email, billing information) are used to bill you and keep
+              your license records, and are never combined with client information, which we do not have.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">3. Cookies & Tracking</h2>
-            <p>
-              HATax does not use cookies, analytics scripts, tracking pixels, fingerprinting, or any
-              other tracking technology. We do not use Google Analytics, Facebook Pixel, Mixpanel, or
-              any similar service.
-            </p>
-            <p>
-              We do not collect browser information, device identifiers, or usage patterns. If you use
-              BYOK mode, our relay server temporarily stores your IP address in a local database
-              strictly for rate limiting (to prevent abuse). This data is not tied to your tax return,
-              is not shared with any third party, and is automatically purged.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">4. Third Parties</h2>
-            <p>
-              In Private Mode (the default), no third party receives any of your data. There are no
-              analytics, tracking, or data-sharing integrations.
-            </p>
-            <p>
-              If you enable BYOK Mode (Bring Your Own Key), PII-stripped messages are sent through our
-              server to Anthropic's API using your own API key. Before any message leaves your browser,
-              SSNs, EINs, addresses, phone numbers, and other personally identifiable information are
-              detected and removed. Our server performs a second PII scan as defense-in-depth, then
-              relays the message to Anthropic and discards it. See Section 13 for full details on how
-              BYOK mode handles your data.
-            </p>
-            <p>
-              The application may load open-source font files or other static assets from a CDN when the
-              page loads, but these requests do not include any of your tax data.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">5. Data Deletion</h2>
-            <p>
-              You can delete all of your tax data at any time using the "Delete all my data" button,
-              available on the export page of any tax return and in the lower-left corner below the
-              tools panel. This permanently removes everything — saved returns, encryption keys,
-              browser storage, and offline app data. Nothing survives.
-            </p>
-            <p>
-              You can also clear your data by clearing your browser's site data for this domain, or by
-              using your browser's "Clear browsing data" feature.
-            </p>
-            <p>
-              Since no copy of your data exists on any server, deletion is instant and irreversible. There
-              is no "account" to close and no data retention period.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">6. Data Portability</h2>
-            <p>
-              HATax provides one-click export in four formats: JSON, CSV, PDF, and <code className="text-HATaxService-orange-300 bg-surface-800 px-1.5 py-0.5 rounded">.hatax</code> (an
-              encrypted, password-protected format for safe backup and transfer). You can export your
-              complete tax return data at any time from the export page. This data belongs to you and
-              can be imported into other tools or kept for your records.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">7. IRC Section 7216 Compliance</h2>
-            <p>
-              IRC Section 7216 prohibits tax return preparers from disclosing or using tax return
-              information for purposes other than preparing the return. Because HATax is a self-preparation
-              tool (you prepare your own return), and because your data never leaves your device, the
-              traditional 7216 disclosure obligations that apply to paid preparers and cloud-based tax
-              software do not apply in the same way.
-            </p>
-            <p>
-              Nevertheless, we have designed HATax to exceed the privacy protections contemplated by
-              Section 7216: we cannot disclose your data because we never possess it.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">8. Security</h2>
-            <p>
-              Here's what we do on our end to protect your data:
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-slate-400">
-              <li>All saved data is encrypted with AES-256-GCM when you set a passphrase</li>
-              <li>The app automatically locks after 15 minutes of inactivity and clears your passphrase from memory</li>
-              <li>The app makes no outside network connections with your tax data — ever</li>
-              <li>If you install HATax as an app (PWA), only static files are cached — never your tax data</li>
+          <Section title="4. How the app protects it">
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Cases, documents and readings are encrypted with AES-256-GCM. The key is made from your passphrase with PBKDF2 (SHA-256, 600,000 iterations); the passphrase itself is never stored.</li>
+              <li>The app locks after 15 minutes without use and 30 seconds after its window is hidden. Work under way, such as documents being read, finishes saving before the key is dropped.</li>
+              <li>Sign-in passwords are kept only as bcrypt hashes.</li>
+              <li>Every change to a case — a value corrected, a review decision, a form placed — is kept in the case&apos;s audit trail.</li>
+              <li>A lost passphrase cannot be recovered by you or by us, and the encrypted cases cannot be opened without it. Keep your passphrase safe and keep backups (Section 5).</li>
             </ul>
-            <p className="mt-3">
-              Because your data also depends on the security of your device and browser, we recommend:
+          </Section>
+
+          <Section title="5. Keeping, backing up and deleting">
+            <p>
+              You decide how long the app keeps a case. Deleting a case removes its return, documents, source files, readings,
+              review record and audit trail. Uninstalling the app leaves its data folder in your Windows user profile, which holds
+              the encrypted cases and the sign-in database: delete that folder to remove everything the app kept.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-slate-400">
-              <li>Using a password or biometric lock on your device</li>
-              <li>Keeping your browser and operating system updated</li>
-              <li>Not using HATax on shared or public computers</li>
-              <li>Exporting and saving your data before clearing browser data</li>
+            <p>
+              The law sets limits both ways. IRC §6107(b) requires a preparer to keep a completed copy of each return, or a list of
+              the taxpayers&apos; names and identifying numbers, for 3 years after the close of the return period. The FTC Safeguards Rule
+              (16 CFR 314.4(c)(6)) requires customer information to be disposed of securely no later than two years after it was last
+              used for the customer, unless it is needed for a legitimate business purpose or the law requires keeping it.
+            </p>
+            <p>
+              Because everything stays on this computer, a failed disk or a lost passphrase loses it. Download the encrypted case
+              file regularly; it holds every case&apos;s return but not the source documents or audit trails, so keep the documents
+              as your security plan and §6107 require.
+            </p>
+          </Section>
+
+          <Section title="6. What the law asks of you">
+            <p>
+              The app helps you protect client information, but the duties are yours as the preparer. In short (the Terms of Use say more):
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <span className="text-white">A written information security program.</span> Tax preparers are financial institutions under the FTC Safeguards
+                Rule (16 CFR Part 314; tax preparation is listed in 314.2(h)(2)(viii)). Your program covers this computer, its backups and
+                every file you export. See IRS Publication 4557 and Publication 5708.
+              </li>
+              <li>
+                <span className="text-white">Privacy notices to your clients</span> under the Gramm-Leach-Bliley Act&apos;s Regulation P (12 CFR Part 1016).
+              </li>
+              <li>
+                <span className="text-white">Consent before using or disclosing tax return information</span> for anything other than preparing the return
+                (IRC §7216; Treas. Reg. §301.7216-3; Rev. Proc. 2013-14).
+              </li>
+              <li>
+                <span className="text-white">Reporting a breach.</span> Report data theft to your IRS Stakeholder Liaison and the state tax agencies, and notify
+                the FTC within 30 days of discovering an event involving the unencrypted information of 500 or more people (16 CFR 314.4(j)).
+              </li>
             </ul>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">9. Children's Privacy</h2>
+          <Section title="7. Children">
             <p>
-              HATax is designed for adults who need to prepare tax returns. We do not knowingly collect
-              information from children under 13. Since we collect no data at all, this is inherently
-              satisfied.
+              The app is for tax professionals, not children. A return can include information about a client&apos;s children, such as
+              dependents; it stays on this computer like everything else.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">10. Open Source Verification</h2>
+          <Section title="8. Changes to this policy">
             <p>
-              Every claim in this privacy policy can be independently verified by examining our source
-              code. The calculation engine is open source under the MIT License. The application code
-              contains no network calls that transmit user data. We encourage security researchers to
-              audit our code.
+              If a version of the app changes what it keeps or sends, this policy changes with it, with a new effective date. A
+              version that sends anything off the computer would say so here first.
             </p>
-          </section>
+          </Section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">11. Changes to This Policy</h2>
-            <p>
-              If we change this policy, we will update this page with the new policy and the date
-              of the change. We committed early on that any feature transmitting data would require
-              explicit consent — BYOK mode fulfills that commitment: it is entirely opt-in, clearly
-              labeled, and disabled by default.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">12. Contact</h2>
-            <p>
-              Questions about this privacy policy? Email us at {/* TODO: replace stub contact link */}<a href="mailto:contact@example.com" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">contact@example.com</a> or visit our {/* TODO: replace stub contact link */}<a href="#" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Source</a>.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-white mt-6 mb-3">13. AI Features (BYOK Mode)</h2>
-            <p>
-              HATax includes an optional AI assistant powered by Anthropic's Claude. It is disabled
-              by default (Private Mode). To use it, you must explicitly switch to BYOK (Bring Your Own
-              Key) mode and provide your own Anthropic API key.
-            </p>
-            <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">What is sent</h3>
-            <p>
-              When you send a chat message in BYOK mode, the following is transmitted: your message
-              text (after PII removal), conversation history (up to 10 messages), and non-identifying
-              context about your position in the tax wizard (e.g., filing status, which step you're on,
-              how many income forms you've entered — but never names, SSNs, addresses, or exact dollar
-              amounts).
-            </p>
-            <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">How PII is blocked</h3>
-            <p>
-              Before any message leaves your browser, a client-side scanner detects and removes Social
-              Security Numbers, EINs, phone numbers, email addresses, street addresses, dates of birth,
-              and other PII. Our server runs a second scan as defense-in-depth. You can inspect every
-              outbound request — including what was blocked — in the Privacy Audit Log (accessible from
-              AI Settings).
-            </p>
-            <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">How our server works</h3>
-            <p>
-              Our server acts as a relay (required for browser CORS restrictions). It forwards your
-              PII-stripped message to Anthropic using your API key, returns the response, and discards
-              both. It does not store, log, cache, or read your messages or API key. The server code is
-              open source.
-            </p>
-            <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">What Anthropic does</h3>
-            <p>
-              Anthropic says it does not use API data for model training, and that API inputs and
-              outputs are retained for up to 30 days for safety monitoring, then automatically
-              deleted. For full details,
-              see <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">Anthropic's privacy policy</a>.
-            </p>
-            <h3 className="text-sm font-semibold text-slate-200 mt-4 mb-2">AI features that use BYOK</h3>
-            <ul className="list-disc list-inside space-y-1 text-slate-400">
-              <li>AI chat conversations and tax Q&A</li>
-              <li>Smart Expense Scanner (AI-powered transaction categorization)</li>
-              <li>AI-enhanced document extraction (scanned PDFs and photos)</li>
-              <li>Voice data entry via dictation</li>
-            </ul>
-            <p className="mt-3">
-              All AI features are additive — the complete tax engine, smart suggestions, document
-              import, and all 82 wizard steps work without AI in Private Mode.
-            </p>
-          </section>
+          <Section title="9. Contact">
+            <p>Questions about this policy or about the app&apos;s handling of information: {mail}.</p>
+          </Section>
         </div>
 
-        {/* Footer */}
-        <div className="text-xs text-slate-600 mt-12 text-center leading-relaxed">
-          <p>This tool is for informational purposes only and does not constitute tax advice.</p>
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <button onClick={() => navigate('/pledge')} className="text-slate-400 hover:text-slate-300 transition-colors">About</button>
-            <span className="text-slate-700">&middot;</span>
-            <button onClick={() => navigate('/terms')} className="text-slate-400 hover:text-slate-300 transition-colors">Terms</button>
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            &larr; Back to dashboard
-          </button>
+        <div className="text-xs text-slate-500 mt-12 flex items-center justify-center gap-3">
+          <button onClick={() => navigate('/terms')} className="text-slate-400 hover:text-slate-300 transition-colors">Terms of Use</button>
+          <span className="text-slate-700">&middot;</span>
+          <button onClick={() => navigate('/preparer')} className="text-slate-400 hover:text-slate-300 transition-colors">Back to the cases</button>
         </div>
       </div>
     </div>

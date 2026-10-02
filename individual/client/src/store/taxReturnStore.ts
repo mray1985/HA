@@ -89,6 +89,12 @@ const hasAMTData = (tr: TaxReturn) =>
   !!(tr.amtData?.isoExerciseSpread || tr.amtData?.privateActivityBondInterest || tr.amtData?.otherAMTAdjustments);
 
 const wantsItemized = (tr: TaxReturn) => tr.deductionMethod === 'itemized';
+/**
+ * Form 8615: shown when the engine has a Form 8615 outcome for the return (a
+ * filer under 24, or claimable, with unearned income over $2,700 — whatever its
+ * source), or once the filer has answered it.
+ */
+const DC_FORM_8615: StepCondition = { type: 'any', conditions: [{ type: 'field_exists', field: 'form8615' }, { type: 'calculation_has', field: 'form8615' }] };
 const wantsChildCredit = (tr: TaxReturn) => tr.incomeDiscovery['child_credit'] === 'yes';
 const wantsEducationCredit = (tr: TaxReturn) => tr.incomeDiscovery['education_credit'] === 'yes';
 
@@ -260,6 +266,7 @@ export const WIZARD_STEPS: WizardStep[] = [
 
   // Review
   { id: 'transition_review', label: 'Review', section: 'review' },
+  { id: 'form_8615', label: 'Form 8615 (Kiddie Tax)', section: 'review', declarativeCondition: DC_FORM_8615 },
   { id: 'review_schedule_c', label: 'Schedule C Review', section: 'review', condition: hasSelfeEmployment, declarativeCondition: DC_SELF_EMPLOYMENT },
   { id: 'amt_review', label: 'AMT Review', section: 'review' },
   { id: 'form8582_review', label: 'Passive Loss Review', section: 'review', condition: (tr) => ((tr.rentalProperties || []).length > 0 || (tr.incomeK1 || []).some(k => k.isPassiveActivity || k.rentalIncome)) },

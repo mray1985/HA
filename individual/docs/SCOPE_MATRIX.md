@@ -134,7 +134,7 @@ This document exists to prevent scope confusion. If a feature is listed as unsup
 | Additional Medicare Tax | ✅ | Form 8959 | 0.9% on earnings above $200K/$250K thresholds |
 | Alternative Minimum Tax (AMT) | ✅ | Form 6251 | Full implementation: Part I (all adjustments 2a-3), Part II (exemption, phase-out, 26%/28% rates), Part III (preferential capital gains rates within AMT); retroactive FTC adjustment |
 | Estimated tax penalty | ✅ | Form 2210 | Safe harbor and annualized income methods; annualized income installment method (Schedule AI) supported |
-| Kiddie tax | ✅ | Form 8615 | Unearned income of dependents under 19 (or 24 if student) |
+| Kiddie tax | ✅ | Form 8615 | On the child's return, line by line from the parent's figures; Form 8814 and the Schedule D Tax Worksheet, Schedule J and Form 2555 cases are not supported |
 | Early distribution penalty | ✅ | Form 5329 | 10% on non-qualified retirement distributions |
 | Excess contribution penalties | ✅ | Form 5329 | IRA, HSA, and Coverdell ESA excess contribution penalties |
 | 529 non-qualified distribution penalty | ✅ | | 10% on earnings portion of non-qualified distributions (IRC §529(c)(3)(B) pro-rata) |
