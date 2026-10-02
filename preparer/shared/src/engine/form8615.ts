@@ -86,15 +86,20 @@ export function form8615Line1(input: Pick<Form8615Input, 'totalIncome' | 'agi' |
   return Math.max(0, line1);
 }
 
-/** The figures Form 8615 needs that the return does not have, in the order the form takes them. */
-export function form8615Missing(info: Form8615Info, childItemizes: boolean): Form8615Field[] {
-  const needed: Form8615Field[] = [
-    'parentName', 'parentSsn', 'parentFilingStatus', 'parentTaxableIncome', 'parentTax',
-    'parentQualifiedDividends', 'parentNetCapitalGain', 'otherChildrenNetUnearnedIncome',
-  ];
-  if (num(info.otherChildrenNetUnearnedIncome) > 0) needed.push('otherChildrenQualifiedDividends', 'otherChildrenNetCapitalGain');
+/**
+ * The figures Form 8615 needs that the return does not have, in the order the
+ * form takes them. A form that stops at line 3 or 5 needs only lines A–C and,
+ * when the child itemizes, the directly connected deductions line 2 takes:
+ * Part II is never reached.
+ */
+export function form8615Missing(info: Form8615Info, childItemizes: boolean, stops = false): Form8615Field[] {
+  const needed: Form8615Field[] = stops
+    ? ['parentName', 'parentSsn', 'parentFilingStatus']
+    : ['parentName', 'parentSsn', 'parentFilingStatus', 'parentTaxableIncome', 'parentTax',
+      'parentQualifiedDividends', 'parentNetCapitalGain', 'otherChildrenNetUnearnedIncome'];
+  if (!stops && num(info.otherChildrenNetUnearnedIncome) > 0) needed.push('otherChildrenQualifiedDividends', 'otherChildrenNetCapitalGain');
   if (childItemizes) needed.push('childDirectlyConnectedDeductions');
-  needed.push('parentSpecialComputation');
+  if (!stops) needed.push('parentSpecialComputation');
   return needed.filter((field) => {
     const value = info[field];
     if (field === 'parentName') return typeof value !== 'string' || !value.trim();
@@ -103,6 +108,25 @@ export function form8615Missing(info: Form8615Info, childItemizes: boolean): For
     if (field === 'parentSpecialComputation') return typeof value !== 'boolean';
     return typeof value !== 'number' || !Number.isFinite(value);
   });
+}
+
+/** Lines 1–5 (Part I). */
+function partOne(input: Omit<Form8615Input, 'info'>, directlyConnected: number) {
+  const KIDDIE = getKiddieTax(input.taxYear);
+  const line1 = form8615Line1(input);
+  // Line 2: $2,700 (2025), or when the child itemizes, the larger of that and $1,350 plus the directly connected deductions.
+  const line2 = Math.max(KIDDIE.UNEARNED_INCOME_THRESHOLD, round2(KIDDIE.STANDARD_DEDUCTION_UNEARNED + directlyConnected));
+  const line3 = round2(line1 - line2);
+  const line4 = round2(Math.max(0, input.taxableIncome));
+  const line5 = line3 > 0 ? Math.min(line3, line4) : 0;
+  return { line1, line2, line3, line4, line5 };
+}
+
+/** Whether the form stops at line 3 or 5; undefined while line 2 waits for the child's directly connected deductions. */
+function stopsInPartOne(input: Omit<Form8615Input, 'info'>, info: Form8615Info): boolean | undefined {
+  if (input.itemizes && (typeof info.childDirectlyConnectedDeductions !== 'number' || !Number.isFinite(info.childDirectlyConnectedDeductions))) return undefined;
+  const { line3, line5 } = partOne(input, input.itemizes ? Math.max(0, num(info.childDirectlyConnectedDeductions)) : 0);
+  return line3 <= 0 || line5 <= 0;
 }
 
 /**
@@ -115,13 +139,15 @@ export function figureForm8615(input: Omit<Form8615Input, 'info'> & { info?: For
   if (info?.applies === false) return undefined;
   if (info?.applies !== true) {
     const line1 = form8615Line1(input);
-    const young = input.age !== undefined ? input.age < getKiddieTax(input.taxYear).STUDENT_AGE_LIMIT : input.canBeClaimedAsDependent === true;
+    // Under 24 at the end of the year. With no date of birth the age is not known, and being
+    // someone's dependent is not one of the conditions: it stays open.
+    const young = input.age === undefined || input.age < getKiddieTax(input.taxYear).STUDENT_AGE_LIMIT;
     // Taxable income is not one of the conditions: with none, the form stops at line 5 but is still attached.
     const possible = young && input.childFilingStatus !== FilingStatus.MarriedFilingJointly
       && line1 > getKiddieTax(input.taxYear).UNEARNED_INCOME_THRESHOLD;
     return possible ? { status: 'ask', unearnedIncome: line1, ...(input.age !== undefined ? { age: input.age } : {}) } : undefined;
   }
-  const missing = form8615Missing(info, input.itemizes);
+  const missing = form8615Missing(info, input.itemizes, stopsInPartOne(input, info) === true);
   if (missing.length > 0) return { status: 'missing', missing };
   return { status: 'figured', result: calculateForm8615({ ...input, info }) };
 }
@@ -145,13 +171,8 @@ export function calculateForm8615(input: Form8615Input): Form8615Result {
     unsupported.push({ ruleId: 'FED.8615.PARENT_WORKSHEET', message: 'Form 8615: the parent\'s tax used the Schedule D Tax Worksheet, Schedule J or the Foreign Earned Income Tax Worksheet (or another child has 28% rate or unrecaptured section 1250 gain), so line 9 follows that worksheet, which HATax does not fill for Form 8615. Figure the child\'s tax by hand.' });
   }
 
-  const line1 = form8615Line1(input);
-  // Line 2: $2,700, or when the child itemizes, the larger of that and $1,350 plus the directly connected deductions.
   const directlyConnected = input.itemizes ? Math.max(0, num(info.childDirectlyConnectedDeductions)) : 0;
-  const line2 = Math.max(KIDDIE.UNEARNED_INCOME_THRESHOLD, round2(KIDDIE.STANDARD_DEDUCTION_UNEARNED + directlyConnected));
-  const line3 = round2(line1 - line2);
-  const line4 = round2(Math.max(0, input.taxableIncome));
-  const line5 = line3 > 0 ? Math.min(line3, line4) : 0;
+  const { line1, line2, line3, line4, line5 } = partOne(input, directlyConnected);
 
   const empty: Form8615Result = {
     applies: false, line1, line2, line3, line4, line5,

@@ -191,8 +191,17 @@ describe('Form 8615 (2025)', () => {
     expect(figureForm8615(zero)).toEqual({ status: 'ask', unearnedIncome: 20_000, age: 17 });
     const stopped = figureForm8615({ ...zero, info: { ...PARENT, childDirectlyConnectedDeductions: 0 } });
     expect(stopped).toMatchObject({ status: 'figured', result: { applies: false, line3: 17_300, line4: 0, line5: 0 } });
-    // With no date of birth, a taxpayer someone can claim as a dependent is asked about.
+    // A form that stops never reaches Part II: lines A–C and line 2's deductions are all it needs.
+    const header = { applies: true, parentName: 'Sam Lee', parentSsn: '987654321', parentFilingStatus: FilingStatus.MarriedFilingJointly };
+    expect(figureForm8615({ ...zero, info: { ...header, childDirectlyConnectedDeductions: 0 } })).toMatchObject({ status: 'figured', result: { applies: false, line5: 0 } });
+    // Until line 2's deductions are given, whether it stops is not known: everything is asked for.
+    expect(figureForm8615({ ...zero, info: header })).toMatchObject({ status: 'missing', missing: expect.arrayContaining(['childDirectlyConnectedDeductions', 'parentTaxableIncome']) });
+    expect(figureForm8615({ ...zero, info: { applies: true, childDirectlyConnectedDeductions: 0 } })).toEqual({ status: 'missing', missing: ['parentName', 'parentSsn', 'parentFilingStatus'] });
+    // With no date of birth the age is not known, and being a dependent is not a condition: asked, either way.
     expect(calculateForm1040(childReturn({ income1099INT: interest(10_000), dateOfBirth: undefined })).form8615).toEqual({ status: 'ask', unearnedIncome: 10_000 });
+    const unknownAge = calculateForm1040(childReturn({ income1099INT: interest(10_000), dateOfBirth: undefined, canBeClaimedAsDependent: false }));
+    expect(unknownAge.form8615).toEqual({ status: 'ask', unearnedIncome: 10_000 });
+    expect(unknownAge.unsupported?.[0]?.message).toContain('or enter the date of birth');
   });
 
   it('asks for each of the parent\'s figures before figuring anything', () => {

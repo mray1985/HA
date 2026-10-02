@@ -51,7 +51,8 @@ describe('the Form 8615 step', () => {
     // Gambling winnings alone (W-2G): no list of income kinds decides it.
     expect(visible(child({ income1099INT: [], incomeW2G: [{ id: 'g', payerName: 'Casino', grossWinnings: 9000, federalTaxWithheld: 0 }] } as Partial<TaxReturn>))).toBe(true);
     expect(visible(child({ dateOfBirth: undefined }))).toBe(true);
-    expect(visible(child({ dateOfBirth: undefined, canBeClaimedAsDependent: false }))).toBe(false);
+    // No date of birth: the age is not known, so the question stays open.
+    expect(visible(child({ dateOfBirth: undefined, canBeClaimedAsDependent: false }))).toBe(true);
     expect(visible(child({ dateOfBirth: '1990-01-01' }))).toBe(false);
     expect(visible(child({ filingStatus: FilingStatus.MarriedFilingJointly }))).toBe(false);
     expect(visible(child({ income1099INT: [] }))).toBe(false);

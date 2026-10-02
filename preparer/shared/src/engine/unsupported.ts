@@ -207,7 +207,7 @@ export function findUnsupportedPatterns(taxReturn: TaxReturn, calculation?: Calc
     const kiddie = getTaxConstants(year).KIDDIE_TAX;
     out.push({
       ruleId: 'FED.8615.APPLIES', jurisdiction: 'US', section: 'federal', itemId: 'applies',
-      message: `${form8615.age !== undefined ? `The taxpayer is ${form8615.age} at the end of ${year}` : 'The taxpayer can be claimed as a dependent'} and has $${form8615.unearnedIncome.toLocaleString('en-US')} of unearned income, more than $${kiddie.UNEARNED_INCOME_THRESHOLD.toLocaleString('en-US')}. Form 8615 taxes it at the parent's rate when the child must file a return and was under 18, or was 18 or a full-time student under 24 whose earned income was not more than half of their support, at least one parent was alive at the end of the year, and the child does not file a joint return. Say whether Form 8615 applies.`,
+      message: `${form8615.age !== undefined ? `The taxpayer is ${form8615.age} at the end of ${year}` : "The taxpayer's date of birth is not entered"} and has $${form8615.unearnedIncome.toLocaleString('en-US')} of unearned income, more than $${kiddie.UNEARNED_INCOME_THRESHOLD.toLocaleString('en-US')}. Form 8615 taxes it at the parent's rate when the child must file a return and was under 18, or was 18 or a full-time student under 24 whose earned income was not more than half of their support, at least one parent was alive at the end of the year, and the child does not file a joint return. Say whether Form 8615 applies${form8615.age === undefined ? ' (or enter the date of birth: at 24 or older it does not)' : ''}.`,
     });
   } else if (form8615?.status === 'missing') {
     for (const field of form8615.missing) {

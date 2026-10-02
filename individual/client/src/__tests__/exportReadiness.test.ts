@@ -288,14 +288,16 @@ describe('what the engine cannot compute blocks export (fail closed)', () => {
   it('sends a Washington question to the state details, and a missing Washington return to the state selection', async () => {
     const { calculateForm1040 } = await import('@hatax/engine');
     const gains = [{ id: 'b', brokerName: 'Broker', description: 'Stock', dateSold: '2025-06-01', proceeds: 310000, costBasis: 10000, isLongTerm: true }];
-    const asked = makeTaxReturn({ addressState: 'WA', income1099B: gains, stateReturns: [{ stateCode: 'WA', residencyType: 'resident' }] } as Partial<TaxReturn>);
+    // An adult: with no date of birth, Form 8615 would also be asked about.
+    const adult = { dateOfBirth: '1980-01-01' };
+    const asked = makeTaxReturn({ ...adult, addressState: 'WA', income1099B: gains, stateReturns: [{ stateCode: 'WA', residencyType: 'resident' }] } as Partial<TaxReturn>);
     expect(checkExportReadiness(asked, calculateForm1040(asked)).blockers)
       .toContainEqual(expect.objectContaining({ stepId: 'state_details', message: expect.stringContaining('Washington capital gains tax') }));
-    const noState = makeTaxReturn({ addressState: 'WA', income1099B: gains } as Partial<TaxReturn>);
+    const noState = makeTaxReturn({ ...adult, addressState: 'WA', income1099B: gains } as Partial<TaxReturn>);
     expect(checkExportReadiness(noState, calculateForm1040(noState)).blockers)
       .toContainEqual(expect.objectContaining({ stepId: 'state_overview', message: expect.stringContaining('no Washington state return') }));
     // Answered: $300,000 − $278,000 = $22,000 × 7% = $1,540, and nothing blocks.
-    const answered = makeTaxReturn({ addressState: 'WA', income1099B: gains, stateReturns: [{ stateCode: 'WA', residencyType: 'resident', stateSpecificData: { waSpecialItems: false } }] } as Partial<TaxReturn>);
+    const answered = makeTaxReturn({ ...adult, addressState: 'WA', income1099B: gains, stateReturns: [{ stateCode: 'WA', residencyType: 'resident', stateSpecificData: { waSpecialItems: false } }] } as Partial<TaxReturn>);
     const calc = calculateForm1040(answered);
     expect(checkExportReadiness(answered, calc).ready).toBe(true);
     expect(calc.stateResults?.[0]).toMatchObject({ stateCode: 'WA', totalStateTax: 1540 });
