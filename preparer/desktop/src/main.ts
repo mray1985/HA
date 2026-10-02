@@ -1,8 +1,8 @@
 /**
  * HA Tax Preparer — desktop main process.
  *
- * Starts the preparer's server inside the app, bound to 127.0.0.1 on a free
- * port, with the files the installer bundles: the built site, llama.cpp
+ * Starts the preparer's server inside the app, bound to 127.0.0.1 on its own
+ * port (APP_PORT), with the files the installer bundles: the built site, llama.cpp
  * `llama-server`, and the approved model files. Case data stays in the app's
  * encrypted browser storage; the server's own data (sign-in database, token
  * key, model verification) lives in the user's app-data folder. Nothing is
@@ -12,6 +12,14 @@
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+
+/**
+ * The app's port, the same at every launch. Cases and the passphrase vault are
+ * kept in the window's browser storage, which belongs to one origin (scheme,
+ * host and port): on another port the last session's cases would not be found.
+ * Below Windows' default dynamic range (49152 and up).
+ */
+const APP_PORT = 47821;
 
 /** The preparer folder when running from the repository (desktop/dist → preparer). */
 const PREPARER_ROOT = resolve(__dirname, '..', '..');
@@ -51,7 +59,21 @@ async function launch(): Promise<void> {
   const { startServer } = await import('../../server/src/app.js');
   const { modelRuntime } = await import('../../server/src/modelRuntime.js');
   stopRuntime = () => modelRuntime.killNow();
-  const server = await startServer({ port: 0, host: '127.0.0.1', clientDist: paths.clientDist });
+  let server: Awaited<ReturnType<typeof startServer>>;
+  try {
+    server = await startServer({ port: APP_PORT, host: '127.0.0.1', clientDist: paths.clientDist });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== 'EADDRINUSE' && code !== 'EACCES') throw err;
+    // Another port would open as an empty app, without the cases saved before.
+    dialog.showErrorBox(
+      'HA Tax Preparer',
+      `HA Tax Preparer uses port ${APP_PORT} on this computer, and another program is using it or Windows has reserved it. ` +
+        'Close the other program, or restart the computer, and open HA Tax Preparer again.',
+    );
+    app.quit();
+    return;
+  }
   closeServer = server.close;
   const origin = `http://127.0.0.1:${server.port}`;
 

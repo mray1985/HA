@@ -38,12 +38,16 @@ function buildInfoPlugin(): Plugin {
   // origin would send sign-ins and model requests off the computer, against
   // the Privacy Policy: recorded here, and the installer refuses it.
   let apiOrigin = '';
+  // `vite build --mode testbuild` (npm run build:test): a build for testers,
+  // labeled as such; the installer for it is npm run dist:test.
+  let testBuild = false;
   return {
     name: 'hatax-build-info',
     apply: 'build',
     configResolved(config) {
       licensed = Boolean(String(config.env.VITE_SYNCFUSION_LICENSE_KEY ?? '').trim());
       apiOrigin = String(config.env.VITE_API_ORIGIN || config.env.VITE_API_BASE || process.env.VITE_API_ORIGIN || process.env.VITE_API_BASE || '').trim();
+      testBuild = config.mode === 'testbuild';
     },
     buildStart() {
       if (!licensed) {
@@ -54,7 +58,7 @@ function buildInfoPlugin(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'build-info.json',
-        source: `${JSON.stringify({ syncfusionLicensed: licensed, apiOrigin, builtAt: new Date().toISOString() }, null, 2)}\n`,
+        source: `${JSON.stringify({ syncfusionLicensed: licensed, apiOrigin, testBuild, builtAt: new Date().toISOString() }, null, 2)}\n`,
       });
     },
   };

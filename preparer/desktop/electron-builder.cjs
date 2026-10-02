@@ -20,11 +20,21 @@
  * Microsoft signature.
  */
 
-const { readdirSync } = require('node:fs');
+const { readdirSync, readFileSync } = require('node:fs');
 const { dirname, join } = require('node:path');
 
 const env = process.env;
 const LLAMA_BIN = join(__dirname, '..', 'tools', 'llama-cpp', 'bin');
+
+/** The packaged client's build info: a build for testers (npm run dist:test) is named as one. */
+const clientBuild = (() => {
+  try {
+    return JSON.parse(readFileSync(join(__dirname, '..', 'client', 'dist', 'build-info.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
+const artifactName = (clientBuild.testBuild ? 'HA-Tax-Preparer-Test-Setup' : 'HA-Tax-Preparer-Setup') + '-${version}.${ext}';
 
 /** Signed by Microsoft in Electron's distribution; re-signing would replace that. */
 const MICROSOFT_SIGNED = new Set(['d3dcompiler_47.dll', 'dxil.dll']);
@@ -83,7 +93,7 @@ module.exports = {
   win: {
     target: ['nsis'],
     icon: 'build/icon.ico',
-    artifactName: 'HA-Tax-Preparer-Setup-${version}.${ext}',
+    artifactName,
     signExts,
     ...(azure ?? {
       signtoolOptions: {

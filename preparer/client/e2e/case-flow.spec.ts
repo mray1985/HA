@@ -131,3 +131,26 @@ test("last year's documents the case lacks are possibly missing, and the client 
   await page.getByRole('link', { name: /^Review/ }).click();
   await expect(page.getByText(/Possible missing 1099-INT from JPMORGAN CHASE BANK NA: the 2024 imported HA Tax return/)).toBeVisible();
 });
+
+test('a forgotten passphrase: the lock screen deletes this computer\'s data and starts over', async ({ page }) => {
+  await page.getByRole('button', { name: /New case/i }).first().click();
+  await expect(page).toHaveURL(/\/documents$/);
+
+  // A new window session: the vault asks for the passphrase.
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Unlock$/i })).toBeVisible({ timeout: 30000 });
+
+  await page.getByRole('button', { name: 'Forgot your passphrase?' }).click();
+  await expect(page.getByLabel('Type DELETE to confirm')).toBeFocused();
+  const startOver = page.getByRole('button', { name: 'Delete everything and start over' });
+  await expect(startOver).toBeDisabled();
+  await page.getByLabel('Type DELETE to confirm').fill('delete');
+  await expect(startOver).toBeDisabled();
+  await page.getByLabel('Type DELETE to confirm').fill('DELETE');
+  await startOver.click();
+
+  await expect(page.getByRole('heading', { name: 'Create Your Passphrase' })).toBeVisible({ timeout: 30000 });
+  const left = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('hatax')));
+  expect(left).toEqual([]);
+});

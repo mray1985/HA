@@ -28,6 +28,7 @@ import { deleteDocumentFiles } from '../services/documentFiles';
 import { deleteAllTaxFacts, deleteTaxFacts } from '../services/preparerTaxFacts';
 import { clearRecordCache, hasPendingRecordWrites, loadRecords, removeRecordsWithPrefix } from '../services/caseRecords';
 import { deleteAllCaseReviews, deleteCaseReview } from '../services/caseAudit';
+import { whenBackgroundWorkIdle } from '../services/backgroundWork';
 
 import {
   RETURN_LIST_KEY,
@@ -349,8 +350,14 @@ export function deleteReturn(id: string): { success: boolean } {
  * Wipe ALL HA Tax data: localStorage, sessionStorage, IndexedDB,
  * service worker caches, and SW registrations.
  * Intended for privacy-critical "delete everything" scenarios.
+ *
+ * Waits first for work the local AI is still doing (a batch of documents read
+ * after the screen locked saves when it ends): what it saved after the wipe
+ * would be left behind.
  */
 export async function wipeAllData(): Promise<void> {
+  await new Promise<void>((idle) => { whenBackgroundWorkIdle(idle); });
+
   // 0. Clear in-memory cache, lock vault, and invalidate pending writes
   returnCache.clear();
   lock();
@@ -374,6 +381,8 @@ export async function wipeAllData(): Promise<void> {
   deleteAllDocuments();
   deleteAllTaxFacts();
   deleteAllCaseReviews();
+  // Anything else the app keeps (the saved sign-in, the expense scanner, lock state).
+  removeRecordsWithPrefix('hatax');
   clearRecordCache();
 
   // 2. Clear sessionStorage

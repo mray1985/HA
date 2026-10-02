@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-const PASSPHRASE = 'e2e-passphrase-2026';
+export const PASSPHRASE = 'e2e-passphrase-2026';
 
 /**
  * Register a new preparer, set up the vault, start the season seat, and land

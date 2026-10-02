@@ -130,6 +130,16 @@ npm run dist       # release/HA-Tax-Preparer-Setup-<version>.exe
 cd ../client && npx playwright test -c playwright.desktop.config.ts
 ```
 
+A build for testers, before the legal pages are confirmed:
+
+```bash
+npm run build:test -w client   # labeled "Test build" in the window title and on every screen
+cd desktop && npm run dist:test   # release/HA-Tax-Preparer-Test-Setup-<version>.exe
+```
+
+`npm run dist` refuses a test build of the client, and `npm run dist:test` a
+release build, so a test build is never released by mistake.
+
 The program and installer icon is `desktop/build/icon.ico`, made from
 `client/public/icons/icon-512.png` by `npm run icon`.
 

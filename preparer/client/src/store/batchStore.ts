@@ -34,8 +34,18 @@ function notifyDone(text: string) {
   }
 }
 
+/**
+ * The tax year being filed: last calendar year (in October 2026, 2025 returns
+ * and their extensions), within the years the engine supports.
+ */
+export function filingYear(now = new Date()): number {
+  const first = SUPPORTED_TAX_YEARS[0];
+  const last = SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!;
+  return Math.min(last, Math.max(first, now.getFullYear() - 1));
+}
+
 export const useBatchStore = create<BatchState>((set, get) => ({
-  taxYear: SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]!,
+  taxYear: filingYear(),
   setTaxYear: (taxYear) => set({ taxYear }),
   busy: null,
   result: null,

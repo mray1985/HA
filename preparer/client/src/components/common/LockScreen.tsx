@@ -8,6 +8,11 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import { wipeAllData } from '../../api/client';
+import { backgroundWorkRunning } from '../../services/backgroundWork';
+
+/** What the preparer types to confirm deleting everything on this computer. */
+const RESET_WORD = 'DELETE';
 
 // ── Password strength helper ─────────────────────────────────────
 
@@ -53,6 +58,12 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(externalError ?? null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // A forgotten passphrase: the only way on is to delete this computer's data and start over.
+  const [resetting, setResetting] = useState(false);
+  const [resetWord, setResetWord] = useState('');
+  const [wiping, setWiping] = useState(false);
+  // Documents still being read when the screen locked: the wipe waits for them to save.
+  const [waitingForWork, setWaitingForWork] = useState(false);
 
   // Brute-force protection: exponential backoff after 3 failed attempts.
   // Persisted in sessionStorage so refreshing the page doesn't reset the counter.
@@ -81,7 +92,8 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
 
   const strength = useMemo(() => getPasswordStrength(passphrase), [passphrase]);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  // The passphrase field has focus, again when the reset panel is cancelled.
+  useEffect(() => { if (!resetting) inputRef.current?.focus(); }, [resetting]);
   useEffect(() => { setError(externalError ?? null); }, [externalError]);
 
   // Countdown timer for backoff
@@ -105,6 +117,19 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
   }, [lockedUntil]);
 
   const isBackedOff = backoffRemaining > 0;
+
+  const startOver = async () => {
+    if (resetWord !== RESET_WORD) return;
+    setWiping(true);
+    setWaitingForWork(backgroundWorkRunning());
+    try {
+      await wipeAllData(); // waits for running work, then reloads the app at its first screen
+    } catch {
+      setWiping(false);
+      setWaitingForWork(false);
+      setError('The data could not be deleted. Close the app and try again.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,12 +202,57 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
           If you forget it, the returns cannot be recovered.
         </p>
       )}
-      {mode === 'unlock' && (
+      {mode === 'unlock' && !resetting && (
         <p className="text-xs text-slate-500 text-center mb-5">
           Enter your passphrase to unlock your clients' returns.
         </p>
       )}
 
+      {resetting && (
+        <div className="space-y-4">
+          <p className="text-xs text-slate-300 leading-relaxed">
+            A passphrase cannot be recovered. Starting over deletes every case, document and setting this app keeps on
+            this computer, and they cannot be brought back. Your sign-in account is not affected.
+          </p>
+          <div>
+            <label htmlFor="reset-word" className="block text-xs font-medium text-slate-400 mb-1.5">
+              Type {RESET_WORD} to confirm
+            </label>
+            <input
+              id="reset-word"
+              value={resetWord}
+              onChange={(e) => setResetWord(e.target.value)}
+              className="w-full px-3 py-2.5 bg-surface-900 border border-slate-600 rounded-lg text-white text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none"
+              autoComplete="off"
+              autoFocus
+              disabled={wiping}
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-red-400 text-center" role="alert">{error}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setResetting(false); setResetWord(''); setError(null); }}
+              className="flex-1 text-sm px-3 py-2.5 rounded-lg bg-surface-700 hover:bg-surface-600 text-slate-300"
+              disabled={wiping}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => { void startOver(); }}
+              className="flex-1 text-sm px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium"
+              disabled={wiping || resetWord !== RESET_WORD}
+            >
+              {wiping ? (waitingForWork ? 'Waiting for documents being read…' : 'Deleting…') : 'Delete everything and start over'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!resetting && (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="passphrase" className="block text-xs font-medium text-slate-400 mb-1.5">
@@ -266,7 +336,18 @@ export default function LockScreen({ mode, onUnlock, error: externalError, inlin
             </>
           )}
         </button>
+
+        {mode === 'unlock' && (
+          <button
+            type="button"
+            onClick={() => { setResetting(true); setError(null); }}
+            className="w-full text-xs text-slate-500 hover:text-slate-300"
+          >
+            Forgot your passphrase?
+          </button>
+        )}
       </form>
+      )}
     </div>
   );
 
