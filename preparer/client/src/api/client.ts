@@ -374,6 +374,8 @@ export async function wipeAllData(): Promise<void> {
   deleteAllDocuments();
   deleteAllTaxFacts();
   deleteAllCaseReviews();
+  // Anything else the app keeps (the saved sign-in, the expense scanner, lock state).
+  removeRecordsWithPrefix('hatax');
   clearRecordCache();
 
   // 2. Clear sessionStorage

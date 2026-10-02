@@ -24,7 +24,9 @@ const STORED: Array<[string, string]> = [
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
-  const mail = <a href={`mailto:${LEGAL.contactEmail}`} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">{LEGAL.contactEmail}</a>;
+  const mail = LEGAL.contactEmail
+    ? <a href={`mailto:${LEGAL.contactEmail}`} className="text-HATaxService-blue-400 hover:text-HATaxService-blue-300 underline">{LEGAL.contactEmail}</a>
+    : <>write to {LEGAL.company}, {LEGAL.address}</>;
 
   return (
     <div className="min-h-screen bg-surface-900">
@@ -36,6 +38,11 @@ export default function PrivacyPage() {
 
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">HA Tax Preparer — Privacy Policy</h1>
         <p className="text-slate-400 text-xs mb-8">Effective {LEGAL.effective}</p>
+        {!LEGAL.confirmed && (
+          <p className="text-amber-300 text-xs border border-amber-500/30 bg-amber-500/10 rounded-lg px-3 py-2 -mt-4 mb-8">
+            Draft for testing: this page has not yet been reviewed by counsel.
+          </p>
+        )}
 
         <div className="space-y-6 text-slate-300 text-sm leading-relaxed">
           <div className="card bg-HATaxService-blue-600/10 border-HATaxService-blue-600/30">

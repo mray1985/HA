@@ -4,13 +4,17 @@
 // must not load anything from another host (the Privacy Policy says nothing
 // leaves the computer; Syncfusion's themes import Google Fonts).
 //
-// Usage: node scripts/check-client.mjs [--warn]
+// Usage: node scripts/check-client.mjs [--warn] [--test-build]
 //   --warn reports a problem without failing (npm run pack, for local testing).
+//   --test-build checks a build for testers (npm run dist:test): the client
+//   must be one (npm run build:test -w client, labeled as such in the app), and
+//   its legal pages may still be drafts awaiting counsel (each page says so).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const warnOnly = process.argv.includes('--warn');
+const testBuild = process.argv.includes('--test-build');
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'dist');
 
 function problem(message) {
@@ -40,14 +44,25 @@ if (info.syncfusionLicensed !== true) {
   );
 }
 
+if (testBuild && info.testBuild !== true) {
+  problem('a test installer needs a test build of the client, which the app labels as one. Run `npm run build:test -w client` from preparer/ first.');
+}
+if (!testBuild && info.testBuild === true) {
+  problem('the client is a test build (npm run build:test); a release needs `npm run build -w client`, or use `npm run dist:test` for testers.');
+}
+
 if (info.apiOrigin) {
   problem(`the client was built with an API origin (${info.apiOrigin}); the desktop app's API is its own server. Unset VITE_API_BASE and VITE_API_ORIGIN and rebuild.`);
 }
 
 // The Terms of Use and Privacy Policy state the business's facts from
 // client/src/pages/legal.ts: a release waits until they are filled and reviewed.
+// A test build may carry the drafts, but not placeholders.
 const legal = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'src', 'pages', 'legal.ts'), 'utf8');
-if (!/\bconfirmed:\s*true\b/.test(legal) || /contact@example\.com/.test(legal)) {
+if (/contact@example\.com/.test(legal)) {
+  problem('client/src/pages/legal.ts still has the placeholder contact address; fill in the company and how to reach it.');
+}
+if (!testBuild && !/\bconfirmed:\s*true\b/.test(legal)) {
   problem('client/src/pages/legal.ts is not confirmed: fill in the company, contact address and governing law, have counsel review the Terms and Privacy pages, then set confirmed: true and rebuild.');
 }
 
@@ -69,4 +84,4 @@ if (remote.length > 0) {
   problem(`the client build loads stylesheets from another host (${remote.join(', ')}); the app must not reach the internet. See client/postcss.config.js.`);
 }
 
-console.log(`client build ${info.builtAt}: Syncfusion license key present; nothing loaded from another host.`);
+console.log(`client build ${info.builtAt}${testBuild ? ' (test build)' : ''}: Syncfusion license key present; nothing loaded from another host.`);
