@@ -156,17 +156,24 @@ function namedField(turn: AssistantTurn, text: string): { field: string } | unde
   return undefined;
 }
 
-/** The printed box number per field, so "box 1" finds the field. */
+/**
+ * The printed box number per field, so "box 1" finds the field.
+ *
+ * Every entry is checked against the form schema by `printedBoxLabels.test.ts` in
+ * local-ai — these were typed by hand and drifted: 1099-INT tax-exempt interest
+ * is box 8 (not box 5), 1099-R gross distribution is box 1 and its distribution
+ * code box 7a (not 1a and 3), and 1099-R federal tax withheld is box 4.
+ */
 const FIELD_BOXES: Partial<Record<DocumentToolName, Record<string, string>>> = {
   add_w2: {
     wages: '1', federalTaxWithheld: '2', socialSecurityWages: '3', socialSecurityTax: '4',
     medicareWages: '5', medicareTax: '6', state: '15', stateWages: '16', stateTaxWithheld: '17',
     localWages: '18', localTaxWithheld: '19', localityName: '20',
   },
-  add_1099_int: { amount: '1', earlyWithdrawalPenalty: '2', usBondInterest: '3', federalTaxWithheld: '4', taxExemptInterest: '5' },
+  add_1099_int: { amount: '1', earlyWithdrawalPenalty: '2', usBondInterest: '3', federalTaxWithheld: '4', taxExemptInterest: '8' },
   add_1099_div: { ordinaryDividends: '1a', qualifiedDividends: '1b', capitalGainDistributions: '2a', federalTaxWithheld: '4', foreignTaxPaid: '6' },
   add_1099_nec: { amount: '1', federalTaxWithheld: '4' },
-  add_1099_r: { grossDistribution: '1a', taxableAmount: '2a', distributionCode: '3', federalTaxWithheld: '4' },
+  add_1099_r: { grossDistribution: '1', taxableAmount: '2a', distributionCode: '7a', federalTaxWithheld: '4' },
   add_1099_misc: { rents: '1', royalties: '2', otherIncome: '3', federalTaxWithheld: '4' },
   add_1099_g: { unemploymentCompensation: '1', federalTaxWithheld: '4' },
   add_1099_b: { proceeds: '1d', costBasis: '1e', isLongTerm: '2' },
@@ -184,6 +191,13 @@ function namesTurn(turn: AssistantTurn, text: string): boolean {
   const who = turn.question?.subjectName?.toLowerCase();
   if (who && t.includes(who)) return true;
   for (const word of subject) if (t.includes(word.toLowerCase())) return true;
+  // A return field named by its own words: "the city is …", "street address …".
+  // This is what separates two free-text fields that both fit any words.
+  if (turn.intent.kind === 'return_field') {
+    const label = RETURN_SAY[turn.intent.field]?.toLowerCase() ?? '';
+    const words = label.split(/[^a-z]+/).filter((w) => w.length >= 3);
+    if (words.some((w) => new RegExp(`\\b${w}\\b`).test(t))) return true;
+  }
   // A held form's file name, when the message mentions a file at all.
   if (/\.(pdf|png|jpe?g|tiff?|heic|webp)\b/.test(t)) {
     return /\b\d{4}\b/.test(t) || subject.length === 0;
@@ -212,9 +226,13 @@ function fitScore(turn: AssistantTurn, text: string): number {
       if (intent.field === 'filingStatus') return readFilingStatus(text) ? 10 : 0;
       if (intent.field === 'dateOfBirth') return /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b(19|20)\d{2}\b/.test(text) ? 10 : 0;
       if (intent.field === 'ssn') return /\b\d{3}[- ]?\d{2}[- ]?\d{4}\b/.test(text) ? 10 : 0;
-      if (intent.field === 'zipCode') return /\b\d{5}(-\d{4})?\b/.test(text) ? 10 : 0;
-      if (intent.field === 'state') return readState(text) ? 10 : 0;
-      // A name or an address is any words at all, so it fits everything weakly.
+      // The return's fields are addressZip and addressState, not zipCode and state.
+      if (intent.field === 'addressZip') return /\b\d{5}(-\d{4})?\b/.test(text) ? 10 : 0;
+      if (intent.field === 'addressState') return readState(text) ? 10 : 0;
+      // Any other name or address is any words at all, so it fits everything
+      // weakly — and several open fields tie at 1, so the message goes to the
+      // one it names. Without a subject it is not a guess: it stays unrouted and
+      // the assistant asks which field it was for.
       return 1;
     }
     case 'filing_status':
@@ -224,9 +242,13 @@ function fitScore(turn: AssistantTurn, text: string): number {
       const field = namedField(turn, text)?.field;
       const input = fieldInput(intent.tool, field ?? intent.field);
       if (!input) return 1;
-      if (input.kind === 'number') return readAmount(text) !== undefined ? 8 : 0;
-      if (input.kind === 'boolean') return readYesNo(text) !== undefined ? 8 : 0;
-      if (input.kind === 'enum') return input.options.some((o) => text.toLowerCase().includes(o.toLowerCase().replace(/_/g, ' '))) ? 8 : 0;
+      // A held box on a form is the strongest thing a typed number can answer: it
+      // is the one field the return cannot do without. It outranks a return field
+      // that merely happens to match the shape of the words — a bare five-digit
+      // number is a ZIP as readily as it is wages.
+      if (input.kind === 'number') return readAmount(text) !== undefined ? 12 : 0;
+      if (input.kind === 'boolean') return readYesNo(text) !== undefined ? 12 : 0;
+      if (input.kind === 'enum') return input.options.some((o) => text.toLowerCase().includes(o.toLowerCase().replace(/_/g, ' '))) ? 12 : 0;
       return 1;
     }
 
@@ -283,10 +305,21 @@ export function targetTurn(turns: AssistantTurn[], text: string): AssistantTurn 
     .map((t) => ({ turn: t, score: fitScore(t, text) }))
     .sort((a, b) => b.score - a.score || b.turn.weight - a.turn.weight);
   const best = scored[0];
-  // Nothing in the message fits anything: the heaviest turn takes it, so a bare
-  // number still lands somewhere sensible, and readForTurn says why if it cannot.
-  return best && best.score > 0 ? best.turn : open.reduce((a, b) => (b.weight > a.weight ? b : a));
+  if (!best || best.score <= 0) return undefined;
+
+  // Several free-text fields all fit any words equally, so a message that names
+  // none of them is ambiguous: "123 Main St" could be the street or the city.
+  // Routing it to whichever happens to be heaviest would write an address into
+  // the wrong field, so it is left unrouted and the assistant asks which field.
+  const tied = scored.filter((s) => s.score === best.score);
+  if (tied.length > 1 && best.score <= TEXT_FIELD_FIT && !tied.some((s) => namesTurn(s.turn, text))) {
+    return undefined;
+  }
+  return best.turn;
 }
+
+/** The score a name or address field gives any words at all. */
+const TEXT_FIELD_FIT = 2;
 
 /** Read the value for one turn out of the words. */
 export function readForTurn(turn: AssistantTurn, text: string): ReadAnswer {
@@ -432,12 +465,43 @@ export function readForTurn(turn: AssistantTurn, text: string): ReadAnswer {
       return { status: 'partial', turnId: turn.id, intent, reason: 'I need to know what that file is, or to have it dropped on the case again' };
     }
 
-    case 'client_question':
+    case 'client_question': {
+      // A state question with a fixed set of answers — an Iowa or Indiana county,
+      // a school district — can be answered by typing one of them, which is
+      // exactly what the card offers. Without this, typing an offered label falls
+      // through as partial even though the assistant advertises typed answers.
+      const options = stateAnswerOptions(intent.questionId, turn);
+      if (options.length > 0) {
+        const said = text.toLowerCase().trim();
+        const hit = options.find((o) =>
+          said === o.label.toLowerCase().trim() ||
+          said === o.value.toLowerCase().trim() ||
+          said.includes(o.label.toLowerCase()),
+        );
+        if (hit) {
+          return { status: 'understood', intent, turnId: turn.id, value: { kind: 'text', value: hit.value }, label: hit.label };
+        }
+        return { status: 'partial', turnId: turn.id, intent, reason: `That one is one of: ${options.map((o) => o.label).join(', ')}.` };
+      }
       return { status: 'partial', turnId: turn.id, intent, reason: 'Only the client can answer that — paste their reply below and I will read it' };
+    }
 
     case 'note':
       return { status: 'partial', turnId: turn.id, intent, reason: 'I did not find a value for any open question in that' };
   }
+}
+
+/**
+ * The answers a state question offers, taken from the card the preparer sees.
+ *
+ * The question itself does not carry them — the state modules build them from
+ * their own county and district lists — so they are read off the options the
+ * assistant already rendered. That keeps one list, in one place.
+ */
+function stateAnswerOptions(questionId: string, turn: AssistantTurn): Array<{ label: string; value: string }> {
+  return (turn.options ?? [])
+    .filter((o) => o.value.kind === 'text')
+    .map((o) => ({ label: o.label, value: String((o.value as { value: string }).value) }));
 }
 
 /** Read a typed message against the open turns. */
@@ -468,16 +532,17 @@ const FILING_LABELS: Record<string, string> = {
 };
 
 const RETURN_SAY: Record<string, string> = {
-  firstName: 'First name',
-  lastName: 'Last name',
-  ssn: 'Social Security number',
-  dateOfBirth: 'Date of birth',
-  streetAddress: 'Street address',
-  city: 'City',
-  state: 'State',
-  zipCode: 'ZIP code',
-  filingStatus: 'Filing status',
-};
+firstName: 'Taxpayer first name',
+    lastName: 'Taxpayer last name',
+    ssn: 'Social Security number',
+    dateOfBirth: 'Date of birth',
+    // The return's own field names.
+    addressStreet: 'Street address',
+    addressCity: 'City',
+    addressState: 'State',
+    addressZip: 'ZIP code',
+    filingStatus: 'Filing status',
+  };
 
 /** Every state and DC, in the order the engine's table has them. */
 const STATE_CODES = [

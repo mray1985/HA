@@ -25,6 +25,7 @@ import { applyChosen, sendToAssistant } from '../../services/assistantChat';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
 import { acceptNoteOffer, dismissNoteOffer, type ReadReplyResult } from '../../services/clientReplies';
 import { nextCase } from '../../services/caseQueue';
+import { loadSpoken, saveSpoken } from '../../services/assistantThread';
 import ReviewActionForm, { ReturnFieldsForm } from './ReviewActions';
 import type { ReviewItem } from '../../services/caseReview';
 import { useCaseStore } from '../../store/caseStore';
@@ -238,13 +239,18 @@ export default function AssistantPanel() {
 
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [spoken, setSpoken] = useState<Spoken[]>([]);
+  // The conversation is kept on the case, not in this component: switching tabs
+  // or reloading unmounts the panel, and a thread that forgets what the preparer
+  // said is not one conversation per case.
+  const [spoken, setSpoken] = useState<Spoken[]>(() => (returnId ? loadSpoken(returnId) : []));
   const [runtime, setRuntime] = useState<LocalRuntimeStatus | null | undefined>(undefined);
   const [offers, setOffers] = useState<ReadReplyResult['offers']>([]);
   /** The reply the offers came from, so accepting one writes against the right record. */
   const [offerReply, setOfferReply] = useState<ReadReplyResult | null>(null);
   const [reply, setReply] = useState('');
-  const [offerStates, setOfferStates] = useState<Record<string, 'accepted' | 'dismissed'>>({});
+  const [offerStates, setOfferStates] = useState<Record<string, 'accepted' | 'dismissed' | 'Held for you'>>({});
+  /** Why a fact was recorded but not put on the return, per offer. */
+  const [offerHeld, setOfferHeld] = useState<Record<string, string | undefined>>({});
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -300,6 +306,15 @@ const upNext = nextTurn(turns);
 
   if (!returnId || !taxReturn || !review) return null;
 
+  /** Add to the conversation, and keep it on the case. */
+  const record = (id: string, text: string, said: string, written: boolean) => {
+    setSpoken((s) => {
+      const next = [...s, { id: `${Date.now()}-${s.length}`, text, said, written }];
+      saveSpoken(id, next);
+      return next;
+    });
+  };
+
   /** Send one message: written straight onto the case, or read as free text. */
   const say = async (text: string) => {
     const trimmed = text.trim();
@@ -308,14 +323,14 @@ const upNext = nextTurn(turns);
     setBusy('Reading that…');
     try {
       const outcome = await sendToAssistant(returnId, trimmed, turns, aiAvailable, setBusy);
-      setSpoken((s) => [...s, { id: `${Date.now()}-${s.length}`, text: trimmed, said: outcome.said, written: outcome.written }]);
+      record(returnId, trimmed, outcome.said, outcome.written);
       if (outcome.reply) {
         setOffers(outcome.reply.offers);
         setOfferReply(outcome.reply);
       }
       if (outcome.written) toast.success(outcome.said);
     } catch (err) {
-      setSpoken((s) => [...s, { id: `${Date.now()}-${s.length}`, text: trimmed, said: err instanceof Error ? err.message : 'That did not work.', written: false }]);
+      record(returnId, trimmed, err instanceof Error ? err.message : 'That did not work.', false);
     } finally {
       setBusy(null);
     }
@@ -456,7 +471,8 @@ return (
                 {offer.proposal.dropped.length > 0 && <p className="text-xs text-slate-400">Not in the words, so left unknown: {offer.proposal.dropped.join(', ')}.</p>}
                 {offerStates[offer.id] ? (
                   <p className={`text-xs mt-2 ${offerStates[offer.id] === 'accepted' ? 'text-emerald-300' : 'text-slate-400'}`}>
-                    {offerStates[offer.id] === 'accepted' ? 'Added to the return.' : 'Dismissed.'}
+                    {offerStates[offer.id] === 'accepted' ? 'Added to the return.' : offerStates[offer.id]}
+                    {offerHeld[offer.id] && <span className="block text-amber-300/90">{offerHeld[offer.id]}</span>}
                   </p>
                 ) : (
                   <div className="mt-2 flex gap-2 justify-end">
@@ -470,8 +486,21 @@ return (
                           const accepted = acceptNoteOffer(id, offerReply, offer, offers.indexOf(offer));
                           return accepted.ok ? { ok: true, outcome: { kind: 'recorded' as const } } : accepted;
                         });
-                        setOfferStates((s) => ({ ...s, [offer.id]: r.ok ? 'accepted' : 'dismissed' }));
-                        if (!r.ok) toast.error(r.error);
+                        if (!r.ok) {
+                          setOfferStates((s) => ({ ...s, [offer.id]: 'dismissed' }));
+                          toast.error(r.error);
+                          return;
+                        }
+                        // A fact can be recorded and still be held off the return —
+                        // a business expense waits for its Schedule C line, its
+                        // category, and its business. Saying "Added" when it was
+                        // held would tell the preparer it is on the return when it
+                        // is not.
+                        const outcome = r.outcome;
+                        const held = outcome.kind === 'held' ? (outcome as { reason?: string }).reason : undefined;
+                        setOfferHeld((s) => ({ ...s, [offer.id]: held }));
+                        setOfferStates((s) => ({ ...s, [offer.id]: held ? 'Held for you' : 'accepted' }));
+                        if (held) toast.error(held); else toast.success('Added to the return');
                       }}
                       className="text-sm font-medium bg-HATaxService-orange-500 hover:bg-HATaxService-orange-600 text-white rounded px-3 py-1"
                     >

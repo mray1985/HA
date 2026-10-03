@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FilingStatus, type TaxReturn } from '@hatax/engine';
 import { generateClientQuestions, invokeTaxTool, type ClientQuestion, type IngestedDocument, type TaxFact, type TaxToolName, type TaxToolSuccess } from '@hatax/local-ai';
 import { buildCaseReview, type ReviewItem } from '../services/caseReview';
-import { assistantTurns, caseHeadline, nextTurn } from '../services/assistantTurns';
+import { assistantTurns, caseHeadline, nextTurn, type AssistantTurn } from '../services/assistantTurns';
 import { readAnswer, readAmount, readCount, readFilingStatus, readRelationship, readResidency, readYesNo } from '../services/assistantAnswers';
 
 /** A held W-2: box 1 was read two ways, so the form is off the return. */
@@ -233,6 +233,66 @@ it('says it did not understand rather than writing something', () => {
 
     const read = readAnswer('call me later about it', turns);
     expect(['unmatched', 'partial']).toContain(read.status);
+  });
+});
+
+describe('an ambiguous message is not routed to an arbitrary field', () => {
+  const fields: AssistantTurn[] = (
+    ['firstName', 'lastName', 'addressStreet', 'addressCity', 'addressZip'] as const
+  ).map((field) => ({
+    id: field,
+    kind: 'blocked' as const,
+    say: `${field} is not entered`,
+    intent: { kind: 'return_field' as const, field },
+    weight: 950,
+  }));
+
+  it('leaves free text unrouted when several open fields fit it equally', () => {
+    // "815 Magnolia Ave" could be the street or the city. Writing it into
+    // whichever field happens to be heaviest puts an address in the wrong place.
+    expect(readAnswer('815 Magnolia Ave', fields).status).not.toBe('understood');
+  });
+
+  it('routes it when the message says which field it is for', () => {
+    const read = readAnswer('the city is Baton Rouge', fields);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') return;
+    expect(read.intent).toMatchObject({ kind: 'return_field', field: 'addressCity' });
+  });
+
+  it('still routes a ZIP, which is not free text', () => {
+    const read = readAnswer('70802', fields);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') return;
+    expect(read.intent).toMatchObject({ field: 'addressZip' });
+  });
+});
+
+describe('the education credit question', () => {
+  const turn: AssistantTurn = {
+    id: 'edu', kind: 'check', say: 'Which education credit?',
+    intent: { kind: 'choice', tool: 'add_education_expense', formKey: 'DOC-T#0' },
+    weight: 650,
+  };
+
+  it('accepts the American Opportunity credit by name', () => {
+    const read = readAnswer('american opportunity', [turn]);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') return;
+    expect(read.value).toEqual({ kind: 'text', value: 'american_opportunity' });
+  });
+
+  it('accepts the Lifetime Learning credit by name', () => {
+    const read = readAnswer('lifetime learning', [turn]);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') return;
+    expect(read.value).toEqual({ kind: 'text', value: 'lifetime_learning' });
+  });
+
+  it('does not pick a credit when the words name neither', () => {
+    const read = readAnswer('not sure', [turn]);
+    // Unrouted rather than guessed: a wrong education credit is a wrong return.
+    expect(['partial', 'unmatched']).toContain(read.status);
   });
 });
 
