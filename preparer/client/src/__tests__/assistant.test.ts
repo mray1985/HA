@@ -414,11 +414,17 @@ describe('an empty case is not a case with ten problems', () => {
       field, message: `${field} is required.`, action: { kind: 'return_field' as const, field },
     }));
 
-  it('asks for the documents, not for the client’s details', () => {
+  it('asks for the documents first, and still lets the details be entered by hand', () => {
     const turns = assistantTurns({ items: missingEverything, facts: [], documents: [], questions: [], clientName: 'this client', caseEmpty: true });
-    expect(turns).toHaveLength(1);
+    // The documents come first: they carry the client's identity and income.
     expect(turns[0]!.ask).toMatch(/Drop their documents in/);
-    expect(turns.some((t) => t.intent.kind === 'return_field')).toBe(false);
+    // With no forms to read, the fields are not "missing" — they are unknown, and
+    // the preparer still has to be able to write them.
+    expect(turns.some((t) => t.kind === 'ask')).toBe(false);
+    const fields = turns.filter((t) => t.intent.kind === 'return_field');
+    expect(fields).toHaveLength(missingEverything.length);
+    expect(fields.every((t) => t.say.startsWith('Nothing on the case says what'))).toBe(true);
+    expect(fields.map((t) => t.ask)).toContain("Taxpayer's first name?");
   });
 
   it('says so in the headline instead of counting problems it cannot judge yet', () => {

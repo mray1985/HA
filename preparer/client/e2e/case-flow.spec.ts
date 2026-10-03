@@ -20,11 +20,12 @@ test('a new case opens on its documents, and the assistant says what is missing'
   await expect(page.getByText(/Drop or choose the client/)).toBeVisible();
 
   await page.getByRole('link', { name: /^Assistant/ }).click();
-  // A case with nothing read on it asks for the documents. It does not report
-  // every field the return needs: the client is not on the case yet, so those
-  // fields are not missing, they are simply unknown until a document arrives.
+  // A case with nothing read on it asks for the documents first: they carry the
+  // client's identity and income. The details stay enterable by hand behind that,
+  // said as unknown rather than as fields that are missing.
   await expect(page.getByText(/Nothing on the case yet/i).first()).toBeVisible();
   await expect(page.getByText(/Drop their documents in/i).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Enter all \d+ details at once/ })).toBeVisible();
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText('Not ready')).toBeVisible();

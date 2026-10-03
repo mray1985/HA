@@ -555,12 +555,16 @@ const INCOME_TOOLS: ReadonlySet<DocumentToolName> = new Set([
  * client's documents have not arrived. Ten "the return is not valid without…"
  * cards on a case with no documents is the app complaining before it has looked.
  */
-function turnsForAnEmptyCase(clientName: string, hasQuestion: boolean): AssistantTurn[] {
+function turnsForAnEmptyCase(
+  clientName: string,
+  hasQuestion: boolean,
+  items: ReviewItem[],
+): AssistantTurn[] {
   const turns: AssistantTurn[] = [{
     id: 'empty',
     kind: 'needed',
     say: `${upperFirst(clientName)} has nothing on the case yet, so I do not know who they are or what they earned.`,
-    ask: 'Drop their documents in — on this page, or on the case list for several clients at once — and I will read them.',
+    ask: 'Drop their documents in — on this page, or on the case list for several clients at once — and I will read them. If there are no documents to hand, enter the details yourself below.',
     intent: { kind: 'document', documentId: '', job: 'reread' },
     weight: 9999,
   }];
@@ -571,6 +575,24 @@ function turnsForAnEmptyCase(clientName: string, hasQuestion: boolean): Assistan
       text: 'How do you want to file the return — single, married filing jointly, married filing separately, head of household, or qualifying surviving spouse?',
       target: { kind: 'filing_status' },
     }));
+  }
+  // The client's own details are still theirs to supply. A case with no documents
+  // has no reader, so the fields stay enterable by hand — the assistant asks for
+  // the documents first, but it must not leave the preparer with no way to write
+  // a name when there are no forms to read one from.
+  for (const item of items) {
+    const action = item.action;
+    if (action?.kind !== 'return_field') continue;
+    const spec = returnFieldSpec(action.field, undefined);
+    const label = spec?.label ?? returnFieldLabel(action.field);
+    turns.push({
+      id: item.id,
+      kind: 'blocked',
+      say: `Nothing on the case says what ${lowerFirst(label)} is.`,
+      ask: `${label}?`,
+      intent: { kind: 'return_field', field: action.field },
+      weight: 900,
+    });
   }
   return turns;
 }
@@ -595,7 +617,7 @@ export function assistantTurns({ items, facts, documents, questions, clientName,
   // A case with nothing read on it: the client's details and their income are
   // both on documents that have not arrived.
   if (caseEmpty) {
-    return turnsForAnEmptyCase(clientName, questions.some((q) => q.target.kind === 'filing_status'));
+    return turnsForAnEmptyCase(clientName, questions.some((q) => q.target.kind === 'filing_status'), items);
   }
 
   // A held income form is already a turn saying the return has no income from it;
