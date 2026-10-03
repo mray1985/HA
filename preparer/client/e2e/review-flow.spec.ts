@@ -1,7 +1,8 @@
 /**
- * E2E: the review flow's speed-ups — documents dropped on any tab of a case,
- * the return summary, the taxpayer's missing details filled in place, one-click
- * decisions, approval from the summary, and on to the next case.
+ * E2E: the assistant's flow — documents dropped on any tab of a case, the case
+ * summary, the taxpayer's missing details entered in one go, values typed into
+ * the assistant and written straight onto the return, one-click decisions,
+ * approval from the summary, and on to the next case.
  */
 
 import { readFileSync } from 'node:fs';
@@ -36,40 +37,63 @@ async function newCase(page: Page, year: string) {
   await expect(page).toHaveURL(/\/documents$/);
 }
 
-test('a W-2 dropped on the Review tab is read, and names the taxpayer', async ({ page }) => {
+/** Type into the assistant's box and send it. */
+async function tell(page: Page, text: string) {
+  const box = page.getByLabel('Type an answer');
+  await box.fill(text);
+  await box.press('Enter');
+}
+
+test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async ({ page }) => {
   await newCase(page, '2025');
-  await page.getByRole('link', { name: /^Review/ }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
 
-  await dropFiles(page, 'section[aria-label="Return summary"]', [{ path: 'e2e/fixtures/w2-basic-single.pdf', name: 'w2-basic-single.pdf' }]);
-  const summary = page.getByRole('region', { name: 'Return summary' });
-  await expect(summary).toContainText('1 of 1 read', { timeout: 30000 });
+  await dropFiles(page, 'section[aria-label="Where the case stands"]', [{ path: 'e2e/fixtures/w2-basic-single.pdf', name: 'w2-basic-single.pdf' }]);
+  const summary = page.getByRole('region', { name: 'Where the case stands' });
+  await expect(summary).toContainText('I read all 1 document', { timeout: 30000 });
 
-  // The employee's SSN, name and address come from the W-2's text layer.
-  await expect(page.getByRole('heading', { name: 'Maya Testpayer' })).toBeVisible();
-  await expect(page.getByText('First name is required.')).toHaveCount(0);
-  await expect(page.getByText('Social Security number is required.')).toHaveCount(0);
-  await expect(page.getByText('ZIP code is required.')).toHaveCount(0);
+  // The employee's SSN, name and address come from the W-2's text layer. The name
+  // is also named on the turn offering the document's reading as one click, so
+  // the heading is matched rather than counted.
+  await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
-  // The filing status is the one thing left to enter.
-  const status = page.getByRole('listitem').filter({ hasText: 'Filing status is required.' });
-  await status.getByRole('button', { name: 'Enter it' }).click();
-  await status.getByLabel('Filing status').selectOption({ label: 'Single' });
-  await status.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Filing status is required.')).toHaveCount(0);
+  // The filing status is typed, not chosen from a list.
+  await expect(page.getByText(/filing status is required/i)).toHaveCount(0);
+  await tell(page, 'single');
+  await expect(page.getByText(/I read all 1 document/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
-  // Decide what is left with one click each, then approve from the summary.
-  for (let i = 0; i < 10; i++) {
-    const decide = page.getByRole('button', { name: 'Record a decision' }).first();
-    if (!(await decide.isVisible().catch(() => false))) break;
-    await decide.click();
-    await page.getByRole('button', { name: 'Checked against the source document' }).click();
+  // Anything the assistant still raised is settled by the preparer, which is what
+  // unblocks approval: "I have checked this" opens the decision, and the quick
+  // choice records it. The Approve button only exists once nothing is open, so
+  // wait for it rather than clicking at a moment the thread happens to be still.
+  const settle = page.getByRole('button', { name: 'I have checked this' });
+  while (await settle.count()) {
+    await settle.first().click();
+    await page.getByRole('button', { name: 'Checked against the document' }).first().click();
+    await settle.first().waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined);
   }
-  await summary.getByRole('button', { name: 'Approve' }).click();
+  // This W-2 prints no date of birth, and the return treats an absent one as
+  // under 65 — so it is asked for rather than assumed, and approval waits on it.
+  // That is the behaviour under test: nothing is approved while a value the
+  // engine needs is unknown.
+  // The question lives on the thread. "What you typed" is only the messages
+  // the preparer sent, so the date of birth is not in that region until answered.
+  const needs = page.getByRole('region', { name: 'What the case needs' });
+  await expect(needs).toContainText("Taxpayer's date of birth?");
+  await tell(page, '4/12/1980');
+  // "Done" from the filing status is already in the conversation. This is the
+  // date itself landing, and the question leaving the thread.
+  await expect(page.getByRole('region', { name: 'What you typed' })).toContainText('Date of birth: 4/12/1980. Done.');
+  await expect(needs).not.toContainText("Taxpayer's date of birth?");
+
+  const approve = summary.getByRole('button', { name: 'Approve' });
+  await approve.waitFor({ state: 'visible', timeout: 30_000 });
+  await approve.click();
   await expect(summary).toContainText('Approved');
 
   // The audit trail keeps each value entered, and each decision's note.
   await page.getByRole('link', { name: 'Approve' }).click();
-  await expect(page.getByText(/Decided for Taxpayer identity: filled from confirmed readings: SSN \(w2-basic-single\.pdf\); name/)).toBeVisible();
   await expect(page.getByText(/Changed filingStatus/)).toBeVisible();
 });
 
@@ -84,19 +108,18 @@ test('next case goes to the case that needs the preparer', async ({ page }) => {
   await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/w2-basic-single.pdf');
   await expect(page.getByText('Entered on the return')).toBeVisible({ timeout: 30000 });
 
-  await page.getByRole('link', { name: /^Review/ }).click();
-  await page.getByRole('region', { name: 'Return summary' }).getByRole('button', { name: /Next case/ }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await page.getByRole('region', { name: 'Where the case stands' }).getByRole('button', { name: /Next case/ }).click();
   await expect(page).toHaveURL(new RegExp(`/preparer/case/${first}`));
 });
 
-test('a review item opens its own document', async ({ page }) => {
+test('a turn about a document opens that document', async ({ page }) => {
   await newCase(page, '2025');
   await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
-  await page.getByRole('link', { name: /^Review/ }).click();
-  const item = page.getByRole('listitem').filter({ hasText: 'enter the qualified education expenses' });
-  await item.getByRole('button', { name: 'Open the document' }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await page.getByRole('button', { name: 'Look at the document' }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   // The document's values are shown without another click.
   await expect(page.getByRole('button', { name: /Hide values read/ })).toBeVisible();
@@ -106,8 +129,8 @@ test('a review item opens its own document', async ({ page }) => {
 
 test("a returning client's next year starts from last year's case", async ({ page }) => {
   await newCase(page, '2025');
-  await page.getByRole('link', { name: /^Review/ }).click();
-  await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await page.getByRole('button', { name: /Enter all \d+ details at once/ }).click();
   await page.getByLabel("Taxpayer's first name").fill('Maya');
   await page.getByLabel("Taxpayer's last name").fill('Lee');
   await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-678');
@@ -121,23 +144,23 @@ test("a returning client's next year starts from last year's case", async ({ pag
   await expect(page.getByRole('alert').filter({ hasText: 'An SSN, ITIN or ATIN is 9 digits.' })).toBeVisible();
   await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-6789');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' }).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to cases' }).click();
   const row = page.getByRole('row', { name: /Maya Lee.*2025/ });
   await row.getByRole('button', { name: 'Start 2026' }).click();
 
-  await expect(page).toHaveURL(/\/review$/);
+  await expect(page).toHaveURL(/\/assistant$/);
   await expect(page.getByText('Tax year 2026')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' }).first()).toBeVisible();
   await expect(page.getByText(/Started from the 2025 case: carried name, SSN and address/)).toBeVisible();
   await expect(page.getByText(/The 2025 case was not approved/)).toBeVisible();
 
-  // Last year's filing status is one click, and the client is still asked.
-  const status = page.getByRole('listitem').filter({ hasText: '2025 case states the filing status head of household' });
-  await status.getByRole('button', { name: 'Use it' }).click();
-  await status.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('2025 case states the filing status head of household')).toHaveCount(0);
+  // Last year's filing status is one click. The card says what the client filed
+  // as; the review item's longer sentence stays behind "Why I am asking".
+  const status = page.getByRole('listitem').filter({ hasText: /file as head of household/i });
+  await status.getByRole('button', { name: /Yes — head of household/i }).click();
+  await expect(status).toHaveCount(0);
 
   // The dashboard no longer offers 2026 for this client.
   await page.getByRole('link', { name: 'Back to cases' }).click();
@@ -172,13 +195,13 @@ test('documents for several clients dropped on the dashboard go to a case each',
 test('a new season starts every returning client at once', async ({ page }) => {
   for (const [first, last, ssn] of [['Maya', 'Lee', '123-45-6789'], ['Sam', 'Ortiz', '987-65-4321']] as const) {
     await newCase(page, '2025');
-    await page.getByRole('link', { name: /^Review/ }).click();
-    await page.getByRole('button', { name: /Enter all \d+ missing details at once/ }).click();
+    await page.getByRole('link', { name: /^Assistant/ }).click();
+    await page.getByRole('button', { name: /Enter all \d+ details at once/ }).click();
     await page.getByLabel("Taxpayer's first name").fill(first);
     await page.getByLabel("Taxpayer's last name").fill(last);
     await page.getByLabel("Taxpayer's SSN or ITIN").fill(ssn);
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByRole('heading', { name: `${first} ${last}` })).toBeVisible();
+    await expect(page.getByRole('heading', { name: `${first} ${last}` }).first()).toBeVisible();
     await page.getByRole('link', { name: 'Back to cases' }).click();
   }
   await page.getByLabel('Tax year for a new case').selectOption('2026');

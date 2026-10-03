@@ -99,6 +99,8 @@ import { printedTaxYear,
 
 export type { OCRStage } from './ocrService';
 import { w2EmployeeFromTextLayer } from './w2EmployeeText';
+import { buildPrintIndex, verifyAgainstPrint, type PrintIndex, type RejectedRead } from './extractionVerification';
+import { buildBoxLedger, summariseBoxLedger, type BoxLedger } from './boxLedger';
 
 // ─── Shared Processing Logic ──────────────────────
 
@@ -114,6 +116,14 @@ function extractFormData(
   payerName: string;
   fieldRawTokens: Record<string, string>;
   fieldSourceLocations: Record<string, FieldSourceLocationValue>;
+  /** Reads the page does not support. Held for a person; never written. */
+  rejectedReads: RejectedRead[];
+  /** What the page prints, so the check can run at the write boundary. */
+  printIndex: PrintIndex;
+  /** Every box the form prints, and what became of it. */
+  boxLedger: BoxLedger;
+  /** The text of the pages this form was read from. */
+  pageText: string;
 } {
   let extractedData: Record<string, unknown> = {};
   let payerName = '';
@@ -209,8 +219,27 @@ function extractFormData(
       payerName = (extractedData.filerName as string) || '';
       break;
   }
-  return { extractedData, payerName, fieldRawTokens, fieldSourceLocations };
-}
+
+  // What the page prints, carried forward. The deterministic check runs on this
+  // at the write boundary, where the form type being written is known — so a
+  // later classification pass cannot relabel a form under values already checked
+  // against a different one, and a new extractor cannot skip the check.
+  const printIndex = buildPrintIndex(blocks);
+
+  // payerName is a printed name and is verified with everything else.
+  const verifiedPayer = verifyAgainstPrint(formType, payerName ? { __payer: payerName } : {}, printIndex);
+
+  return {
+    extractedData,
+    payerName: typeof verifiedPayer.data.__payer === 'string' ? verifiedPayer.data.__payer : '',
+    fieldRawTokens,
+    fieldSourceLocations,
+    printIndex,
+rejectedReads: verifiedPayer.rejected.map((r) => ({ ...r, field: 'payerName' })),
+      pageText: blocks.map((b) => b.text).join(' '),
+      boxLedger: buildBoxLedger(formType, extractedData, verifiedPayer.rejected, blocks.map((b) => b.text).join(' ')),
+    };
+  }
 
 /**
  * Process text blocks through the detection + extraction pipeline.
@@ -319,7 +348,8 @@ function processTextBlocks(
   }
 
   // Extract fields based on form type — using effectiveBlocks (scoped to form pages)
-  const { extractedData, payerName, fieldRawTokens, fieldSourceLocations } = extractFormData(type, effectiveBlocks);
+  const { extractedData, payerName, fieldRawTokens, fieldSourceLocations, rejectedReads, printIndex } =
+    extractFormData(type, effectiveBlocks);
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
   const identity = type === 'W-2' ? w2EmployeeFromTextLayer(effectiveBlocks, !ocrUsed) : null;
   // The tax year the form prints, checked against the case's year in the review.
@@ -330,11 +360,16 @@ function processTextBlocks(
     warnings.push('PDF import captures summary totals only. For individual transactions, use CSV or TXF import.');
   } else if (type === '1095-A') {
     warnings.push('Monthly values may need manual entry. Annual totals are more reliable from OCR.');
-  } else if (type === 'K-1') {
-    warnings.push('K-1 import captures 13 common boxes (1, 2, 4, 5, 6a, 7, 8, 9a, 9b, 9c, 10, 14A and the name). Verify for additional entries.');
-  }
+} else if (type === 'K-1') {
+      warnings.push('K-1 import captures 13 common boxes (1, 2, 4, 5, 6a, 7, 8, 9a, 9b, 9c, 10, 14A and the name). Verify for additional entries.');
+}
 
-  // Add warnings for missing important fields
+  // Account for every box the form prints, so a form the reader mostly failed
+    // on cannot look like a form with two boxes on it.
+    const pageText = effectiveBlocks.map((b) => b.text).join(' ');
+    const boxLedger = buildBoxLedger(type, extractedData, rejectedReads, pageText);
+    const ledgerNote = summariseBoxLedger(boxLedger);
+    if (ledgerNote) warnings.push(`${type ?? 'This form'}: ${ledgerNote}`);
   if (!payerName) {
     warnings.push('Could not extract payer/employer name. Please enter it manually.');
   }
@@ -393,6 +428,13 @@ function processTextBlocks(
         ocrUsed,
         ocrEngine,
         rawOCRText: spanRawOCRText,
+        // A secondary form is applied exactly like a primary one, so it carries
+        // the same print index and ledger. Without these the write boundary has
+        // nothing to check the span's pages against and lets them through.
+        printIndex: spanData.printIndex,
+        pageText: spanData.pageText,
+        boxLedger: spanData.boxLedger,
+        ...(spanData.rejectedReads.length > 0 ? { rejectedReads: spanData.rejectedReads } : {}),
         ...(spanIdentity ? { identity: spanIdentity } : {}),
       });
     }
@@ -409,6 +451,10 @@ function processTextBlocks(
     ...(taxYearPrinted ? { taxYearPrinted } : {}),
     confidence,
     extractedData,
+    ...(printIndex ? { printIndex } : {}),
+    ...(rejectedReads.length > 0 ? { rejectedReads } : {}),
+    boxLedger,
+    pageText,
     fieldRawTokens: Object.keys(fieldRawTokens).length > 0 ? fieldRawTokens : undefined,
     fieldSourceLocations: Object.keys(fieldSourceLocations).length > 0
       ? fieldSourceLocations

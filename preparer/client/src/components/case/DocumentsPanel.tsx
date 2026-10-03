@@ -126,6 +126,7 @@ function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: T
         )}
       </div>
       {showSource && returnId && doc.status !== 'rejected' && <SourceDocument returnId={returnId} doc={doc} />}
+      <GapList doc={doc} />
       {open && (
         <ul className="mt-2 space-y-1">
           {facts.map((fact) => (
@@ -141,6 +142,50 @@ function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: T
         </ul>
       )}
     </li>
+  );
+}
+
+/**
+ * The boxes this reader could not append by itself, named.
+ *
+ * A preparer should never have to go back through the paperwork to find out what
+ * the system did not manage. Every gap is listed with the box number as printed
+ * and the form's own label for it, and nothing is treated as zero or as absent:
+ * a box the reader could not confirm is a box someone still has to look at.
+ */
+function GapList({ doc }: { doc: IngestedDocument }) {
+  const gaps = (doc.boxGaps ?? []).filter((g) => g.boxes.length > 0);
+  if (gaps.length === 0) return null;
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-2">
+      <p className="text-xs font-medium text-amber-200">
+        Not added by itself — check these against the form
+      </p>
+      <ul className="mt-1 space-y-1">
+        {gaps.map((gap, i) => (
+          <li key={`${gap.formType ?? 'form'}-${i}`} className="text-xs">
+            <span className="text-amber-300/90">{gap.formType ?? 'This form'}</span>
+            <span className="text-slate-400">
+              {' '}
+              — {gap.read} of {gap.declared} boxes on the return were filled in
+            </span>
+            <ul className="ml-3 mt-0.5 space-y-0.5">
+              {gap.boxes.map((b, j) => (
+                <li key={`${b.box}-${j}`} className="text-slate-300">
+                  {b.box ? <span className="font-mono text-slate-400">box {b.box}</span> : null}
+                  {b.box ? ' · ' : ''}
+                  {b.label}
+                  {b.state === 'held' && (
+                    <span className="text-amber-300/80"> — read, but the page does not support it</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

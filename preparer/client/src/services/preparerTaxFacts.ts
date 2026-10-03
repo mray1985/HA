@@ -12,6 +12,8 @@ import {
 } from '@hatax/local-ai';
 import type { FieldSourceLocationValue, PDFExtractResult } from './pdfExtractHelpers';
 import { TAX_FACT_KEY_PREFIX, taxFactStorageKey } from './storageScope';
+import { verifyAgainstPrint } from './extractionVerification';
+import { buildBoxLedger } from './boxLedger';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 
 /** A case's TaxFacts, from the encrypted record cache (loaded when the vault unlocks). */
@@ -164,6 +166,35 @@ export function factsForExtraction(input: {
 } {
   const extractor = extractorLabel(input.extracted);
   const tool = formToolForIncomeType(input.extracted.incomeType);
+
+  // The deterministic check, run here rather than inside an extractor: this is
+  // the last point before a value reaches a return, and it is the first point
+  // where the form type actually being written is known. A classification pass
+  // can relabel a form after extraction, so verifying earlier would check the
+  // values against one form and write them under another.
+  const printIndex = input.extracted.printIndex;
+  // Not gated on `tool`: a form with no tax tool (K-1, W-2G) still reaches the
+  // return through the generic fact path, so gating on a tool would let exactly
+  // the forms with the least checking write unchecked values.
+  if (printIndex) {
+    const checked = verifyAgainstPrint(input.extracted.formType, input.extracted.extractedData, printIndex);
+    for (const r of checked.rejected) {
+      input.extracted.warnings.push(
+        `Held ${r.field}: read as ${r.value}, but ${r.detail}. If it is on the form, it goes on the return only when you enter it.`,
+      );
+    }
+    input.extracted.extractedData = checked.data;
+    // The ledger is rebuilt against what actually survives, so a box the check
+    // held is recorded as held rather than quietly counted as read. The page text
+    // has to come along: without it every blank box would come back as a gap.
+    input.extracted.boxLedger = buildBoxLedger(
+      input.extracted.formType,
+      checked.data,
+      checked.rejected,
+      input.extracted.pageText,
+    );
+  }
+
   const reconciled = reconcileFieldProvenance(
     input.extracted.extractedData,
     input.extracted.fieldRawTokens,

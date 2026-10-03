@@ -28,6 +28,7 @@ import {
   type TaxFact,
 } from '@hatax/local-ai';
 import type { PDFExtractResult } from './pdfExtractHelpers';
+import type { DocumentBoxGap } from '@hatax/local-ai';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
@@ -266,13 +267,35 @@ export function applyExtractionToDocument(input: {
       };
     }
 
+    // The extractor and the classifier must agree on what this page is. When
+    // they do not, the boxes were read against one form and would be written
+    // under another, so nothing is written: the disagreement is the finding.
+    const extractedType = piece.formType;
+    const classifierType = classification.formType;
+    const typesDisagree =
+      extractedType !== null &&
+      classifierType !== null &&
+      extractedType !== classifierType;
+
     // Prefer classifier income type when the extractor left it null. A W-2C
     // reaches add_w2c, which corrects the W-2 it names and writes no income.
     const extractedForTools: PDFExtractResult = {
       ...piece,
-      formType: piece.formType ?? classification.formType,
-      incomeType: piece.incomeType ?? classification.incomeType,
+      formType: typesDisagree ? piece.formType : (piece.formType ?? classification.formType),
+      incomeType: typesDisagree ? piece.incomeType : (piece.incomeType ?? classification.incomeType),
     };
+
+    if (typesDisagree) {
+      return {
+        facts: [],
+        toolFields: {},
+        incomeType: null,
+        toolError: `Held: this page reads as ${extractedType} but classifies as ${classifierType}. Nothing was taken from it — check what the document is.`,
+        validation: EMPTY_VALIDATION,
+        extracted: extractedForTools,
+        classification,
+      };
+    }
 
     const built = factsForExtraction({
       returnId: input.returnId,
@@ -323,11 +346,31 @@ export function applyExtractionToDocument(input: {
   // its piece index, so a piece that is not a form keeps its place with null.
   const identities = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.identity ?? null : null));
   const taxYearsPrinted = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.taxYearPrinted ?? null : null));
+  // The gaps, per form, so nobody has to go looking for what was not appended.
+  // A piece that was held or skipped wrote nothing, so it cannot report anything
+  // as filled in: every box it carries becomes a box for the preparer.
+  const boxGaps = pieces.map((p): DocumentBoxGap => {
+    const wrote = classificationAllowsIncomeWrite(p.classification) && !p.toolError;
+    const ledger = p.extracted?.boxLedger;
+    const entries = ledger?.entries ?? [];
+    const gaps = entries.filter((e) => e.state === 'unread' || e.state === 'held');
+    return {
+      formType: p.extracted?.formType ?? null,
+      declared: wrote ? (ledger?.declared ?? 0) : Math.max(entries.length, 1),
+      read: wrote ? (ledger?.read ?? 0) : 0,
+      boxes: wrote
+        ? gaps.map((e) => ({ box: e.box, label: e.label, state: e.state as 'held' | 'unread' }))
+        : (p.toolError
+            ? [{ box: '', label: p.toolError, state: 'held' as const }]
+            : entries.map((e) => ({ box: e.box, label: e.label, state: 'held' as const }))),
+    };
+  });
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
     ...(identities.some(Boolean) ? { identities } : {}),
     ...(taxYearsPrinted.some(Boolean) ? { taxYearsPrinted } : {}),
+    ...(boxGaps.some((g) => g.boxes.length > 0) ? { boxGaps } : {}),
     extractor,
     formTypes: formTypes.length > 0 ? formTypes : undefined,
     // Summary remains the first classified piece for existing UI consumers.

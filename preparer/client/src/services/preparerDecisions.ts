@@ -116,9 +116,20 @@ export function recordChoice(returnId: string, formKey: string, tool: ChoiceTool
   if (facts.length === 0) return { ok: false, error: 'The form is not on this case.' };
   const recorded = recordPreparerChoice(tool, answer, contextFor(returnId, formKey, facts));
   if (!recorded.ok) return recorded;
-  // A new answer replaces every earlier answer field, so a cleared field does not linger.
-  const answerTypes = new Set(CHOICE_FIELDS[tool].map((f) => `${factPrefixOf(tool)}${f}`));
-  saveTaxFacts(returnId, loadTaxFacts(returnId).filter((f) => !(formKeyOf(f) === formKey && f.sourceKind === 'preparer_correction' && answerTypes.has(f.factType))));
+  // Only the fields this answer actually carries are replaced. Wiping every answer
+  // field for the form would mean answering a 1099-Q's box 6 deletes the qualified
+  // expenses typed a moment earlier, leaving the form held all over again. A
+  // field the preparer clears is still present in the answer, so it is still
+  // replaced.
+  const choiceFields = CHOICE_FIELDS[tool] as readonly string[];
+  const answered = new Set(
+    Object.keys(answer)
+      .filter((k) => choiceFields.includes(k))
+      .map((k) => `${factPrefixOf(tool)}${k}`),
+  );
+  if (answered.size > 0) {
+    saveTaxFacts(returnId, loadTaxFacts(returnId).filter((f) => !(formKeyOf(f) === formKey && f.sourceKind === 'preparer_correction' && answered.has(f.factType))));
+  }
   replaceFormFacts(returnId, formKey, recorded.facts);
   const outcome = reapplyForm(returnId, formKey)!;
   appendAudit(returnId, { kind: 'decision', subject: `${facts[0]!.sourceFileName} (${formKey})`, detail: describeAnswer(answer) });

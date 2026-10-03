@@ -1,6 +1,9 @@
 /**
- * One case: header with the client, status and result; tabs for the review,
+ * One case: header with the client, status and result; tabs for the assistant,
  * the documents, the return's forms, the explanation, scenarios and approval.
+ *
+ * The Assistant tab is where the work happens — it replaced the review
+ * checklist and the client questions, which are both threads in it now.
  */
 
 import { useEffect, useRef, useState, type DragEvent } from 'react';
@@ -9,9 +12,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Loader2, Upload } from 'lucide-react';
 import { useCaseStore, type CaseTab } from '../../store/caseStore';
 import { StatusChip, refundOrOwed } from '../../components/case/caseBadges';
-import ReviewPanel from '../../components/case/ReviewPanel';
+import AssistantPanel from '../../components/case/AssistantPanel';
 import DocumentsPanel from '../../components/case/DocumentsPanel';
-import ClientPanel from '../../components/case/ClientPanel';
 import ExplainPanel from '../../components/case/ExplainPanel';
 import ApprovePanel from '../../components/case/ApprovePanel';
 import ReturnPanel from '../../components/case/ReturnPanel';
@@ -26,9 +28,8 @@ import { useBatchStore } from '../../store/batchStore';
 const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
 
 const TABS: Array<{ id: CaseTab; label: string }> = [
-  { id: 'review', label: 'Review' },
+  { id: 'assistant', label: 'Assistant' },
   { id: 'documents', label: 'Documents' },
-  { id: 'client', label: 'Client' },
   { id: 'return', label: 'Return' },
   { id: 'explain', label: 'Explain' },
   { id: 'scenarios', label: 'Scenarios' },
@@ -51,7 +52,7 @@ export default function CasePage() {
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const exists = Boolean(id && listReturns().some((r) => r.id === id));
-  const active: CaseTab = TABS.some((t) => t.id === tab) ? (tab as CaseTab) : 'review';
+  const active: CaseTab = TABS.some((t) => t.id === tab) ? (tab as CaseTab) : 'assistant';
 
   useEffect(() => {
     if (!id || !exists) return;
@@ -154,7 +155,7 @@ export default function CasePage() {
                 className={`px-4 py-2.5 text-sm border-b-2 whitespace-nowrap ${active === t.id ? 'border-HATaxService-orange-500 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
               >
                 {t.label}
-                {t.id === 'review' && review.open.length > 0 && (
+                {t.id === 'assistant' && review.open.length > 0 && (
                   <span className="ml-2 text-xs bg-amber-500/20 text-amber-300 rounded-full px-1.5 py-0.5">{review.open.length}</span>
                 )}
               </Link>
@@ -165,9 +166,8 @@ export default function CasePage() {
 
       <main className={`flex-1 w-full ${active === 'return' ? 'flex min-h-0' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
         <ErrorBoundary>
-          {active === 'review' && <ReviewPanel />}
+          {active === 'assistant' && <AssistantPanel />}
           {active === 'documents' && <DocumentsPanel />}
-          {active === 'client' && <ClientPanel />}
           {active === 'return' && <ReturnPanel />}
           {active === 'explain' && <ExplainPanel />}
           {active === 'scenarios' && <ScenarioLabToolView />}

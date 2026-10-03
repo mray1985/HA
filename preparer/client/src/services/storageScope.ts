@@ -39,3 +39,14 @@ export const DOCUMENT_KEY_PREFIX = 'hatax-preparer:documents:';
 export function documentStorageKey(returnId: string): string {
   return `${DOCUMENT_KEY_PREFIX}${returnId}`;
 }
+
+/**
+ * What the preparer said to the assistant, and what came of it. Kept on the case
+ * so the conversation survives leaving the tab and reloading: the thread itself is
+ * recomputed from the case, but what was typed is the preparer's own record.
+ */
+export const SPOKEN_KEY_PREFIX = 'hatax-preparer:spoken:';
+
+export function spokenStorageKey(returnId: string): string {
+  return `${SPOKEN_KEY_PREFIX}${returnId}`;
+}

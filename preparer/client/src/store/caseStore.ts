@@ -34,7 +34,8 @@ import { YEAR_ITEM_PREFIX } from '../services/returnApplier';
 import { spouseCaseCandidates } from '../services/spouseCases';
 
 export type SaveState = 'idle' | 'saving' | 'saved';
-export type CaseTab = 'review' | 'documents' | 'client' | 'return' | 'explain' | 'scenarios' | 'approve';
+/** The Assistant tab replaced the review checklist and the client questions. */
+export type CaseTab = 'assistant' | 'documents' | 'return' | 'explain' | 'scenarios' | 'approve';
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -90,7 +91,7 @@ interface CaseState {
   selectedFormKeys: Set<string>;
   /** A tab another part of the case asked to show (e.g. "open this field"). */
   requestedTab: CaseTab | null;
-  /** Checklist group the Review tab should bring into view. */
+  /** Checklist group the Assistant thread should bring into view (from an explanation). */
   focusedReviewGroup: ReviewGroup | null;
   /** Document the Documents tab should bring into view. */
   focusedDocumentId: string | null;
@@ -121,7 +122,7 @@ interface CaseState {
   selectAllForms: (keys: string[]) => void;
   clearFormSelection: () => void;
   requestTab: (tab: CaseTab | null) => void;
-  /** Open the Review tab at the checklist group of a return section. */
+  /** Open the Assistant tab at the first turn about a return section. */
   showReviewSection: (section: string) => void;
   /** Open the Documents tab at one document. */
   showDocument: (documentId: string) => void;
@@ -311,7 +312,7 @@ export const useCaseStore = create<CaseState>((set, get) => {
     selectAllForms: (keys) => set({ selectedFormKeys: new Set(keys) }),
     clearFormSelection: () => set({ selectedFormKeys: new Set<string>() }),
     requestTab: (tab) => set({ requestedTab: tab }),
-    showReviewSection: (section) => set({ requestedTab: 'review', focusedReviewGroup: groupForSection(section) }),
+    showReviewSection: (section) => set({ requestedTab: 'assistant', focusedReviewGroup: groupForSection(section) }),
     showDocument: (documentId) => set({ requestedTab: 'documents', focusedDocumentId: documentId }),
   };
 });

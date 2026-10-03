@@ -60,7 +60,7 @@ async function dumpCases(page: Page) {
 async function openCase(page: Page, id: string, tab: string, notes: string[]) {
   await page.goto(`/preparer/case/${id}/${tab}`);
   const unlock = page.locator('#passphrase');
-  const ready = page.getByRole('link', { name: 'Review' }).first();
+  const ready = page.getByRole('link', { name: 'Assistant' }).first();
   await unlock.or(ready).first().waitFor({ state: 'visible', timeout: 60_000 });
   if (await unlock.isVisible()) {
     notes.push(`reload of ${tab} asked for the passphrase`);
@@ -196,7 +196,7 @@ test('stress: seven households, every document read by the local AI', async ({ p
     const id = (match.taxReturn as { id: string }).id;
     if (!named(match.taxReturn)) {
       // The preparer chooses the taxpayer from the people the documents name.
-      await openCase(page, id, 'review', notes);
+      await openCase(page, id, 'assistant', notes);
       const choose = page.getByRole('button', { name: 'Choose the taxpayer' }).first();
       if (await choose.isVisible().catch(() => false)) {
         await choose.click();
@@ -212,11 +212,11 @@ test('stress: seven households, every document read by the local AI', async ({ p
         log(`${household}'s case is unnamed and offers no taxpayer to choose`);
       }
     }
-    await openCase(page, id, 'client', notes);
+    await openCase(page, id, 'assistant', notes);
     await page.getByLabel("Client's reply").fill(reply);
     const t0 = Date.now();
-    await page.getByRole('button', { name: 'Read reply' }).click();
-    const answers = page.getByLabel('Answers read from the reply');
+    await page.getByRole('button', { name: 'Read their reply' }).click();
+    const answers = page.getByRole('region', { name: 'Ask the client' });
     const failed = page.getByRole('alert');
     // The count line, not the list: a reply that answers no open question leaves the list empty (not visible).
     const done = page.getByText(/\d+ of \d+ questions? answered/);
@@ -259,7 +259,7 @@ test('stress: seven households, every document read by the local AI', async ({ p
   const reviews: Record<string, string> = {};
   for (const { taxReturn } of final) {
     const id = (taxReturn as { id: string }).id;
-    await openCase(page, id, 'review', notes);
+    await openCase(page, id, 'assistant', notes);
     await page.waitForTimeout(3_000);
     reviews[id] = await page.locator('#main-content').innerText();
   }

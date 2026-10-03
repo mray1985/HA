@@ -20,7 +20,9 @@ The models run one at a time, from files pinned by SHA-256 in `local-ai/src/mode
 | Feature | With the models | Without | Notes |
 |---------|-----------------|---------|-------|
 | Tax engine (federal and state) | Yes | Yes | Deterministic |
-| Review checklist (diagnostics, held forms, decisions) | Yes | Yes | Deterministic; errors and blockers clear only by fixing the return |
+| The assistant thread (diagnostics, held forms, decisions) | Yes | Yes | Projected from the review items; deterministic; errors and blockers clear only by fixing the return |
+| Answering a turn by typing (an amount, a status, a months count) | Yes | Yes | Read from the words with no model; written through the same validated path the review list used |
+| Reading free text that settles nothing | Yes | No | Offered to the client's-reply pipeline; without the models nothing is written and the assistant says so |
 | Approval gate and filing packet | Yes | Yes | Deterministic |
 | Explain tab (flow, brackets, effective rate, trace) | Yes | Yes | Deterministic |
 | Scenarios tab (what-if, sensitivity) | Yes | Yes | Full engine re-run |
@@ -35,8 +37,10 @@ The models run one at a time, from files pinned by SHA-256 in `local-ai/src/mode
 | Form identification and template filling | Yes | No | Qwen3.5-0.8B |
 | Page evidence (each value confirmed on the page, checkboxes) | Yes | No | Text layer or OCR against the model's reading |
 | Second reading | Yes | No | GLM-OCR re-reads what the page could not confirm |
-| Reading from the text layer and OCR alone | — | Yes | The form is held for the preparer where a value is not read |
-| The taxpayer from the documents | Yes | Partial | The same two-reader check as the amounts |
+| Reading from the text layer and OCR alone | — | Yes | The form is held for the preparer where a value is not read; the value on the form is offered as one click, never retyped |
+| Every box accounted for | Yes | Yes | Each declared box resolves to read / held / empty / unread; a blank box is told from a missed one, and a printed square is never called blank |
+| A value the page does not print | Never written | Never written | Checked against the page before it can reach a return; the tax year graphic, a form label, an OMB number and a margin citation cannot fill a box |
+| The taxpayer from the documents | Yes | Partial | The same two-reader check as the amounts; an unconfirmed reading is offered from the form with its reason, and the name is not asked for again |
 | Placing documents on cases | Yes | Yes | Confirmed SSN, or last four digits with the last name |
 | Prior-year returns (HA Tax and other software) | Yes | Yes | Deterministic import |
 | CSV, TXF and FDX imports | Yes | Yes | Deterministic |
@@ -47,7 +51,7 @@ A value no reader can read stays unknown — never zero — and readers that dis
 
 | Feature | With the models | Without | Notes |
 |---------|-----------------|---------|-------|
-| Client questions (Client tab) | Yes | Yes | Only what the documents do not settle |
+| Client questions (in the assistant) | Yes | Yes | Only what the documents do not settle |
 | Possibly missing documents | Yes | Yes | Compared with last year's by form and payer |
 | Reading a client's reply | Yes | No | Recorded only when the model and a reading of the client's own words agree |
 | New facts a reply states (a dependent, a move, a payment) | Yes | No | Offered; added when the preparer accepts |
@@ -99,3 +103,8 @@ When building a new feature, ask:
 - **Fail closed.** An unread or disputed value is held for the preparer, never zero and never assumed.
 - **The preparer decides.** Model readings are offered or held; the preparer accepts, corrects and approves.
 - **Be honest about tradeoffs.** Say what was not read, and why.
+- **Nothing is invented, nothing is dropped silently.** Every value is checked
+  against what the page actually prints before it can reach a return, and every
+  box the form prints is accounted for as read, held, empty or unread. The
+  preparer is handed the exact list of boxes that were not appended, by box
+  number and by the form's own label, rather than left to find them.

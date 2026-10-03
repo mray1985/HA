@@ -41,6 +41,8 @@ describe('wipeAllData', () => {
     localStorage.setItem('hatax-auth', '{"state":{}}');
     localStorage.setItem('hatax-auth-enc', 'enc');
     localStorage.setItem('hatax-preparer:model-runs:ret-1', 'enc');
+    // What the preparer said to the assistant goes with the case.
+    localStorage.setItem('hatax-preparer:spoken:ret-1', 'enc');
     localStorage.setItem('another-site:setting', '1');
 
     await wipeAllData();

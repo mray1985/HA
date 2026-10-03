@@ -222,10 +222,11 @@ cd client && npm test
 
 | Files | Coverage |
 |-------|----------|
-| `caseReview`, `reviewFlow`, `stateAnswer` | The review list: findings, return fields filled in place, decisions, approval |
+| `caseReview`, `reviewFlow`, `stateAnswer` | What the case reports open: findings, return fields filled in place, decisions, approval |
 | `caseStore`, `caseRecords`, `sessionKey`, `backgroundWork` | The open case, encrypted records, the vault's session key, locks waiting for work |
 | `batchIntake`, `caseIdentity`, `spouseCases`, `caseRollover` | Placing documents on cases, the taxpayer from the documents, joint returns, last year's case |
 | `documentIngestion`, `documentFiles`, `returnApplier`, `recordTools`, `preparerDecisions` | Reading documents into facts, kept source files, applying forms to the return, preparer decisions |
+| `assistant`, `assistantWrites` | The thread's words, and a typed or chosen answer written onto the return |
 | `clientReplies`, `missingDocuments`, `reviewPackage`, `acquisitionDate` | Client replies, possibly missing documents, the review package |
 
 ### 2.2 Import and parsing
@@ -273,8 +274,8 @@ cd client && npx playwright test --project=chromium
 
 | Spec | Coverage |
 |------|----------|
-| `case-flow.spec.ts` | A new case, the dashboard, the Explain and Return tabs, a 1099-Q decision, a W-2c, the Client tab, possibly missing documents |
-| `review-flow.spec.ts` | A W-2 dropped on the Review tab, the next case, a review item's document, a returning client, several clients' documents at once, a new season |
+| `case-flow.spec.ts` | A new case, the dashboard, the Explain and Return tabs, a 1099-Q amount typed into the assistant, a W-2c, the message for the client, possibly missing documents |
+| `review-flow.spec.ts` | A W-2 dropped on the Assistant tab, a filing status typed in, the next case, a turn's document, a returning client, several clients' documents at once, a new season |
 | `local-models.spec.ts` | Opt-in (`E2E_MODELS=1`): a W-2 read by the local models, client replies read by the local reader |
 | `stress-ai.spec.ts` | Opt-in (`E2E_MODELS=1`, `STRESS_DIR`): seven households and 23 documents; see `local-ai/gauntlet/stress/README.md` |
 | `walkthrough-ai.spec.ts` | Opt-in (`E2E_MODELS=1`): a preparer from sign-up to an approved case, with screenshots |

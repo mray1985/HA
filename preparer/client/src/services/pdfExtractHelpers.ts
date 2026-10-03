@@ -8,6 +8,8 @@
 
 import type { PartyIdentity } from '@hatax/local-ai';
 import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
+import type { PrintIndex } from './extractionVerification';
+import type { BoxLedger } from './boxLedger';
 
 // ─── Types ─────────────────────────────────────────
 
@@ -59,6 +61,24 @@ export interface PDFExtractResult {
   payerName: string;
   warnings: string[];
   errors: string[];
+  /**
+   * What the page prints, captured when it was read. The deterministic check
+   * runs on this at the write boundary, so it cannot be skipped by a later
+   * classification pass or by an extractor added later.
+   */
+  printIndex?: PrintIndex;
+  /**
+   * Every box the form prints and what became of it. This is what makes a box
+   * the reader walked past visible instead of indistinguishable from an empty one.
+   */
+  boxLedger?: BoxLedger;
+  /**
+   * The text of the pages this form was read from. Kept so the ledger can be
+   * rebuilt at the write boundary and still tell a blank box from a missed one:
+   * a box whose label is printed with nothing in it is empty, and only a box the
+   * form does not show as readable is a gap.
+   */
+  pageText?: string;
   textBlockCount: number;
   trace?: ImportTrace;
   ocrUsed?: boolean;             // true when OCR was used (lower confidence)
@@ -351,18 +371,44 @@ export function detectFormType(textBlocks: TextBlock[], ocrMode?: boolean): {
     return bestMatch ?? { type: null, incomeType: null, confidence: 'low', matchedKeywords: [] };
   }
 
-  // Digital PDF path: exact substring matching (unchanged)
-  for (const sig of FORM_SIGNATURES) {
-    const matchedPrimary = sig.primaryKeywords.filter(kw => allText.includes(kw));
-    const matchedSecondary = sig.secondaryKeywords.filter(kw => allText.includes(kw));
-    const matched = [...matchedPrimary, ...matchedSecondary];
+  // Digital PDF path: exact substring matching, scored across every signature.
+  // This used to return on the first signature with any primary hit, which made
+  // detection depend on the order this list happens to be written in — the
+  // ordering rules above existed only to prop that up. Scoring every signature
+  // removes the order dependency; declaration order is kept to break ties.
+  // (Measured across the form fixtures: same result on all of them. This is
+  // hardening against keyword drift, not a fix for an observed misdetection.)
+  let bestDigital: {
+    type: SupportedFormType;
+    incomeType: string;
+    score: number;
+    primary: number;
+    matched: string[];
+  } | null = null;
 
-    if (matchedPrimary.length > 0 && matchedSecondary.length >= 2) {
-      return { type: sig.type, incomeType: sig.incomeType, confidence: 'high', matchedKeywords: matched };
+  for (const sig of FORM_SIGNATURES) {
+    const matchedPrimary = sig.primaryKeywords.filter((kw) => allText.includes(kw));
+    if (matchedPrimary.length === 0) continue;
+    const matchedSecondary = sig.secondaryKeywords.filter((kw) => allText.includes(kw));
+    const score = matchedPrimary.length * 10 + matchedSecondary.length;
+    if (!bestDigital || score > bestDigital.score) {
+      bestDigital = {
+        type: sig.type,
+        incomeType: sig.incomeType,
+        score,
+        primary: matchedPrimary.length,
+        matched: [...matchedPrimary, ...matchedSecondary],
+      };
     }
-    if (matchedPrimary.length > 0) {
-      return { type: sig.type, incomeType: sig.incomeType, confidence: 'medium', matchedKeywords: matched };
-    }
+  }
+
+  if (bestDigital) {
+    return {
+      type: bestDigital.type,
+      incomeType: bestDigital.incomeType,
+      confidence: bestDigital.matched.length - bestDigital.primary >= 2 ? 'high' : 'medium',
+      matchedKeywords: bestDigital.matched,
+    };
   }
 
   return { type: null, incomeType: null, confidence: 'low', matchedKeywords: [] };
@@ -577,13 +623,27 @@ function isUnreadableAmountToken(text: string): boolean {
 }
 
 /**
- * Find the nearest amount near a label text.
+ * Find the amount belonging to a label.
+ *
+ * A box's value sits beside its own label: at the right of it, or inside the
+ * label's own line where the form runs label and amount together. It is never a
+ * long way across the page. The search radius used to be 400pt, which on a
+ * letter page reaches most of the width, so a number from an unrelated part of
+ * the form could be taken as this box's amount — a section citation in the
+ * margin ("529 and 530" on a 1099-Q) read as box 2 earnings, on a box that was
+ * in fact empty. `maxAcross` bounds how far right of its label a value may sit.
+ *
  * Returns the original token plus a parsed value when readable.
  * Amount-shaped but unreadable tokens (e.g. "12O.00") return raw without a value.
  * Missing boxes return undefined — distinct from a printed $0.
  * When a text block is located, page + box come from that block (never invented).
  */
-function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDistance = 400): BoxAmount | undefined {
+function findNearbyAmount(
+  textBlocks: TextBlock[],
+  labelBlock: TextBlock,
+  maxDistance = 400,
+  maxAcross = 150,
+): BoxAmount | undefined {
   const candidates: Array<{ value: number; raw: string; distance: number; block: TextBlock }> = [];
   const unreadable: Array<{ raw: string; distance: number; block: TextBlock }> = [];
   const rejected: Array<{ text: string; value: number; reason: string; dx: number; dy: number; dist: number }> = [];
@@ -610,6 +670,13 @@ function findNearbyAmount(textBlocks: TextBlock[], labelBlock: TextBlock, maxDis
 
     const dy = block.y - labelBlock.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // A value belongs beside its label. Text further right than this belongs to
+    // another box, or to the margin notes printed alongside the form.
+    if (dx > maxAcross) {
+      rejected.push({ text: trimmed, value: Number.NaN, reason: `too far right of its label (${Math.round(dx)}pt)`, dx, dy, dist: distance });
+      continue;
+    }
 
     if (!(distance < maxDistance && (dx >= -20 || dy > 0))) {
       continue;

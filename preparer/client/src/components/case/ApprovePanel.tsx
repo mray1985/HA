@@ -139,9 +139,11 @@ export default function ApprovePanel() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-white font-semibold">Not ready</p>
-              <p className="text-sm text-slate-400 mt-1">{review.open.length} review item{review.open.length === 1 ? '' : 's'} must be cleared first.</p>
+              <p className="text-sm text-slate-400 mt-1">
+                {review.open.length} thing{review.open.length === 1 ? '' : 's'} still to clear — the assistant has them all.
+              </p>
             </div>
-            <button onClick={() => requestTab('review')} className="text-sm text-sky-300 hover:text-sky-200">Go to review</button>
+            <button onClick={() => requestTab('assistant')} className="text-sm text-sky-300 hover:text-sky-200">Go to the assistant</button>
           </div>
         )}
       </section>

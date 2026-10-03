@@ -7,7 +7,7 @@
 import type { CaseReviewRecord, ReviewResolution } from './caseReview';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 import type { ModelRunRecord } from './localModels';
-import { AUDIT_KEY_PREFIX, auditStorageKey, MODEL_RUN_KEY_PREFIX, modelRunStorageKey, REVIEW_KEY_PREFIX, reviewStorageKey } from './storageScope';
+import { AUDIT_KEY_PREFIX, auditStorageKey, MODEL_RUN_KEY_PREFIX, modelRunStorageKey, REVIEW_KEY_PREFIX, reviewStorageKey, SPOKEN_KEY_PREFIX, spokenStorageKey } from './storageScope';
 
 export type CaseAuditEvent =
   | { at: string; kind: 'correction'; field: string; from: unknown; to: unknown }
@@ -84,6 +84,9 @@ export function deleteCaseReview(returnId: string): void {
   removeRecord(reviewStorageKey(returnId));
   removeRecord(auditStorageKey(returnId));
   removeRecord(modelRunStorageKey(returnId));
+  // The assistant's conversation is the preparer's record of the case, so it goes
+  // when the case does.
+  removeRecord(spokenStorageKey(returnId));
 }
 
 /** Remove every case's review record, audit trail and model runs (paired with wipeAllData). */
@@ -91,4 +94,5 @@ export function deleteAllCaseReviews(): void {
   removeRecordsWithPrefix(REVIEW_KEY_PREFIX);
   removeRecordsWithPrefix(AUDIT_KEY_PREFIX);
   removeRecordsWithPrefix(MODEL_RUN_KEY_PREFIX);
+  removeRecordsWithPrefix(SPOKEN_KEY_PREFIX);
 }
