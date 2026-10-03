@@ -52,4 +52,21 @@ describe('a blank box is not a gap', () => {
     expect(l.read).toBe(11);
     expect(gaps.length).toBeLessThan(l.declared);
   });
+
+  it('calls the state and local boxes blank rather than missing them', async () => {
+    const l = (await ingested(`${STRESS}/dana-w2.pdf`)).boxLedger!;
+    // The form states Pennsylvania, so box 15 carries a state and is read. Boxes
+    // 16–20 print on the form and are empty on this one. The schema labels them
+    // "(line 1)" to tell the per-state rows apart, and no form prints that —
+    // which used to make all of them read as unread.
+    expect(l.entries.find((e) => e.box === '15')!.state).toBe('read');
+    expect(l.entries.find((e) => e.box === '16')!.state).toBe('read');
+    expect(l.entries.find((e) => e.box === '17')!.state).toBe('read');
+    // No local itemization on this form: boxes 18–20 print and are empty.
+    for (const box of ['18', '19', '20']) {
+      const entry = l.entries.find((e) => e.box === box);
+      expect(entry, `box ${box} is declared`).toBeDefined();
+      expect(entry!.state, `box ${box}`).toBe('empty');
+    }
+  });
 });
