@@ -120,6 +120,12 @@ describe('a boolean is a mark, so the page has to show the square it came from',
     expect(out.rejected[0]!.reason).toBe('not-printed');
   });
 
+  it('holds an unticked W-2 box 13 record when the page prints no box 13 caption', () => {
+    const out = verifyExtractedValues('W-2', { box13: { retirementPlan: false } }, [block('1 Wages $52,431.18')]);
+    expect(out.data).toEqual({});
+    expect(out.rejected[0]!.field).toBe('box13');
+  });
+
   it('holds a ticked square in a W-2 box 13 record with no label on the page', () => {
     const out = verifyExtractedValues('W-2', { box13: { statutoryEmployee: true } }, [block('1 Wages $52,431.18')]);
     expect(out.data).toEqual({});

@@ -198,8 +198,12 @@ describe('a printed square is measured, never read from its glyph', () => {
     const items = await pageItems(`${STRESS}/dana-1098t.pdf`);
     const glyph = items.find((i) => i.s.trim() === '4');
     expect(glyph, 'the form prints a symbol glyph for the tick').toBeDefined();
-    // And CHECK_MARK_TOKENS must not contain it.
-    const { readCheckbox } = await import('@hatax/local-ai');
-    expect(readCheckbox).toBeTypeOf('function');
+    const blocks = toBlocks(items);
+    const page = { raster: rasterize(items, 2), words: toWords(blocks, 2) };
+    const schema = FORM_EXTRACTION_SCHEMAS['1098-T']!;
+    const box8 = schema.boxes.find((b) => b.key === '8')!;
+    const reading = readCheckboxOnPage(page, box8.checkbox!);
+    // The digit is on the page and in the words. It must not come back as a tick.
+    expect(reading.state).not.toBe('checked');
   });
 });

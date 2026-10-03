@@ -374,8 +374,10 @@ export function verifyAgainstPrint(
     // check. The record stands or falls on the page printing this form's square
     // labels at all: a W-2 read with no box 13 caption on it did not read a box 13.
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const ticked = Object.values(value as Record<string, unknown>).some((v) => v === true);
-      if (ticked && phrases.length > 0 && !anyPrinted(print.text, phrases)) {
+      // False is a real answer (the square is there and empty). Gating only a
+      // ticked member would keep `{ retirementPlan: false }` when the page
+      // prints no box 13 caption at all.
+      if (phrases.length > 0 && !anyPrinted(print.text, phrases)) {
         rejected.push({
           field,
           value: 'ticked',

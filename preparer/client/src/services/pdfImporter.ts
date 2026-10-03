@@ -409,7 +409,10 @@ function processTextBlocks(
       const spanBlocks = textBlocks.filter(
         b => b.page >= span.startPage && b.page <= span.endPage,
       );
-      const spanData = extractFormData(span.type, spanBlocks);
+      const spanChecks = meta?.canvases?.length
+        ? readFormCheckboxes(span.type, meta.canvases, meta.dpi ?? 300, spanBlocks)
+        : {};
+      const spanData = extractFormData(span.type, spanBlocks, spanChecks);
       const spanIdentity = span.type === 'W-2' ? w2EmployeeFromTextLayer(spanBlocks, !ocrUsed) : null;
       const spanNumericFields = Object.entries(spanData.extractedData).filter(
         ([, v]) => typeof v === 'number' && v > 0,
@@ -504,12 +507,17 @@ async function renderForCheckboxes(
   file: File,
   textBlocks: TextBlock[],
 ): Promise<{ canvases: HTMLCanvasElement[]; dpi: number } | null> {
-  const detected = detectFormType(textBlocks).type;
-  if (!detected) return null;
-  const declared = FORM_EXTRACTION_SCHEMAS[detected as ClassifiableFormType];
-  if (!declared) return null;
-  const squares = declared.boxes.filter((b) => b.kind === 'checkbox' && b.checkbox);
-  if (squares.length === 0) return null;
+  // Every span, not only the first form. A W-2 followed by a 1098-T still has
+  // squares to measure on the later pages.
+  const spans = detectFormPages(textBlocks);
+  const types = spans.length > 0
+    ? spans.map((s) => s.type)
+    : [detectFormType(textBlocks).type].filter((t): t is NonNullable<typeof t> => t !== null);
+  const needsSquares = types.some((t) => {
+    const declared = FORM_EXTRACTION_SCHEMAS[t as ClassifiableFormType];
+    return declared?.boxes.some((b) => b.kind === 'checkbox' && b.checkbox) ?? false;
+  });
+  if (!needsSquares) return null;
   try {
     const { renderPDFToImages } = await import('./pdfToImages');
     const dpi = 200;
@@ -623,6 +631,19 @@ function readFormCheckboxes(
     if (list) list.push(b);
     else byPage.set(b.page, [b]);
   }
+  // One grayscale conversion per page. A letter page at 300 DPI is millions of
+  // pixels, and a form with several squares used to repeat that for each one.
+  const rendered = new Map<number, ReturnType<typeof renderedPage>>();
+  const pageOf = (pageNumber: number) => {
+    const cached = rendered.get(pageNumber);
+    if (cached) return cached;
+    const canvas = canvases[pageNumber - 1];
+    const pageBlocks = byPage.get(pageNumber);
+    if (!canvas || !pageBlocks) return undefined;
+    const page = renderedPage(canvas, pageBlocks, dpi, 'ocr');
+    rendered.set(pageNumber, page);
+    return page;
+  };
 
   for (const box of squares) {
     // The form's own pages: canvases are in page order, blocks are not.
@@ -631,10 +652,9 @@ function readFormCheckboxes(
       return canvas && byPage.get(p)!.length > 0;
     });
     if (pageNumber === undefined) continue;
-    const canvas = canvases[pageNumber - 1];
-    if (!canvas) continue;
     try {
-      const page = renderedPage(canvas, byPage.get(pageNumber)!, dpi, 'ocr');
+      const page = pageOf(pageNumber);
+      if (!page) continue;
       const reading = readCheckboxOnPage(page, box.checkbox!);
       if (reading.state === 'checked' || reading.state === 'unchecked') {
         out[box.key] = reading.state === 'checked';
@@ -817,6 +837,16 @@ export async function extractFromImage(
 
     const textBlocks = await recognizeImage(imageBitmap, onProgress, scaleFactor);
     const ocrEngine = getLastOcrEngine();
+    // Keep a raster of the photo. Closing the bitmap first would leave checkbox
+    // measurement with no pixels, so a photographed 1098-T could never be ticked.
+    const pixelWidth = imageBitmap.width;
+    const photo = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    if (photo) {
+      photo.width = imageBitmap.width;
+      photo.height = imageBitmap.height;
+      photo.getContext('2d')?.drawImage(imageBitmap, 0, 0);
+    }
+    const dpi = pixelWidth > 0 ? (pixelWidth * 72) / 612 : 72;
 
     // Close bitmap immediately after OCR — free GPU/memory before processing results
     imageBitmap.close();
@@ -837,7 +867,11 @@ export async function extractFromImage(
       };
     }
 
-    return processTextBlocks(textBlocks, 1, { ocrUsed: true, ocrEngine });
+    return processTextBlocks(textBlocks, 1, {
+      ocrUsed: true,
+      ocrEngine,
+      ...(photo ? { canvases: [photo], dpi } : {}),
+    });
   } catch (err: any) {
     return {
       formType: null,

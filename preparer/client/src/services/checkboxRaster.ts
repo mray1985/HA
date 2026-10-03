@@ -49,7 +49,10 @@ export function renderedPage(
   const scale = dpi / 72;
   const words: PageWord[] = blocks.map((b) => ({
     text: b.text,
-    box: [b.x * scale, b.y * scale, (b.x + b.width) * scale, b.y * scale],
+    // The lower edge has to include the line's height. A zero-height box has no
+    // vertical overlap with the next word, so a two-word label such as
+    // "half-time student" can never be found.
+    box: [b.x * scale, b.y * scale, (b.x + b.width) * scale, (b.y + b.height) * scale],
     source,
   }));
   return { raster: { width, height, gray }, words };

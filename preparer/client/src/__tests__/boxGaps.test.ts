@@ -55,10 +55,11 @@ describe('a blank box is not a gap', () => {
 
   it('calls the state and local boxes blank rather than missing them', async () => {
     const l = (await ingested(`${STRESS}/dana-w2.pdf`)).boxLedger!;
-    // The form states Pennsylvania, so box 15 carries a state and is read. Boxes
-    // 16–20 print on the form and are empty on this one. The schema labels them
-    // "(line 1)" to tell the per-state rows apart, and no form prints that —
-    // which used to make all of them read as unread.
+    // The form states Pennsylvania, so box 15 carries a state and is read.
+    // Boxes 16 and 17 print wages and tax and are read. Boxes 18–20 are the
+    // local row: they print and are empty on this form. The schema labels the
+    // state rows "(line 1)" to tell them apart, and no form prints that — which
+    // used to make all of them read as unread.
     expect(l.entries.find((e) => e.box === '15')!.state).toBe('read');
     expect(l.entries.find((e) => e.box === '16')!.state).toBe('read');
     expect(l.entries.find((e) => e.box === '17')!.state).toBe('read');
