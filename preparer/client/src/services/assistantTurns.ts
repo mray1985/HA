@@ -601,19 +601,18 @@ export function assistantTurns({ items, facts, documents, questions, clientName,
   if (caseEmpty) {
     return [
       ...turnsForAnEmptyCase(clientName, questions.some((q) => q.target.kind === 'filing_status')),
-      ...project(items, facts, documents, questions, clientName, incomeHeld, true),
+      ...project(items, facts, documents, questions, clientName, incomeHeld),
     ];
   }
-  return project(items, facts, documents, questions, clientName, incomeHeld, false);
+  return project(items, facts, documents, questions, clientName, incomeHeld);
 }
 
 /**
  * Project the open items and the client's questions into the thread.
  *
- * An item already decided, or information only, is not something to ask about. A
- * note about what was carried over from last year belongs on the case, not as
- * another card to work through — except on a case with no documents, where the
- * thread is asked for documents first and that note is all the rest.
+ * An item already decided is not something to ask about. An informational item
+ * is kept as a note rather than dropped: what a rolled-over case carried from
+ * last year is said once, and it blocks nothing.
  */
 function project(
   items: ReviewItem[],
@@ -622,7 +621,6 @@ function project(
   questions: ClientQuestion[],
   clientName: string,
   incomeHeld: boolean,
-  keepInformational: boolean,
 ): AssistantTurn[] {
   const asked = new Set<string>();
   const turns: AssistantTurn[] = [];
@@ -653,7 +651,6 @@ function project(
 
   for (const item of items) {
     if (item.resolution) continue;
-    if (item.category === 'INFORMATIONAL' && !keepInformational) continue;
     if (incomeHeld && item.id.includes('no-income-sources')) continue;
     if (item.action?.kind === 'return_field' && statedByDocument.has(item.action.field)) continue;
     const turn = turnForItem(item, facts, documents, clientName);
