@@ -119,56 +119,61 @@ test('the preparer, start to approval, with the local AI', async ({ page }) => {
   await shot(page, 'w2c-applied');
 
   // ── 4. The client's questions, and her reply read by the reader model ──
-  await page.getByRole('link', { name: 'Client' }).click();
-  await expect(page.getByLabel('Message to the client')).toBeVisible({ timeout: 60_000 });
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  const askTheClient = page.getByRole('region', { name: 'Ask the client' });
+  await expect(askTheClient).toBeVisible({ timeout: 60_000 });
   await shot(page, 'client-message');
-  await page.getByLabel("Client's reply").fill(
+  await page.getByLabel("The client's reply").fill(
     "Hi! I'm single and filing on my own. For the 529, we paid $12,400 in tuition and fees this year, and the distribution was paid to me. Thanks!",
   );
-  await page.getByRole('button', { name: 'Read reply' }).click();
-  await expect(page.getByLabel('Answers read from the reply')).toBeVisible({ timeout: MODEL_READ });
+  await page.getByRole('button', { name: 'Read their reply' }).click();
+  await expect(page.locator('section[aria-label="What you typed"]')).toBeVisible({ timeout: MODEL_READ });
   await page.waitForTimeout(2_000);
   await shot(page, 'client-reply-read');
   // Offered facts from the reply (if any) are accepted.
-  const offers = page.getByLabel('New facts in the reply');
+  const offers = page.getByRole('region', { name: 'New facts to add' });
   for (let i = 0; i < 5; i++) {
     const add = offers.getByRole('button', { name: /^(Add|Use it|Accept)$/ }).first();
     if (!(await add.isVisible().catch(() => false))) break;
     await add.click();
   }
 
-  // ── 5. The review list: what is left, then approval ──
-  await page.getByRole('link', { name: /^Review/ }).click();
+  // ── 5. The thread: what is left, then approval ──
+  await page.getByRole('link', { name: /^Assistant/ }).click();
   await page.waitForTimeout(2_000);
-  await shot(page, 'review-open');
+  await shot(page, 'assistant-open');
 
-  const filing = page.getByRole('listitem').filter({ hasText: 'Filing status is required.' });
-  if (await filing.isVisible().catch(() => false)) {
-    await filing.getByRole('button', { name: 'Enter it' }).click();
-    await filing.getByLabel('Filing status').selectOption({ label: 'Single' });
-    await filing.getByRole('button', { name: 'Save' }).click();
+  // The filing status is typed into the assistant, not chosen from a list.
+  const filing = page.getByRole('listitem').filter({ hasText: /filing status/i });
+  if (await filing.first().isVisible().catch(() => false)) {
+    await page.getByLabel('Type an answer').fill('single');
+    await page.getByLabel('Type an answer').press('Enter');
+    await page.waitForTimeout(1_500);
   }
-  const education = page.getByRole('listitem').filter({ hasText: 'qualified education expenses' });
+  const education = page.getByRole('listitem').filter({ hasText: /1099-Q/ });
   if (await education.first().isVisible().catch(() => false)) {
+    await page.getByLabel('Type an answer').fill('12400');
+    await page.getByLabel('Type an answer').press('Enter');
+    await page.waitForTimeout(1_500);
     const item = education.first();
-    await item.getByRole('button', { name: /Decide|Enter|Answer/ }).first().click();
-    const expenses = item.getByLabel('Qualified expenses');
-    if (await expenses.isVisible().catch(() => false)) await expenses.fill('12400');
-    const box6 = item.getByLabel('Box 6');
-    if (await box6.isVisible().catch(() => false)) await box6.selectOption('yes');
-    await item.getByRole('button', { name: 'Save' }).click();
+    if (await item.getByRole('button', { name: 'Enter it by hand' }).isVisible().catch(() => false)) {
+      await item.getByRole('button', { name: 'Enter it by hand' }).click();
+      const box6 = item.getByLabel('Box 6');
+      if (await box6.isVisible().catch(() => false)) await box6.selectOption('yes');
+      await item.getByRole('button', { name: 'Save' }).click();
+    }
   }
-  await shot(page, 'review-entered');
+  await shot(page, 'assistant-entered');
 
-  // Each remaining review item: checked against its source document.
+  // Each remaining thing to check: confirmed against its source document.
   for (let i = 0; i < 25; i++) {
-    const decide = page.getByRole('button', { name: 'Record a decision' }).first();
+    const decide = page.getByRole('button', { name: 'I have checked this' }).first();
     if (!(await decide.isVisible().catch(() => false))) break;
     await decide.click();
-    await page.getByRole('button', { name: 'Checked against the source document' }).click();
+    await page.getByRole('button', { name: 'Checked against the document' }).click();
   }
-  const summary = page.getByRole('region', { name: 'Return summary' });
-  await shot(page, 'review-decided');
+  const summary = page.getByRole('region', { name: 'Where the case stands' });
+  await shot(page, 'assistant-decided');
   const approve = summary.getByRole('button', { name: 'Approve' });
   if (await approve.isEnabled().catch(() => false)) {
     await approve.click();

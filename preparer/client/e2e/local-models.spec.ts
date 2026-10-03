@@ -36,11 +36,11 @@ test("a client's reply is read by the local reader and completes a 1099-Q", asyn
   await page.locator('input[type="file"]').first().setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('Recorded — needs your decision')).toBeVisible({ timeout: 240_000 });
 
-  await page.getByRole('link', { name: 'Client' }).click();
-  await expect(page.getByLabel('Message to the client')).toContainText('qualified education expenses');
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await expect(page.getByRole('region', { name: 'Ask the client' })).toContainText('qualified education expenses');
   await page.getByLabel("Client's reply").fill('Hi Sarah! For the 529, we paid $12,400 in tuition and fees this year. Thanks!');
-  await page.getByRole('button', { name: 'Read reply' }).click();
-  const answers = page.getByLabel('Answers read from the reply');
+  await page.getByRole('button', { name: 'Read their reply' }).click();
+  const answers = page.getByRole('region', { name: 'Ask the client' });
   await expect(answers).toContainText('$12,400.00', { timeout: 120_000 });
 
   await page.getByRole('link', { name: 'Documents' }).click();
@@ -55,18 +55,18 @@ test("a new dependent a client's note states is offered, and added when the prep
   await page.getByLabel('Tax year for a new case').selectOption('2025');
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
-  await page.getByRole('link', { name: 'Client' }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
   await expect(page.getByText(/Local AI unavailable/)).toHaveCount(0, { timeout: 60_000 });
   await page.getByLabel("Client's reply").fill('Big news: we had a baby girl, Lily Lee, born March 3, 2025!');
-  await page.getByRole('button', { name: 'Read reply' }).click();
+  await page.getByRole('button', { name: 'Read their reply' }).click();
 
   const offers = page.getByLabel('New facts in the reply');
   await expect(offers).toContainText('Add Lily Lee as a dependent (born 2025-03-03)', { timeout: 120_000 });
   await offers.getByRole('button', { name: 'Add' }).click();
   await expect(offers).toContainText('Added');
   // What the note did not say is asked next.
-  await expect(page.getByLabel('Message to the client')).toContainText('How is Lily Lee related to you?');
-  await expect(page.getByLabel('Message to the client')).toContainText('How many months of 2025 did Lily live with you?');
+  await expect(page.getByRole('region', { name: 'Ask the client' })).toContainText('How is Lily Lee related to you?');
+  await expect(page.getByRole('region', { name: 'Ask the client' })).toContainText('How many months of 2025 did Lily live with you?');
 });
 
 test("the client's answer about a possibly missing document is read, and settles it", async ({ page }) => {
@@ -81,10 +81,10 @@ test("the client's answer about a possibly missing document is read, and settles
   await page.getByRole('button', { name: 'Tax forms' }).click();
   await expect(page.getByRole('region', { name: 'Possibly missing documents' })).toContainText('Possible missing 1099-INT from JPMORGAN CHASE BANK NA');
 
-  await page.getByRole('link', { name: 'Client' }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
   await page.getByLabel("Client's reply").fill('No, I closed that Chase account last year.');
-  await page.getByRole('button', { name: 'Read reply' }).click();
-  await expect(page.getByLabel('Answers read from the reply')).toContainText('from JPMORGAN CHASE BANK NA for 2025? no', { timeout: 180_000 });
+  await page.getByRole('button', { name: 'Read their reply' }).click();
+  await expect(page.getByRole('region', { name: 'Ask the client' })).toContainText('from JPMORGAN CHASE BANK NA for 2025? no', { timeout: 180_000 });
 
   await page.getByRole('link', { name: 'Documents' }).click();
   await expect(page.getByRole('region', { name: 'Possibly missing documents' })).toContainText('The client says there is none this year');

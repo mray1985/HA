@@ -1,6 +1,6 @@
 /**
- * E2E: the preparer's case flow — dashboard, a new case, its review and the
- * approval gate.
+ * E2E: the preparer's case flow — dashboard, a new case, what the assistant
+ * says it needs, and the approval gate.
  */
 
 import { expect, test } from '@playwright/test';
@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await openCaseDashboard(page);
 });
 
-test('a new case opens on its documents, and the review lists what is missing', async ({ page }) => {
+test('a new case opens on its documents, and the assistant says what is missing', async ({ page }) => {
   await expect(page.getByText('No cases yet')).toBeVisible();
   await page.getByLabel('Tax year for a new case').selectOption('2026');
   await page.getByRole('button', { name: /New case/i }).first().click();
@@ -19,10 +19,9 @@ test('a new case opens on its documents, and the review lists what is missing', 
   await expect(page.getByText('Tax year 2026')).toBeVisible();
   await expect(page.getByText(/Drop or choose the client/)).toBeVisible();
 
-  await page.getByRole('link', { name: /^Review/ }).click();
-  await expect(page.getByText('First name is required.')).toBeVisible();
-  await expect(page.getByText('Social Security number is required.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Taxpayer & filing status' })).toBeVisible();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await expect(page.getByText(/return is not valid without first name/i)).toBeVisible();
+  await expect(page.getByText(/return is not valid without social security number/i)).toBeVisible();
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText('Not ready')).toBeVisible();
@@ -54,26 +53,28 @@ test('the Explain and Return tabs render for a new case', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('a 1099-Q waits for the qualified expenses, and the review list takes the decision', async ({ page }) => {
+test('a 1099-Q waits for the qualified expenses, and the assistant takes the amount typed', async ({ page }) => {
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
-  await page.getByRole('link', { name: /^Review/ }).click();
-  const item = page.getByRole('listitem').filter({ hasText: 'enter the qualified education expenses' });
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  const item = page.getByRole('listitem').filter({ hasText: /1099-Q/ });
   await expect(item).toBeVisible();
-  await item.getByRole('button', { name: 'Decide' }).click();
-  await item.getByLabel('Qualified expenses').fill('5000');
-  // A text layer cannot see box 6, so the form asks who received the distribution too.
-  await item.getByRole('button', { name: 'Save' }).click();
-  await expect(item.getByRole('alert')).toContainText('Answer every question');
+
+  // The amount is typed into the assistant and written straight onto the return.
+  await page.getByLabel('Type an answer').fill('5000');
+  await page.getByLabel('Type an answer').press('Enter');
+  // A text layer cannot see box 6, so the form still asks who received it.
+  await expect(item.getByRole('alert').or(page.getByRole('alert')).filter({ hasText: /answered|box 6|Paid to someone/ })).toBeVisible();
+
+  await item.getByRole('button', { name: 'Enter it by hand' }).click();
   await item.getByLabel('Box 6').selectOption('yes');
   await item.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('enter the qualified education expenses')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Approve' }).click();
-  await expect(page.getByText(/Decided for 1099q-529\.pdf.*qualifiedExpenses=5000/)).toBeVisible();
+  await expect(page.getByText(/1099q-529\.pdf.*qualifiedExpenses=5000/)).toBeVisible();
 });
 
 test('a W-2c read from its text layer corrects the W-2 it names', async ({ page }) => {
@@ -90,23 +91,23 @@ test('a W-2c read from its text layer corrects the W-2 it names', async ({ page 
   await expect(page.getByText(/calculate_return: AGI \$54,000\.00/)).toBeVisible();
 });
 
-test('the Client tab asks only what the case cannot settle, and says when the local AI cannot read replies', async ({ page }) => {
+test('the assistant asks only what the case cannot settle, and says when it cannot read a reply', async ({ page }) => {
   await page.getByLabel('Tax year for a new case').selectOption('2025');
   await page.getByRole('button', { name: /New case/i }).first().click();
   await expect(page).toHaveURL(/\/documents$/);
   await page.getByLabel("Add the client's documents").setInputFiles('e2e/fixtures/1099q-529.pdf');
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
-  await page.getByRole('link', { name: 'Client' }).click();
-  const message = page.getByLabel('Message to the client');
-  await expect(message).toContainText('We have your 1099-Q from');
-  await expect(message).toContainText('1. How do you want to file your 2025 return');
-  await expect(message).toContainText('2. How much did you pay in 2025 for qualified education expenses');
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  const askTheClient = page.getByRole('region', { name: 'Ask the client' });
+  await expect(askTheClient).toContainText('We have your 1099-Q from');
+  await expect(askTheClient).toContainText('How do you want to file your 2025 return');
+  await expect(askTheClient).toContainText('How much did you pay in 2025 for qualified education expenses');
   // Box 6 is the preparer's to settle from the form, never a question for the client.
-  await expect(message).not.toContainText('beneficiary');
-  await expect(page.getByText(/Local AI unavailable/)).toBeVisible();
-  await page.getByLabel("Client's reply").fill('We paid $5,000 in tuition.');
-  await expect(page.getByRole('button', { name: 'Read reply' })).toBeDisabled();
+  await expect(askTheClient).not.toContainText('beneficiary');
+  // Without the local models the assistant says so instead of pretending to read.
+  await expect(askTheClient).toContainText(/local AI is not running/i);
+  await expect(page.getByRole('button', { name: 'Read their reply' })).toHaveCount(0);
 });
 
 test("last year's documents the case lacks are possibly missing, and the client is asked about them", async ({ page }) => {
@@ -126,9 +127,8 @@ test("last year's documents the case lacks are possibly missing, and the client 
   await expect(missing).toContainText('the 2024 imported HA Tax return has one for $123.45');
   await expect(missing).not.toContainText('W-2');
 
-  await page.getByRole('link', { name: 'Client' }).click();
-  await expect(page.getByLabel('Message to the client')).toContainText('Did you receive an interest statement (Form 1099-INT) from JPMORGAN CHASE BANK NA for 2025?');
-  await page.getByRole('link', { name: /^Review/ }).click();
+  await page.getByRole('link', { name: /^Assistant/ }).click();
+  await expect(page.getByRole('region', { name: 'Ask the client' })).toContainText('Did you receive an interest statement (Form 1099-INT) from JPMORGAN CHASE BANK NA for 2025?');
   await expect(page.getByText(/Possible missing 1099-INT from JPMORGAN CHASE BANK NA: the 2024 imported HA Tax return/)).toBeVisible();
 });
 

@@ -337,6 +337,188 @@ export type FieldInput =
   | { kind: 'text' }
   | { kind: 'enum'; options: string[] };
 
+/**
+ * What a field of a form is called to a person, in the words the form itself
+ * uses. The tool field names (`federalIncomeTaxWithheld`) are the engine's
+ * vocabulary and must never reach the screen; these are read from the printed
+ * label and the IRS box number where there is one, so the preparer can match
+ * what they see on the page to what the app asks for.
+ *
+ * A field with no entry here is spoken from its name rather than shown raw.
+ */
+const FIELD_LABELS: Partial<Record<DocumentToolName, Record<string, string>>> = {
+  add_w2: {
+    wages: 'Wages, tips and other compensation (box 1)',
+    federalTaxWithheld: 'Federal income tax withheld (box 2)',
+    socialSecurityWages: 'Social Security wages (box 3)',
+    socialSecurityTax: 'Social Security tax withheld (box 4)',
+    medicareWages: 'Medicare wages (box 5)',
+    medicareTax: 'Medicare tax withheld (box 6)',
+    state: 'State (box 15)',
+    stateWages: 'State wages (box 16)',
+    stateTaxWithheld: 'State income tax (box 17)',
+    localWages: 'Local wages (box 18)',
+    localTaxWithheld: 'Local income tax (box 19)',
+    localityName: 'Locality name (box 20)',
+    isSpouse: 'The employee is the taxpayer’s spouse (box 5 has a tick)',
+  },
+  add_w2c: {
+    wages: 'Corrected wages (box 1)',
+    federalTaxWithheld: 'Corrected federal income tax withheld (box 2)',
+    socialSecurityWages: 'Corrected Social Security wages (box 3)',
+    socialSecurityTax: 'Corrected Social Security tax withheld (box 4)',
+    medicareWages: 'Corrected Medicare wages (box 5)',
+    medicareTax: 'Corrected Medicare tax withheld (box 6)',
+    state: 'Corrected state (box 15)',
+    stateWages: 'Corrected state wages (box 16)',
+    stateTaxWithheld: 'Corrected state income tax (box 17)',
+    localWages: 'Corrected local wages (box 18)',
+    localTaxWithheld: 'Corrected local income tax (box 19)',
+  },
+  add_1099_int: {
+    amount: 'Interest income (box 1)',
+    earlyWithdrawalPenalty: 'Early withdrawal penalty (box 2)',
+    usBondInterest: 'Interest on a U.S. Treasury bond sold before maturity (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    taxExemptInterest: 'Tax-exempt interest (box 5)',
+    stateTaxWithheld: 'State tax withheld (box 16)',
+  },
+  add_1099_div: {
+    ordinaryDividends: 'Ordinary dividends (box 1a)',
+    qualifiedDividends: 'Qualified dividends (box 1b)',
+    capitalGainDistributions: 'Capital gain distributions (box 2a)',
+    unrecapturedSection1250Gain: 'Unrecaptured §1250 gain (box 2b)',
+    collectiblesGain: 'Collectibles gain (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    foreignTaxPaid: 'Foreign tax paid (box 6)',
+    foreignSourceIncome: 'Foreign source income (box 7)',
+    stateTaxWithheld: 'State tax withheld (box 17)',
+  },
+  add_1099_nec: {
+    amount: 'Nonemployee compensation (box 1)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    stateTaxWithheld: 'State tax withheld (box 17)',
+  },
+  add_1099_r: {
+    grossDistribution: 'Gross distribution (box 1a)',
+    taxableAmount: 'Taxable amount (box 2a)',
+    distributionCode: 'Distribution code (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    isIRA: 'This is an IRA distribution',
+    isRothIRA: 'This is a Roth IRA distribution',
+    rothContributionBasis: 'Roth IRA contributions made this year (box 5)',
+    qcdAmount: 'Qualified charitable distribution (box 3a)',
+    earlyDistributionExceptionCode: 'Early distribution exception code',
+    earlyDistributionExceptionAmount: 'Amount in an early distribution exception',
+    useSimplifiedMethod: 'The 10-year averaging method applies (box 6)',
+    stateTaxWithheld: 'State tax withheld (box 17)',
+  },
+  add_ssa_1099: {
+    benefitsPaid: 'Benefits paid (box 5)',
+    benefitsRepaid: 'Benefits repaid (box 5r)',
+    netBenefits: 'Net benefits (box 9)',
+    federalTaxWithheld: 'Federal tax withheld (box 10)',
+    isSpouse: 'The recipient is the taxpayer’s spouse',
+  },
+  add_mortgage_interest: {
+    mortgageInterest: 'Mortgage interest received (box 1)',
+    outstandingPrincipal: 'Outstanding principal on 1 January (box 2)',
+    originationDate: 'Date the loan was originated (box 3)',
+    refundOfOverpaidInterest: 'Refund of overpaid interest from a prior year (box 4)',
+    mortgageInsurancePremiums: 'Mortgage insurance premiums (box 5)',
+    points: 'Points paid on the mortgage (box 6)',
+  },
+  add_1099_misc: {
+    rents: 'Rents (box 1)',
+    royalties: 'Royalties (box 2)',
+    otherIncome: 'Other income (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    stateTaxWithheld: 'State tax withheld (box 17)',
+  },
+  add_1099_g: {
+    unemploymentCompensation: 'Unemployment compensation (box 1)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    stateTaxWithheld: 'State tax withheld (box 17)',
+  },
+  add_1099_b: {
+    proceeds: 'Proceeds (box 1d)',
+    costBasis: 'Cost or other basis (box 1e)',
+    isLongTerm: 'Long-term — held more than one year (box 2)',
+    washSaleLossDisallowed: 'Loss disallowed by the wash sale rule (box 4)',
+    isCollectible: 'Collectibles (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+  },
+  add_1099_k: {
+    grossAmount: 'Gross amount (box 1a)',
+    cardNotPresent: 'Amounts paid by card, online or by phone (box 1b)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+  },
+  add_1099_oid: {
+    originalIssueDiscount: 'Original issue discount (box 1)',
+    otherPeriodicInterest: 'Other periodic interest (box 2)',
+    earlyWithdrawalPenalty: 'Early withdrawal penalty (box 3)',
+    federalTaxWithheld: 'Federal tax withheld (box 4)',
+    marketDiscount: 'Market discount (box 5)',
+    acquisitionPremium: 'Acquisition premium (box 6)',
+    stateTaxWithheld: 'State tax withheld (box 12)',
+  },
+  add_1099_c: {
+    dateOfCancellation: 'Date the debt was cancelled (box 1)',
+    amountCancelled: 'Amount of debt cancelled (box 2)',
+    interestIncluded: 'Interest included in the cancelled debt (box 3)',
+    identifiableEventCode: 'Identifiable event code (box 6)',
+    personallyLiable: 'You were personally liable for the debt (box 5)',
+  },
+  add_1099_q: {
+    qualifiedExpenses: 'Qualified education expenses this distribution paid',
+    taxFreeAssistance: 'Tax-free educational assistance — scholarships and grants (box 4)',
+    expensesClaimedForCredit: 'Expenses used for an education credit',
+    recipientNotDesignatedBeneficiary: 'Paid to someone other than the student (box 6)',
+    trusteeToTrusteeTransfer: 'A trustee-to-trustee transfer (box 4a)',
+    qtpToRothIra: 'Paid directly to a Roth IRA (box 4b)',
+  },
+  add_1099_sa: {
+    usedForQualifiedMedicalExpenses: 'Did the whole distribution pay qualified medical expenses?',
+    grossDistribution: 'Gross distribution (box 1)',
+    distributionCode: 'Distribution code (box 3)',
+    accountType: 'Which account paid it (box 5)',
+  },
+  add_1099_s: {
+    closingDate: 'Date of sale (box 2)',
+    grossProceeds: 'Gross proceeds (box 3)',
+    transferorIsForeign: 'The seller was not a US person (box 7)',
+  },
+  add_education_expense: {
+    creditType: 'Which education credit this student qualifies for',
+    enrolledHalfTime: 'Enrolled at least half-time (Form 1098-T box 8)',
+    aotcClaimedPrior4Years: 'American Opportunity credit claimed for this student in any of the 4 years before (Form 8863 line 23)',
+    completedFirst4Years: 'Completed the first 4 years of college before this year (Form 8863 line 25)',
+    felonyDrugConviction: 'Felony drug conviction this year (Form 8863 line 26)',
+    tuitionPaid: 'Tuition paid (Form 1098-T box 1)',
+    scholarships: 'Scholarships and grants (Form 1098-T box 13)',
+  },
+};
+
+/** Spoken from the field name when the form has no printed label for it. */
+function spokenField(field: string): string {
+  const ACRONYMS: Record<string, string> = {
+    ssn: 'SSN', ein: 'EIN', fedTaxWithheld: 'federal tax withheld', qbi: 'QBI',
+    hsa: 'HSA', ctc: 'child tax credit', agi: 'AGI', ira: 'IRA', isbn: 'ISIN',
+  };
+  const key = field.split('.')[0]!;
+  if (ACRONYMS[key]) return ACRONYMS[key]!;
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+}
+
+/** What a field of a form is called to a person: the printed label and box, or the field's own words. */
+export function toolFieldLabel(tool: DocumentToolName, field: string): string {
+  const table = FIELD_LABELS[tool];
+  const exact = table?.[field];
+  if (exact) return exact;
+  const head = field.split('.')[0]!;
+  return table?.[head] ?? spokenField(field);
+}
+
 /** How a preparer enters one field of a form, read from the form tool's schema. */
 export function fieldInput(tool: DocumentToolName, field: string): FieldInput | null {
   let schema = (fieldSchemaFor(tool).shape as Record<string, z.ZodTypeAny>)[field];

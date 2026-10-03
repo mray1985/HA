@@ -121,7 +121,7 @@ export default function CaseDashboardPage() {
     try {
       const created = startNextYear(row.id);
       toast.success(`${row.name}: ${created.taxYear} case started from ${row.taxYear}`);
-      navigate(`/preparer/case/${created.id}/review`);
+      navigate(`/preparer/case/${created.id}/assistant`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Could not start the ${row.taxYear + 1} case`);
     }
