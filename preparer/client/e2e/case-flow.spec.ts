@@ -71,8 +71,12 @@ test('a 1099-Q waits for the qualified expenses, and the assistant takes the amo
   // The amount is typed into the assistant and written straight onto the return.
   await page.getByLabel('Type an answer').fill('5000');
   await page.getByLabel('Type an answer').press('Enter');
+  // What the assistant did is said back in the conversation, in words.
+  const conversation = page.getByRole('region', { name: 'What you typed' });
+  await expect(conversation).toContainText('5000');
+  await expect(conversation.getByText(/Done\./)).toBeVisible();
   // A text layer cannot see box 6, so the form still asks who received it.
-  await expect(item.getByRole('alert').or(page.getByRole('alert')).filter({ hasText: /answered|box 6|Paid to someone/ })).toBeVisible();
+  await expect(item).toContainText(/Paid to someone|Box 6/i);
 
   await item.getByRole('button', { name: 'Enter it by hand' }).click();
   await item.getByLabel('Box 6').selectOption('yes');
