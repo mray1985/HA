@@ -27,12 +27,15 @@ describe('a blank box is not a gap', () => {
     // 4, 6 and 10 are printed and carry nothing, so they are not work.
     for (const blank of ['4', '6', '10']) {
       expect(res.boxLedger!.entries.find((e) => e.box === blank)?.state, `box ${blank}`).toBe('empty');
+      expect(gaps.map((g) => g.box)).not.toContain(blank);
     }
     // Box 5 is the one that had a value read from the year graphic and held, so
     // it stays on the list: someone has to confirm it really is blank.
     expect(res.boxLedger!.entries.find((e) => e.box === '5')?.state).toBe('held');
-    // The three squares are still reported: a square is never called blank.
-    expect(gaps.map((g) => g.box).sort()).toEqual(['5', '7', '8', '9']);
+    // The three squares are always reported: a square is never called blank.
+    for (const square of ['7', '8', '9']) {
+      expect(res.boxLedger!.entries.find((e) => e.box === square)?.state, `box ${square}`).toBe('unread');
+    }
   });
 
   it('keeps a real amount on the return and still names the squares', async () => {

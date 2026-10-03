@@ -20,8 +20,9 @@ test('a new case opens on its documents, and the assistant says what is missing'
   await expect(page.getByText(/Drop or choose the client/)).toBeVisible();
 
   await page.getByRole('link', { name: /^Assistant/ }).click();
-  await expect(page.getByText(/return is not valid without first name/i)).toBeVisible();
-  await expect(page.getByText(/return is not valid without social security number/i)).toBeVisible();
+  // Named by the return's own field table, not by the engine's field names.
+  await expect(page.getByText("Taxpayer's first name?")).toBeVisible();
+  await expect(page.getByText("Taxpayer's SSN or ITIN?")).toBeVisible();
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText('Not ready')).toBeVisible();
@@ -60,7 +61,9 @@ test('a 1099-Q waits for the qualified expenses, and the assistant takes the amo
   await expect(page.getByText('1099q-529.pdf', { exact: true })).toBeVisible({ timeout: 30000 });
 
   await page.getByRole('link', { name: /^Assistant/ }).click();
-  const item = page.getByRole('listitem').filter({ hasText: /1099-Q/ });
+  // Two turns mention this form — the amount and the box 6 recipient — so the
+  // list is scoped rather than matched by text alone.
+  const item = page.getByRole('listitem').filter({ hasText: /1099-Q/ }).first();
   await expect(item).toBeVisible();
 
   // The amount is typed into the assistant and written straight onto the return.

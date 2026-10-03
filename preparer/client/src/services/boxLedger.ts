@@ -114,15 +114,27 @@ export function buildBoxLedger(
   const text = pageText.toLowerCase();
 
   const entries: BoxLedgerEntry[] = [];
+  // The schema declares a row per state (W-2 boxes 15–20), so a form for one
+  // state prints one of each. Only the first occurrence is a box to look at;
+  // counting the rest would list the same printed box four times.
+  const seenPrintedBox = new Set<string>();
+
   for (const box of schema?.boxes ?? []) {
     const field = fields.get(box.key);
     const value = field ? extractedData[field] : undefined;
     const rejection = field ? held.get(field) : undefined;
+    const repeat = box.box !== '' && seenPrintedBox.has(box.box);
+    if (box.box !== '') seenPrintedBox.add(box.box);
 
     let state: BoxState;
-    if (rejection) state = 'held';
+    if (repeat && value === undefined && !rejection) state = 'informational';
+    // `info` is furniture (an address, a phone number). `review` is not: those are
+    // boxes the return needs that only a person can settle, such as 1099-DIV box
+    // 3 nondividend distributions. Counting them as informational would drop a
+    // real gap from the list.
+    else if (rejection) state = 'held';
     else if (value !== undefined && value !== null && value !== '') state = 'read';
-    else if (box.use === 'info' || box.use === 'review') state = 'informational';
+    else if (box.use === 'info') state = 'informational';
     else if (box.kind === 'checkbox') state = 'unread';
     else state = labelIsPrinted(box.label, text) ? 'empty' : 'unread';
 

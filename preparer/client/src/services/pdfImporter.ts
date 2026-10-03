@@ -428,6 +428,13 @@ function processTextBlocks(
         ocrUsed,
         ocrEngine,
         rawOCRText: spanRawOCRText,
+        // A secondary form is applied exactly like a primary one, so it carries
+        // the same print index and ledger. Without these the write boundary has
+        // nothing to check the span's pages against and lets them through.
+        printIndex: spanData.printIndex,
+        pageText: spanData.pageText,
+        boxLedger: spanData.boxLedger,
+        ...(spanData.rejectedReads.length > 0 ? { rejectedReads: spanData.rejectedReads } : {}),
         ...(spanIdentity ? { identity: spanIdentity } : {}),
       });
     }

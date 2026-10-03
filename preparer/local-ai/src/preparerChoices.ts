@@ -17,6 +17,10 @@ import { z } from 'zod';
 import { factsFromFields, type TaxFact, type TaxFactValue } from './taxFact.js';
 import { formKeyOf } from './factValidation.js';
 import {
+  FORM_EXTRACTION_SCHEMAS,
+  TOOL_MAPPINGS,
+} from './formSchemas.js';
+import {
   factPrefixOf,
   fieldSchemaFor,
   FORM_TOOL_NAMES,
@@ -514,9 +518,43 @@ function spokenField(field: string): string {
 export function toolFieldLabel(tool: DocumentToolName, field: string): string {
   const table = FIELD_LABELS[tool];
   const exact = table?.[field];
-  if (exact) return exact;
   const head = field.split('.')[0]!;
-  return table?.[head] ?? spokenField(field);
+  const label = exact ?? table?.[head] ?? spokenField(field);
+  // The box number is taken from the form schema rather than typed into the
+  // label, so it cannot drift from the form. Hand-written box numbers sent
+  // preparers to boxes the form does not have (1099-INT tax-exempt interest is
+  // box 8, not box 5; 1099-R gross distribution is box 1, not box 1a).
+  const printed = printedBoxFor(tool, field);
+  if (!printed) return label;
+  return /\(box [^)]*\)\s*$/.test(label)
+    ? label.replace(/\(box [^)]*\)\s*$/, `(box ${printed})`)
+    : `${label} (box ${printed})`;
+}
+
+/** The box identifier the form prints for a tool field, from the form schema. */
+function printedBoxFor(tool: DocumentToolName, field: string): string | null {
+  const mappings = TOOL_MAPPINGS as Record<
+    string,
+    { tool: string | null; direct?: Record<string, string>; checkboxes?: Record<string, string> } | undefined
+  >;
+  const schemas = FORM_EXTRACTION_SCHEMAS as Record<
+    string,
+    { boxes: ReadonlyArray<{ key: string; box: string }> } | undefined
+  >;
+
+  for (const [formType, mapping] of Object.entries(mappings)) {
+    if (!mapping || mapping.tool !== tool) continue;
+    const schema = schemas[formType];
+    if (!schema) continue;
+    const printed = new Map(schema.boxes.map((b) => [b.key, b.box]));
+    for (const group of [mapping.direct, mapping.checkboxes]) {
+      for (const [boxKey, fieldName] of Object.entries(group ?? {})) {
+        if (fieldName === field) return printed.get(boxKey) || null;
+      }
+    }
+    return null;
+  }
+  return null;
 }
 
 /** How a preparer enters one field of a form, read from the form tool's schema. */

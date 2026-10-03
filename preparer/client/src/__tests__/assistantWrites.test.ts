@@ -5,7 +5,7 @@ import { clearReturnCache, createReturn, getReturn, updateReturn } from '../api/
 import { clearRecordCache } from '../services/caseRecords';
 import { appendTaxFacts, loadTaxFacts } from '../services/preparerTaxFacts';
 import { applyToolResult, SOURCE_FORM_KEY } from '../services/returnApplier';
-import { assistantTurns } from '../services/assistantTurns';
+import { assistantTurns, type AssistantTurn } from '../services/assistantTurns';
 import { applyChosen } from '../services/assistantChat';
 import { readAnswer } from '../services/assistantAnswers';
 
@@ -75,7 +75,7 @@ describe('answering the assistant writes to the return', () => {
     const choice = turns.find((t) => t.intent.kind === 'choice');
     expect(choice?.ask).toBe('How much did this 1099-Q pay in qualified education expenses?');
 
-    const outcome = applyChosen(returnId, choice!, { kind: 'number', value: 5000 }, 'Qualified education expenses this paid: $5,000');
+    const outcome = await applyChosen(returnId, choice!, { kind: 'number', value: 5000 }, 'Qualified education expenses this paid: $5,000');
     expect(outcome).toMatchObject({ written: true, turnId: choice!.id });
     expect(getReturn(returnId).income1099Q).toEqual([
       expect.objectContaining({ qualifiedExpenses: 5000, [SOURCE_FORM_KEY]: 'DOC-Q#0' }),
@@ -99,7 +99,7 @@ describe('answering the assistant writes to the return', () => {
     if (read.status !== 'understood') return;
     expect(read.label).toBe('Wages, tips and other compensation (box 1): $52,000');
 
-    const outcome = applyChosen(returnId, held!, read.value, read.label, wiring());
+    const outcome = await applyChosen(returnId, held!, read.value, read.label, wiring());
     expect(outcome).toMatchObject({ written: true });
     expect(getReturn(returnId).w2Income).toEqual([expect.objectContaining({ wages: 52000 })]);
     expect(loadTaxFacts(returnId).find((f) => f.sourceField === 'wages')).toMatchObject({ value: 52000 });
@@ -118,7 +118,7 @@ describe('answering the assistant writes to the return', () => {
     expect(read.intent).toMatchObject({ kind: 'return_field', field: 'filingStatus' });
 
     const turn = turns.find((t) => t.id === read.turnId)!;
-    const outcome = applyChosen(returnId, turn, read.value, read.label, wiring());
+    const outcome = await applyChosen(returnId, turn, read.value, read.label, wiring());
     expect(outcome).toMatchObject({ written: true });
     expect(getReturn(returnId).filingStatus).toBe(FilingStatus.MarriedFilingJointly);
   });
@@ -130,7 +130,7 @@ describe('answering the assistant writes to the return', () => {
     }, 'DOC-Q');
     const turns = await thread();
     const choice = turns.find((t) => t.intent.kind === 'choice')!;
-    const outcome = applyChosen(returnId, choice, { kind: 'number', value: 5000 }, 'Qualified education expenses this paid: $5,000');
+    const outcome = await applyChosen(returnId, choice, { kind: 'number', value: 5000 }, 'Qualified education expenses this paid: $5,000');
     expect(outcome.said).toBe('Qualified education expenses this paid: $5,000. Done.');
   });
 
@@ -141,9 +141,75 @@ describe('answering the assistant writes to the return', () => {
     }, 'DOC-Q');
     const turns = await thread();
     const choice = turns.find((t) => t.intent.kind === 'choice')!;
-    const outcome = applyChosen(returnId, choice, { kind: 'number', value: 5 }, 'qualified expenses', wiring());
+    const outcome = await applyChosen(returnId, choice, { kind: 'number', value: 5 }, 'qualified expenses', wiring());
     // Nothing wrong with a small number here — it is written, and the engine judges it.
     expect(outcome.written).toBe(true);
     expect(getReturn(returnId).income1099Q).toHaveLength(1);
+  });
+});
+
+describe('an answer lands where the words point', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  it('writes to the box the typed box number names, not the first field open', async () => {
+    // Two held boxes on one form. "box 2" is federal income tax withheld, and the
+    // turn the words matched first carries wages — a reader that ignored the
+    // re-target would report box 2 recorded while writing the wages.
+    const turns: AssistantTurn[] = [
+      {
+        id: 'held-wages', kind: 'blocked', weight: 800,
+        say: 'The two readers read the wages differently.',
+        ask: 'Wages, tips and other compensation (box 1)?',
+        intent: { kind: 'held_field', tool: 'add_w2', formKey: 'DOC-W#0', field: 'wages' },
+      },
+      {
+        id: 'held-fitw', kind: 'blocked', weight: 700,
+        say: 'Federal income tax withheld (box 2) was not read.',
+        ask: 'Federal income tax withheld (box 2)?',
+        intent: { kind: 'held_field', tool: 'add_w2', formKey: 'DOC-W#0', field: 'federalTaxWithheld' },
+      },
+    ];
+    updateReturn(returnId, { wages: 52431.18, federalTaxWithheld: 0 } as never);
+
+    const read = readAnswer('box 2 is 5873.40', turns);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') throw new Error('expected an understood answer');
+    // The box number re-targets the answer. The write has to follow the
+    // re-targeted intent: writing the matched turn's own intent would put 5,873.40
+    // into the wages.
+    expect(read.intent).toMatchObject({ kind: 'held_field', field: 'federalTaxWithheld' });
+    expect(read.turnId).toBe('held-wages');
+  });
+
+  it('confirms the filing status the client stated rather than the first one', async () => {
+    updateReturn(returnId, { filingStatus: FilingStatus.Single } as never);
+    const turn: AssistantTurn = {
+      id: 'fs', kind: 'check',
+      say: 'The client said they file as Married filing jointly.',
+      intent: { kind: 'filing_status', status: FilingStatus.MarriedFilingJointly, label: 'Married filing jointly' },
+      weight: 600,
+    };
+    // The chip answers yes/no about the proposed status. Reading that boolean as
+    // the status would write enum 1, which is Single.
+    const outcome = await applyChosen(returnId, turn, { kind: 'boolean', value: true }, 'Yes — Married filing jointly', wiring());
+    expect(outcome.written).toBe(true);
+    expect(getReturn(returnId).filingStatus).toBe(FilingStatus.MarriedFilingJointly);
+  });
+
+  it('leaves the filing status alone when the preparer declines it', async () => {
+    updateReturn(returnId, { filingStatus: FilingStatus.HeadOfHousehold } as never);
+    const turn: AssistantTurn = {
+      id: 'fs', kind: 'check', say: 'The client said they file as Married filing jointly.',
+      intent: { kind: 'filing_status', status: FilingStatus.MarriedFilingJointly, label: 'Married filing jointly' },
+      weight: 600,
+    };
+    await applyChosen(returnId, turn, { kind: 'boolean', value: false }, 'No, leave it', wiring());
+    expect(getReturn(returnId).filingStatus).toBe(FilingStatus.HeadOfHousehold);
   });
 });

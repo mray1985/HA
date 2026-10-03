@@ -173,7 +173,10 @@ export function factsForExtraction(input: {
   // can relabel a form after extraction, so verifying earlier would check the
   // values against one form and write them under another.
   const printIndex = input.extracted.printIndex;
-  if (tool && printIndex) {
+  // Not gated on `tool`: a form with no tax tool (K-1, W-2G) still reaches the
+  // return through the generic fact path, so gating on a tool would let exactly
+  // the forms with the least checking write unchecked values.
+  if (printIndex) {
     const checked = verifyAgainstPrint(input.extracted.formType, input.extracted.extractedData, printIndex);
     for (const r of checked.rejected) {
       input.extracted.warnings.push(

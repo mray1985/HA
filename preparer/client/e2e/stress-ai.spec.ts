@@ -212,11 +212,11 @@ test('stress: seven households, every document read by the local AI', async ({ p
         log(`${household}'s case is unnamed and offers no taxpayer to choose`);
       }
     }
-    await openCase(page, id, 'client', notes);
+    await openCase(page, id, 'assistant', notes);
     await page.getByLabel("Client's reply").fill(reply);
     const t0 = Date.now();
-    await page.getByRole('button', { name: 'Read reply' }).click();
-    const answers = page.getByLabel('Answers read from the reply');
+    await page.getByRole('button', { name: 'Read their reply' }).click();
+    const answers = page.getByRole('region', { name: 'Ask the client' });
     const failed = page.getByRole('alert');
     // The count line, not the list: a reply that answers no open question leaves the list empty (not visible).
     const done = page.getByText(/\d+ of \d+ questions? answered/);

@@ -347,15 +347,22 @@ export function applyExtractionToDocument(input: {
   const identities = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.identity ?? null : null));
   const taxYearsPrinted = pieces.map((p) => (classificationAllowsIncomeWrite(p.classification) ? p.extracted?.taxYearPrinted ?? null : null));
   // The gaps, per form, so nobody has to go looking for what was not appended.
+  // A piece that was held or skipped wrote nothing, so it cannot report anything
+  // as filled in: every box it carries becomes a box for the preparer.
   const boxGaps = pieces.map((p): DocumentBoxGap => {
+    const wrote = classificationAllowsIncomeWrite(p.classification) && !p.toolError;
     const ledger = p.extracted?.boxLedger;
+    const entries = ledger?.entries ?? [];
+    const gaps = entries.filter((e) => e.state === 'unread' || e.state === 'held');
     return {
       formType: p.extracted?.formType ?? null,
-      declared: ledger?.declared ?? 0,
-      read: ledger?.read ?? 0,
-      boxes: (ledger?.entries ?? [])
-        .filter((e) => e.state === 'unread' || e.state === 'held')
-        .map((e) => ({ box: e.box, label: e.label, state: e.state as 'held' | 'unread' })),
+      declared: wrote ? (ledger?.declared ?? 0) : Math.max(entries.length, 1),
+      read: wrote ? (ledger?.read ?? 0) : 0,
+      boxes: wrote
+        ? gaps.map((e) => ({ box: e.box, label: e.label, state: e.state as 'held' | 'unread' }))
+        : (p.toolError
+            ? [{ box: '', label: p.toolError, state: 'held' as const }]
+            : entries.map((e) => ({ box: e.box, label: e.label, state: 'held' as const }))),
     };
   });
   const updated: IngestedDocument = {

@@ -322,11 +322,16 @@ const upNext = nextTurn(turns);
   };
 
 /** Take a chip's value: written straight onto the case, with nothing to confirm. */
-  const take = (turn: AssistantTurn, option: AssistantOption) => {
+  const take = async (turn: AssistantTurn, option: AssistantOption) => {
     if (busy !== null) return;
-    const outcome = applyChosen(returnId, turn, option.value, option.label);
-    if (outcome.written) toast.success(outcome.said);
-    else toast.error(outcome.said);
+    setBusy('Applying that…');
+    try {
+      const outcome = await applyChosen(returnId, turn, option.value, option.label);
+      if (outcome.written) toast.success(outcome.said);
+      else toast.error(outcome.said);
+    } finally {
+      setBusy(null);
+    }
   };
 
   /** Read the client's pasted reply. */

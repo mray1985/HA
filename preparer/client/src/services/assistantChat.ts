@@ -75,10 +75,15 @@ export async function sendToAssistant(
   if (read.status === 'understood') {
     const turn = turns.find((t) => t.id === read.turnId);
     if (!turn) return { said: 'That question is no longer open.', written: false };
-    const applied = applyValue(returnId, turn, read.value, read.label, wiring);
+    // The answer may have re-targeted the turn: "box 2 is 5873.40" names box 2,
+    // so the value belongs in federal tax withheld, not in the first field the
+    // turn happened to carry. Writing the turn's own intent would report box 2
+    // recorded while writing it somewhere else.
+    const target: AssistantTurn = { ...turn, intent: read.intent };
+    const applied = applyValue(returnId, target, read.value, read.label, wiring);
     if (!applied.ok) return { said: applied.error, written: false, turnId: read.turnId };
     wiring.flush();
-    const result = applied.run();
+    const result = await applied.run();
     wiring.reload();
     if (!result.ok) return { said: result.error, written: false, turnId: read.turnId };
     appendAudit(returnId, { kind: 'decision', subject: 'Assistant', detail: `Typed: "${trimmed}" — ${read.label}` });
@@ -94,8 +99,10 @@ export async function sendToAssistant(
   return { said: '', written: false };
 }
 
+type Recorded = { ok: true; outcome: { kind: 'recorded' } };
 type ApplyResult =
-  | { ok: true; run: () => DecisionResult | { ok: true; outcome: { kind: 'recorded' } } }
+  /** Awaited by the caller: a write may move documents between cases. */
+  | { ok: true; run: () => DecisionResult | Recorded | Promise<DecisionResult | Recorded> }
   | { ok: false; error: string };
 
 /**
@@ -106,17 +113,17 @@ type ApplyResult =
  * `wiring` is how the case is written; it defaults to the open case's store, and
  * is passed in by callers holding something else.
  */
-export function applyChosen(
+export async function applyChosen(
   returnId: string,
   turn: AssistantTurn,
   value: AssistantValue,
   label: string,
   wiring: AssistantWiring = storeWiring(),
-): AssistantOutcome {
+): Promise<AssistantOutcome> {
   const applied = applyValue(returnId, turn, value, label, wiring);
   if (!applied.ok) return { said: applied.error, written: false, turnId: turn.id };
   wiring.flush();
-  const result = applied.run();
+  const result = await applied.run();
   wiring.reload();
   if (!result.ok) return { said: result.error, written: false, turnId: turn.id };
   appendAudit(returnId, { kind: 'decision', subject: 'Assistant', detail: `${label} — chosen in the assistant` });
@@ -167,6 +174,14 @@ function applyValue(
     }
 
     case 'filing_status': {
+      // The chips answer a yes/no about the status this turn proposed, so the
+      // value is the answer and the status is the intent's. Reading the boolean
+      // as the status would make "Yes" write enum 1 — Single — whatever the
+      // client actually said.
+      if (value.kind === 'boolean') {
+        if (!value.value) return { ok: true, run: () => ({ ok: true, outcome: { kind: 'recorded' as const } }) };
+        return { ok: true, run: () => applyStatedFilingStatus(returnId, intent.status, intent.label) };
+      }
       const w = writable(value);
       if (!w.ok || !FILING_SAY[Number(w.value)]) return { ok: false, error: 'I did not get a filing status from that.' };
       const status = Number(w.value) as FilingStatus;
@@ -208,11 +223,33 @@ function applyValue(
       return { ok: true, run: () => recordStateAnswer(returnId, question, v) };
     }
 
-    case 'decision':
     case 'use_bank': {
+      // Saying yes settles the question and must also put last year's account on
+      // the return: resolving the item on its own would leave direct deposit unset
+      // with nothing left telling anyone.
+      const yes = value.kind === 'text' ? value.value === 'accepted' : value.kind === 'boolean' ? value.value : undefined;
+      if (yes === undefined) return { ok: false, error: 'I did not get yes or no.' };
+      return {
+        ok: true,
+run: async () => {
+          const store = useCaseStore.getState();
+const item = store.review?.items.find((i) => i.id === turn.id);
+          if (!item) return { ok: false, error: 'That item is no longer open.' };
+          if (yes) {
+            const { applyLastYearsAccount } = await import('./caseRollover');
+            const used = applyLastYearsAccount(returnId);
+            if (!used.ok) return { ok: false as const, error: used.error };
+          }
+          store.resolve(item, yes ? 'accepted' : 'not_applicable', yes ? 'Reusing last year’s account.' : 'A different account this year.');
+          return { ok: true as const, outcome: { kind: 'recorded' as const } };
+        },
+      };
+    }
+
+    case 'decision': {
       const accepted = value.kind === 'text' ? value.value === 'accepted' : value.kind === 'boolean' ? value.value : undefined;
       if (accepted === undefined) return { ok: false, error: 'I did not get yes or no.' };
-      const itemId = intent.kind === 'decision' ? intent.itemId : turn.id;
+      const itemId = intent.itemId;
       return {
         ok: true,
         run: () => {
@@ -230,10 +267,21 @@ function applyValue(
       if (yes === undefined) return { ok: false, error: 'I did not get yes or no.' };
       return {
         ok: true,
-        run: () => {
-          if (!yes) return { ok: true as const, outcome: { kind: 'recorded' as const } };
-          // Joining moves documents between cases: not one synchronous step.
-          void import('./spouseCases').then(({ joinSpouseCase }) => joinSpouseCase(returnId, intent.returnId));
+        // Awaited: joining moves documents between cases and can fail. Reporting
+        // "Done" before it finishes would claim a move that never happened.
+        run: async () => {
+          const store = useCaseStore.getState();
+          const item = store.review?.items.find((i) => i.id === turn.id);
+          // Declining has to settle the item too, or the turn is rebuilt on the
+          // next render and goes on blocking approval with nothing left to answer.
+          if (!yes) {
+            if (item) store.resolve(item, 'not_applicable', 'Not a spouse — kept as separate cases.');
+            return { ok: true as const, outcome: { kind: 'recorded' as const } };
+          }
+          const { joinSpouseCase } = await import('./spouseCases');
+          const joined = await joinSpouseCase(returnId, intent.returnId);
+          if (!joined.ok) return { ok: false as const, error: joined.error };
+          if (item) store.resolve(item, 'accepted', 'Joined as a joint return.');
           return { ok: true as const, outcome: { kind: 'recorded' as const } };
         },
       };
@@ -250,7 +298,12 @@ function applyValue(
       }
       if (action.kind === 'use_identity') {
         // A reading of the taxpayer's identity the second reader did not agree
-        // with: the preparer has checked the document, so it goes on.
+        // with: the preparer has checked the document, so it goes on. A "no" is
+        // the preparer rejecting that reading, and must never write the very
+        // name or SSN they declined.
+        if (value.kind === 'boolean' && !value.value) {
+          return { ok: true, run: () => ({ ok: true as const, outcome: { kind: 'recorded' as const } }) };
+        }
         const documents = loadDocuments(returnId);
         return {
           ok: true,
