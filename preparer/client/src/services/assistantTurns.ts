@@ -555,11 +555,7 @@ const INCOME_TOOLS: ReadonlySet<DocumentToolName> = new Set([
  * client's documents have not arrived. Ten "the return is not valid without…"
  * cards on a case with no documents is the app complaining before it has looked.
  */
-function turnsForAnEmptyCase(
-  clientName: string,
-  hasQuestion: boolean,
-  items: ReviewItem[],
-): AssistantTurn[] {
+function turnsForAnEmptyCase(clientName: string, hasQuestion: boolean): AssistantTurn[] {
   const turns: AssistantTurn[] = [{
     id: 'empty',
     kind: 'needed',
@@ -576,24 +572,6 @@ function turnsForAnEmptyCase(
       target: { kind: 'filing_status' },
     }));
   }
-  // The client's own details are still theirs to supply. A case with no documents
-  // has no reader, so the fields stay enterable by hand — the assistant asks for
-  // the documents first, but it must not leave the preparer with no way to write
-  // a name when there are no forms to read one from.
-  for (const item of items) {
-    const action = item.action;
-    if (action?.kind !== 'return_field') continue;
-    const spec = returnFieldSpec(action.field, undefined);
-    const label = spec?.label ?? returnFieldLabel(action.field);
-    turns.push({
-      id: item.id,
-      kind: 'blocked',
-      say: `Nothing on the case says what ${lowerFirst(label)} is.`,
-      ask: `${label}?`,
-      intent: { kind: 'return_field', field: action.field },
-      weight: 900,
-    });
-  }
   return turns;
 }
 
@@ -603,9 +581,6 @@ function turnsForAnEmptyCase(
  * look at. Everything decided is left out — the case summary says so instead.
  */
 export function assistantTurns({ items, facts, documents, questions, clientName, intakeBusy, caseEmpty }: AssistantInput): AssistantTurn[] {
-  const asked = new Set<string>();
-  const turns: AssistantTurn[] = [];
-
   // Documents are still being read. Everything the case looks missing right now
   // is a document that has not been read yet, so asking for it would be asking
   // the preparer to do the machine's job — and the question goes away a second
@@ -614,17 +589,43 @@ export function assistantTurns({ items, facts, documents, questions, clientName,
     return [{ id: 'reading', kind: 'note', say: intakeBusy, intent: { kind: 'note' }, weight: 9999 }];
   }
 
-  // A case with nothing read on it: the client's details and their income are
-  // both on documents that have not arrived.
-  if (caseEmpty) {
-    return turnsForAnEmptyCase(clientName, questions.some((q) => q.target.kind === 'filing_status'), items);
-  }
-
   // A held income form is already a turn saying the return has no income from it;
   // the engine's "no income sources" item would only repeat it.
   const incomeHeld = items.some(
     (i) => i.action?.kind === 'fix' && INCOME_TOOLS.has(i.action.tool),
   );
+
+  // A case with nothing read on it opens by asking for the documents. The thread is
+  // still projected underneath: a rolled-over case carries notes about what came
+  // from last year, and with no documents that note is all the preparer is told.
+  if (caseEmpty) {
+    return [
+      ...turnsForAnEmptyCase(clientName, questions.some((q) => q.target.kind === 'filing_status')),
+      ...project(items, facts, documents, questions, clientName, incomeHeld, true),
+    ];
+  }
+  return project(items, facts, documents, questions, clientName, incomeHeld, false);
+}
+
+/**
+ * Project the open items and the client's questions into the thread.
+ *
+ * An item already decided, or information only, is not something to ask about. A
+ * note about what was carried over from last year belongs on the case, not as
+ * another card to work through — except on a case with no documents, where the
+ * thread is asked for documents first and that note is all the rest.
+ */
+function project(
+  items: ReviewItem[],
+  facts: TaxFact[],
+  documents: IngestedDocument[],
+  questions: ClientQuestion[],
+  clientName: string,
+  incomeHeld: boolean,
+  keepInformational: boolean,
+): AssistantTurn[] {
+  const asked = new Set<string>();
+  const turns: AssistantTurn[] = [];
 
   // The forms whose decision only the preparer can make from the form itself, by
   // form key. The client may be asked about them, but not in a second card saying
@@ -651,8 +652,8 @@ export function assistantTurns({ items, facts, documents, questions, clientName,
   }
 
   for (const item of items) {
-    // An item already decided, or information only, is not something to ask about.
-    if (item.resolution || item.category === 'INFORMATIONAL') continue;
+    if (item.resolution) continue;
+    if (item.category === 'INFORMATIONAL' && !keepInformational) continue;
     if (incomeHeld && item.id.includes('no-income-sources')) continue;
     if (item.action?.kind === 'return_field' && statedByDocument.has(item.action.field)) continue;
     const turn = turnForItem(item, facts, documents, clientName);

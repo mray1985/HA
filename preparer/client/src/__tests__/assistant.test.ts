@@ -418,13 +418,23 @@ describe('an empty case is not a case with ten problems', () => {
     const turns = assistantTurns({ items: missingEverything, facts: [], documents: [], questions: [], clientName: 'this client', caseEmpty: true });
     // The documents come first: they carry the client's identity and income.
     expect(turns[0]!.ask).toMatch(/Drop their documents in/);
-    // With no forms to read, the fields are not "missing" — they are unknown, and
-    // the preparer still has to be able to write them.
-    expect(turns.some((t) => t.kind === 'ask')).toBe(false);
+    // With no forms to read, the fields are still enterable — the preparer has to
+    // be able to write a name when there is no form to read one from.
     const fields = turns.filter((t) => t.intent.kind === 'return_field');
     expect(fields).toHaveLength(missingEverything.length);
-    expect(fields.every((t) => t.say.startsWith('Nothing on the case says what'))).toBe(true);
     expect(fields.map((t) => t.ask)).toContain("Taxpayer's first name?");
+  });
+
+  it('still says what a rolled-over case carried over', () => {
+    const rollover: ReviewItem[] = [
+      {
+        id: 'rollover:carried', category: 'INFORMATIONAL', group: 'personal', source: 'document',
+        message: 'Started from the 2025 case: carried firstName; ssn; addressCity.',
+      },
+    ];
+    const turns = assistantTurns({ items: rollover, facts: [], documents: [], questions: [], clientName: 'Maya Lee', caseEmpty: true });
+    // With no documents, this note is all the preparer is told about last year.
+    expect(turns.map((t) => t.say).join(' ')).toMatch(/Started from the 2025 case/);
   });
 
   it('says so in the headline instead of counting problems it cannot judge yet', () => {
