@@ -20,9 +20,11 @@ test('a new case opens on its documents, and the assistant says what is missing'
   await expect(page.getByText(/Drop or choose the client/)).toBeVisible();
 
   await page.getByRole('link', { name: /^Assistant/ }).click();
-  // Named by the return's own field table, not by the engine's field names.
-  await expect(page.getByText("Taxpayer's first name?")).toBeVisible();
-  await expect(page.getByText("Taxpayer's SSN or ITIN?")).toBeVisible();
+  // A case with nothing read on it asks for the documents. It does not report
+  // every field the return needs: the client is not on the case yet, so those
+  // fields are not missing, they are simply unknown until a document arrives.
+  await expect(page.getByText(/Nothing on the case yet/i)).toBeVisible();
+  await expect(page.getByText(/Drop their documents in/i)).toBeVisible();
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText('Not ready')).toBeVisible();
