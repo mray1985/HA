@@ -172,12 +172,34 @@ Missing a filing status is a test failure.
 
 ## Adding to the Case UI (Client)
 
-Case tabs live in `client/src/components/case/`, and what the review lists is built in `client/src/services/caseReview.ts`. A new check must:
+The case's tabs live in `client/src/components/case/`. What the assistant says
+about the case is built in three places, and a new check usually touches one of
+them:
+
+- `client/src/services/caseReview.ts` decides **whether** something is open. It
+  produces review items with an optional `action` saying what could settle them.
+  This is the authority; nothing else may decide that a case is ready.
+- `client/src/services/assistantTurns.ts` decides **how it is said** — the plain
+  words, the one question, and the machine-readable intent. It only ever
+  projects the items it is given, and never invents a check. Two inputs say what
+  the case is *not* yet able to answer: `intakeBusy` (documents are being read,
+  so nothing is missing and nothing is asked) and `caseEmpty` (nothing is read
+  and nothing answered, so the assistant asks for the documents). A return field
+  is named from `returnFields.ts`'s own table — never as its field name, and never
+  case-folded into `zIP`.
+- `client/src/services/assistantAnswers.ts` decides **what a typed message
+  settles** — the deterministic reading of amounts, counts, yes/no and the fixed
+  vocabularies, with no model in the loop.
+
+A new check must:
 
 1. **Fail closed.** A situation the engine cannot compute to the official rules is a finding in `shared/src/engine/unsupported.ts`, which blocks approval and export — never an approximation.
-2. **Name the source.** Every value read from a document keeps its source document; a review item opens its own document.
-3. **Let the preparer settle it in place.** A missing return field is entered in the item itself; a warning can be decided with a note. Errors and blockers clear only by fixing the return.
-4. **Be in the audit trail.** Every correction and decision is recorded on the case.
+2. **Name the source.** Every value read from a document keeps its source document; a turn opens its own document.
+3. **Say it in the form's words.** The turn names fields the way the form prints them, box number included (`toolFieldLabel` in `local-ai/src/preparerChoices.ts`). The engine's field names never reach the screen.
+4. **Let the preparer settle it in place.** A missing return field is typed or entered in the turn; a warning can be decided with a note. Errors and blockers clear only by fixing the return or the documents.
+5. **Never be answered by guesswork.** A turn with no answer the preparer can give from the form or the client stays open, with the reason. An unread value stays unknown — never zero.
+6. **Be in the audit trail.** Every value written and every decision recorded on the case.
+7. **Account for the box.** A new box joins `local-ai/src/formSchemas.ts`, and the ledger in `client/src/services/boxLedger.ts` picks it up: it is reported as read, held, empty or unread, and anything not read is listed for the preparer by box number and printed label. If a box cannot be read from the page, that is the finding — not a zero, and not silence.
 
 ## Test Requirements
 

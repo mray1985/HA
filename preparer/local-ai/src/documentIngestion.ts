@@ -89,6 +89,22 @@ export interface IngestedDocument {
   identities?: Array<PartyIdentity | null>;
   /** The tax year each form in the file prints (a W-2c's box c), in extraction order; null when not read. */
   taxYearsPrinted?: Array<string | null>;
+  /**
+   * Per form in the file, in extraction order: the boxes the reader could not
+   * append by itself. Kept so the preparer is handed the exact list rather than
+   * being left to find the gaps in the paperwork.
+   */
+  boxGaps?: DocumentBoxGap[];
+}
+
+/** What the reader could not append from one form, and why. */
+export interface DocumentBoxGap {
+  formType: string | null;
+  /** Boxes this form needs on the return. */
+  declared: number;
+  read: number;
+  /** Named boxes still needing a person: printed box id and the form's own label. */
+  boxes: Array<{ box: string; label: string; state: 'held' | 'unread' }>;
 }
 
 export interface DocumentFileMeta {

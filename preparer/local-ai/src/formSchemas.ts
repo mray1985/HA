@@ -957,7 +957,7 @@ interface ToolMappingSpec {
   year?: { key: string; field: string };
 }
 
-const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
+export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
   'W-2': {
     tool: 'add_w2',
     direct: {

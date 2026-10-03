@@ -50,31 +50,49 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   prior-year return — are compared with this year's by form and payer (EIN, or
   the payer's name without legal suffixes: "Chase" is "JPMORGAN CHASE BANK
   NA"). Each one not received is shown as *possibly* missing ("Possible
-  missing 1099-INT from Chase"), put in the review, and asked about on the
-  Client tab; the client's "no" settles it, and their "yes" waits for the
-  upload.
-- **Client questions and replies.** The Client tab lists only what the
-  case's documents do not settle — a dependent's months at home or
-  relationship, where the client lived, the qualified expenses a 1099-Q paid,
-  the filing status — as a message to send. The client's reply is read on this
-  machine by Qwen3.5-0.8B, one question at a time under a grammar, and an
-  answer is recorded (as a verified client-response fact) only when the model
-  and a reading of the client's own words agree; everything else stays open
-  with the reason. A stated filing status waits for the preparer. New facts a
-  reply or note states — a new dependent, a move, an estimated payment — are
-  offered with only the values the client's words give, and are added when
-  the preparer accepts them. The reply is kept word for word in the audit
-  trail.
-- **Review.** Every deterministic check of the return (the diagnostics engine
-  in `shared/src/diagnostics`) and every piece of document evidence that needs
-  a person — held forms, unread documents, credit choices — in one checklist,
-  under a summary of the case (documents read, federal and state results, what
-  is open, the change from last year) with Approve and Next case. A missing
-  name, SSN, address or filing status is entered in the item itself (or all at
-  once); an item opens its own document. Errors and blockers clear only by
-  fixing the return; warnings can be decided with a note, or with one click
-  ("Checked against the source document", "Confirmed with the client"). Every
-  correction and decision is in the case's audit trail.
+  missing 1099-INT from Chase"), raised in the assistant, and asked about in the
+  message for the client; the client's "no" settles it, and their "yes" waits
+  for the upload.
+- **The assistant.** One conversation per case, on the Assistant tab, that
+  replaces the review checklist and the client questions. Every open item is a
+  turn saying what is wrong in plain words — the form's own box names, never the
+  engine's field names — what is needed, and up to three ways to give it: a chip
+  to click, a field form, or a type into the box at the bottom. What the
+  preparer types is written straight onto the case: a number goes into the box
+  that is waiting for one, a filing status onto the return, "all year" onto a
+  dependent. Nothing is asked twice, and nothing is asked that the documents on
+  the case already settle. What is blocking the return sorts to the top, then
+  what only the client can answer, then what to check.
+  - **What is on a form is never asked for.** A name, SSN or address that a
+    document already carries is offered as the value on that document, one click
+    to accept, and the same value is never asked for twice — including when the
+    reading needs a second reader to agree, where the turn says so instead of
+    asking the preparer to retype what they can see.
+  - **While documents are being read, nothing is missing.** The assistant says
+    what it is reading and asks nothing, so it cannot ask for a value the
+    document it is halfway through is about to supply. A case with nothing read on
+    it asks for the documents rather than reporting every field the return needs.
+- **Client questions and replies.** The assistant asks only what the case's
+  documents do not settle — a dependent's months at home or relationship, where
+  the client lived, the qualified expenses a 1099-Q paid, the filing status — and
+  gives them as a message to send. The client's reply is read on this machine by
+  Qwen3.5-0.8B, one question at a time under a grammar, and an answer is
+  recorded (as a verified client-response fact) only when the model and a reading
+  of the client's own words agree; everything else stays open with the reason. A
+  stated filing status waits for the preparer. New facts a reply or note states —
+  a new dependent, a move, an estimated payment — are offered with only the
+  values the client's words give, and are added when the preparer accepts them.
+  The reply is kept word for word in the audit trail.
+- **What still decides.** Every deterministic check of the return (the
+  diagnostics engine in `shared/src/diagnostics`) and every piece of document
+  evidence that needs a person — held forms, unread documents, credit choices —
+  is what the assistant is built from; the thread is projected from those items
+  on every render, so it can never disagree with them. A missing name, SSN,
+  address or filing status is typed or entered in the turn (or all at once); a
+  turn opens its own document. Errors and blockers clear only by fixing the
+  return or the documents; warnings can be decided with a note, or with one click
+  ("Checked against the document", "Confirmed with the client"). Every value
+  written and every decision is in the case's audit trail.
 - **Approve.** Approval is refused while anything is open and is withdrawn by
   any later change to the return. The approved return produces the federal
   filing packet and state forms.
@@ -83,13 +101,26 @@ routes only judgment to the preparer (work order: `# HA Tax Preparers App`):
   pinned by SHA-256 and bundled by the installer. All case data is encrypted at
   rest with AES-256-GCM.
 
+### How the assistant decides where a typed answer goes
+
+The preparer types into one box. Each message is scored against the open turns
+(`client/src/services/assistantAnswers.ts`) and goes to the one it fits best —
+by the box it names, the kind of value it is, and how much that turn unblocks.
+The reading itself is deterministic: amounts, counts, yes/no, filing statuses,
+relationships, residency and states are read from the words, with no model in
+the loop. That is the same rule the client's replies already follow — a value
+goes onto a return only when the words say so. When the words settle nothing,
+the message is offered to the client's-reply pipeline for the open questions and
+for any new fact it states. When even that cannot run, the assistant says plainly
+that it did not understand and nothing is written.
+
 ## Architecture
 
 ```
 preparer/
 ├── shared/    → @hatax/engine — tax engine, form mappings, return diagnostics
 ├── local-ai/  → @hatax/local-ai — TaxFacts, tax tools, document reading, two-reader verification, model gauntlet
-├── client/    → @hatax/preparer — case dashboard and case review (React 19 + Vite 6 + Tailwind + Zustand 5)
+├── client/    → @hatax/preparer — case dashboard and the assistant (React 19 + Vite 6 + Tailwind + Zustand 5)
 ├── server/    → Express + better-sqlite3 — sign-in, seat, local model routes (port 3002)
 ├── desktop/   → Electron app and Windows installer (bundles the site, llama.cpp and the models)
 ├── tools/     → llama.cpp CPU runtime, b11262 (not committed)
