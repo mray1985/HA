@@ -52,8 +52,10 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   const summary = page.getByRole('region', { name: 'Where the case stands' });
   await expect(summary).toContainText('I read all 1 document', { timeout: 30000 });
 
-  // The employee's SSN, name and address come from the W-2's text layer.
-  await expect(page.getByRole('heading', { name: 'Maya Testpayer' })).toBeVisible();
+  // The employee's SSN, name and address come from the W-2's text layer. The name
+  // is also named on the turn offering the document's reading as one click, so
+  // the heading is matched rather than counted.
+  await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
   // The filing status is the one thing left: it is typed, not chosen from a list.
   await expect(page.getByText(/filing status is required/i)).toHaveCount(0);
