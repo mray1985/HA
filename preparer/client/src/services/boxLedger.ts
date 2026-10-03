@@ -68,30 +68,31 @@ const STOPWORDS = new Set([
   'address', 'city', 'state', 'zip', 'box', 'check', 'if', 'or', 'by', 'as', 'be',
 ]);
 
-/** The words that identify a printed label. */
-function significantWords(label: string): string[] {
-  return label
+/**
+ * Whether the form prints this box's label.
+ *
+ * Only the words that identify the box are compared. The schema appends
+ * disambiguators the form does not print — "(line 1)" to tell the per-state rows
+ * apart, and a "(s)" that no form carries — and requiring those made every
+ * W-2 state and local box read as unread when the form plainly prints them.
+ * Every identifying word must be present, so this stays strict about identity and
+ * lenient only about wording the form was never going to print.
+ */
+function labelIsPrinted(label: string, pageText: string): boolean {
+  const all = label
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length >= 4 && !STOPWORDS.has(w));
-}
+    .filter(Boolean);
+  // Words that carry no identity: a plural marker, and the row disambiguator.
+  const ignorable = new Set(['s', 'line', 'lines', 'no', 'of', 'the', 'and', 'or']);
+  const words = all.filter((w) => w.length >= 3 && !ignorable.has(w) && !STOPWORDS.has(w));
+  if (words.length > 0) return words.every((w) => pageText.includes(w));
 
-/** Whether the form prints this box's label. */
-function labelIsPrinted(label: string, pageText: string): boolean {
-  const words = significantWords(label);
-  if (words.length === 0) {
-    // A label made only of common words ("Code", "Amount") still identifies its
-    // box on the page. Falling back to the bare words keeps those boxes from
-    // being reported as gaps when they are simply blank.
-    const bare = label
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 3);
-    return bare.length > 0 && bare.every((w) => pageText.includes(w));
-  }
-  return words.every((w) => pageText.includes(w));
+  // A label made only of common words ("Code", "Amount") still identifies its box
+  // on the page, so fall back to the bare words rather than calling it a miss.
+  const bare = all.filter((w) => w.length >= 3 && !ignorable.has(w));
+  return bare.length > 0 && bare.every((w) => pageText.includes(w));
 }
 
 /**

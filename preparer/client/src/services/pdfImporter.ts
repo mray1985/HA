@@ -17,7 +17,9 @@
  * - Always requires user review before importing
  */
 
+import { FORM_EXTRACTION_SCHEMAS, TOOL_MAPPINGS, type ClassifiableFormType } from '@hatax/local-ai';
 import { extractWithSyncfusion } from './syncfusionExtractor';
+import { readCheckboxOnPage, renderedPage } from './checkboxRaster';
 
 // Re-export everything from the pure logic module so consumers can import
 // from either file. Tests import directly from pdfExtractHelpers to avoid
@@ -111,6 +113,8 @@ import { buildBoxLedger, summariseBoxLedger, type BoxLedger } from './boxLedger'
 function extractFormData(
   formType: ReturnType<typeof detectFormType>['type'],
   blocks: TextBlock[],
+  /** Box key → whether its printed square is ticked, where that could be proved. */
+  checkboxes: Record<string, boolean> = {},
 ): {
   extractedData: Record<string, unknown>;
   payerName: string;
@@ -220,6 +224,9 @@ function extractFormData(
       break;
   }
 
+  // The squares the ink reader proved, as fields on the form.
+  applyCheckboxStates(formType, checkboxes, extractedData, fieldRawTokens, fieldSourceLocations);
+
   // What the page prints, carried forward. The deterministic check runs on this
   // at the write boundary, where the form type being written is known — so a
   // later classification pass cannot relabel a form under values already checked
@@ -252,7 +259,7 @@ rejectedReads: verifiedPayer.rejected.map((r) => ({ ...r, field: 'payerName' }))
 function processTextBlocks(
   textBlocks: TextBlock[],
   pagesScanned: number,
-  meta?: { ocrUsed?: boolean; ocrEngine?: PDFExtractResult['ocrEngine'] },
+  meta?: { ocrUsed?: boolean; ocrEngine?: PDFExtractResult['ocrEngine']; canvases?: HTMLCanvasElement[]; dpi?: number },
 ): PDFExtractResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -327,6 +334,17 @@ function processTextBlocks(
   // Scope raw OCR text to only the effective (form) pages for AI enhancement
   const rawOCRText = ocrUsed ? effectiveBlocks.map(b => b.text).join('\n') : undefined;
 
+  // ── The printed squares ──
+  //
+  // A tick is not text, so the text layer cannot say whether a checkbox is
+  // marked — on a digital form the mark extracts as a symbol-font glyph (a real
+  // 1098-T prints "4"), and reading that would be worse than reading nothing.
+  // When the page was rendered for OCR the raster is already here, so each square
+  // the form declares is measured on its own ink.
+  const checkboxStates = meta?.canvases?.length
+    ? readFormCheckboxes(type, meta.canvases, meta.dpi ?? 300, effectiveBlocks)
+    : {};
+
   if (!type) {
     return {
       formType: null,
@@ -349,7 +367,7 @@ function processTextBlocks(
 
   // Extract fields based on form type — using effectiveBlocks (scoped to form pages)
   const { extractedData, payerName, fieldRawTokens, fieldSourceLocations, rejectedReads, printIndex } =
-    extractFormData(type, effectiveBlocks);
+    extractFormData(type, effectiveBlocks, checkboxStates);
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
   const identity = type === 'W-2' ? w2EmployeeFromTextLayer(effectiveBlocks, !ocrUsed) : null;
   // The tax year the form prints, checked against the case's year in the review.
@@ -473,6 +491,35 @@ function processTextBlocks(
   };
 }
 
+/**
+ * Render the pages of a digital PDF, but only if a form on it declares a square.
+ *
+ * A tick is ink, not text: on a digital form it extracts as a symbol-font glyph
+ * (a real 1098-T prints "4" for its half-time box), so the text layer cannot say
+ * whether a box is marked. Rendering is the only way to see the mark, and it is
+ * not cheap — so it happens when there is a square to read, and a failure to
+ * render leaves every square unread, which the gap list reports rather than hides.
+ */
+async function renderForCheckboxes(
+  file: File,
+  textBlocks: TextBlock[],
+): Promise<{ canvases: HTMLCanvasElement[]; dpi: number } | null> {
+  const detected = detectFormType(textBlocks).type;
+  if (!detected) return null;
+  const declared = FORM_EXTRACTION_SCHEMAS[detected as ClassifiableFormType];
+  if (!declared) return null;
+  const squares = declared.boxes.filter((b) => b.kind === 'checkbox' && b.checkbox);
+  if (squares.length === 0) return null;
+  try {
+    const { renderPDFToImages } = await import('./pdfToImages');
+    const dpi = 200;
+    return { canvases: await renderPDFToImages(file, 10, dpi), dpi };
+  } catch {
+    // No canvas, no squares: the boxes stay unread and are reported.
+    return null;
+  }
+}
+
 // ─── Public API ────────────────────────────────────
 
 /**
@@ -521,7 +568,11 @@ export async function extractFromPDF(file: File): Promise<PDFExtractResult> {
       };
     }
 
-    const result = processTextBlocks(textBlocks, pagesScanned);
+    // The printed squares need pixels, and a digital PDF has none until it is
+    // rendered. Only rendered when the form declares a checkbox box — otherwise
+    // there is nothing to measure and the page is not worth drawing.
+    const canvases = await renderForCheckboxes(file, textBlocks);
+    const result = processTextBlocks(textBlocks, pagesScanned, canvases ? { canvases: canvases.canvases, dpi: canvases.dpi } : undefined);
 
     // If Syncfusion found form field values, note it in the trace
     if (formFieldsWithValues > 0 && result.trace) {
@@ -542,6 +593,85 @@ export async function extractFromPDF(file: File): Promise<PDFExtractResult> {
       errors: [`Failed to read PDF: ${msg}`],
       textBlockCount: 0,
     };
+  }
+}
+
+/**
+ * Measure every square this form declares, on the pages that were rendered.
+ *
+ * Each box is read beside its own printed label, so a tick is attributed to the
+ * box whose label it sits with. A square that cannot be proved either way is left
+ * out entirely rather than guessed at: an unproved square must not settle an
+ * eligibility answer, and the gap list reports it as unread.
+ */
+function readFormCheckboxes(
+  formType: ReturnType<typeof detectFormType>['type'],
+  canvases: readonly HTMLCanvasElement[],
+  dpi: number,
+  blocks: readonly TextBlock[],
+): Record<string, boolean> {
+  if (!formType) return {};
+  const schema = FORM_EXTRACTION_SCHEMAS[formType as ClassifiableFormType];
+  if (!schema) return {};
+  const squares = schema.boxes.filter((b) => b.kind === 'checkbox' && b.checkbox);
+  if (squares.length === 0) return {};
+
+  const out: Record<string, boolean> = {};
+  const byPage = new Map<number, TextBlock[]>();
+  for (const b of blocks) {
+    const list = byPage.get(b.page);
+    if (list) list.push(b);
+    else byPage.set(b.page, [b]);
+  }
+
+  for (const box of squares) {
+    // The form's own pages: canvases are in page order, blocks are not.
+    const pageNumber = [...byPage.keys()].sort((a, b) => a - b).find((p) => {
+      const canvas = canvases[p - 1];
+      return canvas && byPage.get(p)!.length > 0;
+    });
+    if (pageNumber === undefined) continue;
+    const canvas = canvases[pageNumber - 1];
+    if (!canvas) continue;
+    try {
+      const page = renderedPage(canvas, byPage.get(pageNumber)!, dpi, 'ocr');
+      const reading = readCheckboxOnPage(page, box.checkbox!);
+      if (reading.state === 'checked' || reading.state === 'unchecked') {
+        out[box.key] = reading.state === 'checked';
+      }
+    } catch {
+      // A page that cannot be rendered leaves its squares unread, which the gap
+      // list reports. Never a value.
+    }
+  }
+  return out;
+}
+
+/**
+ * Put the proved squares onto the form's fields.
+ *
+ * Only boxes the schema maps to a field are written, and only a proved square is
+ * written — a missing one leaves the field absent, which the tools read as
+ * unknown rather than as unticked.
+ */
+function applyCheckboxStates(
+  formType: ReturnType<typeof detectFormType>['type'],
+  checkboxes: Record<string, boolean>,
+  extractedData: Record<string, unknown>,
+  fieldRawTokens: Record<string, string>,
+  fieldSourceLocations: Record<string, FieldSourceLocationValue>,
+): void {
+  if (!formType || Object.keys(checkboxes).length === 0) return;
+  const mapping = TOOL_MAPPINGS[formType as ClassifiableFormType];
+  const fields = mapping?.checkboxes;
+  if (!fields) return;
+  for (const [boxKey, field] of Object.entries(fields)) {
+    const state = checkboxes[boxKey];
+    if (state === undefined) continue;
+    extractedData[field] = state;
+    fieldRawTokens[field] = state ? 'ticked' : 'not ticked';
+    // A square is a mark, not a value: it has no field location to point at.
+    delete fieldSourceLocations[field];
   }
 }
 
@@ -588,7 +718,9 @@ export async function extractFromPDFWithOCR(
       };
     }
 
-    return processTextBlocks(textBlocks, canvases.length, { ocrUsed: true, ocrEngine });
+    // The canvases come along so the printed squares can be measured on them: a tick
+    // is ink, not text, and OCR cannot see one either.
+    return processTextBlocks(textBlocks, canvases.length, { ocrUsed: true, ocrEngine, canvases, dpi });
   } catch (err: any) {
     return {
       formType: null,
