@@ -132,6 +132,53 @@ function moneyToolFields(formType: string | null): Set<string> {
   return out;
 }
 
+/**
+ * The fields this form fills from a printed square, with the label each square
+ * sits beside.
+ *
+ * A boolean is a mark, not a word: nothing in the text layer says whether a box
+ * is ticked. So a boolean is kept only when the form declares that field a square
+ * *and* the page prints the label that square belongs to. That proves the box
+ * exists on this form; it does not prove it is ticked — measuring the tick is the
+ * ink reader's job (`checkboxRaster`). What this stops is a boolean arriving for
+ * a field that is not a square at all, or from a box this revision does not print.
+ */
+function checkboxFields(formType: string | null): Map<string, string> {
+  const key = (formType ?? '') as ClassifiableFormType;
+  const schema = FORM_EXTRACTION_SCHEMAS[key];
+  const mapping = TOOL_MAPPINGS[key];
+  const out = new Map<string, string>();
+  if (!schema || !mapping) return out;
+  const phraseOf = new Map(
+    schema.boxes.filter((b) => b.checkbox).map((b) => [b.key, b.checkbox!.labelPhrase]),
+  );
+  for (const [boxKey, field] of Object.entries(mapping.checkboxes ?? {})) {
+    const phrase = phraseOf.get(boxKey);
+    if (phrase) out.set(field, phrase);
+  }
+  return out;
+}
+
+/**
+ * Every label the squares on this form sit beside, whether or not a field is
+ * mapped to them. W-2 box 13 is read as one record rather than per square, so
+ * there is no field to look up — but its labels are still on the page.
+ */
+function checkboxPhrases(formType: string | null): string[] {
+  const schema = FORM_EXTRACTION_SCHEMAS[(formType ?? '') as ClassifiableFormType];
+  if (!schema) return [];
+  return schema.boxes.flatMap((b) => (b.checkbox ? [b.checkbox.labelPhrase] : []));
+}
+
+/** Whether the page prints any of these labels. */
+function anyPrinted(pageText: string, phrases: Iterable<string>): boolean {
+  for (const phrase of phrases) {
+    const needle = squash(phrase);
+    if (needle.length > 0 && pageText.includes(needle)) return true;
+  }
+  return false;
+}
+
 /** A bare four-digit year, which is a date on a form and never an amount. */
 function isPlausibleYear(token: string): boolean {
   const n = Number(token);
@@ -205,6 +252,8 @@ export function verifyAgainstPrint(
   const moneyFields = moneyToolFields(formType);
   const years = new Set(print.years);
   const labels = declaredLabels(formType).map(squash);
+  const squares = checkboxFields(formType);
+  const phrases = checkboxPhrases(formType);
   const data: Record<string, unknown> = {};
   const rejected: RejectedRead[] = [];
 
@@ -299,10 +348,46 @@ export function verifyAgainstPrint(
       continue;
     }
 
-    // A checkbox is a mark beside a label, not the word "true". The text-layer
-    // reader only sets one when that label's own line carries the mark, and
-    // rejecting every boolean here would drop those reads. An object in this
-    // position is that same checkbox record (W-2 box 13).
+    // A checkbox is a mark beside a label, not the word "true", so nothing in the
+    // text can prove one. It is kept only when the form declares this field a
+    // square and the page prints the label that square belongs to.
+    if (typeof value === 'boolean') {
+      const phrase = squares.get(field);
+      const said = phrase ? print.text.includes(squash(phrase)) : false;
+      if (!said) {
+        rejected.push({
+          field,
+          value: String(value),
+          reason: 'not-printed',
+          detail: phrase
+            ? `this page does not print the label this square belongs to ("${phrase}")`
+            : `${field} is not a printed square on this form, so nothing on the page can mark it`,
+        });
+        continue;
+      }
+      data[field] = value;
+      continue;
+    }
+
+    // An object in this position is a checkbox record (W-2 box 13), whose keys
+    // are tool fields rather than box keys, so there is no per-key label to
+    // check. The record stands or falls on the page printing this form's square
+    // labels at all: a W-2 read with no box 13 caption on it did not read a box 13.
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      // False is a real answer (the square is there and empty). Gating only a
+      // ticked member would keep `{ retirementPlan: false }` when the page
+      // prints no box 13 caption at all.
+      if (phrases.length > 0 && !anyPrinted(print.text, phrases)) {
+        rejected.push({
+          field,
+          value: 'ticked',
+          reason: 'not-printed',
+          detail: 'this page prints none of the labels the squares on this form sit beside',
+        });
+        continue;
+      }
+    }
+
     data[field] = value;
   }
 

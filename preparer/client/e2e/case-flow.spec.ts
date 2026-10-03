@@ -76,12 +76,14 @@ test('a 1099-Q waits for the qualified expenses, and the assistant takes the amo
   const conversation = page.getByRole('region', { name: 'What you typed' });
   await expect(conversation).toContainText('5000');
   await expect(conversation.getByText(/Done\./)).toBeVisible();
-  // A text layer cannot see box 6, so the form still asks who received it.
-  await expect(item).toContainText(/Paid to someone|Box 6/i);
-
-  await item.getByRole('button', { name: 'Enter it by hand' }).click();
-  await item.getByLabel('Box 6').selectOption('yes');
-  await item.getByRole('button', { name: 'Save' }).click();
+  // Box 6 is a printed square. When the page renders, it is measured and the
+  // question is gone. When it cannot be rendered, the assistant still asks.
+  const box6 = page.getByRole('listitem').filter({ hasText: /Paid to someone other than the student \(box 6\)/i });
+  if (await box6.count()) {
+    await box6.getByRole('button', { name: 'Enter it by hand' }).click();
+    await box6.getByLabel('Box 6').selectOption('yes');
+    await box6.getByRole('button', { name: 'Save' }).click();
+  }
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText(/1099q-529\.pdf.*qualifiedExpenses=5000/)).toBeVisible();

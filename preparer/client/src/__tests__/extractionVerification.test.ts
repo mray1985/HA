@@ -75,9 +75,75 @@ describe('the deterministic gate: nothing is written the page does not print', (
       const out = verifyExtractedValues('1099-NEC', { amount: 78702 }, [block('1a 78702'), block('2 28,400.00'), block('2025')]);
       expect(out.data).toEqual({ amount: 78702 });
     });
+
+    it('holds a name the page never printed', () => {
+      const out = verifyExtractedValues(
+        '1099-INT',
+        { payerName: 'FIRST MERIDIAN SAVINGS BANK' },
+        [block('1 Interest income $231.40 FOO BAR CREDIT UNION 94-3216540')],
+      );
+      expect(out.data).toEqual({});
+      expect(out.rejected[0]!.reason).toBe('not-printed');
+    });
+
+    it('keeps a payer name the page does print', () => {
+      const out = verifyExtractedValues(
+        '1099-INT',
+        { payerName: 'ELI BRANDT' },
+        [block('ELI BRANDT 1 Interest income $231.40')],
+      );
+      expect(out.data).toEqual({ payerName: 'ELI BRANDT' });
+      expect(out.rejected).toEqual([]);
+    });
+  });
+});
+
+describe('a boolean is a mark, so the page has to show the square it came from', () => {
+  const page = [block('8 Checked if at least half-time student 9 Checked if a graduate student')];
+
+  it('keeps a square the form declares and the page prints', () => {
+    const out = verifyExtractedValues('1098-T', { halfTimeStudent: true }, page);
+    expect(out.data).toEqual({ halfTimeStudent: true });
+    expect(out.rejected).toEqual([]);
   });
 
-  describe('never holds a value the page really does print', () => {
+  it('holds a boolean for a field that is not a square on this form', () => {
+    // tuitionPaid is an amount box: nothing on the page can mark it true.
+    const out = verifyExtractedValues('1098-T', { tuitionPaid: true as never }, page);
+    expect(out.data).toEqual({});
+    expect(out.rejected[0]!.detail).toMatch(/not a printed square/);
+  });
+
+  it('holds a square whose label this form revision does not print', () => {
+    const out = verifyExtractedValues('1098-T', { halfTimeStudent: true }, [block('1 Payments received $4,200.00')]);
+    expect(out.data).toEqual({});
+    expect(out.rejected[0]!.reason).toBe('not-printed');
+  });
+
+  it('holds an unticked W-2 box 13 record when the page prints no box 13 caption', () => {
+    const out = verifyExtractedValues('W-2', { box13: { retirementPlan: false } }, [block('1 Wages $52,431.18')]);
+    expect(out.data).toEqual({});
+    expect(out.rejected[0]!.field).toBe('box13');
+  });
+
+  it('holds a ticked square in a W-2 box 13 record with no label on the page', () => {
+    const out = verifyExtractedValues('W-2', { box13: { statutoryEmployee: true } }, [block('1 Wages $52,431.18')]);
+    expect(out.data).toEqual({});
+    expect(out.rejected[0]!.field).toBe('box13');
+    expect(out.rejected[0]!.detail).toMatch(/none of the labels/);
+  });
+
+  it('keeps a W-2 box 13 square the page does print', () => {
+    const out = verifyExtractedValues(
+      'W-2',
+      { box13: { retirementPlan: true } },
+      [block('13 Statutory employee Retirement plan Third-party sick pay')],
+    );
+    expect(out.data).toEqual({ box13: { retirementPlan: true } });
+  });
+});
+
+describe('never holds a value the page really does print', () => {
     it('keeps a comma-grouped amount', () => {
       const out = verifyExtractedValues('W-2', { wages: 52431.18 }, [block('$ 52,431.18')]);
       expect(out.data).toEqual({ wages: 52431.18 });
@@ -103,7 +169,6 @@ describe('the deterministic gate: nothing is written the page does not print', (
       const out = verifyExtractedValues('W-2C', { taxYearCorrected: 2025 }, [block('2025')]);
       expect(out.data).toEqual({ taxYearCorrected: 2025 });
     });
-  });
 });
 
 describe('the 1098-T that started this: box 5 is empty and must stay empty', () => {
