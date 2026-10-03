@@ -61,7 +61,7 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   await expect(page.getByText(/filing status is required/i)).toHaveCount(0);
   await tell(page, 'single');
   await expect(page.getByText(/I read all 1 document/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Maya Testpayer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
   // Everything the assistant raised is now gone, so the case can be approved.
   await page.getByRole('button', { name: 'I have checked this' }).first().click().catch(() => undefined);
@@ -120,7 +120,7 @@ test("a returning client's next year starts from last year's case", async ({ pag
   await expect(page.getByRole('alert').filter({ hasText: 'An SSN, ITIN or ATIN is 9 digits.' })).toBeVisible();
   await page.getByLabel("Taxpayer's SSN or ITIN").fill('123-45-6789');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' }).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to cases' }).click();
   const row = page.getByRole('row', { name: /Maya Lee.*2025/ });
@@ -128,7 +128,7 @@ test("a returning client's next year starts from last year's case", async ({ pag
 
   await expect(page).toHaveURL(/\/assistant$/);
   await expect(page.getByText('Tax year 2026')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Maya Lee' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Maya Lee' }).first()).toBeVisible();
   await expect(page.getByText(/Started from the 2025 case: carried name, SSN and address/)).toBeVisible();
   await expect(page.getByText(/The 2025 case was not approved/)).toBeVisible();
 
@@ -176,7 +176,7 @@ test('a new season starts every returning client at once', async ({ page }) => {
     await page.getByLabel("Taxpayer's last name").fill(last);
     await page.getByLabel("Taxpayer's SSN or ITIN").fill(ssn);
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByRole('heading', { name: `${first} ${last}` })).toBeVisible();
+    await expect(page.getByRole('heading', { name: `${first} ${last}` }).first()).toBeVisible();
     await page.getByRole('link', { name: 'Back to cases' }).click();
   }
   await page.getByLabel('Tax year for a new case').selectOption('2026');
