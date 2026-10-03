@@ -63,9 +63,17 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   await expect(page.getByText(/I read all 1 document/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
-  // Everything the assistant raised is now gone, so the case can be approved.
-  await page.getByRole('button', { name: 'I have checked this' }).first().click().catch(() => undefined);
-  await summary.getByRole('button', { name: 'Approve' }).click();
+  // Anything the assistant still raised is settled by the preparer, which is what
+  // unblocks approval. The Approve button only exists once nothing is open, so
+  // wait for it rather than clicking at a moment the thread happens to be still.
+  const settle = page.getByRole('button', { name: 'I have checked this' });
+  while (await settle.count()) {
+    await settle.first().click();
+    await settle.first().waitFor({ state: 'detached', timeout: 10_000 }).catch(() => undefined);
+  }
+  const approve = summary.getByRole('button', { name: 'Approve' });
+  await approve.waitFor({ state: 'visible', timeout: 30_000 });
+  await approve.click();
   await expect(summary).toContainText('Approved');
 
   // The audit trail keeps each value entered, and each decision's note.
