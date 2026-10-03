@@ -202,8 +202,14 @@ function namesTurn(turn: AssistantTurn, text: string): boolean {
   if (/\.(pdf|png|jpe?g|tiff?|heic|webp)\b/.test(t)) {
     return /\b\d{4}\b/.test(t) || subject.length === 0;
   }
-  // A state named in the message.
-  if (turn.intent.kind === 'state_answer') return true;
+  // A state named in the message. Every state turn used to count as named,
+  // so a street address was routed to an open county question.
+  if (turn.intent.kind === 'state_answer') {
+    const question = turn.item?.action?.kind === 'state_answer' ? turn.item.action.question : undefined;
+    if (!question) return false;
+    const state = getStateName(question.stateCode).toLowerCase();
+    return t.includes(state) || new RegExp(`\\b${question.stateCode.toLowerCase()}\\b`).test(t);
+  }
   return false;
 }
 
@@ -267,10 +273,11 @@ function fitScore(turn: AssistantTurn, text: string): number {
 
     case 'state_answer': {
       const question = turn.item?.action?.kind === 'state_answer' ? turn.item.action.question : undefined;
-      if (!question) return 1;
+      if (!question) return 0;
       if (question.kind === 'yes_no') return readYesNo(text) !== undefined ? 8 : 0;
       if (question.kind === 'amount' || question.kind === 'count') return readAmount(text) !== undefined ? 8 : 0;
-      return 1;
+      if (question.kind === 'choice') return matchChoice(text, question.options ?? []) ? 8 : 0;
+      return 0;
     }
 
     case 'acquisition_date':
@@ -425,6 +432,19 @@ export function readForTurn(turn: AssistantTurn, text: string): ReadAnswer {
     }
 
     case 'state_answer': {
+      const question = turn.item?.action?.kind === 'state_answer' ? turn.item.action.question : undefined;
+      // A county or school district is one of the options the card lists. Yes/no
+      // and amounts do not cover it, so typing "Polk" used to fall through as
+      // partial even though that is exactly the answer the question offers.
+      if (question?.kind === 'choice') {
+        const hit = matchChoice(text, question.options ?? []);
+        if (!hit) {
+          const shown = (question.options ?? []).slice(0, 6).map((o) => o.label);
+          const more = (question.options?.length ?? 0) > shown.length ? ', …' : '';
+          return { status: 'partial', turnId: turn.id, intent, reason: `That one is one of: ${shown.join(', ')}${more}.` };
+        }
+        return { status: 'understood', intent, turnId: turn.id, value: { kind: 'text', value: hit.value }, label: hit.label };
+      }
       const b = readYesNo(text);
       if (b !== undefined) return { status: 'understood', intent, turnId: turn.id, value: { kind: 'boolean', value: b }, label: b ? 'Yes' : 'No' };
       const n = readAmount(text);
@@ -489,6 +509,29 @@ export function readForTurn(turn: AssistantTurn, text: string): ReadAnswer {
     case 'note':
       return { status: 'partial', turnId: turn.id, intent, reason: 'I did not find a value for any open question in that' };
   }
+}
+
+/**
+ * The option a typed answer names, when exactly one option fits.
+ *
+ * Labels are "49 Polk": the code, the name, or the whole label all count.
+ * Two options sharing a word is not a guess.
+ */
+function matchChoice(
+  text: string,
+  options: ReadonlyArray<{ value: string; label: string }>,
+): { value: string; label: string } | undefined {
+  const said = text.toLowerCase().trim();
+  const exact = options.find((o) => said === o.label.toLowerCase().trim() || said === o.value.toLowerCase().trim());
+  if (exact) return exact;
+  const words = said.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+  const hits = options.filter((o) => {
+    const label = o.label.toLowerCase().trim();
+    if (label.length >= 3 && said.includes(label)) return true;
+    const labelWords = label.split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+    return labelWords.some((w) => words.includes(w));
+  });
+  return hits.length === 1 ? hits[0] : undefined;
 }
 
 /**

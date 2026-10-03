@@ -32,6 +32,11 @@ export interface PrintIndex {
   numbers: Record<string, boolean>;
   /** Four-digit years the page prints. */
   years: string[];
+  /**
+   * The page's text with case, spaces and punctuation removed.
+   * A string read survives only when this contains it.
+   */
+  text: string;
 }
 
 /** Printed furniture that is never a value: form numbers, OMB codes, URLs. */
@@ -155,7 +160,11 @@ function printedYears(blocks: readonly TextBlock[]): Set<string> {
 export function buildPrintIndex(blocks: readonly TextBlock[]): PrintIndex {
   const numbers: Record<string, boolean> = {};
   for (const [value, info] of printedNumbers(blocks)) numbers[value] = info.onlyYearFragments;
-  return { numbers, years: [...printedYears(blocks)] };
+  return {
+    numbers,
+    years: [...printedYears(blocks)],
+    text: squash(blocks.map((b) => b.text).join(' ')),
+  };
 }
 
 /** Labels the form itself prints, from the schema for this form revision. */
@@ -274,10 +283,26 @@ export function verifyAgainstPrint(
         });
         continue;
       }
+      // A name, a date or a code is either printed or it was invented. The
+      // furniture and label checks above only catch the form's own words.
+      const needle = squash(text);
+      if (needle.length > 0 && !(print.text ?? '').includes(needle)) {
+        rejected.push({
+          field,
+          value: text,
+          reason: 'not-printed',
+          detail: `"${text}" does not appear anywhere on the page`,
+        });
+        continue;
+      }
       data[field] = value;
       continue;
     }
 
+    // A checkbox is a mark beside a label, not the word "true". The text-layer
+    // reader only sets one when that label's own line carries the mark, and
+    // rejecting every boolean here would drop those reads. An object in this
+    // position is that same checkbox record (W-2 box 13).
     data[field] = value;
   }
 

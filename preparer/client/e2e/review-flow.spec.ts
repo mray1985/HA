@@ -77,10 +77,12 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   // under 65 — so it is asked for rather than assumed, and approval waits on it.
   // That is the behaviour under test: nothing is approved while a value the
   // engine needs is unknown.
-  const conversation = page.getByRole('region', { name: 'What you typed' });
-  await expect(conversation).toContainText("Taxpayer's date of birth?");
+  // The question lives on the thread. "What you typed" is only the messages
+  // the preparer sent, so the date of birth is not in that region until answered.
+  const needs = page.getByRole('region', { name: 'What the case needs' });
+  await expect(needs).toContainText("Taxpayer's date of birth?");
   await tell(page, '4/12/1980');
-  await expect(conversation.getByText(/Done\./)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'What you typed' }).getByText(/Done\./)).toBeVisible();
 
   const approve = summary.getByRole('button', { name: 'Approve' });
   await approve.waitFor({ state: 'visible', timeout: 30_000 });
@@ -151,10 +153,11 @@ test("a returning client's next year starts from last year's case", async ({ pag
   await expect(page.getByText(/Started from the 2025 case: carried name, SSN and address/)).toBeVisible();
   await expect(page.getByText(/The 2025 case was not approved/)).toBeVisible();
 
-  // Last year's filing status is one click.
-  const status = page.getByRole('listitem').filter({ hasText: '2025 case states the filing status head of household' });
-  await status.getByRole('button', { name: /Use it|Save|yes/i }).first().click();
-  await expect(page.getByText('2025 case states the filing status head of household')).toHaveCount(0);
+  // Last year's filing status is one click. The card says what the client filed
+  // as; the review item's longer sentence stays behind "Why I am asking".
+  const status = page.getByRole('listitem').filter({ hasText: /file as head of household/i });
+  await status.getByRole('button', { name: /Yes — head of household/i }).click();
+  await expect(status).toHaveCount(0);
 
   // The dashboard no longer offers 2026 for this client.
   await page.getByRole('link', { name: 'Back to cases' }).click();

@@ -30,6 +30,12 @@ describe('the deterministic gate: nothing is written the page does not print', (
       expect(out.rejected[0]!.reason).toBe('only-a-tax-year');
     });
 
+    it('holds a payer name the page does not print', () => {
+      const out = verifyExtractedValues('1099-INT', { payerName: 'HALLUCINATED BANK' }, [block('CHASE'), block('Payer name')]);
+      expect(out.data).toEqual({});
+      expect(out.rejected[0]!.reason).toBe('not-printed');
+    });
+
     it("holds the form's own label read as a value", () => {
       const out = verifyExtractedValues(
         '1099-C',

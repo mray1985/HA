@@ -268,6 +268,48 @@ describe('an ambiguous message is not routed to an arbitrary field', () => {
   });
 });
 
+describe('a state choice is answered by typing one of its options', () => {
+  const turn: AssistantTurn = {
+    id: 'in-county',
+    kind: 'needed',
+    say: 'Indiana needs a county.',
+    ask: 'Indiana county where you lived on January 1, 2025',
+    intent: { kind: 'state_answer', questionId: 'inCounty' },
+    weight: 400,
+    item: {
+      id: 'in-county',
+      category: 'REVIEW',
+      group: 'state',
+      source: 'readiness',
+      message: 'Indiana county tax needs the county.',
+      action: {
+        kind: 'state_answer',
+        question: {
+          stateCode: 'IN',
+          key: 'inCounty',
+          prompt: 'Indiana county where you lived on January 1, 2025',
+          kind: 'choice',
+          options: [
+            { value: '49', label: '49 Polk' },
+            { value: '53', label: '53 Marion' },
+          ],
+        },
+      },
+    },
+  };
+
+  it('returns the county code when the preparer types the name', () => {
+    const read = readAnswer('Polk', [turn]);
+    expect(read.status).toBe('understood');
+    if (read.status !== 'understood') return;
+    expect(read.value).toEqual({ kind: 'text', value: '49' });
+  });
+
+  it('does not treat an address as a county', () => {
+    expect(readAnswer('815 Magnolia Ave', [turn]).status).not.toBe('understood');
+  });
+});
+
 describe('the education credit question', () => {
   const turn: AssistantTurn = {
     id: 'edu', kind: 'check', say: 'Which education credit?',
