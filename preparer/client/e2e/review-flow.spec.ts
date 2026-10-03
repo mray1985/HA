@@ -64,12 +64,14 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
   // Anything the assistant still raised is settled by the preparer, which is what
-  // unblocks approval. The Approve button only exists once nothing is open, so
+  // unblocks approval: "I have checked this" opens the decision, and the quick
+  // choice records it. The Approve button only exists once nothing is open, so
   // wait for it rather than clicking at a moment the thread happens to be still.
   const settle = page.getByRole('button', { name: 'I have checked this' });
   while (await settle.count()) {
     await settle.first().click();
-    await settle.first().waitFor({ state: 'detached', timeout: 10_000 }).catch(() => undefined);
+    await page.getByRole('button', { name: 'Checked against the document' }).first().click();
+    await settle.first().waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined);
   }
   const approve = summary.getByRole('button', { name: 'Approve' });
   await approve.waitFor({ state: 'visible', timeout: 30_000 });
