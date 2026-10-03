@@ -60,10 +60,6 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   // The filing status is typed, not chosen from a list.
   await expect(page.getByText(/filing status is required/i)).toHaveCount(0);
   await tell(page, 'single');
-  // This W-2 carries no date of birth, so the preparer supplies it. The return
-  // treats an absent date of birth as under 65, so it is asked for rather than
-  // assumed, and the case cannot be approved until it is answered.
-  await tell(page, '4/12/1980');
   await expect(page.getByText(/I read all 1 document/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
@@ -77,6 +73,15 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
     await page.getByRole('button', { name: 'Checked against the document' }).first().click();
     await settle.first().waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined);
   }
+  // This W-2 prints no date of birth, and the return treats an absent one as
+  // under 65 — so it is asked for rather than assumed, and approval waits on it.
+  // That is the behaviour under test: nothing is approved while a value the
+  // engine needs is unknown.
+  const conversation = page.getByRole('region', { name: 'What you typed' });
+  await expect(conversation).toContainText("Taxpayer's date of birth?");
+  await tell(page, '4/12/1980');
+  await expect(conversation.getByText(/Done\./)).toBeVisible();
+
   const approve = summary.getByRole('button', { name: 'Approve' });
   await approve.waitFor({ state: 'visible', timeout: 30_000 });
   await approve.click();
