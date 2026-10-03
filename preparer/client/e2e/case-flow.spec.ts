@@ -24,7 +24,7 @@ test('a new case opens on its documents, and the assistant says what is missing'
   // every field the return needs: the client is not on the case yet, so those
   // fields are not missing, they are simply unknown until a document arrives.
   await expect(page.getByText(/Nothing on the case yet/i)).toBeVisible();
-  await expect(page.getByText(/Drop their documents in/i)).toBeVisible();
+  await expect(page.getByText(/Drop their documents in/i).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Approve' }).click();
   await expect(page.getByText('Not ready')).toBeVisible();
