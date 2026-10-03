@@ -57,9 +57,13 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   // the heading is matched rather than counted.
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
-  // The filing status is the one thing left: it is typed, not chosen from a list.
+  // The filing status is typed, not chosen from a list.
   await expect(page.getByText(/filing status is required/i)).toHaveCount(0);
   await tell(page, 'single');
+  // This W-2 carries no date of birth, so the preparer supplies it. The return
+  // treats an absent date of birth as under 65, so it is asked for rather than
+  // assumed, and the case cannot be approved until it is answered.
+  await tell(page, '4/12/1980');
   await expect(page.getByText(/I read all 1 document/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Maya Testpayer' }).first()).toBeVisible();
 
