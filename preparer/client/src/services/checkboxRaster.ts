@@ -13,7 +13,7 @@
  * form declares. This module's only job is to hand that reader a raster and the
  * page's words in the same coordinate space.
  */
-import { readCheckbox, type CheckboxReading, type CheckboxSpec, type PageRaster, type PageWord } from '@hatax/local-ai';
+import { readCheckbox, readRowAmount, type AmountRowSpec, type CellAmountReading, type CheckboxReading, type CheckboxSpec, type PageRaster, type PageWord } from '@hatax/local-ai';
 import type { TextBlock } from './pdfExtractHelpers';
 
 export interface RenderedPage {
@@ -74,3 +74,21 @@ export function readCheckboxOnPage(
 }
 
 export type { CheckboxSpec, CheckboxReading, PageRaster, PageWord };
+
+/**
+ * Read the amount belonging to one money box, confined to the ruled row its
+ * printed label names.
+ *
+ * This is the answer to "is this box empty?" that proximity cannot give: the
+ * row's own ruling lines bound it, so a blank box returns 'empty' instead of the
+ * nearest number on the page.
+ */
+export function readRowAmountOnPage(
+  page: RenderedPage,
+  spec: AmountRowSpec,
+  near?: [number, number, number, number] | null,
+): CellAmountReading {
+  return readRowAmount(page.raster, page.words, spec, near ?? null);
+}
+
+export type { AmountRowSpec, CellAmountReading };
