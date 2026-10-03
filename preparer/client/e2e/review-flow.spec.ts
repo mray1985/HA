@@ -82,7 +82,10 @@ test('a W-2 dropped on the Assistant tab is read, and names the taxpayer', async
   const needs = page.getByRole('region', { name: 'What the case needs' });
   await expect(needs).toContainText("Taxpayer's date of birth?");
   await tell(page, '4/12/1980');
-  await expect(page.getByRole('region', { name: 'What you typed' }).getByText(/Done\./)).toBeVisible();
+  // "Done" from the filing status is already in the conversation. This is the
+  // date itself landing, and the question leaving the thread.
+  await expect(page.getByRole('region', { name: 'What you typed' })).toContainText('Date of birth: 4/12/1980. Done.');
+  await expect(needs).not.toContainText("Taxpayer's date of birth?");
 
   const approve = summary.getByRole('button', { name: 'Approve' });
   await approve.waitFor({ state: 'visible', timeout: 30_000 });

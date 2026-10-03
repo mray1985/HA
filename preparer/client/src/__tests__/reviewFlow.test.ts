@@ -98,7 +98,9 @@ describe('engine findings one field settles', () => {
     expect(parseReturnField('count', '4,000')).toEqual({ ok: true, value: 4000 });
     expect(parseReturnField('count', '12.5')).toMatchObject({ ok: false });
     expect(parseReturnField('date', '2025-07-01')).toEqual({ ok: true, value: '2025-07-01' });
+    expect(parseReturnField('date', '4/12/1980')).toEqual({ ok: true, value: '1980-04-12' });
     expect(parseReturnField('date', 'July 1')).toMatchObject({ ok: false });
+    expect(parseReturnField('date', '13/40/1980')).toMatchObject({ ok: false });
     const tr = {
       id: 'c', taxYear: 2026, status: 'in_progress', currentStep: 0, currentSection: 'review', ...PERSON,
       dependents: [], w2Income: [], income1099NEC: [{ id: 'n', payerName: 'Client', amount: 60000 }], income1099K: [], income1099INT: [], income1099DIV: [],

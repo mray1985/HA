@@ -38,6 +38,9 @@ const NO = /^\s*(no|nope|nah|negative|false|incorrect|wrong|never)\b/i;
  * 5,873.40 and never 2. Years are dropped for the same reason.
  */
 export function readAmount(text: string): number | undefined {
+  // A date is not an amount. "4/12/1980" would otherwise become 4 after the year
+  // is stripped, and land in a box instead of the date of birth.
+  if (/\b\d{4}-\d{2}-\d{2}\b/.test(text) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(text)) return undefined;
   const cleaned = text
     .replace(/[$£€]/g, '')
     .replace(/,/g, '')

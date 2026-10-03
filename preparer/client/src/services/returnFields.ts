@@ -91,6 +91,21 @@ export function returnFieldSpec(path: string, taxReturn?: TaxReturn | null): Ret
   return null;
 }
 
+/** Month/day/year as typed, or an ISO date, as YYYY-MM-DD. */
+function isoDate(text: string): string | undefined {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text);
+  const year = iso?.[1] ?? slash?.[3];
+  const month = (iso?.[2] ?? slash?.[1])?.padStart(2, '0');
+  const day = (iso?.[3] ?? slash?.[2])?.padStart(2, '0');
+  if (!year || !month || !day) return undefined;
+  const value = `${year}-${month}-${day}`;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  if (parsed.getUTCFullYear() !== Number(year) || parsed.getUTCMonth() + 1 !== Number(month) || parsed.getUTCDate() !== Number(day)) return undefined;
+  return value;
+}
+
 /**
  * The value to write for what the preparer typed, or an error. Blank is an
  * error, never an empty value written over the field.
@@ -121,8 +136,10 @@ export function parseReturnField(kind: ReturnFieldKind, input: string): { ok: tr
       const amount = text.replace(/^\$/, '').replace(/,/g, '');
       return /^\d{1,9}(\.\d{1,2})?$/.test(amount) ? { ok: true, value: Number(amount) } : { ok: false, error: 'Enter a dollar amount.' };
     }
-    case 'date':
-      return /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(new Date(`${text}T00:00:00Z`).getTime()) ? { ok: true, value: text } : { ok: false, error: 'Enter the date.' };
+    case 'date': {
+      const iso = isoDate(text);
+      return iso ? { ok: true, value: iso } : { ok: false, error: 'Enter the date.' };
+    }
     case 'text':
       return { ok: true, value: text };
   }

@@ -51,6 +51,8 @@ describe('reading what the preparer types', () => {
     expect(readAmount('52000')).toBe(52000);
     expect(readAmount('1,234.56')).toBe(1234.56);
     expect(readAmount('nothing here')).toBeUndefined();
+    expect(readAmount('4/12/1980')).toBeUndefined();
+    expect(readAmount('1980-04-12')).toBeUndefined();
   });
 
   it('does not read the box number a message names as the value', () => {
