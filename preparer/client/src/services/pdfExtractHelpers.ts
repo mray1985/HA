@@ -6,7 +6,7 @@
  * everything from here and adds the PDF loading/parsing layer.
  */
 
-import type { PartyIdentity } from '@hatax/local-ai';
+import { figureIsItsOwnLabel, type PartyIdentity } from '@hatax/local-ai';
 import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
 import type { PrintIndex } from './extractionVerification';
 import type { BoxLedger } from './boxLedger';
@@ -689,6 +689,10 @@ function isUnreadableAmountToken(text: string): boolean {
  * Missing boxes return undefined — distinct from a printed $0.
  * When a text block is located, page + box come from that block (never invented).
  */
+function blockBox(block: TextBlock): [number, number, number, number] {
+  return [block.x, block.y, block.x + block.width, block.y + block.height];
+}
+
 function findNearbyAmount(
   textBlocks: TextBlock[],
   labelBlock: TextBlock,
@@ -708,6 +712,9 @@ function findNearbyAmount(
     if (block.page !== labelBlock.page) continue;
 
     const trimmed = block.text.trim();
+    // A bare four-digit year, or a form number such as 8863, is not an amount.
+    // Amounts on these forms carry cents or a thousands comma.
+    if (/^\d{4}$/.test(trimmed.replace(/[$,\s]/g, ''))) continue;
 
     // Calculate X distance from nearest point on label (not just right edge).
     let dx: number;
@@ -721,6 +728,17 @@ function findNearbyAmount(
 
     const dy = block.y - labelBlock.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // The amount's centre has to fall in this label's column. A figure under the
+    // next box (box 3's 500 read as box 4 withholding) is below and to the left,
+    // and used to win because any block below the label was in range.
+    const centreX = block.x + block.width / 2;
+    // The value sits on the label's own line or the line just under it. A
+    // figure several rows down belongs to another box even when it shares the column.
+    if (dy < -8 || dy > 36 || centreX < labelLeft - 4 || centreX > labelRight + 80) {
+      rejected.push({ text: trimmed, value: Number.NaN, reason: `outside this label's column`, dx, dy, dist: distance });
+      continue;
+    }
 
     // A value belongs beside its label. Text further right than this belongs to
     // another box, or to the margin notes printed alongside the form.
@@ -808,6 +826,16 @@ function findNearbyAmount(
       if (isUnreadableAmountToken(trimmed)) {
         unreadable.push({ raw: trimmed, distance: scoredDistance, block });
       }
+      continue;
+    }
+
+    // A figure printed inside the words that name the box is the label, not the
+    // value. A real 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and the
+    // reader took the 1250 out of the label as the amount, on three documents.
+    // The token has to sit in the label's own box: a real 1,250 beside that
+    // label has the same digits and is the amount.
+    if (figureIsItsOwnLabel(raw, labelBlock.text, blockBox(block), blockBox(labelBlock))) {
+      rejected.push({ text: trimmed, value: num, reason: `the figure ${raw} is printed in this box's own label`, dx: 0, dy: block.y - labelBlock.y, dist: scoredDistance });
       continue;
     }
 
@@ -907,16 +935,38 @@ function extractBoxValue(
  * generic "employer" — preventing the EIN label from being selected when
  * the actual employer-name label exists.
  */
+/**
+ * Fold typographic punctuation to its ASCII form.
+ *
+ * A form's text layer prints the apostrophe in "PAYER'S" as U+2019, and the
+ * schema declares it as ASCII. Keywords are written in ASCII, so an exact match
+ * misses every label a form prints with a curly quote.
+ */
+function foldTypography(text: string): string {
+  return text
+    .replace(/[\u2018\u2019\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\u00A0/g, ' ');
+}
+
 function findLabelBlock(textBlocks: TextBlock[], keywords: string[]): TextBlock | null {
   for (const kw of keywords) {
     let fallback: TextBlock | null = null;
-    const kwCompact = kw.replace(/\s+/g, '');
+    // A form prints "PAYER’S" with a typographic apostrophe; the keyword says
+    // "payer's". Without folding typography the specific keyword never matches,
+    // and the loose one that does is far worse: on a 1099-INT the label "PAYER'S
+    // name" was missed and the search fell through to "PAYER'S TIN", so the
+    // payer's name was looked for under the wrong label and the recipient's name
+    // was returned instead, on five documents.
+    const kwFlat = foldTypography(kw).toLowerCase();
+    const kwCompact = kwFlat.replace(/\s+/g, '');
     for (const block of textBlocks) {
-      const blockLower = block.text.toLowerCase();
+      const blockLower = foldTypography(block.text).toLowerCase();
       const blockCompact = blockLower.replace(/\s+/g, '');
       // Match normally OR via compact form (collapses letter-spaced IRS labels
       // like "4 F e d e r a l i n c o m e t a x w i t h h e l d")
-      if (blockLower.includes(kw) || blockCompact.includes(kwCompact)) {
+      if (blockLower.includes(kwFlat) || blockCompact.includes(kwCompact)) {
         // Reject merged form headers — wide blocks (>300px) containing multiple
         // header terms (payer, address, city, ZIP, OMB etc.) that happen to also
         // include a box keyword. These mega-blocks span the full form width and
@@ -936,6 +986,33 @@ function findLabelBlock(textBlocks: TextBlock[], keywords: string[]): TextBlock 
   return null;
 }
 
+/**
+ * The payer's name printed under a wide header.
+ *
+ * The header itself is skipped as a proximity anchor. The name is the first
+ * line beneath its left edge; the header's own continuation ("or foreign
+ * postal code...") is not a name.
+ */
+function nameUnderMergedHeader(blocks: readonly TextBlock[], keywords: readonly string[]): TextBlock | undefined {
+  for (const header of blocks) {
+    if (!isMergedHeader(header)) continue;
+    const flat = foldTypography(header.text).toLowerCase();
+    if (!keywords.some((k) => flat.includes(foldTypography(k).toLowerCase()))) continue;
+    const under = blocks
+      .filter((b) =>
+        b !== header &&
+        b.page === header.page &&
+        b.y >= header.y + header.height - 2 &&
+        b.y < header.y + 40 &&
+        Math.abs(b.x - header.x) < 30 &&
+        !/payer|street|address|city|province|postal|telephone|zip/i.test(b.text),
+      )
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    if (under[0]) return under[0];
+  }
+  return undefined;
+}
+
 /** Detect merged form headers — wide blocks containing multiple header/boilerplate terms. */
 function isMergedHeader(block: TextBlock): boolean {
   if (block.width < 250) return false;
@@ -949,6 +1026,12 @@ function isMergedHeader(block: TextBlock): boolean {
 /**
  * Extract name from the top area of the PDF (typically payer/employer info).
  * When a name block is located, page + box are recorded under fieldKey.
+ */
+/**
+ * Words that are never part of a payer's name, however they are capitalised.
+ * Only the form's all-caps furniture: ordinary label words are already excluded
+ * by the capitalisation test, and listing them would break real names such as
+ * "GOLDEN STATE CREDIT UNION" and "SUNSHINE SAVINGS BANK".
  */
 function extractPayerName(
   textBlocks: TextBlock[],
@@ -1001,10 +1084,13 @@ function extractPayerName(
     return false;
   };
 
-  let chosen: TextBlock | undefined;
+  // A 1099-INT prints the payer's name under one wide header. That header is
+  // not a usable proximity anchor, and the name is the first line beneath it,
+  // not the recipient further down the page.
+  let chosen = nameUnderMergedHeader(textBlocks, keywords);
 
   // Look for the label first
-  const labelBlock = findLabelBlock(textBlocks, keywords);
+  const labelBlock = chosen ? undefined : findLabelBlock(textBlocks, keywords);
   if (labelBlock) {
     // Find text below/near the label that looks like a name
     // Widened search: 150px horizontal, 80px vertical (real W-2 boxes are tall)
@@ -1073,8 +1159,10 @@ function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDista
 
     // Skip blocks that look like IRS box labels (e.g., "5 Transaction type",
     // "7 W i n n i n g s..." where letter-spaced labels also start with a digit).
-    // These are digit-prefixed labels for other boxes, not values.
-    if (/^\d{1,2}[a-z]?\s+[A-Za-z]/i.test(block.text.trim()) && block.text.trim().length > 3) continue;
+    // These are digit-prefixed labels for other boxes, not values. A share
+    // description ("40 sh. ACME CORP") starts the same way and is the value.
+    const trimmedEarly = block.text.trim();
+    if (/^\d{1,2}[a-z]?\s+[A-Za-z]/i.test(trimmedEarly) && trimmedEarly.length > 3 && !/\bsh\.?\b/i.test(trimmedEarly)) continue;
 
     // Skip standalone currency symbols, punctuation, or very short non-text noise
     const trimmed = block.text.trim();
@@ -1106,8 +1194,16 @@ function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDista
   }
 
   if (candidates.length === 0) return { text: '' };
-  candidates.sort((a, b) => a.distance - b.distance);
-  return { text: candidates[0].text, block: candidates[0].block };
+  // The value is the first line under the label, in its column. The nearest
+  // block anywhere below can be the next box's date.
+  const beneath = candidates.filter((c) => {
+    const dy = c.block.y - labelBlock.y;
+    const cx = c.block.x + c.block.width / 2;
+    return dy >= -2 && dy < 28 && cx >= labelLeft - 8 && cx <= labelRight + 40;
+  });
+  const pool = beneath.length > 0 ? beneath : candidates;
+  pool.sort((a, b) => a.distance - b.distance);
+  return { text: pool[0]!.text, block: pool[0]!.block };
 }
 
 /**
@@ -1145,6 +1241,64 @@ const US_STATE_CODES = new Set([
   'NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT',
   'VT','VA','WA','WV','WI','WY',
 ]);
+
+/** The two-letter state printed under a state box, such as "15 State". */
+function stateCodeUnder(blocks: readonly TextBlock[], keywords: string[]): string | undefined {
+  const label = findLabelBlock(blocks as TextBlock[], keywords);
+  if (!label) return undefined;
+  const text = findNearbyText(blocks as TextBlock[], label).text.toUpperCase();
+  const code = text.match(/\b([A-Z]{2})\b/)?.[1];
+  return code && US_STATE_CODES.has(code) ? code : undefined;
+}
+
+/** A small whole number printed under its label, such as 1098 box 9. */
+function integerUnder(blocks: readonly TextBlock[], keywords: string[]): number | undefined {
+  const label = findLabelBlock(blocks as TextBlock[], keywords);
+  if (!label) return undefined;
+  const hits = (blocks as TextBlock[]).filter((b) => {
+    if (!/^\d{1,2}$/.test(b.text.trim())) return false;
+    const dy = b.y - label.y;
+    const cx = b.x + b.width / 2;
+    return dy > 0 && dy < 40 && cx >= label.x - 4 && cx <= label.x + label.width + 16;
+  }).sort((a, b) => a.y - b.y);
+  const n = hits[0] ? Number(hits[0].text.trim()) : undefined;
+  return n !== undefined && n > 0 ? n : undefined;
+}
+
+/**
+ * A digital form prints a checked square as the glyph "4" in the label line
+ * ("7 4 If address") or as its own "4" just to the right of the label.
+ */
+function checkedByGlyph(blocks: readonly TextBlock[], keywords: string[]): boolean | undefined {
+  const label = findLabelBlock(blocks as TextBlock[], keywords);
+  if (!label) return undefined;
+  if (/^\d/.test(label.text.trim()) && /\b4\b/.test(label.text)) return true;
+  return (blocks as TextBlock[]).some((b) => {
+    if (b.text.trim() !== '4') return false;
+    return Math.abs(b.y - label.y) < 8 && b.x >= label.x + label.width - 4 && b.x < label.x + label.width + 48;
+  });
+}
+
+/** A one- or two-character code printed under its label, such as 1099-R box 7a. */
+function codeUnder(blocks: readonly TextBlock[], keywords: string[]): string | undefined {
+  const label = findLabelBlock(blocks as TextBlock[], keywords);
+  if (!label) return undefined;
+  const hits = (blocks as TextBlock[]).filter((b) => {
+    const text = b.text.trim();
+    if (!/^[A-Za-z0-9]{1,2}$/.test(text)) return false;
+    const dy = b.y - label.y;
+    const cx = b.x + b.width / 2;
+    return dy > 0 && dy < 40 && cx >= label.x - 8 && cx <= label.x + label.width + 16;
+  }).sort((a, b) => a.y - b.y || a.x - b.x);
+  return hits[0]?.text.trim();
+}
+
+/** An EIN printed under a TIN label ("72-7654321"). */
+function tinUnder(blocks: readonly TextBlock[], keywords: string[]): string | undefined {
+  const label = findLabelBlock(blocks as TextBlock[], keywords);
+  if (!label) return undefined;
+  return findNearbyText(blocks as TextBlock[], label).text.match(/\b\d{2}-\d{7}\b/)?.[0];
+}
 
 type W2StateColumn = '16' | '17' | '18' | '19' | '20';
 const W2_STATE_COLUMNS: readonly W2StateColumn[] = ['16', '17', '18', '19', '20'];
@@ -1381,6 +1535,8 @@ export function extract1099INTFields(
     usBondInterest: box('usBondInterest', ['u.s. savings bond', '3 interest on u.s.', 'box 3']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
     taxExemptInterest: box('taxExemptInterest', ['tax-exempt interest', '8 tax-exempt', 'box 8']),
+    stateCode: stateCodeUnder(textBlocks, ['15 state']),
+    stateTaxWithheld: box('stateTaxWithheld', ['17 state tax withheld', 'state tax withheld']),
   };
 }
 
@@ -1400,6 +1556,8 @@ export function extract1099DIVFields(
     collectiblesGain: box('collectiblesGain', ['collectibles (28%) gain', 'collectibles', '2d collectibles']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
     foreignTaxPaid: box('foreignTaxPaid', ['foreign tax paid', '7 foreign', 'box 7']),
+    stateCode: stateCodeUnder(textBlocks, ['14 state', '15 state']),
+    stateTaxWithheld: box('stateTaxWithheld', ['16 state tax withheld', 'state tax withheld']),
   };
 }
 
@@ -1415,7 +1573,8 @@ export function extract1099RFields(
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross', 'box 1']),
     taxableAmount: box('taxableAmount', ['taxable amount', '2a taxable', 'box 2a']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
-    distributionCode: extractBoxText(textBlocks, ['distribution code', '7 distribution code', 'box 7'], fieldRawTokens, 'distributionCode', fieldSourceLocations),
+    distributionCode: codeUnder(textBlocks, ['7a dist', 'distribution code']) ?? '',
+    stateCode: stateCodeUnder(textBlocks, ['15 state']),
   };
 }
 
@@ -1433,6 +1592,7 @@ export function extract1099NECFields(
       'amount',
       fieldSourceLocations,
     ),
+    payerEin: tinUnder(textBlocks, ["payer's tin"]),
   };
 }
 
@@ -1450,6 +1610,7 @@ export function extract1099MISCFields(
     otherIncome: box('otherIncome', ['other income', '3 other income', 'box 3']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
     stateTaxWithheld: box('stateTaxWithheld', ['state tax withheld', '16 state tax', 'box 16']),
+    stateCode: stateCodeUnder(textBlocks, ['17 state', "payer's state no"]),
   };
 }
 
@@ -1464,6 +1625,7 @@ export function extract1099GFields(
     payerName: extractPayerName(textBlocks, ["payer's name", 'payer name', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     unemploymentCompensation: box('unemploymentCompensation', ['unemployment compensation', '1 unemployment', 'box 1']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
+    stateCode: stateCodeUnder(textBlocks, ['11a state', '11 state']),
   };
 }
 
@@ -1559,7 +1721,7 @@ export function extractW2CFields(
   if (ein) out.employerEin = ein;
   const year = cellText('tax year/form corrected', /^(19|20)\d{2}\b/);
   if (year) {
-    out.taxYearCorrected = year.text.trim().slice(0, 4);
+    out.taxYearCorrected = Number(year.text.trim().slice(0, 4));
     if (fieldRawTokens) fieldRawTokens.taxYearCorrected = year.text.trim();
     recordFieldLocation(fieldSourceLocations, 'taxYearCorrected', year);
   }
@@ -1691,6 +1853,10 @@ export function extract1099SAFields(
     payerName: extractPayerName(textBlocks, ["trustee's name", "payer's name", 'trustee', 'payer'], fieldRawTokens, 'payerName', fieldSourceLocations),
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross distribution', 'box 1']),
     distributionCode: extractBoxText(textBlocks, ['distribution code', '3 distribution code', 'box 3'], fieldRawTokens, 'distributionCode', fieldSourceLocations),
+    accountType: checkedByGlyph(textBlocks, ['5 hsa']) ? 'HSA'
+      : checkedByGlyph(textBlocks, ['archer']) ? 'Archer MSA'
+      : checkedByGlyph(textBlocks, ['ma msa']) ? 'MA MSA'
+      : undefined,
   };
 }
 
@@ -1718,9 +1884,14 @@ export function extract1098Fields(
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
     lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient'], fieldRawTokens, 'lenderName', fieldSourceLocations),
+    lenderTin: tinUnder(textBlocks, ["lender's tin", "recipient's/lender's tin"]),
     mortgageInterest: box('mortgageInterest', ['mortgage interest received', '1 mortgage interest', 'box 1']),
     outstandingPrincipal: box('outstandingPrincipal', ['outstanding mortgage principal', '2 outstanding', 'box 2']),
+    originationDate: extractBoxText(textBlocks, ['mortgage origination date', '3 mortgage origination', 'origination date'], fieldRawTokens, 'originationDate', fieldSourceLocations),
     mortgageInsurancePremiums: box('mortgageInsurancePremiums', ['mortgage insurance premiums', '5 mortgage insurance', 'box 5']),
+    points: box('points', ['points paid on purchase', '6 points paid', 'box 6']),
+    propertyAddressSameAsBorrower: checkedByGlyph(textBlocks, ['if address of property', 'address of property securing']),
+    numberOfProperties: integerUnder(textBlocks, ['number of properties']),
   };
 }
 
@@ -1733,8 +1904,11 @@ export function extract1098TFields(
     extractBoxValue(textBlocks, keywords, fieldRawTokens, key, fieldSourceLocations);
   return {
     institutionName: extractPayerName(textBlocks, ["filer's name", 'institution name', 'institution'], fieldRawTokens, 'institutionName', fieldSourceLocations),
+    institutionEin: tinUnder(textBlocks, ["filer's employer identification", "employer identification no", "filer's ein"]),
+    studentName: extractBoxText(textBlocks, ["student's name"], fieldRawTokens, 'studentName', fieldSourceLocations),
     tuitionPaid: box('tuitionPaid', ['payments received', '1 payments received', 'box 1']),
-    scholarships: box('scholarships', ['scholarships or grants', '5 scholarships', 'box 5']),
+    scholarships: box('scholarships', ['scholarships or grants', '5 scholarships', 'box 5'])
+      ?? (findLabelBlock(textBlocks, ['5 scholarships', 'scholarships or grants']) ? 0 : undefined),
   };
 }
 

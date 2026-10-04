@@ -717,6 +717,29 @@ export function moneyItemsIn(text: string, box?: PixelBox): MoneyItem[] {
  * 'unknown' and nothing is written: an amount is never reported from a region
  * the page did not prove belongs to this box.
  */
+/**
+ * Whether a figure's digits are printed in the words that name its own box.
+ *
+ * Runs shorter than three digits are left alone: those are box numbers and small
+ * counts, and a label legitimately carries its own box number.
+ */
+export function printedInsideLabel(raw: string, labelText: string): boolean {
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (digits.length < 3) return false;
+  return new RegExp(`(^|[^0-9])${digits}([^0-9]|$)`).test(labelText);
+}
+
+/**
+ * The figure is the label's own text, not an amount printed beside it.
+ *
+ * Digit equality is not enough: box 2b's label contains 1250, and a real
+ * whole-dollar 1,250 (or 12.50) in the value column has those same digits.
+ * The figure counts as the label only when its token also sits in the label's box.
+ */
+export function figureIsItsOwnLabel(raw: string, labelText: string, token: PixelBox, label: PixelBox): boolean {
+  return printedInsideLabel(raw, labelText) && centreIn(label, token);
+}
+
 export function readRowAmount(
   raster: PageRaster,
   words: readonly PageWord[],
@@ -764,6 +787,11 @@ export function readRowAmount(
         if (!centreIn(region, w.box)) continue;
         const money = moneyIn(w.text);
         if (!money) continue;
+        // The row also contains the words that name the box, and those words can
+        // hold digits: a 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and
+        // the reader took the 1250 out of the label as the amount, on three
+        // documents. A printed amount is never a digit run out of its own label.
+        if (figureIsItsOwnLabel(money.raw, phrase, w.box, label)) continue;
         out.push({ value: money.value, raw: money.raw, box: w.box });
       }
       return out;
@@ -772,7 +800,7 @@ export function readRowAmount(
     // The vertical rule can stop short of the amount column. Look across the
     // label's line before calling a row that holds a real figure empty.
     if (found.length === 0) {
-      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 10 * h), bottom];
       found = collect(wide);
     }
 
@@ -1181,8 +1209,12 @@ export function readBox12Code(amount: PixelBox, words: readonly PageWord[]): str
  */
 export function box12CodeAt(amount: PixelBox, words: readonly PageWord[]): { code: string; box: PixelBox } | null {
   const height = amount[3] - amount[1];
+  const midY = (amount[1] + amount[3]) / 2;
+  // The code sits on the amount's line, but the text layer often places it a
+  // hair above that line, so a strict overlap test kept the vertical "Code"
+  // and dropped the letter that was typed.
   const found = tokens(words)
-    .filter((t) => sameLine(t.box, amount) && t.box[2] <= amount[0] + 1 && amount[0] - t.box[2] < 12 * height)
+    .filter((t) => Math.abs((t.box[1] + t.box[3]) / 2 - midY) < height * 1.2 && t.box[2] <= amount[0] + 1 && amount[0] - t.box[2] < 12 * height)
     .map((t) => ({ code: t.text.trim().toUpperCase(), box: t.box }))
     .filter((t) => BOX12_CODE_SET.has(t.code))
     .sort((a, b) => b.box[2] - a.box[2]);

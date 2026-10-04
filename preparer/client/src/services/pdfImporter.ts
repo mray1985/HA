@@ -17,7 +17,7 @@
  * - Always requires user review before importing
  */
 
-import { FORM_EXTRACTION_SCHEMAS, TOOL_MAPPINGS, type ClassifiableFormType } from '@hatax/local-ai';
+import { FORM_EXTRACTION_SCHEMAS, readBox12Entry, TOOL_MAPPINGS, type ClassifiableFormType } from '@hatax/local-ai';
 import { extractWithSyncfusion } from './syncfusionExtractor';
 import { readCheckboxOnPage, readRowAmountOnPage, renderedPage, type CellAmountReading } from './checkboxRaster';
 
@@ -226,6 +226,7 @@ function extractFormData(
 
   // The squares the ink reader proved, as fields on the form.
   applyCheckboxStates(formType, checkboxes, extractedData, fieldRawTokens, fieldSourceLocations);
+  applyMeasuredChoices(formType, checkboxes, extractedData);
 
   // What the page prints, carried forward. The deterministic check runs on this
   // at the write boundary, where the form type being written is known — so a
@@ -373,6 +374,7 @@ function processTextBlocks(
   // number for an empty box, and a held box reaches the preparer while an
   // invented one does not.
   if (meta?.canvases?.length) {
+    if (type === 'W-2') applyW2Box12(meta.canvases, meta.dpi ?? 300, effectiveBlocks, extractedData);
     const rows = readFormRowAmounts(type, meta.canvases, meta.dpi ?? 300, effectiveBlocks);
     applyRowAmountConfirmations(
       type,
@@ -686,7 +688,9 @@ function readFormCheckboxes(
     try {
       const page = pageOf(pageNumber);
       if (!page) continue;
-      const reading = readCheckboxOnPage(page, box.checkbox!);
+      // A page often prints the form more than once. The copy at the top is the
+      // one being read; without a hint every repeated label is "unknown".
+      const reading = readCheckboxOnPage(page, box.checkbox!, [0, 0, 1, 1]);
       if (reading.state === 'checked' || reading.state === 'unchecked') {
         out[box.key] = reading.state === 'checked';
       }
@@ -705,6 +709,65 @@ function readFormCheckboxes(
  * written — a missing one leaves the field absent, which the tools read as
  * unknown rather than as unticked.
  */
+/**
+ * Choices the schema records as a group of squares, not as one boolean field.
+ * W-2 box 13, the 1099-B holding period, and the 1099-SA account type.
+ */
+function applyMeasuredChoices(
+  formType: ReturnType<typeof detectFormType>['type'],
+  checks: Record<string, boolean>,
+  data: Record<string, unknown>,
+): void {
+  if (formType === 'W-2') {
+    const box13: Record<string, boolean> = {};
+    for (const [key, field] of [
+      ['13.statutory', 'statutoryEmployee'],
+      ['13.retirement', 'retirementPlan'],
+      ['13.sickPay', 'thirdPartySickPay'],
+    ] as const) {
+      if (checks[key] !== undefined) box13[field] = checks[key]!;
+    }
+    if (Object.keys(box13).length === 3) data.box13 = box13;
+  }
+  if (formType === '1099-B' && checks['2.long'] !== undefined && checks['2.short'] !== undefined && checks['2.long'] !== checks['2.short']) {
+    data.isLongTerm = checks['2.long'];
+  }
+  if (formType === '1099-SA') {
+    const options = [['5.hsa', 'HSA'], ['5.archer', 'Archer MSA'], ['5.ma', 'MA MSA']] as const;
+    const checked = options.filter(([key]) => checks[key] === true);
+    if (options.every(([key]) => checks[key] !== undefined) && checked.length === 1) data.accountType = checked[0]![1];
+  }
+}
+
+/** Box 12 entries printed under 12a–12d: an official code and its amount. */
+function applyW2Box12(
+  canvases: readonly HTMLCanvasElement[],
+  dpi: number,
+  blocks: readonly TextBlock[],
+  data: Record<string, unknown>,
+): void {
+  const byPage = new Map<number, TextBlock[]>();
+  for (const b of blocks) {
+    const list = byPage.get(b.page);
+    if (list) list.push(b);
+    else byPage.set(b.page, [b]);
+  }
+  const pageNumber = [...byPage.keys()].sort((a, b) => a - b).find((p) => canvases[p - 1] && byPage.get(p)!.length > 0);
+  if (pageNumber === undefined) return;
+  const page = renderedPage(canvases[pageNumber - 1]!, byPage.get(pageNumber)!, dpi, 'pdf-text');
+  // The first copy is the one at the top of the page. Later copies repeat "12a".
+  const near: readonly [number, number, number, number] = [0, 0, 1, 1];
+  const entries: Array<{ code: string; amount: number }> = [];
+  for (const slot of ['12a', '12b', '12c', '12d']) {
+    const entry = readBox12Entry(slot, page.words, near);
+    if (!entry) continue;
+    const amount = Number(entry.amount.replace(/[$,]/g, ''));
+    if (!Number.isFinite(amount)) continue;
+    entries.push({ code: entry.code, amount });
+  }
+  if (entries.length > 0) data.box12 = entries;
+}
+
 function applyCheckboxStates(
   formType: ReturnType<typeof detectFormType>['type'],
   checkboxes: Record<string, boolean>,
