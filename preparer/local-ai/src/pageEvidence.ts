@@ -729,6 +729,17 @@ export function printedInsideLabel(raw: string, labelText: string): boolean {
   return new RegExp(`(^|[^0-9])${digits}([^0-9]|$)`).test(labelText);
 }
 
+/**
+ * The figure is the label's own text, not an amount printed beside it.
+ *
+ * Digit equality is not enough: box 2b's label contains 1250, and a real
+ * whole-dollar 1,250 (or 12.50) in the value column has those same digits.
+ * The figure counts as the label only when its token also sits in the label's box.
+ */
+export function figureIsItsOwnLabel(raw: string, labelText: string, token: PixelBox, label: PixelBox): boolean {
+  return printedInsideLabel(raw, labelText) && centreIn(label, token);
+}
+
 export function readRowAmount(
   raster: PageRaster,
   words: readonly PageWord[],
@@ -780,7 +791,7 @@ export function readRowAmount(
         // hold digits: a 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and
         // the reader took the 1250 out of the label as the amount, on three
         // documents. A printed amount is never a digit run out of its own label.
-        if (printedInsideLabel(money.raw, phrase)) continue;
+        if (figureIsItsOwnLabel(money.raw, phrase, w.box, label)) continue;
         out.push({ value: money.value, raw: money.raw, box: w.box });
       }
       return out;

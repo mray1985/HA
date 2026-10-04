@@ -6,7 +6,7 @@
  * everything from here and adds the PDF loading/parsing layer.
  */
 
-import type { PartyIdentity } from '@hatax/local-ai';
+import { figureIsItsOwnLabel, type PartyIdentity } from '@hatax/local-ai';
 import { normalizeOCRText, fuzzyIncludes } from './ocrTextMatching';
 import type { PrintIndex } from './extractionVerification';
 import type { BoxLedger } from './boxLedger';
@@ -689,21 +689,8 @@ function isUnreadableAmountToken(text: string): boolean {
  * Missing boxes return undefined — distinct from a printed $0.
  * When a text block is located, page + box come from that block (never invented).
  */
-/**
- * Whether a figure's digits are printed in the label that names its own box.
- *
- * The form's label often contains numbers that are part of the words rather than
- * the value: a 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and reading
- * the 1250 as the box's amount invents income. A printed amount is never a digit
- * run out of its own label, so this rejects the figure.
- *
- * Runs shorter than three digits are left alone: they are box numbers and small
- * counts, and a label legitimately contains its own box number.
- */
-function printedInsideLabel(raw: string, labelText: string): boolean {
-  const digits = raw.replace(/[^0-9]/g, '');
-  if (digits.length < 3) return false;
-  return new RegExp(`(^|[^0-9])${digits}([^0-9]|$)`).test(labelText);
+function blockBox(block: TextBlock): [number, number, number, number] {
+  return [block.x, block.y, block.x + block.width, block.y + block.height];
 }
 
 function findNearbyAmount(
@@ -830,9 +817,10 @@ function findNearbyAmount(
 
     // A figure printed inside the words that name the box is the label, not the
     // value. A real 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and the
-    // reader took the 1250 out of the label as the amount, on three documents. An
-    // amount a box prints is never a digit run from its own printed label.
-    if (printedInsideLabel(raw, labelBlock.text)) {
+    // reader took the 1250 out of the label as the amount, on three documents.
+    // The token has to sit in the label's own box: a real 1,250 beside that
+    // label has the same digits and is the amount.
+    if (figureIsItsOwnLabel(raw, labelBlock.text, blockBox(block), blockBox(labelBlock))) {
       rejected.push({ text: trimmed, value: num, reason: `the figure ${raw} is printed in this box's own label`, dx: 0, dy: block.y - labelBlock.y, dist: scoredDistance });
       continue;
     }
@@ -1066,8 +1054,6 @@ function extractPayerName(
   // Look for the label first
   const labelBlock = findLabelBlock(textBlocks, keywords);
   if (labelBlock) {
-    console.debug('[PayerDbg] label="' + labelBlock.text.slice(0, 80) + '" w=' + Math.round(labelBlock.width) + ' merged=' + isMergedHeader(labelBlock));
-    console.debug('[PayerDbg] widePage1=' + JSON.stringify(textBlocks.filter(b => b.page === 1 && b.width >= 250).slice(0, 2).map(b => ({ w: Math.round(b.width), y: Math.round(b.y), t: b.text.slice(0, 60) }))));
     // Find text below/near the label that looks like a name
     // Widened search: 150px horizontal, 80px vertical (real W-2 boxes are tall)
     const candidates = textBlocks.filter(b =>

@@ -7,7 +7,7 @@
  * its own label.
  */
 import { describe, it, expect } from 'vitest';
-import { printedInsideLabel } from '../src/pageEvidence';
+import { figureIsItsOwnLabel, printedInsideLabel } from '../src/pageEvidence';
 
 describe('a figure printed in its own label is the label', () => {
   it('rejects the digits a label carries', () => {
@@ -35,5 +35,17 @@ describe('a figure printed in its own label is the label', () => {
   it('matches whole digit runs, not a fragment of a longer number', () => {
     // 250 appears inside 1250 but is not the figure printed in the label.
     expect(printedInsideLabel('250', 'Unrecap. Sec. 1250 gain')).toBe(false);
+  });
+
+  it('keeps a real amount that shares the label\'s digits when it sits beside the label', () => {
+    const label = [0, 0, 120, 12] as const;
+    const inLabel = [8, 0, 48, 12] as const;
+    const valueColumn = [200, 0, 260, 12] as const;
+    // The label's own "1250" sits in the label's box.
+    expect(figureIsItsOwnLabel('1250', 'Unrecap. Sec. 1250 gain', inLabel, label)).toBe(true);
+    // A whole-dollar 1,250 and 12.50 both normalize to 1250, and both are the
+    // amount when they are printed in the value column.
+    expect(figureIsItsOwnLabel('1,250', 'Unrecap. Sec. 1250 gain', valueColumn, label)).toBe(false);
+    expect(figureIsItsOwnLabel('12.50', 'Unrecap. Sec. 1250 gain', valueColumn, label)).toBe(false);
   });
 });
