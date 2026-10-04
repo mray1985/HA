@@ -38,30 +38,34 @@ function makeBlock(text: string, x = 0, y = 0, page = 1): TextBlock {
   return { text, x, y, width: text.length * 7, height: 12, page };
 }
 
+/** A figure on the line under its label, inside that label's column. */
+function underLabel(text: string, x: number, labelY: number): TextBlock {
+  return makeBlock(text, x, labelY + 14);
+}
+
 /**
  * Create a full set of text blocks that simulate a W-2 PDF.
  */
 function makeW2Blocks(): TextBlock[] {
-  // Position labels on the left (x=30) and values to the right (x=250)
-  // with enough vertical spacing (100px) to prevent proximity collisions.
-  // Value x must be within 200px of label end: label at x=30 with ~150px width → value at x=250 is ~70px away.
+  // Each amount sits on the line under its label. A figure further right than
+  // the label's own column belongs to the next box and is not read.
   return [
     makeBlock('Form W-2', 250, 20),
     makeBlock('Wage and Tax Statement', 200, 40),
     makeBlock("Employer's name", 30, 100),
     makeBlock('Acme Corp', 30, 130),
     makeBlock('Wages, tips', 30, 250),
-    makeBlock('75000.00', 250, 250),
+    underLabel('75000.00', 30, 250),
     makeBlock('Federal income tax withheld', 30, 350),
-    makeBlock('12000.00', 250, 350),
+    underLabel('12000.00', 30, 350),
     makeBlock('Social security wages', 30, 450),
-    makeBlock('75000.00', 250, 450),
+    underLabel('75000.00', 30, 450),
     makeBlock('Social security tax withheld', 30, 550),
-    makeBlock('4650.00', 250, 550),
+    underLabel('4650.00', 30, 550),
     makeBlock('Medicare wages and tips', 30, 650),
-    makeBlock('75000.00', 250, 650),
+    underLabel('75000.00', 30, 650),
     makeBlock('Medicare tax withheld', 30, 750),
-    makeBlock('1087.50', 250, 750),
+    underLabel('1087.50', 30, 750),
     // Boxes 15-17: positional layout — state code + numbers on the same Y line
     // (real IRS W-2 layout: state code left, state wages middle, state tax right)
     makeBlock('NY', 30, 1150),
@@ -84,13 +88,13 @@ function make1099INTBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('First National Bank', 30, 120),
     makeBlock('1 Interest income', 30, 160),
-    makeBlock('1250.00', 250, 160),
+    underLabel('1250.00', 30, 160),
     makeBlock('2 Early withdrawal penalty', 30, 200),
-    makeBlock('50.00', 250, 200),
+    underLabel('50.00', 30, 200),
     makeBlock('4 Federal income tax withheld', 30, 240),
-    makeBlock('0.00', 250, 240),
+    underLabel('0.00', 30, 240),
     makeBlock('8 Tax-exempt interest', 30, 280),
-    makeBlock('200.00', 250, 280),
+    underLabel('200.00', 30, 280),
     makeBlock('Payer', 30, 320),
     makeBlock('Recipient', 30, 360),
   ];
@@ -106,15 +110,15 @@ function make1099DIVBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('Vanguard Group', 30, 120),
     makeBlock('1a Ordinary dividends', 30, 160),
-    makeBlock('3200.00', 250, 160),
+    underLabel('3200.00', 30, 160),
     makeBlock('1b Qualified dividends', 30, 200),
-    makeBlock('2800.00', 250, 200),
+    underLabel('2800.00', 30, 200),
     makeBlock('2a Capital gain distributions', 30, 240),
-    makeBlock('500.00', 250, 240),
+    underLabel('500.00', 30, 240),
     makeBlock('4 Federal income tax withheld', 30, 280),
-    makeBlock('0.00', 250, 280),
+    underLabel('0.00', 30, 280),
     makeBlock('7 Foreign tax paid', 30, 320),
-    makeBlock('45.00', 250, 320),
+    underLabel('45.00', 30, 320),
     makeBlock('Payer', 30, 360),
   ];
 }
@@ -129,13 +133,13 @@ function make1099RBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('Fidelity Investments', 30, 120),
     makeBlock('1 Gross distribution', 30, 160),
-    makeBlock('25000.00', 250, 160),
+    underLabel('25000.00', 30, 160),
     makeBlock('2a Taxable amount', 30, 200),
-    makeBlock('25000.00', 250, 200),
+    underLabel('25000.00', 30, 200),
     makeBlock('4 Federal income tax withheld', 30, 240),
-    makeBlock('5000.00', 250, 240),
+    underLabel('5000.00', 30, 240),
     makeBlock('Distribution code', 30, 280),
-    makeBlock('7', 250, 280),
+    underLabel('7', 30, 280),
   ];
 }
 
@@ -149,7 +153,7 @@ function make1099NECBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('Freelance Co LLC', 30, 120),
     makeBlock('1 Nonemployee compensation', 30, 160),
-    makeBlock('45000.00', 250, 160),
+    underLabel('45000.00', 30, 160),
     makeBlock('Payer', 30, 200),
     makeBlock('Recipient', 30, 240),
     makeBlock('Compensation', 30, 260),
@@ -166,9 +170,9 @@ function make1099MISCBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('Property Mgmt Inc', 30, 130),
     makeBlock('Other income', 30, 250),
-    makeBlock('8000.00', 250, 250),
+    underLabel('8000.00', 30, 250),
     makeBlock('Federal income tax withheld', 30, 350),
-    makeBlock('800.00', 250, 350),
+    underLabel('800.00', 30, 350),
     makeBlock('Rents', 30, 450),
     makeBlock('Payer', 30, 490),
     makeBlock('Royalties', 30, 510),
@@ -186,9 +190,9 @@ function make1099GBlocks(): TextBlock[] {
     makeBlock("Payer's name", 30, 100),
     makeBlock('State Unemployment Agency', 30, 120),
     makeBlock('1 Unemployment compensation', 30, 160),
-    makeBlock('15600.00', 250, 160),
+    underLabel('15600.00', 30, 160),
     makeBlock('4 Federal income tax withheld', 30, 200),
-    makeBlock('1560.00', 250, 200),
+    underLabel('1560.00', 30, 200),
     makeBlock('Unemployment', 30, 240),
     makeBlock('State tax refund', 30, 260),
     makeBlock('Payer', 30, 280),
@@ -209,11 +213,11 @@ function make1099BBlocks(): TextBlock[] {
     makeBlock('Short-term transactions', 30, 200),
     makeBlock('Long-term transactions', 30, 250),
     makeBlock('Total proceeds', 30, 350),
-    makeBlock('125000.00', 250, 350),
+    underLabel('125000.00', 30, 350),
     makeBlock('Cost or other basis', 30, 450),
-    makeBlock('110000.00', 250, 450),
+    underLabel('110000.00', 30, 450),
     makeBlock('4 Federal income tax withheld', 30, 550),
-    makeBlock('250.00', 250, 550),
+    underLabel('250.00', 30, 550),
   ];
 }
 
@@ -228,11 +232,11 @@ function make1099KBlocks(): TextBlock[] {
     makeBlock("Filer's name", 30, 100),
     makeBlock('Uber Technologies', 30, 130),
     makeBlock('1a Gross amount', 30, 250),
-    makeBlock('42000.00', 250, 250),
+    underLabel('42000.00', 30, 250),
     makeBlock('1b Card not present', 30, 350),
-    makeBlock('38000.00', 250, 350),
+    underLabel('38000.00', 30, 350),
     makeBlock('4 Federal income tax withheld', 30, 450),
-    makeBlock('4200.00', 250, 450),
+    underLabel('4200.00', 30, 450),
     makeBlock('Payment settlement', 30, 550),
     makeBlock('Third party network', 30, 600),
   ];
@@ -249,9 +253,9 @@ function makeSSA1099Blocks(): TextBlock[] {
     makeBlock('Social Security Benefit Statement', 200, 40),
     makeBlock('Social Security Administration', 30, 80),
     makeBlock('5 Net benefits', 30, 250),
-    makeBlock('24000.00', 250, 250),
+    underLabel('24000.00', 30, 250),
     makeBlock('6 Voluntary federal tax withheld', 30, 350),
-    makeBlock('2400.00', 350, 350),
+    underLabel('2400.00', 30, 350),
     makeBlock('Benefits paid', 30, 450),
   ];
 }
@@ -266,9 +270,9 @@ function make1099SABlocks(): TextBlock[] {
     makeBlock("Trustee's name", 30, 100),
     makeBlock('HealthEquity Inc', 30, 120),
     makeBlock('1 Gross distribution', 30, 160),
-    makeBlock('3500.00', 250, 160),
+    underLabel('3500.00', 30, 160),
     makeBlock('Federal income tax withheld', 30, 200),
-    makeBlock('0.00', 250, 200),
+    underLabel('0.00', 30, 200),
     makeBlock('Health savings', 30, 240),
     makeBlock('Distribution code', 30, 260),
     makeBlock('Gross distribution', 30, 280),
@@ -287,11 +291,11 @@ function make1099QBlocks(): TextBlock[] {
     makeBlock("Trustee's name", 30, 100),
     makeBlock('Vanguard 529 Plan', 30, 130),
     makeBlock('1 Gross distribution amount', 30, 250),
-    makeBlock('15000.00', 250, 250),
+    underLabel('15000.00', 30, 250),
     makeBlock('2 Earnings for the year', 30, 350),
-    makeBlock('3200.00', 250, 350),
+    underLabel('3200.00', 30, 350),
     makeBlock('3 Basis of return', 30, 450),
-    makeBlock('11800.00', 250, 450),
+    underLabel('11800.00', 30, 450),
     makeBlock('Education program', 30, 550),
   ];
 }
@@ -471,7 +475,7 @@ describe('extractW2Fields', () => {
       makeBlock("Employer's name", 30, 100),
       makeBlock('Test Company', 30, 120),
       makeBlock('1 Wages, tips', 30, 160),
-      makeBlock('50000', 250, 160),
+      underLabel('50000', 30, 160),
       // No federal tax withheld blocks
     ];
     const data = extractW2Fields(blocks);
@@ -485,9 +489,9 @@ describe('extractW2Fields', () => {
       makeBlock("Employer's name", 30, 100),
       makeBlock('Zero Corp', 30, 120),
       makeBlock('1 Wages, tips', 30, 160),
-      makeBlock('0.00', 250, 160),
+      underLabel('0.00', 30, 160),
       makeBlock('2 Federal income tax withheld', 30, 200),
-      makeBlock('0', 250, 200),
+      underLabel('0', 30, 200),
       makeBlock('employer', 30, 50),
       makeBlock('social security', 30, 300),
     ];
@@ -626,7 +630,7 @@ describe('extract1099SAFields', () => {
       makeBlock("Trustee's name", 30, 100),
       makeBlock('Optum Bank', 30, 120),
       makeBlock('1 Gross distribution', 30, 160),
-      makeBlock('1200.00', 250, 160),
+      underLabel('1200.00', 30, 160),
     ];
     const data = extract1099SAFields(blocks);
     expect(data.payerName).toBe('Optum Bank');
@@ -651,7 +655,7 @@ describe('extract1099QFields', () => {
       makeBlock("Trustee's name", 30, 100),
       makeBlock('State 529 Plan', 30, 120),
       makeBlock('1 Gross distribution', 30, 160),
-      makeBlock('5000.00', 250, 160),
+      underLabel('5000.00', 30, 160),
     ];
     const data = extract1099QFields(blocks);
     expect(data.payerName).toBe('State 529 Plan');
@@ -705,7 +709,7 @@ describe('extractW2CFields', () => {
     expect(data).toMatchObject({
       employerName: 'RIVERBEND LOGISTICS LLC',
       employerEin: '72-1234567',
-      taxYearCorrected: '2025',
+      taxYearCorrected: 2025,
       previousWages: 52431.18, correctWages: 54000,
       previousFederalTaxWithheld: 5873.4, correctFederalTaxWithheld: 6120,
       previousSocialSecurityWages: 52431.18, correctSocialSecurityWages: 54000,
@@ -830,7 +834,7 @@ describe('edge cases', () => {
       makeBlock("Employer's name", 30, 100),
       makeBlock('Acme Corp', 30, 120),
       makeBlock('Wages, tips', 30, 160),
-      makeBlock('$75,000.00', 250, 160),
+      underLabel('$75,000.00', 30, 160),
       makeBlock('employer', 30, 50),
       makeBlock('social security', 30, 300),
     ];
@@ -853,8 +857,8 @@ describe('edge cases', () => {
       makeBlock("Employer's name", 30, 100),
       makeBlock('Acme Corp', 30, 120),
       makeBlock('1 Wages, tips', 30, 160),
-      makeBlock('50000', 250, 160), // closest
-      makeBlock('75000', 250, 190), // farther
+      underLabel('50000', 30, 160), // in this label's column
+      makeBlock('75000', 250, 190), // the next column, not this box
       makeBlock('employer', 30, 50),
       makeBlock('social security', 30, 300),
     ];
@@ -890,7 +894,7 @@ describe('keyword collision prevention', () => {
       makeBlock('Vanguard', 30, 130),
       makeBlock('Reinvested proceeds', 30, 200), // "proceeds" appears but shouldn't trigger 1099-B
       makeBlock('1a Ordinary dividends', 30, 300),
-      makeBlock('5000.00', 250, 300),
+      underLabel('5000.00', 30, 300),
       makeBlock('Qualified dividends', 30, 400),
     ];
     const result = detectFormType(blocks);
@@ -904,11 +908,11 @@ describe('keyword collision prevention', () => {
       makeBlock("Trustee's name", 30, 100),
       makeBlock('HealthEquity Inc', 30, 130),
       makeBlock('1 Gross distribution', 30, 250),
-      makeBlock('3500.00', 250, 250),
+      underLabel('3500.00', 30, 250),
       makeBlock('3 Distribution code', 30, 350),
-      makeBlock('1', 250, 350),
+      underLabel('1', 30, 350),
       makeBlock('Federal income tax withheld', 30, 450),
-      makeBlock('350.00', 250, 450),
+      underLabel('350.00', 30, 450),
     ];
     const data = extract1099SAFields(blocks);
     expect(data.distributionCode).toBe('1');
