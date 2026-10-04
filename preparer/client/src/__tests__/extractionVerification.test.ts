@@ -198,9 +198,15 @@ describe('real forms keep every amount they legitimately carry', () => {
     [`${STRESS}/eli-1099div.pdf`, { ordinaryDividends: 3120, qualifiedDividends: 2880, capitalGainDistributions: 640 }],
     [`${STRESS}/eli-1099int.pdf`, { amount: 2310.4 }],
     [`${STRESS}/eli-1099r.pdf`, { grossDistribution: 24000, taxableAmount: 24000, federalTaxWithheld: 2400 }],
-    [`${STRESS}/fay-1099misc.pdf`, { otherIncome: 1200, federalTaxWithheld: 1200 }],
-    [`${STRESS}/fay-1099nec-brewing.pdf`, { amount: 78702 }],
-    [`${STRESS}/fay-1099nec-events.pdf`, { amount: 78701 }],
+    [`${STRESS}/fay-1099misc.pdf`, { otherIncome: 1200 }],
+    // The amounts these two print. They used to be expected as 78702 and 78701,
+    // which are the fabricated figures the reader used to produce before a box's
+    // amount had to be confirmed against the page: 78702/78701 came from the
+    // documents' own fixture furniture, and the 1099-MISC's box 4 was expected to
+    // carry 1200, which is box 3's other income. Asserting those here recorded the
+    // bug as the expected result.
+    [`${STRESS}/fay-1099nec-brewing.pdf`, { amount: 28400 }],
+    [`${STRESS}/fay-1099nec-events.pdf`, { amount: 12750 }],
     [`${STRESS}/gus-w2.pdf`, { wages: 112000, federalTaxWithheld: 17400, medicareTax: 1624, stateTaxWithheld: 6050 }],
     [`${STRESS}/okafor-1098.pdf`, { mortgageInterest: 11240.66, outstandingPrincipal: 289400 }],
     [`${E2E}/1099q-529.pdf`, { grossDistribution: 8000, earnings: 1200, basisReturn: 6800 }],

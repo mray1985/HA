@@ -89,7 +89,7 @@ describe('the real forms it reads', () => {
     // this has to go through the write boundary — that is where "read" becomes
     // "held", and the ledger is rebuilt to say so.
     const res = await read(`${STRESS}/fay-1099misc.pdf`);
-    factsForExtraction({
+    const built = factsForExtraction({
       returnId: 'case-1',
       taxYear: 2025,
       documentId: 'doc-1',
@@ -97,10 +97,16 @@ describe('the real forms it reads', () => {
       extracted: res,
     });
     const ledger = res.boxLedger!;
-    expect(ledger.held).toBeGreaterThan(0);
-    // royalties was read from the tax year graphic; the ledger must not claim it.
-    expect(ledger.entries.find((e) => e.field === 'royalties')?.state).toBe('held');
-    expect(res.warnings.some((w) => w.includes('royalties'))).toBe(true);
+    // The property worth protecting is that royalties is never claimed as read:
+    // it was taken from the tax year graphic, and this form does not carry it.
+    //
+    // How the reader refuses has changed - the whole form is now held rather
+    // than one box being held - so this asserts the outcome, not the mechanism.
+    // Asserting a held counter would have pinned the earlier behaviour and
+    // failed the moment the refusal got stricter, which is the wrong direction
+    // for a guard against invented income.
+    expect(ledger.entries.find((e) => e.field === 'royalties')?.state).not.toBe('read');
+    expect(built.toolFields.royalties).toBeUndefined();
   });
 
   it('reports a blank form as having nothing to write rather than as a failure', async () => {

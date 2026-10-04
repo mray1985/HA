@@ -1280,7 +1280,11 @@ function checkedByGlyph(blocks: readonly TextBlock[], keywords: string[]): boole
 }
 
 /** A one- or two-character code printed under its label, such as 1099-R box 7a. */
-function codeUnder(blocks: readonly TextBlock[], keywords: string[]): string | undefined {
+function codeUnder(
+  blocks: readonly TextBlock[],
+  keywords: string[],
+  onLocated?: (block: TextBlock) => void,
+): string | undefined {
   const label = findLabelBlock(blocks as TextBlock[], keywords);
   if (!label) return undefined;
   const hits = (blocks as TextBlock[]).filter((b) => {
@@ -1290,7 +1294,12 @@ function codeUnder(blocks: readonly TextBlock[], keywords: string[]): string | u
     const cx = b.x + b.width / 2;
     return dy > 0 && dy < 40 && cx >= label.x - 8 && cx <= label.x + label.width + 16;
   }).sort((a, b) => a.y - b.y || a.x - b.x);
-  return hits[0]?.text.trim();
+  const found = hits[0];
+  if (!found) return undefined;
+  // Where the code was read from, for the field's provenance. Without this a
+  // located code carries no page + box, while every other located scalar does.
+  onLocated?.(found);
+  return found.text.trim();
 }
 
 /** An EIN printed under a TIN label ("72-7654321"). */
@@ -1573,7 +1582,10 @@ export function extract1099RFields(
     grossDistribution: box('grossDistribution', ['gross distribution', '1 gross', 'box 1']),
     taxableAmount: box('taxableAmount', ['taxable amount', '2a taxable', 'box 2a']),
     federalTaxWithheld: box('federalTaxWithheld', ['federal income tax withheld', '4 federal', 'box 4']),
-    distributionCode: codeUnder(textBlocks, ['7a dist', 'distribution code']) ?? '',
+    distributionCode: codeUnder(textBlocks, ['7a dist', 'distribution code'], (block) => {
+      // A code read from a specific block is located like any other scalar.
+      recordFieldLocation(fieldSourceLocations, 'distributionCode', block);
+    }) ?? '',
     stateCode: stateCodeUnder(textBlocks, ['15 state']),
   };
 }

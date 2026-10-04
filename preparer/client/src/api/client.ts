@@ -406,8 +406,8 @@ export async function wipeAllData(): Promise<void> {
     } catch { /* caches API may fail in some environments */ }
   }
 
-  // 5. Unregister service workers
-  if ('serviceWorker' in navigator) {
+  // 5. Unregister service workers. Node's test runner has no navigator.
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));
