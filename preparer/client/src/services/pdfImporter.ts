@@ -381,6 +381,7 @@ function processTextBlocks(
       extractedData,
       fieldRawTokens,
       fieldSourceLocations,
+      rejectedReads,
     );
   }
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
@@ -428,6 +429,19 @@ function processTextBlocks(
         ? readFormCheckboxes(span.type, meta.canvases, meta.dpi ?? 300, spanBlocks)
         : {};
       const spanData = extractFormData(span.type, spanBlocks, spanChecks);
+      if (meta?.canvases?.length) {
+        const spanRows = readFormRowAmounts(span.type, meta.canvases, meta.dpi ?? 300, spanBlocks);
+        applyRowAmountConfirmations(
+          span.type,
+          spanRows,
+          TOOL_MAPPINGS[span.type as ClassifiableFormType]?.direct,
+          spanData.extractedData,
+          spanData.fieldRawTokens,
+          spanData.fieldSourceLocations,
+          spanData.rejectedReads,
+        );
+        spanData.boxLedger = buildBoxLedger(span.type, spanData.extractedData, spanData.rejectedReads, spanData.pageText);
+      }
       const spanIdentity = span.type === 'W-2' ? w2EmployeeFromTextLayer(spanBlocks, !ocrUsed) : null;
       const spanNumericFields = Object.entries(spanData.extractedData).filter(
         ([, v]) => typeof v === 'number' && v > 0,
@@ -510,7 +524,7 @@ function processTextBlocks(
 }
 
 /**
- * Render the pages of a digital PDF, but only if a form on it declares a square.
+ * Render the pages of a digital PDF when a form on it has a square or a money box.
  *
  * A tick is ink, not text: on a digital form it extracts as a symbol-font glyph
  * (a real 1098-T prints "4" for its half-time box), so the text layer cannot say
@@ -528,11 +542,13 @@ async function renderForCheckboxes(
   const types = spans.length > 0
     ? spans.map((s) => s.type)
     : [detectFormType(textBlocks).type].filter((t): t is NonNullable<typeof t> => t !== null);
-  const needsSquares = types.some((t) => {
+  // A money box needs the page too: the ruled row is what confirms its amount.
+  // SSA-1099 has money boxes and no checkbox, and used to skip rendering entirely.
+  const needsPage = types.some((t) => {
     const declared = FORM_EXTRACTION_SCHEMAS[t as ClassifiableFormType];
-    return declared?.boxes.some((b) => b.kind === 'checkbox' && b.checkbox) ?? false;
+    return declared?.boxes.some((b) => (b.kind === 'checkbox' && b.checkbox) || b.kind === 'money') ?? false;
   });
-  if (!needsSquares) return null;
+  if (!needsPage) return null;
   try {
     const { renderPDFToImages } = await import('./pdfToImages');
     const dpi = 200;
@@ -754,14 +770,23 @@ function readFormRowAmounts(
     for (const pageNumber of pageNumbers) {
       const page = pageOf(pageNumber);
       if (!page) continue;
-      // Anchors: the label as printed, then the printed box number with a space,
-      // which survives scans where the label text is lost.
-      const anchors = [box.label, box.box ? `${box.box} ` : ''].filter((s) => s.trim().length > 0);
-      if (anchors.length === 0) continue;
-      const reading = readRowAmountOnPage(page, { anchors });
-      if (reading.state === 'unknown') continue;
-      out[box.key] = reading;
-      break;
+      // The printed label is the row. A bare box number ("1 ") matches too many
+      // places, and an empty hit on one of those was wiping a real amount.
+      const reading = box.label.trim().length > 0
+        ? readRowAmountOnPage(page, { anchors: [box.label] })
+        : { state: 'unknown' as const, reason: 'this box has no printed label' };
+      if (reading.state === 'read' || reading.state === 'empty') {
+        out[box.key] = reading;
+        break;
+      }
+      if (box.box.trim().length > 0) {
+        const numbered = readRowAmountOnPage(page, { anchors: [`${box.box} `] });
+        if (numbered.state === 'read') {
+          out[box.key] = numbered;
+          break;
+        }
+      }
+      if (!out[box.key]) out[box.key] = reading;
     }
   }
   return out;
@@ -770,12 +795,9 @@ function readFormRowAmounts(
 /**
  * Hold back any money value the ruled row did not confirm.
  *
- * This is the strict direction: a box's amount counts only when the form's own
- * ruling lines prove which row it sits in and that row holds that amount. A
- * value that proximity alone supplied is removed rather than kept, because on a
- * blank form proximity always finds *something* — a year, a section number, the
- * form's own title — and a held box is visible to the preparer while an invented
- * one is not.
+ * A blank row removes the proximity amount and records it as held. A row that
+ * could not be bounded does not: removing it would hold a real W-2, and the
+ * W-2c that corrects that W-2 would never apply.
  */
 function applyRowAmountConfirmations(
   formType: ReturnType<typeof detectFormType>['type'],
@@ -784,6 +806,7 @@ function applyRowAmountConfirmations(
   extractedData: Record<string, unknown>,
   fieldRawTokens: Record<string, string>,
   fieldSourceLocations: Record<string, FieldSourceLocationValue>,
+  rejectedReads: RejectedRead[],
 ): void {
   if (!formType || !mapping) return;
   for (const [boxKey, reading] of Object.entries(rows)) {
@@ -793,11 +816,24 @@ function applyRowAmountConfirmations(
       extractedData[field] = reading.value;
       if (reading.raw !== undefined) fieldRawTokens[field] = reading.raw;
       delete fieldSourceLocations[field];
-    } else if (reading.state === 'empty') {
-      delete extractedData[field];
-      delete fieldRawTokens[field];
-      delete fieldSourceLocations[field];
+      continue;
     }
+    // Only a row that was found and is blank removes the proximity amount.
+    // Unknown means the row could not be bounded; removing the amount then holds
+    // a real W-2, and the W-2c that corrects it never applies.
+    if (reading.state !== 'empty') continue;
+    const prior = extractedData[field];
+    if (prior !== undefined && prior !== null && prior !== '') {
+      rejectedReads.push({
+        field,
+        value: String(prior),
+        reason: 'not-printed',
+        detail: reading.reason,
+      });
+    }
+    delete extractedData[field];
+    delete fieldRawTokens[field];
+    delete fieldSourceLocations[field];
   }
 }
 

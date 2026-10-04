@@ -177,6 +177,28 @@ interface FormSignature {
   incomeType: string;
   primaryKeywords: string[];
   secondaryKeywords: string[];
+  /**
+   * Text this form must also print before a primary match is enough to call it.
+   *
+   * W-2C's secondaries are deliberately a superset of the W-2's, so that a real
+   * correction is never read as an original. On a photo or scan that made the
+   * reverse mistake common: a plain W-2 satisfies W-2C's primary on noise alone
+   * (a fuzzy "w-2c" matches the printed "w-2" at one edit), and W-2C's generic
+   * secondaries then outscore W-2. The result was every W-2 photo read as a
+   * W-2c and no money extracted at all. So W-2C also has to print something only
+   * a correction prints.
+   */
+  requireAlso?: string[];
+  /**
+   * Text that must appear *exactly* for a fuzzy primary match to count.
+   *
+   * OCR scoring tolerates two edits, which is right for a long phrase and wrong
+   * for a four-character form code: a plain W-2 photo satisfies "w-2c" at one
+   * edit. A correction prints its own code exactly, so requiring that keeps the
+   * W-2c signature for corrections without letting a photo borrow it. Paired
+   * with requireAlso, which is checked fuzzily because these are long phrases.
+   */
+  requireExact?: string[];
 }
 
 // ORDERING MATTERS: Forms with keywords that are substrings of other forms
@@ -203,8 +225,13 @@ const FORM_SIGNATURES: FormSignature[] = [
   {
     type: 'W-2C',
     incomeType: 'w2c',
-    primaryKeywords: ['w-2c', 'corrected wage and tax statement'],
-    secondaryKeywords: ['previously reported', 'correct information', 'employer', 'wages', 'federal income tax withheld', 'social security'],
+primaryKeywords: ['w-2c', 'corrected wage and tax statement'],
+      secondaryKeywords: ['previously reported', 'correct information', 'employer', 'wages', 'federal income tax withheld', 'social security'],
+      // Printed only by a correction. "w-2c" itself cannot be required here: the
+      // fuzzy match that satisfies the primary on noise satisfies this too, which
+      // would make the check a no-op.
+      requireAlso: ['previously reported', 'correct information', 'corrected wage and tax statement'],
+      requireExact: ['w-2c', 'corrected wage and tax statement'],
   },
   {
     type: 'W-2',
@@ -335,6 +362,26 @@ const FORM_SIGNATURES: FormSignature[] = [
  * When `ocrMode` is false/undefined, behavior is identical to pre-OCR
  * (exact substring matching via String.includes).
  */
+/**
+ * Whether a form that matched its primary keywords is confirmed by the extra,
+ * form-specific text it requires. Forms with neither requirement are confirmed
+ * by the primary match alone.
+ *
+ * `requireAlso` is tested with the caller's loose (fuzzy) matcher because those
+ * are whole phrases; `requireExact` with the strict one, because those are short
+ * form codes a scan garbles into the neighbouring form's code.
+ */
+function signatureConfirmed(
+  sig: FormSignature,
+  loose: (keyword: string) => boolean,
+  strict: (keyword: string) => boolean,
+): boolean {
+  if (!sig.requireAlso && !sig.requireExact) return true;
+  const alsoOk = !sig.requireAlso || sig.requireAlso.some(loose);
+  const exactOk = !sig.requireExact || sig.requireExact.some(strict);
+  return alsoOk || exactOk;
+}
+
 export function detectFormType(textBlocks: TextBlock[], ocrMode?: boolean): {
   type: SupportedFormType | null;
   incomeType: string | null;
@@ -360,6 +407,9 @@ export function detectFormType(textBlocks: TextBlock[], ocrMode?: boolean): {
       const matched = [...matchedPrimary, ...matchedSecondary];
 
       if (matchedPrimary.length > 0) {
+        // A primary keyword alone is not enough where the form needs a second,
+        // form-specific confirmation (see FormSignature.requireAlso/requireExact).
+        if (!signatureConfirmed(sig, (kw) => fuzzyIncludes(allText, kw, 2), (kw) => allText.includes(kw))) continue;
         const score = matchedPrimary.length * 10 + matchedSecondary.length;
         if (score > bestScore) {
           bestScore = score;
@@ -389,6 +439,7 @@ export function detectFormType(textBlocks: TextBlock[], ocrMode?: boolean): {
   for (const sig of FORM_SIGNATURES) {
     const matchedPrimary = sig.primaryKeywords.filter((kw) => allText.includes(kw));
     if (matchedPrimary.length === 0) continue;
+    if (!signatureConfirmed(sig, (kw) => allText.includes(kw), (kw) => allText.includes(kw))) continue;
     const matchedSecondary = sig.secondaryKeywords.filter((kw) => allText.includes(kw));
     const score = matchedPrimary.length * 10 + matchedSecondary.length;
     if (!bestDigital || score > bestDigital.score) {

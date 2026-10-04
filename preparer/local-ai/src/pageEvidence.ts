@@ -612,17 +612,29 @@ function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
  * the next word ("8,000.00 Form"). The whole run is not a money token, but the
  * figure in it is. A year, a ZIP, and a box number still are not.
  */
-function moneyFigure(text: string): { value: number; raw: string } | undefined {
-  const whole = parseMoneyToken(text.trim());
-  if (whole !== undefined) return { value: whole, raw: text.trim() };
+export function moneyIn(text: string): { value: number; raw: string } | undefined {
   const t = text.trim();
-  const m = t.match(/\(\s*-?[$€]?\s?\d[\d,]*(?:\.\d{1,2})?\s*\)/)
-    ?? t.match(/-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/)
-    ?? t.match(/-?[$€]?\s?\d+\.\d{2}/);
-  if (!m) return undefined;
-  const raw = m[0].replace(/\s+/g, '');
-  const value = parseMoneyToken(raw);
-  return value === undefined ? undefined : { value, raw };
+  // Parentheses stay in the match so "(1,250.00)" is an accounting negative,
+  // not the positive 1250 inside them. A currency sign makes a whole-dollar
+  // figure money ("$500"). A bare whole-dollar figure is money too, except a
+  // year, a ZIP, or a one- or two-digit box number.
+  const patterns = [
+    /\(\s*-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\s*\)/,
+    /\(\s*-?[$€]?\s?\d+\.\d{2}\s*\)/,
+    /\(\s*-?[$€]?\s?\d{1,7}\s*\)/,
+    /-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/,
+    /-?[$€]?\s?\d+\.\d{2}/,
+    /-?[$€]\s?\d{1,7}(?!\d)/,
+    /(?<![\d$.(-])(?!(?:19|20)\d{2}\b)(?!\d{5}\b)(?!\d{1,2}\b)\d{3,7}(?![\d-])/,
+  ];
+  for (const pattern of patterns) {
+    const m = t.match(pattern);
+    if (!m) continue;
+    const raw = m[0].replace(/\s+/g, '');
+    const value = parseMoneyToken(raw);
+    if (value !== undefined) return { value, raw };
+  }
+  return undefined;
 }
 
 /**
@@ -684,7 +696,7 @@ export function readRowAmount(
       const out: Array<{ value: number; raw: string; box: PixelBox }> = [];
       for (const w of words) {
         if (!centreIn(region, w.box)) continue;
-        const money = moneyFigure(w.text);
+        const money = moneyIn(w.text);
         if (!money) continue;
         out.push({ value: money.value, raw: money.raw, box: w.box });
       }
