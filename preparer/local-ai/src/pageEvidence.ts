@@ -637,6 +637,72 @@ export function moneyIn(text: string): { value: number; raw: string } | undefine
   return undefined;
 }
 
+/** A money figure found inside a text run, with where it sits across that run. */
+export interface MoneyItem {
+  value: number;
+  raw: string;
+  /**
+   * Horizontal centre of the figure within its run, in raster pixels.
+   * Absent when the run has no box: a missing box is not the coordinate 0.
+   */
+  cx?: number;
+}
+
+/**
+ * Every money figure in a text run, each with its own horizontal position.
+ *
+ * OCR of a photographed form returns whole strips of the page, so a single run
+ * carries several boxes' amounts on one line: a measured W-2 photo yields
+ * "94-3216540 68,250.00 7,120.00" in one block, carrying box 1 and box 2. Reading
+ * only the first figure makes one box's value serve for both, so the figures are
+ * separated and placed by character offset — which is what lets a caller tell
+ * box 1 from box 2 on the same printed line.
+ *
+ * The offset is apportioned across the run's width (`x1 - x0`) rather than
+ * measured from glyph widths: the same approximation the proximity reader
+ * makes, and the only one available without a per-glyph text layer. Without a
+ * box there is no width, so the figure is returned with no coordinate.
+ *
+ * This reports position; it does not decide which figure belongs to which box.
+ * That decision needs the form's printed columns, and guessing by proximity was
+ * measured to reinstate a fabricated 1098-T box 5.
+ */
+export function moneyItemsIn(text: string, box?: PixelBox): MoneyItem[] {
+  const patterns = [
+    /\(\s*-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\s*\)/g,
+    /\(\s*-?[$€]?\s?\d+\.\d{2}\s*\)/g,
+    /\(\s*-?[$€]?\s?\d{1,7}\s*\)/g,
+    /-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/g,
+    /-?[$€]?\s?\d+\.\d{2}/g,
+    /-?[$€]\s?\d{1,7}(?!\d)/g,
+    /(?<![\d$.(-])(?!(?:19|20)\d{2}\b)(?!\d{5}\b)(?!\d{1,2}\b)\d{3,7}(?![\d-])/g,
+  ];
+  // First pattern that claims a span wins, so one figure is not reported twice
+  // by two patterns that both cover it.
+  const taken: Array<[number, number]> = [];
+  const out: Array<MoneyItem & { start: number }> = [];
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = pattern.exec(text)) !== null) {
+      const start = m.index;
+      const end = start + m[0].length;
+      if (taken.some(([s, e]) => start < e && end > s)) continue;
+      const raw = m[0].replace(/\s+/g, '');
+      const value = parseMoneyToken(raw);
+      if (value === undefined) continue;
+      taken.push([start, end]);
+      if (!box) {
+        out.push({ value, raw, start });
+        continue;
+      }
+      const cx = box[0] + ((start + m[0].length / 2) / Math.max(1, text.length)) * (box[2] - box[0]);
+      out.push({ value, raw, cx, start });
+    }
+  }
+  return out.sort((a, b) => a.start - b.start).map(({ start: _start, ...item }) => item);
+}
+
 /**
  * Read the amount belonging to one box, confined to the ruled row its label
  * names.
