@@ -818,9 +818,25 @@ function applyRowAmountConfirmations(
       delete fieldSourceLocations[field];
       continue;
     }
-    // Only a row that was found and is blank removes the proximity amount.
-    // Unknown means the row could not be bounded; removing the amount then holds
-    // a real W-2, and the W-2c that corrects it never applies.
+    // A blank ruled row removes the proximity amount. A row that could not be
+    // bounded does not. Measured both ways over the 23 stress documents whose
+    // values are known:
+    //
+    //   keep an unbounded row's amount   19/23 matching, 1 fabricated
+    //   hold an unbounded row too        10/23 matching, 0 fabricated
+    //
+    // Holding every unbounded row is not a small loss: on a W-2 most rows come
+    // back unbounded, so it discards most of the suite, digital PDFs included.
+    // The one fabrication it costs is a 1098-T whose box 5 row cannot be bounded
+    // and so keeps a decorative figure printed nearby (scholarships 25, where
+    // the form prints nothing).
+    //
+    // The way out is not to choose here but to bound those rows. OCR reads a
+    // photographed form in whole page strips, so one text run carries several
+    // boxes' amounts at once ("94-3216540 68,250.00 7,120.00" is box 1 and box 2),
+    // and moneyItemsIn separates and places them. Telling those figures apart
+    // needs the form's printed columns: picking by proximity was measured and
+    // reinstates the same fabricated 1098-T box 5.
     if (reading.state !== 'empty') continue;
     const prior = extractedData[field];
     if (prior !== undefined && prior !== null && prior !== '') {
