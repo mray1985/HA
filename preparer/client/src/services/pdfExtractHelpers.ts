@@ -689,6 +689,23 @@ function isUnreadableAmountToken(text: string): boolean {
  * Missing boxes return undefined — distinct from a printed $0.
  * When a text block is located, page + box come from that block (never invented).
  */
+/**
+ * Whether a figure's digits are printed in the label that names its own box.
+ *
+ * The form's label often contains numbers that are part of the words rather than
+ * the value: a 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and reading
+ * the 1250 as the box's amount invents income. A printed amount is never a digit
+ * run out of its own label, so this rejects the figure.
+ *
+ * Runs shorter than three digits are left alone: they are box numbers and small
+ * counts, and a label legitimately contains its own box number.
+ */
+function printedInsideLabel(raw: string, labelText: string): boolean {
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (digits.length < 3) return false;
+  return new RegExp(`(^|[^0-9])${digits}([^0-9]|$)`).test(labelText);
+}
+
 function findNearbyAmount(
   textBlocks: TextBlock[],
   labelBlock: TextBlock,
@@ -808,6 +825,15 @@ function findNearbyAmount(
       if (isUnreadableAmountToken(trimmed)) {
         unreadable.push({ raw: trimmed, distance: scoredDistance, block });
       }
+      continue;
+    }
+
+    // A figure printed inside the words that name the box is the label, not the
+    // value. A real 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and the
+    // reader took the 1250 out of the label as the amount, on three documents. An
+    // amount a box prints is never a digit run from its own printed label.
+    if (printedInsideLabel(raw, labelBlock.text)) {
+      rejected.push({ text: trimmed, value: num, reason: `the figure ${raw} is printed in this box's own label`, dx: 0, dy: block.y - labelBlock.y, dist: scoredDistance });
       continue;
     }
 

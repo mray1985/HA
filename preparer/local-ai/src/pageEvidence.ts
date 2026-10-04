@@ -717,6 +717,18 @@ export function moneyItemsIn(text: string, box?: PixelBox): MoneyItem[] {
  * 'unknown' and nothing is written: an amount is never reported from a region
  * the page did not prove belongs to this box.
  */
+/**
+ * Whether a figure's digits are printed in the words that name its own box.
+ *
+ * Runs shorter than three digits are left alone: those are box numbers and small
+ * counts, and a label legitimately carries its own box number.
+ */
+export function printedInsideLabel(raw: string, labelText: string): boolean {
+  const digits = raw.replace(/[^0-9]/g, '');
+  if (digits.length < 3) return false;
+  return new RegExp(`(^|[^0-9])${digits}([^0-9]|$)`).test(labelText);
+}
+
 export function readRowAmount(
   raster: PageRaster,
   words: readonly PageWord[],
@@ -764,6 +776,11 @@ export function readRowAmount(
         if (!centreIn(region, w.box)) continue;
         const money = moneyIn(w.text);
         if (!money) continue;
+        // The row also contains the words that name the box, and those words can
+        // hold digits: a 1099-DIV prints box 2b as "Unrecap. Sec. 1250 gain", and
+        // the reader took the 1250 out of the label as the amount, on three
+        // documents. A printed amount is never a digit run out of its own label.
+        if (printedInsideLabel(money.raw, phrase)) continue;
         out.push({ value: money.value, raw: money.raw, box: w.box });
       }
       return out;
