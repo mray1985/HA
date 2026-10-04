@@ -39,13 +39,19 @@ describe('money figures in one text run', () => {
     expect(moneyItemsIn('(1,250.00)', RUN)[0]!.value).toBe(-1250);
   });
 
-  it('places figures in proportion to where they are printed', () => {
+  it('places figures in proportion to where they are printed, inside the run', () => {
     const left = moneyItemsIn('11,111.00', RUN)[0]!;
     const right = moneyItemsIn('                    22,222.00', RUN)[0]!;
-    expect(right.cx).toBeGreaterThan(left.cx);
+    expect(right.cx).toBeGreaterThan(left.cx!);
+    // The run is [100, 200]. Scaling by the right edge instead of the width
+    // puts the right-hand figure past x=200.
+    expect(left.cx).toBeGreaterThanOrEqual(RUN[0]);
+    expect(left.cx).toBeLessThanOrEqual(RUN[2]);
+    expect(right.cx).toBeGreaterThanOrEqual(RUN[0]);
+    expect(right.cx).toBeLessThanOrEqual(RUN[2]);
   });
 
-  it('reports position 0 without a box, so callers cannot mistake it for x=0', () => {
-    expect(moneyItemsIn('5,000.00')[0]!.cx).toBe(0);
+  it('does not invent a coordinate when the run has no box', () => {
+    expect(moneyItemsIn('5,000.00')[0]!.cx).toBeUndefined();
   });
 });

@@ -641,8 +641,11 @@ export function moneyIn(text: string): { value: number; raw: string } | undefine
 export interface MoneyItem {
   value: number;
   raw: string;
-  /** Horizontal centre of the figure within its run, in raster pixels. */
-  cx: number;
+  /**
+   * Horizontal centre of the figure within its run, in raster pixels.
+   * Absent when the run has no box: a missing box is not the coordinate 0.
+   */
+  cx?: number;
 }
 
 /**
@@ -655,9 +658,10 @@ export interface MoneyItem {
  * separated and placed by character offset — which is what lets a caller tell
  * box 1 from box 2 on the same printed line.
  *
- * The offset is apportioned across the run's width rather than measured from
- * glyph widths: the same approximation the proximity reader makes, and the only
- * one available without a per-glyph text layer.
+ * The offset is apportioned across the run's width (`x1 - x0`) rather than
+ * measured from glyph widths: the same approximation the proximity reader
+ * makes, and the only one available without a per-glyph text layer. Without a
+ * box there is no width, so the figure is returned with no coordinate.
  *
  * This reports position; it does not decide which figure belongs to which box.
  * That decision needs the form's printed columns, and guessing by proximity was
@@ -676,7 +680,7 @@ export function moneyItemsIn(text: string, box?: PixelBox): MoneyItem[] {
   // First pattern that claims a span wins, so one figure is not reported twice
   // by two patterns that both cover it.
   const taken: Array<[number, number]> = [];
-  const out: MoneyItem[] = [];
+  const out: Array<MoneyItem & { start: number }> = [];
   for (const pattern of patterns) {
     pattern.lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -688,11 +692,15 @@ export function moneyItemsIn(text: string, box?: PixelBox): MoneyItem[] {
       const value = parseMoneyToken(raw);
       if (value === undefined) continue;
       taken.push([start, end]);
-      const cx = box ? box[0] + ((start + m[0].length / 2) / Math.max(1, text.length)) * box[2] : 0;
-      out.push({ value, raw, cx });
+      if (!box) {
+        out.push({ value, raw, start });
+        continue;
+      }
+      const cx = box[0] + ((start + m[0].length / 2) / Math.max(1, text.length)) * (box[2] - box[0]);
+      out.push({ value, raw, cx, start });
     }
   }
-  return out.sort((a, b) => a.cx - b.cx);
+  return out.sort((a, b) => a.start - b.start).map(({ start: _start, ...item }) => item);
 }
 
 /**
