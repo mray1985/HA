@@ -770,16 +770,21 @@ function readFormRowAmounts(
     for (const pageNumber of pageNumbers) {
       const page = pageOf(pageNumber);
       if (!page) continue;
-      // Anchors: the label as printed, then the printed box number with a space,
-      // which survives scans where the label text is lost.
-      const anchors = [box.label, box.box ? `${box.box} ` : ''].filter((s) => s.trim().length > 0);
-      if (anchors.length === 0) continue;
-      const reading = readRowAmountOnPage(page, { anchors });
-      // A proved row wins. An unknown row is kept too: dropping it would leave
-      // the proximity amount in place, which is the number this check exists to hold.
+      // The printed label is the row. A bare box number ("1 ") matches too many
+      // places, and an empty hit on one of those was wiping a real amount.
+      const reading = box.label.trim().length > 0
+        ? readRowAmountOnPage(page, { anchors: [box.label] })
+        : { state: 'unknown' as const, reason: 'this box has no printed label' };
       if (reading.state === 'read' || reading.state === 'empty') {
         out[box.key] = reading;
         break;
+      }
+      if (box.box.trim().length > 0) {
+        const numbered = readRowAmountOnPage(page, { anchors: [`${box.box} `] });
+        if (numbered.state === 'read') {
+          out[box.key] = numbered;
+          break;
+        }
       }
       if (!out[box.key]) out[box.key] = reading;
     }
@@ -790,12 +795,9 @@ function readFormRowAmounts(
 /**
  * Hold back any money value the ruled row did not confirm.
  *
- * This is the strict direction: a box's amount counts only when the form's own
- * ruling lines prove which row it sits in and that row holds that amount. A
- * value that proximity alone supplied is removed rather than kept, because on a
- * blank form proximity always finds *something* — a year, a section number, the
- * form's own title — and a held box is visible to the preparer while an invented
- * one is not.
+ * A blank row removes the proximity amount and records it as held. A row that
+ * could not be bounded does not: removing it would hold a real W-2, and the
+ * W-2c that corrects that W-2 would never apply.
  */
 function applyRowAmountConfirmations(
   formType: ReturnType<typeof detectFormType>['type'],
@@ -816,8 +818,10 @@ function applyRowAmountConfirmations(
       delete fieldSourceLocations[field];
       continue;
     }
-    // Empty and unknown both fail confirmation. A proximity amount that was
-    // already written is held, not deleted in silence, so the ledger shows it.
+    // Only a row that was found and is blank removes the proximity amount.
+    // Unknown means the row could not be bounded; removing the amount then holds
+    // a real W-2, and the W-2c that corrects it never applies.
+    if (reading.state !== 'empty') continue;
     const prior = extractedData[field];
     if (prior !== undefined && prior !== null && prior !== '') {
       rejectedReads.push({

@@ -722,6 +722,18 @@ export function readRowAmount(
     }
 
     if (found.length === 0) {
+      // The rule can stop short of the amount. Look across the label's line
+      // before calling the row empty and removing a figure that is printed there.
+      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+      for (const w of words) {
+        if (!centreIn(wide, w.box)) continue;
+        const money = moneyIn(w.text);
+        if (!money) continue;
+        found.push({ value: money.value, raw: money.raw, box: w.box });
+      }
+    }
+
+    if (found.length === 0) {
       return { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
     }
 
