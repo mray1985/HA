@@ -576,6 +576,163 @@ const SQUARE_EDGE_INK = 0.5;
  * em; a letter is at most about 0.75 em tall. Measured: without the size
  * floor the letter "a" below "March" read as a checked 1098-T box 7 on a scan.
  */
+// ─── Money amounts, read inside the ruled row that belongs to the box ─────
+
+/**
+ * Where a money box's row sits on the page, found from printed text.
+ *
+ * A form row is one box: the label sits in the left column and the amount in a
+ * column to its right, so the whole row — not the label's own cell — is what
+ * belongs to the box. The row's top and bottom come from the form's ruling
+ * lines, which is what tells a filled box from an empty one. Proximity cannot:
+ * given any number nearby, nearest-wins always returns something, so a blank
+ * box picks up a year, a section number or the form's own title.
+ */
+export interface AmountRowSpec {
+  /** Printed text tried in order; the first phrase found on the page anchors the row. */
+  anchors: ReadonlyArray<string>;
+  /** How far right of the label a value may sit when the row has no right rule. */
+  maxAcrossPx?: number;
+}
+
+export interface CellAmountReading {
+  /** 'read' when the row holds one amount, 'empty' when the ruled row provably holds none. */
+  state: 'read' | 'empty' | 'unknown';
+  reason: string;
+  value?: number;
+  /** The token as printed, when read. */
+  raw?: string;
+  /** The ruled row the search was confined to, in raster pixels. */
+  row?: PixelBox;
+}
+
+/** Word centre inside a box, with a little slack for glyphs touching the rule. */
+function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
+  const cx = (box[0] + box[2]) / 2;
+  const cy = (box[1] + box[3]) / 2;
+  return cx >= inner[0] - slack && cx <= inner[2] + slack && cy >= inner[1] - slack && cy <= inner[3] + slack;
+}
+
+/**
+ * The money printed inside a text run, if any.
+ *
+ * The text layer merges a value with whatever sits beside it: a real 1099-G
+ * extracts as "3,600.00 Form" and a 1099-MISC as "1,200.00 $". Requiring the
+ * whole token to be money rejected both. Only a comma-grouped figure or one with
+ * cents counts, so a ZIP ("78704"), a year, an OMB number ("1545-0120") and a
+ * box number are still not money.
+ *
+ * Exported so the rule can be tested directly: it is the difference between a
+ * real 1099-G amount ("3,600.00 Form") being read and every money box on the
+ * form being held back.
+ */
+export function moneyIn(text: string): { value: number; raw: string } | undefined {
+  const t = text.trim();
+  const m = t.match(/-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/) ?? t.match(/-?[$€]?\s?\d+\.\d{2}/);
+  if (!m) return undefined;
+  const raw = m[0].replace(/\s+/g, '');
+  const value = parseMoneyToken(raw);
+  return value === undefined ? undefined : { value, raw };
+}
+
+/**
+ * Read the amount belonging to one box, confined to the ruled row its label
+ * names.
+ *
+ * The row is the label's own table cell extended across the columns to its
+ * right, bounded above and below by the form's printed rules. A value printed
+ * inside that row belongs to the box; one anywhere else on the form does not.
+ *
+ * Returns 'empty' only when the rules were found and the row provably holds no
+ * amount — that is the result which stops a blank box inventing a value. When
+ * the rules cannot be found the row cannot be bounded, so the answer is
+ * 'unknown' and nothing is written: an amount is never reported from a region
+ * the page did not prove belongs to this box.
+ */
+export function readRowAmount(
+  raster: PageRaster,
+  words: readonly PageWord[],
+  spec: AmountRowSpec,
+  near?: PixelBox | null,
+): CellAmountReading {
+  for (const phrase of spec.anchors) {
+    const hits = findPhrase(words, phrase);
+    if (hits.length === 0) continue;
+    let label: PixelBox;
+    if (hits.length === 1) {
+      label = hits[0]!;
+    } else if (near) {
+      label = [...hits].sort((a, b) => boxGap(a, near) - boxGap(b, near))[0]!;
+    } else {
+      // The same phrase appears more than once and nothing says which box this
+      // is: guessing between them is how a value lands in the wrong box.
+      continue;
+    }
+
+    const h = Math.max(4, label[3] - label[1]);
+    const around: PixelBox = [
+      Math.max(0, Math.floor(label[0] - 4 * h)), Math.max(0, Math.floor(label[1] - 20 * h)),
+      Math.min(raster.width - 1, Math.ceil(label[0] + 40 * h)), Math.min(raster.height - 1, Math.ceil(label[3] + 20 * h)),
+    ];
+    const threshold = regionThreshold(raster, around);
+    const cell = tableCell(raster, threshold, label, 0);
+    if (!cell) continue;
+
+    const [cellLeft, top, , bottom] = cell;
+
+    // The row's right boundary is the next vertical rule to the right of the
+    // label. It must be searched from the label's own right edge: searching from
+    // inside the label locks onto a rule that crosses the label's text (measured
+    // on a 1099-G, whose "Unemployment compensation" runs from x=852 to x=1107
+    // while the rule found from x=966 sat at x=1099), and the row then stops
+    // before the value, which is printed further right. A rule found before the
+    // label ends is not this row's boundary.
+    let right = findRule(raster, threshold, false, label[2] + 1, 1, Math.round(80 * h), top + 3, bottom - 3);
+    // If the row prints no further rule, the value sits to the right of the
+    // label in the same row: reach across the columns rather than stop short.
+    if (right === null || right <= label[2]) right = Math.min(raster.width - 1, label[2] + (spec.maxAcrossPx ?? 30 * h));
+    const row: PixelBox = [cellLeft, top, Math.max(right, label[2]), bottom];
+
+    // Every money figure in the row. A currency sign alone is not money and is
+    // skipped; a value merged with its neighbour is read out of the run.
+    const found: Array<{ value: number; raw: string; box: PixelBox }> = [];
+    for (const w of words) {
+      if (!centreIn(row, w.box)) continue;
+      const t = w.text.trim();
+      if (/^[$€]$/.test(t)) continue;
+      const money = moneyIn(t);
+      if (!money) continue;
+      found.push({ value: money.value, raw: money.raw, box: w.box });
+    }
+
+    if (found.length === 0) {
+      return { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
+    }
+
+    // One figure, or several tokens printing the same figure ("$ 1,200.00" split
+    // across words), is a value. Two different figures in one row is not
+    // something this reader can resolve, so nothing is written.
+    const distinct = new Map<number, string>();
+    for (const f of found) if (!distinct.has(f.value)) distinct.set(f.value, f.raw);
+    if (distinct.size === 1) {
+      const [value, raw] = [...distinct.entries()][0]!;
+      return { state: 'read', value, raw, reason: `read in the ruled row for "${phrase}"`, row };
+    }
+    return {
+      state: 'unknown',
+      reason: `the ruled row for "${phrase}" holds ${distinct.size} different amounts (${[...distinct.keys()].join(', ')})`,
+      row,
+    };
+  }
+  return { state: 'unknown', reason: 'no ruled row could be found for this box' };
+}
+
+/** Anchors for a box, from the printed text the schema declares for it. */
+export function rowSpecFromLabels(labels: readonly string[], maxAcrossPx?: number): AmountRowSpec | null {
+  const anchors = labels.filter((l) => l.trim().length > 0);
+  return anchors.length ? { anchors, ...(maxAcrossPx !== undefined ? { maxAcrossPx } : {}) } : null;
+}
+
 function findSquares(r: PageRaster, region: PixelBox, em: number, threshold: number): PixelBox[] {
   const minSide = Math.max(4, em * 0.8);
   const maxSide = em * 2.5;

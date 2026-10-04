@@ -19,7 +19,7 @@
 
 import { FORM_EXTRACTION_SCHEMAS, TOOL_MAPPINGS, type ClassifiableFormType } from '@hatax/local-ai';
 import { extractWithSyncfusion } from './syncfusionExtractor';
-import { readCheckboxOnPage, renderedPage } from './checkboxRaster';
+import { readCheckboxOnPage, readRowAmountOnPage, renderedPage, type CellAmountReading } from './checkboxRaster';
 
 // Re-export everything from the pure logic module so consumers can import
 // from either file. Tests import directly from pdfExtractHelpers to avoid
@@ -368,6 +368,21 @@ function processTextBlocks(
   // Extract fields based on form type — using effectiveBlocks (scoped to form pages)
   const { extractedData, payerName, fieldRawTokens, fieldSourceLocations, rejectedReads, printIndex } =
     extractFormData(type, effectiveBlocks, checkboxStates);
+  // Money boxes are then re-read from the ruled row each one's printed label
+  // names. Only a value that row confirms survives: proximity alone invents a
+  // number for an empty box, and a held box reaches the preparer while an
+  // invented one does not.
+  if (meta?.canvases?.length) {
+    const rows = readFormRowAmounts(type, meta.canvases, meta.dpi ?? 300, effectiveBlocks);
+    applyRowAmountConfirmations(
+      type,
+      rows,
+      TOOL_MAPPINGS[type as ClassifiableFormType]?.direct,
+      extractedData,
+      fieldRawTokens,
+      fieldSourceLocations,
+    );
+  }
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
   const identity = type === 'W-2' ? w2EmployeeFromTextLayer(effectiveBlocks, !ocrUsed) : null;
   // The tax year the form prints, checked against the case's year in the review.
@@ -692,6 +707,97 @@ function applyCheckboxStates(
     fieldRawTokens[field] = state ? 'ticked' : 'not ticked';
     // A square is a mark, not a value: it has no field location to point at.
     delete fieldSourceLocations[field];
+  }
+}
+
+/**
+ * Read every money box on a form from the ruled row its printed label names.
+ *
+ * Keys are the form's schema box keys, so a reading can be matched back to the
+ * field it fills. 'empty' and 'unknown' are both returned: the caller needs to
+ * know that a box was checked and found blank, which is different from never
+ * having looked.
+ */
+function readFormRowAmounts(
+  formType: ReturnType<typeof detectFormType>['type'],
+  canvases: readonly HTMLCanvasElement[],
+  dpi: number,
+  blocks: readonly TextBlock[],
+): Record<string, CellAmountReading> {
+  if (!formType) return {};
+  const schema = FORM_EXTRACTION_SCHEMAS[formType as ClassifiableFormType];
+  if (!schema) return {};
+  const money = schema.boxes.filter((b) => b.kind === 'money' && b.label.trim().length > 0);
+  if (money.length === 0) return {};
+
+  const byPage = new Map<number, TextBlock[]>();
+  for (const b of blocks) {
+    const list = byPage.get(b.page);
+    if (list) list.push(b);
+    else byPage.set(b.page, [b]);
+  }
+  const pageNumbers = [...byPage.keys()].sort((a, b) => a - b);
+  const rendered = new Map<number, ReturnType<typeof renderedPage>>();
+  const pageOf = (pageNumber: number) => {
+    const cached = rendered.get(pageNumber);
+    if (cached) return cached;
+    const canvas = canvases[pageNumber - 1];
+    const pageBlocks = byPage.get(pageNumber);
+    if (!canvas || !pageBlocks) return undefined;
+    const page = renderedPage(canvas, pageBlocks, dpi, 'ocr');
+    rendered.set(pageNumber, page);
+    return page;
+  };
+
+  const out: Record<string, CellAmountReading> = {};
+  for (const box of money) {
+    for (const pageNumber of pageNumbers) {
+      const page = pageOf(pageNumber);
+      if (!page) continue;
+      // Anchors: the label as printed, then the printed box number with a space,
+      // which survives scans where the label text is lost.
+      const anchors = [box.label, box.box ? `${box.box} ` : ''].filter((s) => s.trim().length > 0);
+      if (anchors.length === 0) continue;
+      const reading = readRowAmountOnPage(page, { anchors });
+      if (reading.state === 'unknown') continue;
+      out[box.key] = reading;
+      break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Hold back any money value the ruled row did not confirm.
+ *
+ * This is the strict direction: a box's amount counts only when the form's own
+ * ruling lines prove which row it sits in and that row holds that amount. A
+ * value that proximity alone supplied is removed rather than kept, because on a
+ * blank form proximity always finds *something* — a year, a section number, the
+ * form's own title — and a held box is visible to the preparer while an invented
+ * one is not.
+ */
+function applyRowAmountConfirmations(
+  formType: ReturnType<typeof detectFormType>['type'],
+  rows: Record<string, CellAmountReading>,
+  mapping: Record<string, string> | undefined,
+  extractedData: Record<string, unknown>,
+  fieldRawTokens: Record<string, string>,
+  fieldSourceLocations: Record<string, FieldSourceLocationValue>,
+): void {
+  if (!formType || !mapping) return;
+  for (const [boxKey, reading] of Object.entries(rows)) {
+    const field = mapping[boxKey];
+    if (!field) continue;
+    if (reading.state === 'read' && typeof reading.value === 'number') {
+      extractedData[field] = reading.value;
+      if (reading.raw !== undefined) fieldRawTokens[field] = reading.raw;
+      delete fieldSourceLocations[field];
+    } else if (reading.state === 'empty') {
+      delete extractedData[field];
+      delete fieldRawTokens[field];
+      delete fieldSourceLocations[field];
+    }
   }
 }
 
