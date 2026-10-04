@@ -800,7 +800,7 @@ export function readRowAmount(
     // The vertical rule can stop short of the amount column. Look across the
     // label's line before calling a row that holds a real figure empty.
     if (found.length === 0) {
-      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 10 * h), bottom];
       found = collect(wide);
     }
 
@@ -1209,8 +1209,12 @@ export function readBox12Code(amount: PixelBox, words: readonly PageWord[]): str
  */
 export function box12CodeAt(amount: PixelBox, words: readonly PageWord[]): { code: string; box: PixelBox } | null {
   const height = amount[3] - amount[1];
+  const midY = (amount[1] + amount[3]) / 2;
+  // The code sits on the amount's line, but the text layer often places it a
+  // hair above that line, so a strict overlap test kept the vertical "Code"
+  // and dropped the letter that was typed.
   const found = tokens(words)
-    .filter((t) => sameLine(t.box, amount) && t.box[2] <= amount[0] + 1 && amount[0] - t.box[2] < 12 * height)
+    .filter((t) => Math.abs((t.box[1] + t.box[3]) / 2 - midY) < height * 1.2 && t.box[2] <= amount[0] + 1 && amount[0] - t.box[2] < 12 * height)
     .map((t) => ({ code: t.text.trim().toUpperCase(), box: t.box }))
     .filter((t) => BOX12_CODE_SET.has(t.code))
     .sort((a, b) => b.box[2] - a.box[2]);
