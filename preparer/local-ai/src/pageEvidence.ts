@@ -618,9 +618,9 @@ function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
  *
  * The text layer merges a value with whatever sits beside it: a real 1099-G
  * extracts as "3,600.00 Form" and a 1099-MISC as "1,200.00 $". Requiring the
- * whole token to be money rejected both. Only a comma-grouped figure or one with
- * cents counts, so a ZIP ("78704"), a year, an OMB number ("1545-0120") and a
- * box number are still not money.
+ * whole token to be money rejected both. A comma-grouped figure, one with
+ * cents, a whole-dollar amount, or an accounting negative counts. A ZIP
+ * ("78704"), a year, an OMB number ("1545-0120") and a box number do not.
  *
  * Exported so the rule can be tested directly: it is the difference between a
  * real 1099-G amount ("3,600.00 Form") being read and every money box on the
@@ -628,11 +628,27 @@ function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
  */
 export function moneyIn(text: string): { value: number; raw: string } | undefined {
   const t = text.trim();
-  const m = t.match(/-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/) ?? t.match(/-?[$€]?\s?\d+\.\d{2}/);
-  if (!m) return undefined;
-  const raw = m[0].replace(/\s+/g, '');
-  const value = parseMoneyToken(raw);
-  return value === undefined ? undefined : { value, raw };
+  // Parentheses stay in the match so "(1,250.00)" is an accounting negative,
+  // not the positive 1250 inside them. A currency sign makes a whole-dollar
+  // figure money ("$500"). A bare whole-dollar figure is money too, except a
+  // year, a ZIP, or a one- or two-digit box number.
+  const patterns = [
+    /\(\s*-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\s*\)/,
+    /\(\s*-?[$€]?\s?\d+\.\d{2}\s*\)/,
+    /\(\s*-?[$€]?\s?\d{1,7}\s*\)/,
+    /-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/,
+    /-?[$€]?\s?\d+\.\d{2}/,
+    /-?[$€]\s?\d{1,7}(?!\d)/,
+    /(?<![\d$.(-])(?!(?:19|20)\d{2}\b)(?!\d{5}\b)(?!\d{1,2}\b)\d{3,7}(?![\d-])/,
+  ];
+  for (const pattern of patterns) {
+    const m = t.match(pattern);
+    if (!m) continue;
+    const raw = m[0].replace(/\s+/g, '');
+    const value = parseMoneyToken(raw);
+    if (value !== undefined) return { value, raw };
+  }
+  return undefined;
 }
 
 /**

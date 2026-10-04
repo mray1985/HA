@@ -40,5 +40,13 @@ describe('money printed inside a text run', () => {
 
   it('keeps a negative figure negative', () => {
     expect(moneyIn('-1,250.00')).toEqual({ value: -1250, raw: '-1,250.00' });
+    expect(moneyIn('(1,250.00)')).toEqual({ value: -1250, raw: '(1,250.00)' });
+    expect(moneyIn('(100.00)')).toEqual({ value: -100, raw: '(100.00)' });
+  });
+
+  it('reads a whole-dollar amount, with or without a currency sign', () => {
+    expect(moneyIn('500')).toEqual({ value: 500, raw: '500' });
+    expect(moneyIn('$500')).toEqual({ value: 500, raw: '$500' });
+    expect(moneyIn('$ 500')).toEqual({ value: 500, raw: '$500' });
   });
 });

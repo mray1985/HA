@@ -381,6 +381,7 @@ function processTextBlocks(
       extractedData,
       fieldRawTokens,
       fieldSourceLocations,
+      rejectedReads,
     );
   }
   // The employee on a W-2: confirmed from a text layer; one OCR reading is not.
@@ -428,6 +429,19 @@ function processTextBlocks(
         ? readFormCheckboxes(span.type, meta.canvases, meta.dpi ?? 300, spanBlocks)
         : {};
       const spanData = extractFormData(span.type, spanBlocks, spanChecks);
+      if (meta?.canvases?.length) {
+        const spanRows = readFormRowAmounts(span.type, meta.canvases, meta.dpi ?? 300, spanBlocks);
+        applyRowAmountConfirmations(
+          span.type,
+          spanRows,
+          TOOL_MAPPINGS[span.type as ClassifiableFormType]?.direct,
+          spanData.extractedData,
+          spanData.fieldRawTokens,
+          spanData.fieldSourceLocations,
+          spanData.rejectedReads,
+        );
+        spanData.boxLedger = buildBoxLedger(span.type, spanData.extractedData, spanData.rejectedReads, spanData.pageText);
+      }
       const spanIdentity = span.type === 'W-2' ? w2EmployeeFromTextLayer(spanBlocks, !ocrUsed) : null;
       const spanNumericFields = Object.entries(spanData.extractedData).filter(
         ([, v]) => typeof v === 'number' && v > 0,
@@ -510,7 +524,7 @@ function processTextBlocks(
 }
 
 /**
- * Render the pages of a digital PDF, but only if a form on it declares a square.
+ * Render the pages of a digital PDF when a form on it has a square or a money box.
  *
  * A tick is ink, not text: on a digital form it extracts as a symbol-font glyph
  * (a real 1098-T prints "4" for its half-time box), so the text layer cannot say
@@ -528,11 +542,13 @@ async function renderForCheckboxes(
   const types = spans.length > 0
     ? spans.map((s) => s.type)
     : [detectFormType(textBlocks).type].filter((t): t is NonNullable<typeof t> => t !== null);
-  const needsSquares = types.some((t) => {
+  // A money box needs the page too: the ruled row is what confirms its amount.
+  // SSA-1099 has money boxes and no checkbox, and used to skip rendering entirely.
+  const needsPage = types.some((t) => {
     const declared = FORM_EXTRACTION_SCHEMAS[t as ClassifiableFormType];
-    return declared?.boxes.some((b) => b.kind === 'checkbox' && b.checkbox) ?? false;
+    return declared?.boxes.some((b) => (b.kind === 'checkbox' && b.checkbox) || b.kind === 'money') ?? false;
   });
-  if (!needsSquares) return null;
+  if (!needsPage) return null;
   try {
     const { renderPDFToImages } = await import('./pdfToImages');
     const dpi = 200;
@@ -759,9 +775,13 @@ function readFormRowAmounts(
       const anchors = [box.label, box.box ? `${box.box} ` : ''].filter((s) => s.trim().length > 0);
       if (anchors.length === 0) continue;
       const reading = readRowAmountOnPage(page, { anchors });
-      if (reading.state === 'unknown') continue;
-      out[box.key] = reading;
-      break;
+      // A proved row wins. An unknown row is kept too: dropping it would leave
+      // the proximity amount in place, which is the number this check exists to hold.
+      if (reading.state === 'read' || reading.state === 'empty') {
+        out[box.key] = reading;
+        break;
+      }
+      if (!out[box.key]) out[box.key] = reading;
     }
   }
   return out;
@@ -784,6 +804,7 @@ function applyRowAmountConfirmations(
   extractedData: Record<string, unknown>,
   fieldRawTokens: Record<string, string>,
   fieldSourceLocations: Record<string, FieldSourceLocationValue>,
+  rejectedReads: RejectedRead[],
 ): void {
   if (!formType || !mapping) return;
   for (const [boxKey, reading] of Object.entries(rows)) {
@@ -793,11 +814,22 @@ function applyRowAmountConfirmations(
       extractedData[field] = reading.value;
       if (reading.raw !== undefined) fieldRawTokens[field] = reading.raw;
       delete fieldSourceLocations[field];
-    } else if (reading.state === 'empty') {
-      delete extractedData[field];
-      delete fieldRawTokens[field];
-      delete fieldSourceLocations[field];
+      continue;
     }
+    // Empty and unknown both fail confirmation. A proximity amount that was
+    // already written is held, not deleted in silence, so the ledger shows it.
+    const prior = extractedData[field];
+    if (prior !== undefined && prior !== null && prior !== '') {
+      rejectedReads.push({
+        field,
+        value: String(prior),
+        reason: 'not-printed',
+        detail: reading.reason,
+      });
+    }
+    delete extractedData[field];
+    delete fieldRawTokens[field];
+    delete fieldSourceLocations[field];
   }
 }
 
