@@ -570,12 +570,6 @@ function hasSquareOutline(r: PageRaster, [bx0, by0, bx1, by1]: PixelBox, thresho
 /** Share of each edge that must be inked for a shape to count as a square. */
 const SQUARE_EDGE_INK = 0.5;
 
-/**
- * Find checkbox squares in a region: roughly square shapes with all four
- * edges drawn, 0.8 to 2.5 label ems on a side. IRS squares measure 0.93 to 2
- * em; a letter is at most about 0.75 em tall. Measured: without the size
- * floor the letter "a" below "March" read as a checked 1098-T box 7 on a scan.
- */
 // ─── Money amounts, read inside the ruled row that belongs to the box ─────
 
 /**
@@ -614,17 +608,9 @@ function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
 }
 
 /**
- * The money printed inside a text run, if any.
- *
- * The text layer merges a value with whatever sits beside it: a real 1099-G
- * extracts as "3,600.00 Form" and a 1099-MISC as "1,200.00 $". Requiring the
- * whole token to be money rejected both. A comma-grouped figure, one with
- * cents, a whole-dollar amount, or an accounting negative counts. A ZIP
- * ("78704"), a year, an OMB number ("1545-0120") and a box number do not.
- *
- * Exported so the rule can be tested directly: it is the difference between a
- * real 1099-G amount ("3,600.00 Form") being read and every money box on the
- * form being held back.
+ * A money figure inside a text run. The text layer often glues the amount to
+ * the next word ("8,000.00 Form"). The whole run is not a money token, but the
+ * figure in it is. A year, a ZIP, and a box number still are not.
  */
 export function moneyIn(text: string): { value: number; raw: string } | undefined {
   const t = text.trim();
@@ -671,6 +657,7 @@ export function readRowAmount(
   spec: AmountRowSpec,
   near?: PixelBox | null,
 ): CellAmountReading {
+  let blank: CellAmountReading | undefined;
   for (const phrase of spec.anchors) {
     const hits = findPhrase(words, phrase);
     if (hits.length === 0) continue;
@@ -694,57 +681,52 @@ export function readRowAmount(
     const cell = tableCell(raster, threshold, label, 0);
     if (!cell) continue;
 
-    const [cellLeft, top, , bottom] = cell;
+    const [cellLeft, top, cellRight, bottom] = cell;
 
-    // The row's right boundary is the next vertical rule to the right of the
-    // label. It must be searched from the label's own right edge: searching from
-    // inside the label locks onto a rule that crosses the label's text (measured
-    // on a 1099-G, whose "Unemployment compensation" runs from x=852 to x=1107
-    // while the rule found from x=966 sat at x=1099), and the row then stops
-    // before the value, which is printed further right. A rule found before the
-    // label ends is not this row's boundary.
-    let right = findRule(raster, threshold, false, label[2] + 1, 1, Math.round(80 * h), top + 3, bottom - 3);
-    // If the row prints no further rule, the value sits to the right of the
-    // label in the same row: reach across the columns rather than stop short.
-    if (right === null || right <= label[2]) right = Math.min(raster.width - 1, label[2] + (spec.maxAcrossPx ?? 30 * h));
-    const row: PixelBox = [cellLeft, top, Math.max(right, label[2]), bottom];
+    // Extend to the row's right edge: the first vertical rule past the label's
+    // cell, or the page edge when this row prints no rule there.
+    let right = findRule(raster, threshold, false, cellRight + 1, 1, Math.round(80 * h), top + 3, bottom - 3);
+    if (right === null) right = Math.min(raster.width - 1, cellRight + (spec.maxAcrossPx ?? 60 * h));
+    const row: PixelBox = [cellLeft, top, right, bottom];
 
-    // Every money figure in the row. A currency sign alone is not money and is
-    // skipped; a value merged with its neighbour is read out of the run.
-    const found: Array<{ value: number; raw: string; box: PixelBox }> = [];
-    for (const w of words) {
-      if (!centreIn(row, w.box)) continue;
-      const t = w.text.trim();
-      if (/^[$€]$/.test(t)) continue;
-      const money = moneyIn(t);
-      if (!money) continue;
-      found.push({ value: money.value, raw: money.raw, box: w.box });
-    }
-
-    if (found.length === 0) {
-      // The rule can stop short of the amount. Look across the label's line
-      // before calling the row empty and removing a figure that is printed there.
-      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+    // Amount tokens anywhere in the row. A currency sign and its digits are
+    // often separate words, so a bare numeric token beside a currency sign is
+    // joined rather than counted twice.
+    const collect = (region: PixelBox) => {
+      const out: Array<{ value: number; raw: string; box: PixelBox }> = [];
       for (const w of words) {
-        if (!centreIn(wide, w.box)) continue;
+        if (!centreIn(region, w.box)) continue;
         const money = moneyIn(w.text);
         if (!money) continue;
-        found.push({ value: money.value, raw: money.raw, box: w.box });
+        out.push({ value: money.value, raw: money.raw, box: w.box });
       }
+      return out;
+    };
+    let found = collect(row);
+    // The vertical rule can stop short of the amount column. Look across the
+    // label's line before calling a row that holds a real figure empty.
+    if (found.length === 0) {
+      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+      found = collect(wide);
     }
 
     if (found.length === 0) {
-      return { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
+      // This anchor's row is blank. Another anchor for the same box may still
+      // name the row that holds the amount, so do not decide empty yet.
+      blank = { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
+      continue;
+    }
+    if (found.length === 1) {
+      return { state: 'read', value: found[0]!.value, raw: found[0]!.raw, reason: `read in the ruled row for "${phrase}"`, row };
     }
 
-    // One figure, or several tokens printing the same figure ("$ 1,200.00" split
-    // across words), is a value. Two different figures in one row is not
-    // something this reader can resolve, so nothing is written.
-    const distinct = new Map<number, string>();
-    for (const f of found) if (!distinct.has(f.value)) distinct.set(f.value, f.raw);
+    // "$ 4,200.00" split across words, or the same figure glued to a neighbour,
+    // is one amount. Two different figures in the row is not resolved here.
+    const distinct = new Map<number, { raw: string }>();
+    for (const a of found) if (!distinct.has(a.value)) distinct.set(a.value, { raw: a.raw });
     if (distinct.size === 1) {
-      const [value, raw] = [...distinct.entries()][0]!;
-      return { state: 'read', value, raw, reason: `read in the ruled row for "${phrase}"`, row };
+      const [value, meta] = [...distinct.entries()][0]!;
+      return { state: 'read', value, raw: meta.raw, reason: `read in the ruled row for "${phrase}"`, row };
     }
     return {
       state: 'unknown',
@@ -752,7 +734,7 @@ export function readRowAmount(
       row,
     };
   }
-  return { state: 'unknown', reason: 'no ruled row could be found for this box' };
+  return blank ?? { state: 'unknown', reason: 'no ruled row could be found for this box' };
 }
 
 /** Anchors for a box, from the printed text the schema declares for it. */
@@ -761,6 +743,12 @@ export function rowSpecFromLabels(labels: readonly string[], maxAcrossPx?: numbe
   return anchors.length ? { anchors, ...(maxAcrossPx !== undefined ? { maxAcrossPx } : {}) } : null;
 }
 
+/**
+ * Find checkbox squares in a region: roughly square shapes with all four
+ * edges drawn, 0.8 to 2.5 label ems on a side. IRS squares measure 0.93 to 2
+ * em; a letter is at most about 0.75 em tall. Measured: without the size
+ * floor the letter "a" below "March" read as a checked 1098-T box 7 on a scan.
+ */
 function findSquares(r: PageRaster, region: PixelBox, em: number, threshold: number): PixelBox[] {
   const minSide = Math.max(4, em * 0.8);
   const maxSide = em * 2.5;
