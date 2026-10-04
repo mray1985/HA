@@ -608,6 +608,24 @@ function centreIn(inner: PixelBox, box: PixelBox, slack = 1): boolean {
 }
 
 /**
+ * A money figure inside a text run. The text layer often glues the amount to
+ * the next word ("8,000.00 Form"). The whole run is not a money token, but the
+ * figure in it is. A year, a ZIP, and a box number still are not.
+ */
+function moneyFigure(text: string): { value: number; raw: string } | undefined {
+  const whole = parseMoneyToken(text.trim());
+  if (whole !== undefined) return { value: whole, raw: text.trim() };
+  const t = text.trim();
+  const m = t.match(/\(\s*-?[$€]?\s?\d[\d,]*(?:\.\d{1,2})?\s*\)/)
+    ?? t.match(/-?[$€]?\s?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/)
+    ?? t.match(/-?[$€]?\s?\d+\.\d{2}/);
+  if (!m) return undefined;
+  const raw = m[0].replace(/\s+/g, '');
+  const value = parseMoneyToken(raw);
+  return value === undefined ? undefined : { value, raw };
+}
+
+/**
  * Read the amount belonging to one box, confined to the ruled row its label
  * names.
  *
@@ -627,6 +645,7 @@ export function readRowAmount(
   spec: AmountRowSpec,
   near?: PixelBox | null,
 ): CellAmountReading {
+  let blank: CellAmountReading | undefined;
   for (const phrase of spec.anchors) {
     const hits = findPhrase(words, phrase);
     if (hits.length === 0) continue;
@@ -661,47 +680,38 @@ export function readRowAmount(
     // Amount tokens anywhere in the row. A currency sign and its digits are
     // often separate words, so a bare numeric token beside a currency sign is
     // joined rather than counted twice.
-    const found: Array<{ value: number; raw: string; box: PixelBox }> = [];
-    const inRow = words.filter((w) => centreIn(row, w.box));
-    for (let i = 0; i < inRow.length; i++) {
-      const w = inRow[i]!;
-      const t = w.text.trim();
-      if (/^[$€]$/.test(t)) continue;
-      const value = parseMoneyToken(t);
-      if (value === undefined) continue;
-      // Skip a standalone integer that is really a year or the label's own
-      // number, when a currency sign in the row shows the row does hold money.
-      found.push({ value, raw: t, box: w.box });
+    const collect = (region: PixelBox) => {
+      const out: Array<{ value: number; raw: string; box: PixelBox }> = [];
+      for (const w of words) {
+        if (!centreIn(region, w.box)) continue;
+        const money = moneyFigure(w.text);
+        if (!money) continue;
+        out.push({ value: money.value, raw: money.raw, box: w.box });
+      }
+      return out;
+    };
+    let found = collect(row);
+    // The vertical rule can stop short of the amount column. Look across the
+    // label's line before calling a row that holds a real figure empty.
+    if (found.length === 0) {
+      const wide: PixelBox = [label[2], top, Math.min(raster.width - 1, label[2] + 90 * h), bottom];
+      found = collect(wide);
     }
 
     if (found.length === 0) {
-      return { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
+      // This anchor's row is blank. Another anchor for the same box may still
+      // name the row that holds the amount, so do not decide empty yet.
+      blank = { state: 'empty', reason: `the ruled row for "${phrase}" holds no amount`, row };
+      continue;
     }
     if (found.length === 1) {
       return { state: 'read', value: found[0]!.value, raw: found[0]!.raw, reason: `read in the ruled row for "${phrase}"`, row };
     }
 
-    // More than one amount in the row: "$ 4,200.00" split across words is the
-    // common case. Join a currency sign with the nearest following number
-    // before deciding the row is ambiguous.
-    const joined: Array<{ value: number; raw: string; box: PixelBox }> = [];
-    const consumed = new Set<number>();
-    for (let i = 0; i < inRow.length; i++) {
-      const t = inRow[i]!.text.trim();
-      if (!/^[$€]$/.test(t)) continue;
-      for (let j = i + 1; j < inRow.length && j <= i + 3; j++) {
-        const num = parseMoneyToken(inRow[j]!.text.trim());
-        if (num === undefined) continue;
-        consumed.add(j);
-        joined.push({ value: num, raw: `${t}${inRow[j]!.text.trim()}`, box: inRow[i]!.box });
-        break;
-      }
-    }
-    const alone = found.filter((_, i) => !consumed.has(i) && !/^[$€]$/.test(inRow[i]?.text.trim() ?? ''));
-    const all = [...joined, ...alone];
-
+    // "$ 4,200.00" split across words, or the same figure glued to a neighbour,
+    // is one amount. Two different figures in the row is not resolved here.
     const distinct = new Map<number, { raw: string }>();
-    for (const a of all) if (!distinct.has(a.value)) distinct.set(a.value, { raw: a.raw });
+    for (const a of found) if (!distinct.has(a.value)) distinct.set(a.value, { raw: a.raw });
     if (distinct.size === 1) {
       const [value, meta] = [...distinct.entries()][0]!;
       return { state: 'read', value, raw: meta.raw, reason: `read in the ruled row for "${phrase}"`, row };
@@ -712,7 +722,7 @@ export function readRowAmount(
       row,
     };
   }
-  return { state: 'unknown', reason: 'no ruled row could be found for this box' };
+  return blank ?? { state: 'unknown', reason: 'no ruled row could be found for this box' };
 }
 
 /** Anchors for a box, from the printed text the schema declares for it. */
