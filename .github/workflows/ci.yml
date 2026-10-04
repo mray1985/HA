@@ -51,6 +51,13 @@ jobs:
       - name: Run server tests
         run: npm test -w server
 
+      # The client holds the document reader and the whole preparer workflow, so
+      # its tests are the ones that catch a misread amount. They were missing here:
+      # 26 of them were failing on main while this job reported success, because
+      # nothing in this workflow ran them.
+      - name: Run client tests
+        run: npm test -w client
+
   # ──────────────────────────────────────────────
   # Job 2: TypeScript Type-Check
   # ──────────────────────────────────────────────
