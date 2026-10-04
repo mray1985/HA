@@ -933,16 +933,38 @@ function extractBoxValue(
  * generic "employer" — preventing the EIN label from being selected when
  * the actual employer-name label exists.
  */
+/**
+ * Fold typographic punctuation to its ASCII form.
+ *
+ * A form's text layer prints the apostrophe in "PAYER'S" as U+2019, and the
+ * schema declares it as ASCII. Keywords are written in ASCII, so an exact match
+ * misses every label a form prints with a curly quote.
+ */
+function foldTypography(text: string): string {
+  return text
+    .replace(/[\u2018\u2019\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\u00A0/g, ' ');
+}
+
 function findLabelBlock(textBlocks: TextBlock[], keywords: string[]): TextBlock | null {
   for (const kw of keywords) {
     let fallback: TextBlock | null = null;
-    const kwCompact = kw.replace(/\s+/g, '');
+    // A form prints "PAYER’S" with a typographic apostrophe; the keyword says
+    // "payer's". Without folding typography the specific keyword never matches,
+    // and the loose one that does is far worse: on a 1099-INT the label "PAYER'S
+    // name" was missed and the search fell through to "PAYER'S TIN", so the
+    // payer's name was looked for under the wrong label and the recipient's name
+    // was returned instead, on five documents.
+    const kwFlat = foldTypography(kw).toLowerCase();
+    const kwCompact = kwFlat.replace(/\s+/g, '');
     for (const block of textBlocks) {
-      const blockLower = block.text.toLowerCase();
+      const blockLower = foldTypography(block.text).toLowerCase();
       const blockCompact = blockLower.replace(/\s+/g, '');
       // Match normally OR via compact form (collapses letter-spaced IRS labels
       // like "4 F e d e r a l i n c o m e t a x w i t h h e l d")
-      if (blockLower.includes(kw) || blockCompact.includes(kwCompact)) {
+      if (blockLower.includes(kwFlat) || blockCompact.includes(kwCompact)) {
         // Reject merged form headers — wide blocks (>300px) containing multiple
         // header terms (payer, address, city, ZIP, OMB etc.) that happen to also
         // include a box keyword. These mega-blocks span the full form width and
@@ -975,6 +997,12 @@ function isMergedHeader(block: TextBlock): boolean {
 /**
  * Extract name from the top area of the PDF (typically payer/employer info).
  * When a name block is located, page + box are recorded under fieldKey.
+ */
+/**
+ * Words that are never part of a payer's name, however they are capitalised.
+ * Only the form's all-caps furniture: ordinary label words are already excluded
+ * by the capitalisation test, and listing them would break real names such as
+ * "GOLDEN STATE CREDIT UNION" and "SUNSHINE SAVINGS BANK".
  */
 function extractPayerName(
   textBlocks: TextBlock[],
@@ -1029,9 +1057,17 @@ function extractPayerName(
 
   let chosen: TextBlock | undefined;
 
+  // A merged header is not mined for the name. Measured: on a 1099-INT the
+  // payer's name is not inside the merged header block that carries the label, so
+  // reading a name out of that run finds nothing and changes nothing. Where the
+  // name sits relative to a label this far from it needs its own trace, not a
+  // guess - two attempts here were neutral.
+
   // Look for the label first
   const labelBlock = findLabelBlock(textBlocks, keywords);
   if (labelBlock) {
+    console.debug('[PayerDbg] label="' + labelBlock.text.slice(0, 80) + '" w=' + Math.round(labelBlock.width) + ' merged=' + isMergedHeader(labelBlock));
+    console.debug('[PayerDbg] widePage1=' + JSON.stringify(textBlocks.filter(b => b.page === 1 && b.width >= 250).slice(0, 2).map(b => ({ w: Math.round(b.width), y: Math.round(b.y), t: b.text.slice(0, 60) }))));
     // Find text below/near the label that looks like a name
     // Widened search: 150px horizontal, 80px vertical (real W-2 boxes are tall)
     const candidates = textBlocks.filter(b =>
