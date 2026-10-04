@@ -55,6 +55,13 @@ jobs:
       # its tests are the ones that catch a misread amount. They were missing here:
       # 26 of them were failing on main while this job reported success, because
       # nothing in this workflow ran them.
+      # Several of those tests read the stress documents, which are generated
+      # rather than committed.
+      - name: Generate stress documents
+        if: matrix.app == 'preparer'
+        working-directory: preparer/local-ai/gauntlet/stress
+        run: node make-docs.mjs
+
       - name: Run client tests
         run: npm test -w client
 
