@@ -178,7 +178,15 @@ function ReadWarnings({ doc }: { doc: IngestedDocument }) {
  * on the return can be typed into from here.
  */
 function GapList({ doc }: { doc: IngestedDocument }) {
-  const gaps = (doc.boxGaps ?? []).filter((g) => g.boxes.length > 0);
+  // The index matters as much as the gap. Facts carry a form's key as
+  // document#piece, and boxGaps is built one entry per piece, so a gap's position
+  // in boxGaps *is* its form's index. Filtering first would shift every index
+  // after a piece with nothing outstanding, and a value typed into box 7 of the
+  // second form would be recorded against the first. So the original index is
+  // carried through rather than filtered away.
+  const gaps = (doc.boxGaps ?? [])
+    .map((gap, piece) => ({ gap, piece }))
+    .filter(({ gap }) => gap.boxes.length > 0);
   const [open, setOpen] = useState<string | null>(null);
   const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
   if (gaps.length === 0) return null;
@@ -189,14 +197,12 @@ function GapList({ doc }: { doc: IngestedDocument }) {
         Not added by itself — check these against the form
       </p>
       <ul className="mt-1 space-y-2">
-        {gaps.map((gap, i) => {
+        {gaps.map(({ gap, piece }) => {
           const guide = formGuidance(gap.formType);
           const tool = toolForForm(gap.formType as never);
-          // Facts carry the form's key as document#piece, and the gap list is
-          // built one entry per piece, so this gap's index is its form's index.
-          const formKey = `${doc.documentId}#${i}`;
+          const formKey = `${doc.documentId}#${piece}`;
           return (
-            <li key={`${gap.formType ?? 'form'}-${i}`} className="text-xs">
+            <li key={`${gap.formType ?? 'form'}-${piece}`} className="text-xs">
               <p className="text-amber-300/90">{gap.formType ?? 'This form'}</p>
               <p className="text-slate-300">{guide.what}</p>
               <p className="text-slate-400">

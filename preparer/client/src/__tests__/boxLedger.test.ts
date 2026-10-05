@@ -16,6 +16,30 @@ const stateOf = (ledger: { entries: Array<{ key: string; state: BoxState }> }, k
   ledger.entries.find((e) => e.key === key)?.state;
 
 describe('every box the form prints is accounted for', () => {
+  it('does not claim a miss when it has no page text to judge by', () => {
+    // The reader-model path has no page text: it works from the rendered page,
+    // and what it could not read is reported through its own page evidence. If
+    // the ledger called every absent box unread it would invent a gap on every
+    // ordinary form with a blank optional box — and a gap holds a case open.
+    const withoutText = buildBoxLedger('1099-G', { unemploymentCompensation: 15600 });
+    // A money box the form leaves blank reads blank. A checkbox still reads
+    // unread, because a printed square is not a figure: "no value" there means
+    // the square was not read, not that it was left unticked.
+    expect(stateOf(withoutText, '2')).toBe('empty');
+    expect(stateOf(withoutText, '8')).toBe('unread');
+    // A box the form really does fill in is still held with its figure.
+    const filled = buildBoxLedger('1099-G', {}, [], undefined, [{ key: '2', label: 'State or local income tax refunds, credits, or offsets', text: '310.00' }]);
+    expect(stateOf(filled, '2')).toBe('held');
+
+    // With page text, a blank box and a missed one are told apart as before.
+    // The page must carry the label's identifying words: "printed" is judged on
+    // the words that name the box, not on the box number.
+    const printed = '1 Unemployment compensation 2 State or local income tax refunds, credits, or offsets';
+    const withText = buildBoxLedger('1099-G', { unemploymentCompensation: 15600 }, [], printed);
+    expect(stateOf(withText, '2')).toBe('empty');
+    expect(stateOf(buildBoxLedger('1099-G', { unemploymentCompensation: 15600 }, [], '1 Unemployment compensation'), '2')).toBe('unread');
+  });
+
   it('records what became of each declared box', () => {
     const ledger = buildBoxLedger(
       '1098-T',

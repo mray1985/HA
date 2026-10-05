@@ -518,7 +518,11 @@ export function applyModelReadingsToDocument(input: {
       reading.formType,
       reading.args as Record<string, unknown>,
       [],
-      '',
+      // No page text on this path: the reader works from the rendered page, and
+      // what it could not read is already reported through its own evidence as a
+      // held form. Passing '' would make the ledger call every blank printed box
+      // a box it missed.
+      undefined,
       reading.mapping?.reviewBoxes ?? [],
     );
     return gapsFor(reading.formType ?? null, wrote, ledger, [

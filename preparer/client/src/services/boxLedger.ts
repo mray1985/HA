@@ -119,8 +119,11 @@ export function buildBoxLedger(
   formType: string | null,
   extractedData: Record<string, unknown>,
   rejectedReads: readonly RejectedRead[] = [],
-  /** The page text, so a blank box can be told from a missed one. */
-  pageText = '',
+  /**
+   * The page text, so a blank box can be told from a missed one. Omit it when
+   * the text is not available: see below.
+   */
+  pageText?: string,
   /** Boxes the form fills in that no tool can place, keyed by schema box key. */
   unplaced: readonly UnplacedBox[] = [],
 ): BoxLedger {
@@ -128,7 +131,7 @@ export function buildBoxLedger(
   const fields = fieldsByBox(formType);
   const held = new Map(rejectedReads.map((r) => [r.field, r]));
   const filled = new Map(unplaced.map((u) => [u.key, u]));
-  const text = pageText.toLowerCase();
+  const text = (pageText ?? '').toLowerCase();
 
   const entries: BoxLedgerEntry[] = [];
   // The schema declares a row per state (W-2 boxes 15–20), so a form for one
@@ -157,7 +160,12 @@ export function buildBoxLedger(
     else if (value !== undefined && value !== null && value !== '') state = 'read';
     else if (box.use === 'info') state = 'informational';
     else if (box.kind === 'checkbox') state = 'unread';
-    else state = labelIsPrinted(box.label, text) ? 'empty' : 'unread';
+    // Without the page's own words there is no telling a blank box from one that
+    // was walked past, and calling it unread claims a miss nobody has evidence
+    // for — which invents a gap, and a gap now holds a case open. The reader's
+    // own page evidence reports the boxes it genuinely could not read, so an
+    // absent page text leaves the box blank rather than guessing.
+    else state = pageText === undefined || labelIsPrinted(box.label, text) ? 'empty' : 'unread';
 
     entries.push({
       key: box.key,

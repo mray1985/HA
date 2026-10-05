@@ -60,7 +60,12 @@ export default function ApprovePanel() {
   // Documents the reader could not finish, and how far that has been checked.
   const gapItems = review.items.filter((i) => i.id.startsWith('document:gaps:'));
   const openGaps = gapItems.filter((i) => !i.resolution);
-  const checkedBoxes = gapItems.reduce((n, i) => n + Number(i.id.split(':').pop()) || 0, 0);
+  // The count is the last field of the item id. A count that will not parse is
+  // skipped rather than added, so one malformed id cannot zero the total.
+  const checkedBoxes = gapItems.reduce((n, i) => {
+    const count = Number(i.id.slice(i.id.lastIndexOf(':') + 1));
+    return n + (Number.isFinite(count) ? count : 0);
+  }, 0);
   const result = refundOrOwed(calculation?.form1040);
 
   const buildFederal = async () => {
