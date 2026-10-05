@@ -1,0 +1,59 @@
+{
+  "id": "1099s-sale",
+  "description": "1099-S Copy B (Rev. December 2026): a residential closing reported by the title company. Boxes 1, 2a, 3 and 4 only. 2b, 2c, the digital-asset row (8a-8d) and the two squares at the end of the dotted leaders stay blank - boxes 6 and 7 print beyond the page reader's search window and are read from the model, which this PDF-only sweep does not run. Synthetic data.",
+  "form": "f1099s.pdf",
+  "formType": "1099-S",
+  "pageIndex": 2,
+  "fieldPrefix": "Form1099-S[0].CopyB[0].",
+  "fields": {
+    "CopyBHeader[0].f2_1[0]": "2025",
+    "LeftCol[0].f2_2[0]": "GULFSIDE TITLE & ESCROW INC",
+    "RightCol[0].f2_20[0]": "04/18/2025",
+    "RightCol[0].f2_21[0]": "412,500.00",
+    "RightCol[0].f2_24[0]": "1147 HARBOUR ROAD UNIT 3, SARASOTA FL 34236",
+    "RightCol[0].f2_25[0]": "6,180.25"
+  },
+  "expectedBoxes": {
+    "1": {
+      "date": "04/18/2025",
+      "field": "RightCol[0].f2_20[0]"
+    },
+    "2a": {
+      "money": 412500,
+      "field": "RightCol[0].f2_21[0]"
+    },
+    "3": {
+      "text": "1147 HARBOUR ROAD UNIT 3, SARASOTA FL 34236",
+      "field": "RightCol[0].f2_24[0]"
+    },
+    "4": {
+      "money": 6180.25,
+      "field": "RightCol[0].f2_25[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.name": {
+      "firstLine": "GULFSIDE TITLE & ESCROW INC"
+    }
+  },
+  "blankBoxes": [
+    "2b",
+    "2c",
+    "6",
+    "7",
+    "8a",
+    "8b",
+    "8c",
+    "8d"
+  ],
+  "expected": {
+    "tool": "add_1099_s",
+    "args": {
+      "filerName": "GULFSIDE TITLE & ESCROW INC",
+      "closingDate": "04/18/2025",
+      "grossProceeds": 412500,
+      "propertyAddress": "1147 HARBOUR ROAD UNIT 3, SARASOTA FL 34236",
+      "buyerRealEstateTax": 6180.25
+    }
+  }
+}
