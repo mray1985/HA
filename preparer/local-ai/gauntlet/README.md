@@ -393,3 +393,23 @@ state payments the model gave to the IRS.
 | f1099q.pdf (Rev. April 2025) | 19ad3c80de52d509 |
 | f1099sa.pdf (Rev. April 2025) | cc2324629a9bd416 |
 | f1099oid.pdf (Rev. January 2024) | cc88d18964125c3f |
+| fw2g.pdf (Rev. January 2026, Copy B on page 3 of 8) | 2d75e44d5ea6574a |
+| f1098e.pdf (2026, Copy B for Borrower on page 3 of 4) | bffb9b5ec4f06d47 |
+| f1095a.pdf (2025; page 1 is a "CAUTION: NOT FOR FILING" cover, the statement is page 2 of 3) | df83be599d3bdcda |
+| f1065sk1.pdf (Schedule K-1 Form 1065, 2025, single page) | 66098d4d48537ce2 |
+
+The last four were fetched from irs.gov on 2026-10-05, each from the "Current
+Revision" PDF link on the form's own About page rather than a constructed path:
+
+| File | Canonical URL |
+|---|---|
+| fw2g.pdf | https://www.irs.gov/pub/irs-pdf/fw2g.pdf |
+| f1098e.pdf | https://www.irs.gov/pub/irs-pdf/f1098e.pdf |
+| f1095a.pdf | https://www.irs.gov/pub/irs-pdf/f1095a.pdf |
+| f1065sk1.pdf | https://www.irs.gov/pub/irs-pdf/f1065sk1.pdf |
+
+All four are fillable AcroForms, so a case can fill them: 219, 43, 81 and 111
+fields respectively. Form 1095-A carries that caveat from the IRS — it is
+published for reference and the Marketplace, not the taxpayer, completes it —
+but the fields are present and fillable.
+
