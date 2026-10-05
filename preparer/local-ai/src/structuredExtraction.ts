@@ -162,6 +162,12 @@ const W2G_FIELDS: Record<string, FieldKind> = {
   stateTaxWithheld: 'money',
 };
 
+const SLI_FIELDS: Record<string, FieldKind> = {
+  lenderName: 'text',
+  studentLoanInterest: 'money',
+  originationFeesExcluded: 'boolean',
+};
+
 const G_FIELDS: Record<string, FieldKind> = {
   payerName: 'text',
   unemploymentCompensation: 'money',
@@ -272,6 +278,7 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_1099_s: S_FIELDS,
   add_w2c: W2C_FIELDS,
   add_w2g: W2G_FIELDS,
+  add_1098_e: SLI_FIELDS,
 };
 
 interface Normalized {

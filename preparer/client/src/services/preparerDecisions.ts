@@ -101,7 +101,7 @@ export function withdrawReleasedForm(returnId: string, formKey: string): ApplyOu
   const outcome = reapplyForm(returnId, formKey);
   const tool = formToolOfFacts(formFacts(returnId, formKey));
   const application = tool ? TOOL_APPLICATION[tool] : undefined;
-  if (application?.kind === 'aggregate' && (application.target === 'socialSecurityBenefits' || application.target === 'mortgageInterest')) {
+  if (application?.kind === 'aggregate' && (application.target === 'socialSecurityBenefits' || application.target === 'mortgageInterest' || application.target === 'studentLoanInterest')) {
     clearAggregateWithoutForms(returnId, application.target);
   }
   return outcome;

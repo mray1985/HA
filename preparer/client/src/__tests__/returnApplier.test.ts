@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { invokeTaxTool, type IngestedDocument, type TaxToolName, type TaxToolSuccess } from '@hatax/local-ai';
+import { formToolForIncomeType, invokeTaxTool, type IngestedDocument, type TaxToolName, type TaxToolSuccess } from '@hatax/local-ai';
 import { clearReturnCache, createReturn, getReturn, updateReturn } from '../api/client';
 import { clearRecordCache } from '../services/caseRecords';
 import { appendTaxFacts } from '../services/preparerTaxFacts';
@@ -174,7 +174,7 @@ describe('applyExtraction', () => {
 
   /** One form of a multi-form file, as document intake produces it. */
   function piece(incomeType: string, fields: Record<string, unknown>, formIndex: number) {
-    const tool = incomeType === 'w2' ? 'add_w2' : null;
+    const tool = formToolForIncomeType(incomeType);
     const facts = tool
       ? (invokeTaxTool({ tool, args: fields, context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-PDF', sourceFormIndex: formIndex, sourceFileName: 'employer.pdf', extractor: 'test' } }) as TaxToolSuccess).facts
       : [];
@@ -183,13 +183,16 @@ describe('applyExtraction', () => {
   }
 
   it('adds one item per form of a multi-form PDF and records how each form was applied', () => {
-    const document: IngestedDocument = { documentId: 'DOC-PDF', returnId, fileName: 'employer.pdf', mimeType: 'application/pdf', byteLength: 1, contentHash: 'h', ingestedAt: '', status: 'extracted', formTypes: ['W-2', 'W-2', '1098-E'] };
+    // Every classifiable form now has a tool, so this drives the "no tool" branch
+// with a form type outside the map on purpose: the guarantee is that a form the
+// app cannot place is reported, not dropped.
+const document: IngestedDocument = { documentId: 'DOC-PDF', returnId, fileName: 'employer.pdf', mimeType: 'application/pdf', byteLength: 1, contentHash: 'h', ingestedAt: '', status: 'extracted', formTypes: ['W-2', 'W-2', 'unreadable-form'] };
     const extraction: ApplyExtractionResult = {
       document,
       pieces: [
         piece('w2', { employerName: 'Riverbend Logistics LLC', wages: 52431.18, federalTaxWithheld: 5873.4 }, 0),
         piece('w2', { employerName: 'Bayou Events Catering Inc', wages: 8100, federalTaxWithheld: 405 }, 1),
-        piece('1098e', { interestPaid: 612.4 }, 2),
+        piece('unreadable-form', { amount: 4000 }, 2),
       ],
       facts: [],
     };
@@ -200,7 +203,7 @@ describe('applyExtraction', () => {
     const saved = loadDocuments(returnId)[0]!;
     expect(saved.appliedAs).toEqual(['income_item', 'income_item', 'not_applied']);
     const review = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [saved] });
-    expect(review.items.find((i) => i.id === 'document:not-applied:DOC-PDF#2')?.message).toContain('the 1098-E was read but is not entered automatically');
+    expect(review.items.find((i) => i.id === 'document:not-applied:DOC-PDF#2')?.message).toContain('the unreadable-form was read but is not entered automatically');
   });
 });
 
@@ -292,5 +295,57 @@ describe('a business expense from a client reply', () => {
     updateReturn(returnId, { businesses: [{ id: 'biz-a', businessName: 'Design' }] as never });
     expense();
     expect(getReturn(returnId).expenses).toEqual([expect.objectContaining({ businessId: 'biz-a' })]);
+  });
+});
+
+describe('Form 1098-E aggregate', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  it('sums student loan interest from every 1098-E on the case', () => {
+    const first = readDocument('add_1098_e', { lenderName: 'BANK A', studentLoanInterest: 1842.55 }, 'DOC-E1');
+    expect(first).toEqual({ kind: 'aggregate', target: 'studentLoanInterest', applied: true, forms: 1 });
+    expect(getReturn(returnId).studentLoanInterest).toBe(1842.55);
+
+    readDocument('add_1098_e', { lenderName: 'BANK B', studentLoanInterest: 657.45 }, 'DOC-E2');
+    expect(getReturn(returnId).studentLoanInterest).toBe(2500);
+  });
+
+  it('does not take box 1 as the deduction when box 2 is checked', () => {
+    // Box 2 means box 1 leaves out origination fees and capitalized interest, so
+    // the deductible amount is the Deduction Worksheet's, not box 1's.
+    const out = readDocument('add_1098_e', { lenderName: 'BANK A', studentLoanInterest: 1842.55, originationFeesExcluded: true }, 'DOC-E1');
+    expect(out.kind).toBe('aggregate');
+    if (out.kind !== 'aggregate' || out.applied) return;
+    expect(out.reason).toContain('Deduction Worksheet');
+    // Nothing is written: a partial deduction would silently understate it.
+    expect(getReturn(returnId).studentLoanInterest ?? 0).toBe(0);
+  });
+
+  it('applies box 1 when box 2 is present and unchecked', () => {
+    const out = readDocument('add_1098_e', { lenderName: 'BANK A', studentLoanInterest: 900, originationFeesExcluded: false }, 'DOC-E1');
+    expect(out).toMatchObject({ applied: true });
+    expect(getReturn(returnId).studentLoanInterest).toBe(900);
+  });
+
+  it('withholds the total when no box 1 could be read', () => {
+    const out = readDocument('add_1098_e', { lenderName: 'BANK A' }, 'DOC-E1');
+    expect(out.kind).toBe('aggregate');
+    if (out.kind !== 'aggregate' || out.applied) return;
+    expect(out.reason).toContain('box 1');
+    expect(getReturn(returnId).studentLoanInterest ?? 0).toBe(0);
+  });
+
+  it('says in the case review why a read 1098-E is not on the return', () => {
+    readDocument('add_1098_e', { lenderName: 'BANK A', studentLoanInterest: 1842.55, originationFeesExcluded: true }, 'DOC-E1');
+    const doc = { documentId: 'DOC-E1', returnId, fileName: 'f1098e.pdf', mimeType: 'application/pdf', byteLength: 1, contentHash: 'h', ingestedAt: '', status: 'extracted', formTypes: ['1098-E'], appliedAs: ['aggregate_waiting'], applyReasons: ['Form 1098-E DOC-E1#0 has box 2 checked: box 1 excludes origination fees and capitalized interest, so the deduction is worked on the Deduction Worksheet rather than taken from box 1.'] } as IngestedDocument;
+    const review = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [doc] });
+    const item = review.items.find((i) => i.id === 'document:aggregate-waiting:DOC-E1#0');
+    expect(item?.message).toContain('Deduction Worksheet');
   });
 });

@@ -44,6 +44,7 @@ export const FORM_TOOL_NAMES = [
   'add_1099_s',
   'add_w2c',
   'add_w2g',
+  'add_1098_e',
 ] as const;
 
 /**
@@ -85,7 +86,12 @@ export function isRecordTool(name: string): name is RecordToolName {
 }
 
 /** Totals the engine keeps once per return, recomputed from every source's facts. */
-export type AggregateTarget = 'socialSecurityBenefits' | 'mortgageInterest' | 'estimatedPayments' | 'stateResidency';
+export type AggregateTarget =
+  | 'socialSecurityBenefits'
+  | 'mortgageInterest'
+  | 'studentLoanInterest'
+  | 'estimatedPayments'
+  | 'stateResidency';
 
 /**
  * How a successful call applies to the return.
@@ -171,6 +177,7 @@ const INCOME_TYPE_TO_FORM_TOOL: Record<string, DocumentToolName> = {
   ssa1099: 'add_ssa_1099',
   '1098': 'add_mortgage_interest',
   '1098t': 'add_education_expense',
+  '1098e': 'add_1098_e',
   '1099q': 'add_1099_q',
   '1099sa': 'add_1099_sa',
   '1099s': 'add_1099_s',
@@ -554,6 +561,19 @@ const AddW2GFieldsSchema = z
   })
   .strict();
 
+/**
+ * Form 1098-E (2026). Field names match the engine's studentLoanInterest, which
+ * is one value for the return rather than an array.
+ */
+const Add1098EFieldsSchema = z
+  .object({
+    lenderName: optionalString,
+    studentLoanInterest: optionalAmount,
+    /** Box 2: box 1 leaves out origination fees / capitalized pre-2004 interest. */
+    originationFeesExcluded: optionalBoolean,
+  })
+  .strict();
+
 const AddW2cFieldsSchema = z
   .object({
     employerName: optionalString,
@@ -751,6 +771,7 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_1099_s: Add1099SFieldsSchema,
   add_w2c: AddW2cFieldsSchema,
   add_w2g: AddW2GFieldsSchema,
+  add_1098_e: Add1098EFieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
@@ -786,6 +807,7 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_1099_s: { kind: 'needs_preparer_choice', target: 'homeSale', choice: 'ownershipAndBasis' },
   add_w2c: { kind: 'w2_correction' },
   add_w2g: { kind: 'income_item', itemType: 'w2g' },
+  add_1098_e: { kind: 'aggregate', target: 'studentLoanInterest' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -821,6 +843,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_1099_s: '1099S',
   add_w2c: 'W2C',
   add_w2g: 'W2G',
+  add_1098_e: '1098E',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',

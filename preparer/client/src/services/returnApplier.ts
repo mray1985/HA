@@ -95,6 +95,7 @@ export type ApplicableResult = Pick<TaxToolSuccess, 'application' | 'fields'>;
 const AGGREGATE_DISCOVERY: Partial<Record<AggregateTarget, string>> = {
   socialSecurityBenefits: INCOME_DISCOVERY_KEYS.ssa1099!,
   mortgageInterest: INCOME_DISCOVERY_KEYS['1098']!,
+  studentLoanInterest: INCOME_DISCOVERY_KEYS['1098e']!,
 };
 
 export function applyToolResult(
@@ -267,17 +268,27 @@ export function outcomeOfApply(outcome: ApplyOutcome): DocumentPieceOutcome {
  * Apply every form of an extracted document to the return, and record on the
  * document how each form got there.
  */
+/** Why a form did not land on the return, when the outcome says. Empty otherwise. */
+function reasonOf(outcome: ApplyOutcome): string {
+  return 'reason' in outcome && typeof outcome.reason === 'string' ? outcome.reason : '';
+}
+
 export function applyExtraction(returnId: string, extraction: ApplyExtractionResult): DocumentPieceOutcome[] {
   if (extraction.unclassified || extraction.provenanceError) return [];
+  const reasons: string[] = [];
   const outcomes = extraction.pieces.map((piece, formIndex): DocumentPieceOutcome => {
-    if (piece.toolError || !piece.incomeType) return 'not_applied';
+    if (piece.toolError || !piece.incomeType) { reasons.push(piece.toolError ?? 'No tool reads this form.'); return 'not_applied'; }
     const application = applicationFor(piece.incomeType);
-    if (!application) return 'not_applied';
-    if ((application.kind === 'income_item' || application.kind === 'w2_correction') && Object.keys(piece.toolFields).length === 0) return 'not_applied';
-    return outcomeOfApply(applyToolResult(returnId, { application, fields: piece.toolFields },
-      { documentId: extraction.document.documentId, formIndex }));
+    if (!application) { reasons.push('No tool reads this form.'); return 'not_applied'; }
+    if ((application.kind === 'income_item' || application.kind === 'w2_correction') && Object.keys(piece.toolFields).length === 0) { reasons.push('No box on this form could be read.'); return 'not_applied'; }
+    const outcome = applyToolResult(returnId, { application, fields: piece.toolFields },
+      { documentId: extraction.document.documentId, formIndex });
+    // Keep why a form did not land on the return: without it the case review can
+    // only say a total is missing, not what is holding it.
+    reasons.push(reasonOf(outcome));
+    return outcomeOfApply(outcome);
   });
-  upsertDocument(returnId, { ...extraction.document, appliedAs: outcomes });
+  upsertDocument(returnId, { ...extraction.document, appliedAs: outcomes, applyReasons: reasons });
   return outcomes;
 }
 
@@ -382,16 +393,57 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  * no form of this year is left to give it, it comes off the return. Only
  * called on that path — a hand-entered total is never cleared by a form.
  */
-export function clearAggregateWithoutForms(returnId: string, target: 'socialSecurityBenefits' | 'mortgageInterest'): void {
-  if (factsByForm(returnId, target === 'socialSecurityBenefits' ? 'SSA1099_' : '1098_').forms.size > 0) return;
+/** Aggregate targets whose total is a scalar the applier writes directly. */
+type SummedAggregate = 'socialSecurityBenefits' | 'mortgageInterest' | 'studentLoanInterest';
+
+/** Fact prefix of the forms behind each summed aggregate. */
+const AGGREGATE_FACT_PREFIX: Record<SummedAggregate, string> = {
+  socialSecurityBenefits: 'SSA1099_',
+  mortgageInterest: '1098_',
+  studentLoanInterest: '1098E_',
+};
+
+export function clearAggregateWithoutForms(returnId: string, target: SummedAggregate): void {
+  if (factsByForm(returnId, AGGREGATE_FACT_PREFIX[target]).forms.size > 0) return;
   if (target === 'socialSecurityBenefits') {
     if (getReturn(returnId).incomeSSA1099) deleteSSA1099(returnId);
+  } else if (target === 'studentLoanInterest') {
+    updateReturn(returnId, { studentLoanInterest: undefined });
   } else if (getReturn(returnId).itemizedDeductions) {
     upsertItemized(returnId, { mortgageInterest: 0, mortgageInsurancePremiums: 0, mortgageBalance: undefined });
   }
 }
 
-function recomputeAggregate(returnId: string, target: 'socialSecurityBenefits' | 'mortgageInterest'): ApplyOutcome {
+function recomputeAggregate(returnId: string, target: SummedAggregate): ApplyOutcome {
+  if (target === 'studentLoanInterest') {
+    const { forms, held } = factsByForm(returnId, AGGREGATE_FACT_PREFIX[target]);
+    if (held.length > 0) {
+      return { kind: 'aggregate', target, applied: false, reason: `Form 1098-E ${held.join(', ')} is held for review; the total waits for it.` };
+    }
+    if (forms.size === 0) return { kind: 'aggregate', target, applied: false, reason: 'No Form 1098-E can be applied.' };
+    for (const [key, fields] of forms) {
+      const interest = fields.get('studentLoanInterest');
+      if (!interest || amountFromFact(interest) === undefined) {
+        return { kind: 'aggregate', target, applied: false, reason: `Form 1098-E ${key} has no readable student loan interest (box 1).` };
+      }
+      // Box 2 checked means box 1 leaves out origination fees and capitalized
+      // interest on pre-September 2004 loans, so box 1 is not the deductible
+      // amount - the Student Loan Interest Deduction Worksheet is. Applying box 1
+      // anyway would quietly understate the deduction, so it waits instead.
+      const excluded = fields.get('originationFeesExcluded');
+      if (excluded?.status === 'extracted' && excluded.value === true) {
+        return {
+          kind: 'aggregate',
+          target,
+          applied: false,
+          reason: `Form 1098-E ${key} has box 2 checked: box 1 excludes origination fees and capitalized interest, so the deduction is worked on the Deduction Worksheet rather than taken from box 1.`,
+        };
+      }
+    }
+    updateReturn(returnId, { studentLoanInterest: round2(sumPresent(forms.values(), 'studentLoanInterest')!) });
+    return { kind: 'aggregate', target, applied: true, forms: forms.size };
+  }
+
   if (target === 'socialSecurityBenefits') {
     const { forms, held } = factsByForm(returnId, 'SSA1099_');
     if (held.length > 0) {

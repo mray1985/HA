@@ -88,6 +88,11 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
     address: ['winner.street', 'winner.apt', 'winner.city', 'winner.state', 'winner.zip'],
   },
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
+  '1098-E': {
+    tin: 'borrower.tin',
+    name: 'borrower.name',
+    address: ['borrower.street', 'borrower.city'],
+  },
 };
 
 /** Forms whose person may be a dependent: read to place the form only. */

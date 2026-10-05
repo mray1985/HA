@@ -358,3 +358,46 @@ describe('Form W-2G (Rev. January 2026)', () => {
     expect(Object.values(structured.args)).not.toContain(0);
   });
 });
+describe('Form 1098-E (Rev. 2026)', () => {
+  const SLI = getFormExtractionSchema('1098-E')!;
+
+  it('reads only the two boxes the form prints', () => {
+    expect(SLI.boxes.filter((b) => /^\d+$/.test(b.box)).map((b) => b.box)).toEqual(['1', '2']);
+  });
+
+  it('names box 1 as the form prints it, "Student loan interest received by lender"', () => {
+    expect(SLI.boxes.find((b) => b.key === '1')).toMatchObject({
+      box: '1',
+      label: 'Student loan interest received by lender',
+      kind: 'money',
+      use: 'tool',
+    });
+  });
+
+  it('maps box 1 to the tool and box 2 to a boolean', () => {
+    const mapped = mapBoxesToTool(SLI, {
+      'lender.block': 'MOUNT HOREAN NATIONAL BANK\nPO BOX 88\nCONCORD NH 03301',
+      '1': '1,842.55',
+      '2': 'X',
+    });
+    expect(mapped.tool).toBe('add_1098_e');
+    const structured = extractStructuredFields('1098e', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({
+      lenderName: 'MOUNT HOREAN NATIONAL BANK',
+      studentLoanInterest: 1842.55,
+      originationFeesExcluded: true,
+    });
+  });
+
+  it('reads an unchecked box 2 as false, not as absent', () => {
+    const mapped = mapBoxesToTool(SLI, { '1': '500.00', '2': 'no' });
+    const structured = extractStructuredFields('1098e', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({ studentLoanInterest: 500, originationFeesExcluded: false });
+  });
+
+  it('sends an unreadable box 2 to review rather than guessing it was unchecked', () => {
+    const mapped = mapBoxesToTool(SLI, { '1': '500.00', '2': 'maybe' });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['2']);
+    expect(mapped.bag).not.toHaveProperty('originationFeesExcluded');
+  });
+});

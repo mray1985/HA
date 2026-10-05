@@ -805,6 +805,29 @@ const W2G_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/**
+ * Form 1098-E (Rev. 2026), Copy B for Borrower. The form prints only boxes 1
+ * and 2. Box 2 is the one that matters: when it is checked, box 1 excludes loan
+ * origination fees and capitalized interest on pre-2004 loans, so box 1 on its
+ * own is not the deductible amount and the Deduction Worksheet decides it.
+ */
+const SLI_SCHEMA: FormExtractionSchema = {
+  formType: '1098-E',
+  revision: '2026',
+  boxes: [
+    CORRECTED,
+    box('lender.block', "RECIPIENT'S/LENDER'S name, street address, room/suite no., city/town, state/province, country, ZIP/foreign code, and telephone number", 'text', 'tool', ''),
+    box('lender.tin', "RECIPIENT'S TIN", 'tin', 'info', ''),
+    box('borrower.tin', "BORROWER'S TIN", 'tin', 'info', ''),
+    box('borrower.name', "BORROWER'S name", 'text', 'info', ''),
+    box('borrower.street', "BORROWER'S street address and apt. no.", 'text', 'info', ''),
+    box('borrower.city', "BORROWER'S city/town, state/province, country, and ZIP/foreign code", 'text', 'info', ''),
+    box('account', 'Account number (see instructions)', 'text', 'info', ''),
+    box('1', 'Student loan interest received by lender', 'money', 'tool'),
+    checkbox('2', 'If checked, box 1 does not include loan origination fees and/or capitalized interest for loans made before September 1, 2004', 'tool', { labelPhrase: 'does', direction: 'below' }),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -825,6 +848,7 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   '1099-S': S_SCHEMA,
   'W-2C': W2C_SCHEMA,
   'W-2G': W2G_SCHEMA,
+  '1098-E': SLI_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -1210,6 +1234,12 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     // Box 13 prints the state and the payer's state ID in one cell; only the
     // two-letter code is an argument.
     state: { key: '13', field: 'stateCode' },
+  },
+  '1098-E': {
+    tool: 'add_1098_e',
+    direct: { '1': 'studentLoanInterest' },
+    name: { keys: ['lender.block'], field: 'lenderName' },
+    checkboxes: { '2': 'originationFeesExcluded' },
   },
   '1098-T': {
     tool: 'add_education_expense',

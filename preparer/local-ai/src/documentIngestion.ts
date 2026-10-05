@@ -85,6 +85,13 @@ export interface IngestedDocument {
   classifications?: DocumentClassificationRecord[];
   /** Outcome per form in the file, in extraction order, once applied to the return. */
   appliedAs?: DocumentPieceOutcome[];
+  /**
+   * Why a form did not land on the return, in the same order as `appliedAs`
+   * (empty string where it did, or where the outcome says nothing). A form that
+   * was read but is not on the return is otherwise indistinguishable from one
+   * whose total is waiting on another form.
+   */
+  applyReasons?: string[];
   /** The person each form in the file is about (employee, recipient, borrower), in extraction order. */
   identities?: Array<PartyIdentity | null>;
   /** The tax year each form in the file prints (a W-2c's box c), in extraction order; null when not read. */
