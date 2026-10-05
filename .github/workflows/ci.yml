@@ -20,7 +20,12 @@ jobs:
   unit-tests:
     name: Unit & Integration Tests (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Generous on purpose. The suite itself runs in about two minutes; a limit
+    # near that only ever fires when the job is waiting for a runner rather than
+    # working, and a job killed for queueing reports itself as a failure that says
+    # nothing about the code. Losing whole runs to that makes a red cross
+    # meaningless, which is the one thing this workflow exists to prevent.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -71,7 +76,8 @@ jobs:
   typecheck:
     name: TypeScript Check (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # tsc takes about a minute. See the note on the unit job's timeout.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -168,7 +174,9 @@ jobs:
   build:
     name: Production Build (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The build takes a little over a minute. See the note on the unit job's
+    # timeout: a limit close to the real duration only fires on queueing.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
