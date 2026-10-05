@@ -110,6 +110,7 @@ const DESCRIPTIONS: Record<TaxToolName | ReturnToolName, string> = {
   add_1099_s: `Record one Form 1099-S (real estate sale). Basis and the home-sale exclusion are decided separately. ${NO_GUESSING}`,
   add_mortgage_interest: `Add one Form 1098 (mortgage interest statement). ${NO_GUESSING}`,
   add_education_expense: `Add one Form 1098-T (tuition statement). This records the statement; which education credit applies is decided separately. ${NO_GUESSING}`,
+  add_w2g: `Add one Form W-2G (gambling winnings). Reportable winnings are box 1 and the type of wager box 3; the wager type is descriptive and never changes the amount. Winnings from identical wagers (box 7) and local winnings are reviewed by the preparer, not passed here. ${NO_GUESSING}`,
   set_filing_status_candidate:
     'Record a filing-status candidate stated in the evidence. This does not set the final filing status; the tax engine and preparer decide that.',
   add_dependent: `Record one dependent named in the evidence (a prior-year return, the client's answers, an intake sheet). Call once per person. Whether they qualify is decided by the engine and the preparer. ${NO_GUESSING}`,

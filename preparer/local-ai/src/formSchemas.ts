@@ -757,6 +757,54 @@ const W2C_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/**
+ * Form W-2G (Rev. January 2026), Copy B. Labels are taken from the printed
+ * page, so box 1 reads "Reportable winnings" rather than the older "Gross
+ * winnings", and "Type of wager" is box 3. The winner's TIN is printed in the
+ * numbered box 9, not in the address block, so it is keyed by its box.
+ */
+const W2G_SCHEMA: FormExtractionSchema = {
+  formType: 'W-2G',
+  revision: 'January 2026',
+  boxes: [
+    CORRECTED,
+    box('payer.name', "PAYER'S name", 'text', 'tool', ''),
+    box('payer.street', "PAYER'S street address", 'text', 'info', ''),
+    box('payer.suite', "PAYER'S room or suite no.", 'text', 'info', ''),
+    box('payer.city', "PAYER'S city or town", 'text', 'info', ''),
+    box('payer.state', "PAYER'S state or province", 'text', 'info', ''),
+    box('payer.country', "PAYER'S country", 'text', 'info', ''),
+    box('payer.zip', "PAYER'S ZIP or foreign postal code", 'text', 'info', ''),
+    box('payer.tin', "PAYER'S TIN", 'tin', 'info', ''),
+    box('payer.phone', "PAYER'S telephone no.", 'text', 'info', ''),
+    box('9', "WINNER'S TIN", 'tin', 'info'),
+    box('winner.name', "WINNER'S name", 'text', 'info', ''),
+    box('winner.street', "WINNER'S street address", 'text', 'info', ''),
+    box('winner.apt', "WINNER'S apt. no.", 'text', 'info', ''),
+    box('winner.city', "WINNER'S city or town", 'text', 'info', ''),
+    box('winner.state', "WINNER'S state or province", 'text', 'info', ''),
+    box('winner.country', "WINNER'S country", 'text', 'info', ''),
+    box('winner.zip', "WINNER'S ZIP or foreign postal code", 'text', 'info', ''),
+    box('1', 'Reportable winnings', 'money', 'tool'),
+    box('2', 'Date won', 'date', 'review'),
+    box('3', 'Type of wager', 'text', 'tool'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'Transaction', 'text', 'review'),
+    box('6', 'Race', 'text', 'review'),
+    box('7', 'Winnings from identical wagers', 'money', 'review'),
+    box('8', 'Cashier', 'text', 'info'),
+    box('10', 'Window', 'text', 'info'),
+    box('11', 'First identification no.', 'text', 'review'),
+    box('12', 'Second identification no.', 'text', 'review'),
+    box('13', "State/Payer's state identification no.", 'stateAndId', 'tool'),
+    box('14', 'State winnings', 'money', 'review'),
+    box('15', 'State income tax withheld', 'money', 'tool'),
+    box('16', 'Local winnings', 'money', 'review'),
+    box('17', 'Local income tax withheld', 'money', 'review'),
+    box('18', 'Name of locality', 'text', 'review'),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -776,6 +824,7 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   '1099-SA': SA_SCHEMA,
   '1099-S': S_SCHEMA,
   'W-2C': W2C_SCHEMA,
+  'W-2G': W2G_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -1148,6 +1197,19 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     moreStates: [{ key: '15.state.1.prev', field: 'previousState' }, { key: '15.state.1.correct', field: 'correctState' }],
     year: { key: 'c', field: 'taxYearCorrected' },
     checkboxes: { e: 'correctsSsnOrName' },
+  },
+  'W-2G': {
+    tool: 'add_w2g',
+    direct: {
+      '1': 'grossWinnings',
+      '3': 'typeOfWager',
+      '4': 'federalTaxWithheld',
+      '15': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.name'], field: 'payerName' },
+    // Box 13 prints the state and the payer's state ID in one cell; only the
+    // two-letter code is an argument.
+    state: { key: '13', field: 'stateCode' },
   },
   '1098-T': {
     tool: 'add_education_expense',

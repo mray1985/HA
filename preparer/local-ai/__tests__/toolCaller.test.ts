@@ -174,12 +174,24 @@ describe('tool caller (development-order step 9)', () => {
 
   it('does not invent a tool for an unsupported income type', () => {
     const outcome = callIncomeToolFromStructuredFields({
-      incomeType: 'w2g',
+      incomeType: 'not-a-form',
       args: { grossWinnings: 50 },
       context: ctx,
     });
     expect(outcome.ok).toBe(false);
     expect(outcome.tool).toBeNull();
-    expect(proposeIncomeToolCall('w2g', {})).toBeNull();
+    expect(proposeIncomeToolCall('not-a-form', {})).toBeNull();
+  });
+
+  it('calls add_w2g for a W-2G structured field bag', () => {
+    const outcome = callIncomeToolFromStructuredFields({
+      incomeType: 'w2g',
+      args: { payerName: 'RIVERBEND CASINO', grossWinnings: 24600 },
+      context: ctx,
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok || !outcome.result?.ok) return;
+    expect(outcome.tool).toBe('add_w2g');
+    expect(outcome.result.fields).toEqual({ payerName: 'RIVERBEND CASINO', grossWinnings: 24600 });
   });
 });

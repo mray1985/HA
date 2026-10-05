@@ -153,6 +153,15 @@ const MISC_FIELDS: Record<string, FieldKind> = {
   stateTaxWithheld: 'money',
 };
 
+const W2G_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  grossWinnings: 'money',
+  typeOfWager: 'text',
+  federalTaxWithheld: 'money',
+  stateCode: 'text',
+  stateTaxWithheld: 'money',
+};
+
 const G_FIELDS: Record<string, FieldKind> = {
   payerName: 'text',
   unemploymentCompensation: 'money',
@@ -262,6 +271,7 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_1099_sa: SA_FIELDS,
   add_1099_s: S_FIELDS,
   add_w2c: W2C_FIELDS,
+  add_w2g: W2G_FIELDS,
 };
 
 interface Normalized {

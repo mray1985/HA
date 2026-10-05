@@ -11,6 +11,7 @@ import {
   type FormExtractionSchema,
 } from '../src/formSchemas.js';
 import { extractStructuredFields } from '../src/structuredExtraction.js';
+import type { ClassifiableFormType } from '../src/documentClassifier.js';
 
 const W2 = getFormExtractionSchema('W-2')!;
 
@@ -176,8 +177,12 @@ describe('mapBoxesToTool', () => {
   });
 
   it('routes every filled tax box on a form without a tax tool to review', () => {
+    // Every classifiable form now has a tax tool, so this exercises the
+    // fallback through a form type outside the union on purpose: the guarantee
+    // is that a filled box is never silently dropped, and it has to survive a
+    // future form that ships with a schema but no tool.
     const noTool: FormExtractionSchema = {
-      formType: 'W-2G',
+      formType: 'FUTURE-1099' as ClassifiableFormType,
       revision: 'test',
       boxes: [
         { key: '1', box: '1', label: 'Reportable winnings', kind: 'money', use: 'tool' },
@@ -287,5 +292,69 @@ describe('corrected forms (work order §15 "corrected W-2 handling", §72)', () 
       const b = getFormExtractionSchema(formType)!.boxes.find((x) => x.key === 'corrected');
       expect(b, formType).toMatchObject({ kind: 'checkbox', use: 'review', checkbox: { labelPhrase: 'CORRECTED', direction: 'left' } });
     }
+  });
+});
+
+describe('Form W-2G (Rev. January 2026)', () => {
+  const W2G = getFormExtractionSchema('W-2G')!;
+
+  it('names box 1 as the form prints it, "Reportable winnings"', () => {
+    // The engine's IncomeW2G field is still called grossWinnings, but this
+    // revision of the form prints "Reportable winnings". Sending a preparer to
+    // a label the form does not have is the failure printedBoxLabels guards.
+    expect(W2G.boxes.find((b) => b.key === '1')).toMatchObject({
+      box: '1',
+      label: 'Reportable winnings',
+      kind: 'money',
+      use: 'tool',
+    });
+  });
+
+  it('reads the type of wager from box 3, where the form prints it', () => {
+    // IncomeW2G in shared/types/index.ts comments this as "Box 4 description".
+    // Box 4 is federal income tax withheld; the wager type is box 3.
+    expect(W2G.boxes.find((b) => b.key === '3')).toMatchObject({ box: '3', label: 'Type of wager', use: 'tool' });
+    expect(W2G.boxes.find((b) => b.key === '4')).toMatchObject({ box: '4', label: 'Federal income tax withheld' });
+  });
+
+  it('keys the winner TIN by its printed box 9', () => {
+    expect(W2G.boxes.find((b) => b.key === '9')).toMatchObject({ box: '9', label: "WINNER'S TIN" });
+  });
+
+  it('maps boxes to add_w2g arguments and nothing else', () => {
+    const mapped = mapBoxesToTool(W2G, {
+      'payer.name': 'RIVERBEND CASINO\n4100 CANAL ST\nNEW ORLEANS LA 70119',
+      '1': '24,600.00',
+      '3': 'Poker tournament',
+      '4': '4,920.00',
+      '13': 'LA/98765',
+      '15': '1,230.00',
+      '7': '600.00',
+    });
+    expect(mapped.tool).toBe('add_w2g');
+    const structured = extractStructuredFields('w2g', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({
+      payerName: 'RIVERBEND CASINO',
+      grossWinnings: 24600,
+      typeOfWager: 'Poker tournament',
+      federalTaxWithheld: 4920,
+      // Only the two-letter code; the payer's state ID in the same cell is not
+      // passed as an argument.
+      stateCode: 'LA',
+      stateTaxWithheld: 1230,
+    });
+  });
+
+  it('routes winnings from identical wagers to review, since no argument takes them', () => {
+    const mapped = mapBoxesToTool(W2G, { '1': '1,000.00', '7': '250.00', '16': '100.00' });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['7', '16']);
+    expect(mapped.bag).not.toHaveProperty('identicalWagers');
+  });
+
+  it('leaves a blank box out of the arguments entirely', () => {
+    const mapped = mapBoxesToTool(W2G, { '1': '500.00', '4': '' });
+    const structured = extractStructuredFields('w2g', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({ grossWinnings: 500 });
+    expect(Object.values(structured.args)).not.toContain(0);
   });
 });

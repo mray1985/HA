@@ -81,6 +81,12 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
   '1099-SA': RECIPIENT,
   '1099-S': RECIPIENT,
   '1098': { tin: 'borrower.tin', name: 'borrower.name', address: ['borrower.street', 'borrower.city'] },
+  // The winner's TIN is printed in numbered box 9, not in the address block.
+  'W-2G': {
+    tin: '9',
+    name: 'winner.name',
+    address: ['winner.street', 'winner.apt', 'winner.city', 'winner.state', 'winner.zip'],
+  },
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
 };
 

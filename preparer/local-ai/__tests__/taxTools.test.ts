@@ -153,8 +153,8 @@ describe('tax tools (HA-AI-011)', () => {
     expect(toolNameForIncomeType('w2')).toBe('add_w2');
     expect(toolNameForIncomeType('1099int')).toBe('add_1099_int');
     expect(toolNameForIncomeType('1099misc')).toBe('add_1099_misc');
-    // Forms with no tax tool yet, and preparer-choice forms, are not income-item tools.
-    expect(toolNameForIncomeType('w2g')).toBeNull();
+    expect(toolNameForIncomeType('w2g')).toBe('add_w2g');
+    // Preparer-choice forms are not income-item tools.
     expect(toolNameForIncomeType('1099q')).toBeNull();
   });
 
@@ -320,5 +320,62 @@ describe('SSA-1099, 1098 and 1098-T tools', () => {
     if (!r.ok) return;
     expect(r.fields).toEqual({ scholarships: 3000 });
     expect(r.facts.find((f) => f.sourceField === 'tuitionPaid')?.status).toBe('unknown');
+  });
+});
+
+describe('Form W-2G tool', () => {
+  it('records gambling winnings as an income item with W2G facts', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: {
+        payerName: 'RIVERBEND CASINO',
+        grossWinnings: 24600,
+        typeOfWager: 'Poker tournament',
+        federalTaxWithheld: 4920,
+        stateCode: 'LA',
+        stateTaxWithheld: 1230,
+      },
+      context: { ...ctx, sourceFileName: 'fw2g.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.incomeType).toBe('w2g');
+    expect(result.application).toEqual({ kind: 'income_item', itemType: 'w2g' });
+    expect(result.fields).toEqual({
+      payerName: 'RIVERBEND CASINO',
+      grossWinnings: 24600,
+      typeOfWager: 'Poker tournament',
+      federalTaxWithheld: 4920,
+      stateCode: 'LA',
+      stateTaxWithheld: 1230,
+    });
+    // Field names must match shared/types IncomeW2G so the item stores as-is.
+    for (const key of Object.keys(result.fields)) {
+      expect(result.facts.some((f) => f.factType === `W2G_${key}`), key).toBe(true);
+    }
+  });
+
+  it('rejects a field the form does not have rather than inventing one', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: { grossWinnings: 100, netWinnings: 100 },
+      context: ctx,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain('netWinnings');
+  });
+
+  it('omits an absent box instead of passing zero for it', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: { grossWinnings: 500, federalTaxWithheld: null, stateTaxWithheld: '' },
+      context: ctx,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual({ grossWinnings: 500 });
+    expect(result.fields).not.toHaveProperty('federalTaxWithheld');
+    expect(Object.values(result.fields)).not.toContain(0);
   });
 });

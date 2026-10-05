@@ -43,6 +43,7 @@ export const FORM_TOOL_NAMES = [
   'add_1099_sa',
   'add_1099_s',
   'add_w2c',
+  'add_w2g',
 ] as const;
 
 /**
@@ -72,7 +73,7 @@ export type RecordToolName = (typeof RECORD_TOOL_NAMES)[number];
 /** Tools whose result is one engine item per source (addIncomeItem). */
 export type TaxToolIncomeName =
   | 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r'
-  | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c'
+  | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c' | 'add_w2g'
   | 'add_schedule_c_income';
 
 export function isDocumentTool(name: string): name is DocumentToolName {
@@ -130,7 +131,7 @@ export type PreparerChoice = 'creditType' | 'qualifiedExpenses' | 'qualifiedMedi
 export type TaxToolIncomeType =
   | 'w2' | '1099int' | '1099div' | '1099nec' | '1099r'
   | '1099misc' | '1099g' | '1099b' | '1099k' | '1099oid' | '1099c'
-  | 'business-receipts';
+  | 'w2g' | 'business-receipts';
 
 export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
@@ -144,6 +145,7 @@ export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> 
   add_1099_k: '1099k',
   add_1099_oid: '1099oid',
   add_1099_c: '1099c',
+  add_w2g: 'w2g',
   add_schedule_c_income: 'business-receipts',
 };
 
@@ -160,6 +162,7 @@ const INCOME_TYPE_TO_TOOL: Record<string, FormIncomeToolName> = {
   '1099k': 'add_1099_k',
   '1099oid': 'add_1099_oid',
   '1099c': 'add_1099_c',
+  w2g: 'add_w2g',
 };
 
 /** Classified document income type → the form tool that reads it (income items and preparer-choice forms). */
@@ -539,6 +542,18 @@ const cap = (f: string) => f[0]!.toUpperCase() + f.slice(1);
 export const w2cField = (side: 'previous' | 'correct', field: W2cCorrectable) => `${side}${cap(field)}`;
 
 /** Form W-2c (Rev. January 2026): only the corrected boxes are printed. */
+/** Form W-2G (Rev. January 2026): gambling winnings. Field names match IncomeW2G. */
+const AddW2GFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    grossWinnings: optionalAmount,
+    typeOfWager: optionalString,
+    federalTaxWithheld: optionalAmount,
+    stateCode: optionalString,
+    stateTaxWithheld: optionalAmount,
+  })
+  .strict();
+
 const AddW2cFieldsSchema = z
   .object({
     employerName: optionalString,
@@ -735,6 +750,7 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_1099_sa: Add1099SaFieldsSchema,
   add_1099_s: Add1099SFieldsSchema,
   add_w2c: AddW2cFieldsSchema,
+  add_w2g: AddW2GFieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
@@ -769,6 +785,7 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_1099_sa: { kind: 'needs_preparer_choice', target: 'hsaDistribution', choice: 'qualifiedMedicalExpenses' },
   add_1099_s: { kind: 'needs_preparer_choice', target: 'homeSale', choice: 'ownershipAndBasis' },
   add_w2c: { kind: 'w2_correction' },
+  add_w2g: { kind: 'income_item', itemType: 'w2g' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -803,6 +820,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_1099_sa: '1099SA',
   add_1099_s: '1099S',
   add_w2c: 'W2C',
+  add_w2g: 'W2G',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',
