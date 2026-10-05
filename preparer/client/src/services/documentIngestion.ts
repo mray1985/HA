@@ -29,6 +29,7 @@ import {
 } from '@hatax/local-ai';
 import type { PDFExtractResult } from './pdfExtractHelpers';
 import type { DocumentBoxGap } from '@hatax/local-ai';
+import { buildBoxLedger, type BoxLedger } from './boxLedger';
 import { DOCUMENT_KEY_PREFIX, documentStorageKey } from './storageScope';
 import { readRecord, removeRecord, removeRecordsWithPrefix, writeRecord } from './caseRecords';
 import { appendTaxFacts, factsForExtraction } from './preparerTaxFacts';
@@ -353,17 +354,14 @@ export function applyExtractionToDocument(input: {
     const wrote = classificationAllowsIncomeWrite(p.classification) && !p.toolError;
     const ledger = p.extracted?.boxLedger;
     const entries = ledger?.entries ?? [];
-    const gaps = entries.filter((e) => e.state === 'unread' || e.state === 'held');
-    return {
-      formType: p.extracted?.formType ?? null,
-      declared: wrote ? (ledger?.declared ?? 0) : Math.max(entries.length, 1),
-      read: wrote ? (ledger?.read ?? 0) : 0,
-      boxes: wrote
-        ? gaps.map((e) => ({ box: e.box, label: e.label, state: e.state as 'held' | 'unread' }))
-        : (p.toolError
-            ? [{ box: '', label: p.toolError, state: 'held' as const }]
-            : entries.map((e) => ({ box: e.box, label: e.label, state: 'held' as const }))),
-    };
+    return gapsFor(
+      p.extracted?.formType ?? null,
+      wrote,
+      ledger ?? { formType: null, declared: 0, read: 0, held: 0, unread: 0, empty: 0, entries },
+      p.toolError
+        ? [{ box: '', label: p.toolError, state: 'held' as const }]
+        : entries.map((e) => ({ box: e.box, label: e.label, state: 'held' as const })),
+    );
   });
   const updated: IngestedDocument = {
     ...input.document,
@@ -371,6 +369,9 @@ export function applyExtractionToDocument(input: {
     ...(identities.some(Boolean) ? { identities } : {}),
     ...(taxYearsPrinted.some(Boolean) ? { taxYearsPrinted } : {}),
     ...(boxGaps.some((g) => g.boxes.length > 0) ? { boxGaps } : {}),
+    // The reader's own warnings: OCR accuracy, extra forms in the file, a K-1's
+    // partial coverage, and the one-line account of what the ledger made of it.
+    ...(input.extracted.warnings?.length ? { warnings: [...input.extracted.warnings] } : {}),
     extractor,
     formTypes: formTypes.length > 0 ? formTypes : undefined,
     // Summary remains the first classified piece for existing UI consumers.
@@ -399,6 +400,38 @@ export function applyExtractionToDocument(input: {
  * Facts carry the model's provenance — reader, file hash and quantization,
  * run id — and each value's location and second reading.
  */
+/**
+ * The preparer's gap list for one form, from its box ledger.
+ *
+ * Shared by both reading paths so a document read from its text layer and one
+ * read by the models report their gaps the same way. A form that placed nothing
+ * cannot say which of its boxes were filled in, so it reports every box it
+ * carries as needing a person rather than claiming a partial read.
+ */
+function gapsFor(
+  formType: string | null,
+  wrote: boolean,
+  ledger: BoxLedger,
+  /** What to list instead when the form placed nothing at all. */
+  nothingPlaced: Array<{ box: string; label: string; state: 'held' }>,
+): DocumentBoxGap {
+  const entries = ledger.entries;
+  const gaps = entries.filter((e) => e.state === 'unread' || e.state === 'held');
+  return {
+    formType,
+    declared: wrote ? ledger.declared : Math.max(entries.length, 1),
+    read: wrote ? ledger.read : 0,
+    boxes: wrote
+      ? gaps.map((e) => ({
+          box: e.box,
+          label: e.label,
+          state: e.state as 'held' | 'unread',
+          ...(e.field ? { field: e.field } : {}),
+        }))
+      : nothingPlaced,
+  };
+}
+
 export function applyModelReadingsToDocument(input: {
   returnId: string;
   taxYear: number;
@@ -475,11 +508,34 @@ export function applyModelReadingsToDocument(input: {
   if (!provenance.ok) return { document: input.document, pieces, facts: [], provenanceError: provenance.error };
   if (facts.length > 0) appendTaxFacts(input.returnId, facts);
 
+  // The same gap list the text-layer path builds, so a document read by the
+  // models is no quieter than one read from its text layer. `reviewBoxes` is
+  // where a filled box that no tool accepts has been recorded all along; until
+  // now nothing read it, so a 1099-DIV box 5 or a W-2 box 7 reached nobody.
+  const boxGaps = kept.map((reading) => {
+    const wrote = Boolean(reading.tool);
+    const ledger = buildBoxLedger(
+      reading.formType,
+      reading.args as Record<string, unknown>,
+      [],
+      '',
+      reading.mapping?.reviewBoxes ?? [],
+    );
+    return gapsFor(reading.formType ?? null, wrote, ledger, [
+      {
+        box: '',
+        label: `${reading.formType} is read but not entered automatically — enter it on the return.`,
+        state: 'held' as const,
+      },
+    ]);
+  });
+
   const updated: IngestedDocument = {
     ...input.document,
     status: 'extracted',
     ...(kept.some((r) => r.identity) ? { identities: kept.map((r) => r.identity) } : {}),
     ...(kept.some((r) => yearOfReading(r)) ? { taxYearsPrinted: kept.map((r) => yearOfReading(r)) } : {}),
+    ...(boxGaps.some((g) => g.boxes.length > 0) ? { boxGaps } : {}),
     extractor: `${reader.id} + ${second.id}`,
     formTypes: kept.map((r) => r.formType).filter((t): t is NonNullable<typeof t> => Boolean(t)),
     classification: classificationRecord(kept[0]!.classification),

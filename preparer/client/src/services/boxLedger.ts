@@ -96,6 +96,19 @@ function labelIsPrinted(label: string, pageText: string): boolean {
 }
 
 /**
+ * A box the page prints a value in, that no tax tool accepts yet.
+ *
+ * The reader model path produces these as `ToolMapping.reviewBoxes`; the text
+ * layer produces the same condition as a RejectedRead. Without them a box that is
+ * plainly filled in reads as blank or missed, and the preparer is never told.
+ */
+export interface UnplacedBox {
+  key: string;
+  label: string;
+  text: string;
+}
+
+/**
  * Account for every box the form prints.
  *
  * The point is the gap: a form the reader mostly failed on must say so, naming
@@ -108,10 +121,13 @@ export function buildBoxLedger(
   rejectedReads: readonly RejectedRead[] = [],
   /** The page text, so a blank box can be told from a missed one. */
   pageText = '',
+  /** Boxes the form fills in that no tool can place, keyed by schema box key. */
+  unplaced: readonly UnplacedBox[] = [],
 ): BoxLedger {
   const schema = FORM_EXTRACTION_SCHEMAS[(formType ?? '') as ClassifiableFormType];
   const fields = fieldsByBox(formType);
   const held = new Map(rejectedReads.map((r) => [r.field, r]));
+  const filled = new Map(unplaced.map((u) => [u.key, u]));
   const text = pageText.toLowerCase();
 
   const entries: BoxLedgerEntry[] = [];
@@ -124,16 +140,20 @@ export function buildBoxLedger(
     const field = fields.get(box.key);
     const value = field ? extractedData[field] : undefined;
     const rejection = field ? held.get(field) : undefined;
+    const unplacedBox = filled.get(box.key);
     const repeat = box.box !== '' && seenPrintedBox.has(box.box);
     if (box.box !== '') seenPrintedBox.add(box.box);
 
     let state: BoxState;
-    if (repeat && value === undefined && !rejection) state = 'informational';
+    if (repeat && value === undefined && !rejection && !unplacedBox) state = 'informational';
     // `info` is furniture (an address, a phone number). `review` is not: those are
     // boxes the return needs that only a person can settle, such as 1099-DIV box
     // 3 nondividend distributions. Counting them as informational would drop a
     // real gap from the list.
     else if (rejection) state = 'held';
+    // Filled in, and nothing can put it on the return. Held, not blank: the
+    // figure is on the form and a preparer has to decide where it belongs.
+    else if (unplacedBox) state = 'held';
     else if (value !== undefined && value !== null && value !== '') state = 'read';
     else if (box.use === 'info') state = 'informational';
     else if (box.kind === 'checkbox') state = 'unread';
@@ -147,6 +167,9 @@ export function buildBoxLedger(
       ...(field ? { field } : {}),
       ...(value !== undefined ? { value } : {}),
       ...(rejection ? { reason: rejection.detail } : {}),
+      ...(unplacedBox
+        ? { value: unplacedBox.text, reason: 'the form prints this, but no part of the return takes it yet' }
+        : {}),
     });
   }
 

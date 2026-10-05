@@ -95,6 +95,13 @@ export interface IngestedDocument {
    * being left to find the gaps in the paperwork.
    */
   boxGaps?: DocumentBoxGap[];
+  /**
+   * What the reader wants a person to know about this document: that it was read
+   * by OCR, that it holds more than one form, that a K-1 captures only its common
+   * boxes, and what the box ledger made of it. The reader writes these; nothing
+   * used to read them, so they were dropped on the floor.
+   */
+  warnings?: string[];
 }
 
 /** What the reader could not append from one form, and why. */
@@ -103,8 +110,14 @@ export interface DocumentBoxGap {
   /** Boxes this form needs on the return. */
   declared: number;
   read: number;
-  /** Named boxes still needing a person: printed box id and the form's own label. */
-  boxes: Array<{ box: string; label: string; state: 'held' | 'unread' }>;
+  /**
+   * Named boxes still needing a person: printed box id and the form's own label.
+   *
+   * `field` is the return field the box feeds, when it feeds one. It is what lets
+   * a preparer type the value straight into that box without going back to the
+   * document, so it is carried here rather than looked up again in the UI.
+   */
+  boxes: Array<{ box: string; label: string; state: 'held' | 'unread'; field?: string }>;
 }
 
 export interface DocumentFileMeta {
