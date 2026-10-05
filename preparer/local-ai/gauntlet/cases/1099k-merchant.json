@@ -1,0 +1,64 @@
+{
+  "id": "1099k-merchant",
+  "description": "1099-K Copy B (Rev. December 2026): a payment filer reporting a year of card and third party network transactions. Boxes 1a, 1b and 4 only; 1c, 1d, 2, 3, the month grid and both state rows stay blank. Synthetic data.",
+  "form": "f1099k.pdf",
+  "formType": "1099-K",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyHeader[0].CalendarYear[0].f2_1[0]": "2025",
+    "LeftCol[0].f2_2[0]": "NORTHGATE PAYMENTS LLC",
+    "RightCol[0].f2_21[0]": "184,320.75",
+    "RightCol[0].f2_22[0]": "161,905.40",
+    "RightCol[0].f2_28[0]": "4,210.60"
+  },
+  "expectedBoxes": {
+    "1a": {
+      "money": 184320.75,
+      "field": "RightCol[0].f2_21[0]"
+    },
+    "1b": {
+      "money": 161905.4,
+      "field": "RightCol[0].f2_22[0]"
+    },
+    "4": {
+      "money": 4210.6,
+      "field": "RightCol[0].f2_28[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.name": {
+      "firstLine": "NORTHGATE PAYMENTS LLC"
+    }
+  },
+  "blankBoxes": [
+    "1c",
+    "1d",
+    "2",
+    "3",
+    "5a",
+    "5b",
+    "5c",
+    "5d",
+    "5e",
+    "5f",
+    "5g",
+    "5h",
+    "5i",
+    "5j",
+    "5k",
+    "5l",
+    "6",
+    "7",
+    "8"
+  ],
+  "expected": {
+    "tool": "add_1099_k",
+    "args": {
+      "platformName": "NORTHGATE PAYMENTS LLC",
+      "grossAmount": 184320.75,
+      "cardNotPresent": 161905.4,
+      "federalTaxWithheld": 4210.6
+    }
+  }
+}

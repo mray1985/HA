@@ -1,0 +1,61 @@
+{
+  "id": "1099misc-royalties",
+  "description": "1099-MISC Copy B with royalties filled in box 2. 1099misc-rents leaves box 2 blank, which guards the fabrication the box ledger test describes - royalties read out of the tax year graphic - but cannot catch a filled box 2 going unread, which would silently drop royalty income. Boxes 3, 5 to 15 and the state block stay blank. Synthetic data.",
+  "form": "f1099msc.pdf",
+  "formType": "1099-MISC",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyHeader[0].CalendarYear[0].f2_1[0]": "2025",
+    "LeftColumn[0].f2_2[0]": "BLACKWELL & VANCE PUBLISHING",
+    "LeftColumn[0].f2_10[0]": "72-9098114",
+    "LeftColumn[0].f2_11[0]": "XXX-XX-4321",
+    "LeftColumn[0].f2_12[0]": "JORDAN TESTPAYER",
+    "RightColumn[0].f2_20[0]": "21,600.00",
+    "RightColumn[0].f2_21[0]": "8,415.30",
+    "RightColumn[0].f2_23[0]": "1,120.00"
+  },
+  "expectedBoxes": {
+    "1": {
+      "money": 21600,
+      "field": "RightColumn[0].f2_20[0]"
+    },
+    "2": {
+      "money": 8415.3,
+      "field": "RightColumn[0].f2_21[0]"
+    },
+    "4": {
+      "money": 1120,
+      "field": "RightColumn[0].f2_23[0]"
+    }
+  },
+  "expectedKeys": {
+    "payer.name": {
+      "firstLine": "BLACKWELL & VANCE PUBLISHING"
+    }
+  },
+  "blankBoxes": [
+    "3",
+    "5",
+    "6",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13a",
+    "14",
+    "15",
+    "16",
+    "17"
+  ],
+  "expected": {
+    "tool": "add_1099_misc",
+    "args": {
+      "payerName": "BLACKWELL & VANCE PUBLISHING",
+      "rents": 21600,
+      "royalties": 8415.3,
+      "federalTaxWithheld": 1120
+    }
+  }
+}

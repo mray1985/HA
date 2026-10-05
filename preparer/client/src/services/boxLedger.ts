@@ -96,6 +96,19 @@ function labelIsPrinted(label: string, pageText: string): boolean {
 }
 
 /**
+ * A box the page prints a value in, that no tax tool accepts yet.
+ *
+ * The reader model path produces these as `ToolMapping.reviewBoxes`; the text
+ * layer produces the same condition as a RejectedRead. Without them a box that is
+ * plainly filled in reads as blank or missed, and the preparer is never told.
+ */
+export interface UnplacedBox {
+  key: string;
+  label: string;
+  text: string;
+}
+
+/**
  * Account for every box the form prints.
  *
  * The point is the gap: a form the reader mostly failed on must say so, naming
@@ -106,13 +119,19 @@ export function buildBoxLedger(
   formType: string | null,
   extractedData: Record<string, unknown>,
   rejectedReads: readonly RejectedRead[] = [],
-  /** The page text, so a blank box can be told from a missed one. */
-  pageText = '',
+  /**
+   * The page text, so a blank box can be told from a missed one. Omit it when
+   * the text is not available: see below.
+   */
+  pageText?: string,
+  /** Boxes the form fills in that no tool can place, keyed by schema box key. */
+  unplaced: readonly UnplacedBox[] = [],
 ): BoxLedger {
   const schema = FORM_EXTRACTION_SCHEMAS[(formType ?? '') as ClassifiableFormType];
   const fields = fieldsByBox(formType);
   const held = new Map(rejectedReads.map((r) => [r.field, r]));
-  const text = pageText.toLowerCase();
+  const filled = new Map(unplaced.map((u) => [u.key, u]));
+  const text = (pageText ?? '').toLowerCase();
 
   const entries: BoxLedgerEntry[] = [];
   // The schema declares a row per state (W-2 boxes 15–20), so a form for one
@@ -124,20 +143,29 @@ export function buildBoxLedger(
     const field = fields.get(box.key);
     const value = field ? extractedData[field] : undefined;
     const rejection = field ? held.get(field) : undefined;
+    const unplacedBox = filled.get(box.key);
     const repeat = box.box !== '' && seenPrintedBox.has(box.box);
     if (box.box !== '') seenPrintedBox.add(box.box);
 
     let state: BoxState;
-    if (repeat && value === undefined && !rejection) state = 'informational';
+    if (repeat && value === undefined && !rejection && !unplacedBox) state = 'informational';
     // `info` is furniture (an address, a phone number). `review` is not: those are
     // boxes the return needs that only a person can settle, such as 1099-DIV box
     // 3 nondividend distributions. Counting them as informational would drop a
     // real gap from the list.
     else if (rejection) state = 'held';
+    // Filled in, and nothing can put it on the return. Held, not blank: the
+    // figure is on the form and a preparer has to decide where it belongs.
+    else if (unplacedBox) state = 'held';
     else if (value !== undefined && value !== null && value !== '') state = 'read';
     else if (box.use === 'info') state = 'informational';
     else if (box.kind === 'checkbox') state = 'unread';
-    else state = labelIsPrinted(box.label, text) ? 'empty' : 'unread';
+    // Without the page's own words there is no telling a blank box from one that
+    // was walked past, and calling it unread claims a miss nobody has evidence
+    // for — which invents a gap, and a gap now holds a case open. The reader's
+    // own page evidence reports the boxes it genuinely could not read, so an
+    // absent page text leaves the box blank rather than guessing.
+    else state = pageText === undefined || labelIsPrinted(box.label, text) ? 'empty' : 'unread';
 
     entries.push({
       key: box.key,
@@ -147,6 +175,9 @@ export function buildBoxLedger(
       ...(field ? { field } : {}),
       ...(value !== undefined ? { value } : {}),
       ...(rejection ? { reason: rejection.detail } : {}),
+      ...(unplacedBox
+        ? { value: unplacedBox.text, reason: 'the form prints this, but no part of the return takes it yet' }
+        : {}),
     });
   }
 

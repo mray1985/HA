@@ -20,6 +20,7 @@ import {
   extract1099KFields,
   extractSSA1099Fields,
   extract1099SAFields,
+  extract1099SFields,
   extract1099QFields,
   extractW2CFields,
   generateImportTrace,
@@ -663,6 +664,56 @@ describe('extract1099QFields', () => {
     expect(data.earnings).toBeUndefined();
     expect(data.basisReturn).toBeUndefined();
     expect(data).not.toHaveProperty('distributionType');
+  });
+});
+
+describe('extract1099SFields', () => {
+  // Positions from the text layer of an IRS 1099-S Copy B (Rev. December 2026),
+  // Copy B page, top-down as the importer sees them.
+  //
+  // Box 3's printed label wraps: it ends "or legal" and the word "description"
+  // is a second run just beneath it. Letter-spaced print reaches the importer
+  // one glyph per block, so that run reads "d e s c r i p t i o n". It sits
+  // nearer the label than the address does, and it used to be read back as the
+  // address — into e2e/pdf-fixtures.spec.ts's 1099s-sale case.
+  const at = (text: string, x: number, y: number, width: number, height = 8): TextBlock =>
+    ({ text, x, y, width, height, page: 1 });
+
+  const copyB = (): TextBlock[] => [
+    at('Form 1099-S', 300, 40, 90),
+    at('Proceeds From Real Estate Transactions', 478, 58, 98),
+    at("FILER'S name", 54, 118, 60),
+    at('GULFSIDE TITLE & ESCROW INC', 54, 140, 126),
+    at('1 Date of closing', 308, 100, 47),
+    at('04/18/2025', 325, 116, 40),
+    at('2a Total gross proceeds', 299, 128, 77),
+    at('412,500.00', 354, 143, 40),
+    at('Address (including city, state, and ZIP code) or legal', 309, 145, 159),
+    at('d e s c r i p t i o n', 309, 153, 34),
+    at('1147 HARBOUR ROAD UNIT 3, SARASOTA FL 34236', 297, 170, 197),
+    at("4 Buyer's part of real estate tax", 299, 200, 103),
+    at('6,180.25', 463, 214, 31),
+  ];
+
+  it("reads the value in a box whose printed label wraps, not the label's own remainder", () => {
+    const data = extract1099SFields(copyB());
+    expect(data.propertyAddress).toBe('1147 HARBOUR ROAD UNIT 3, SARASOTA FL 34236');
+  });
+
+  it('reads the rest of the form alongside a wrapped label', () => {
+    const data = extract1099SFields(copyB());
+    expect(data.filerName).toBe('GULFSIDE TITLE & ESCROW INC');
+    expect(data.grossProceeds).toBe(412500);
+    expect(data.closingDate).toBe('04/18/2025');
+    expect(data.buyerRealEstateTax).toBe(6180.25);
+  });
+
+  it('keeps a value that is itself more than one word', () => {
+    // The wrapped-label rule must not swallow an ordinary two-word value, whose
+    // words are separated by a wider gap than letter spacing puts between glyphs.
+    const blocks = copyB();
+    blocks.splice(10, 1, at('CREDIT CARD', 297, 170, 60));
+    expect(extract1099SFields(blocks).propertyAddress).toBe('CREDIT CARD');
   });
 });
 

@@ -16,6 +16,30 @@ const stateOf = (ledger: { entries: Array<{ key: string; state: BoxState }> }, k
   ledger.entries.find((e) => e.key === key)?.state;
 
 describe('every box the form prints is accounted for', () => {
+  it('does not claim a miss when it has no page text to judge by', () => {
+    // The reader-model path has no page text: it works from the rendered page,
+    // and what it could not read is reported through its own page evidence. If
+    // the ledger called every absent box unread it would invent a gap on every
+    // ordinary form with a blank optional box — and a gap holds a case open.
+    const withoutText = buildBoxLedger('1099-G', { unemploymentCompensation: 15600 });
+    // A money box the form leaves blank reads blank. A checkbox still reads
+    // unread, because a printed square is not a figure: "no value" there means
+    // the square was not read, not that it was left unticked.
+    expect(stateOf(withoutText, '2')).toBe('empty');
+    expect(stateOf(withoutText, '8')).toBe('unread');
+    // A box the form really does fill in is still held with its figure.
+    const filled = buildBoxLedger('1099-G', {}, [], undefined, [{ key: '2', label: 'State or local income tax refunds, credits, or offsets', text: '310.00' }]);
+    expect(stateOf(filled, '2')).toBe('held');
+
+    // With page text, a blank box and a missed one are told apart as before.
+    // The page must carry the label's identifying words: "printed" is judged on
+    // the words that name the box, not on the box number.
+    const printed = '1 Unemployment compensation 2 State or local income tax refunds, credits, or offsets';
+    const withText = buildBoxLedger('1099-G', { unemploymentCompensation: 15600 }, [], printed);
+    expect(stateOf(withText, '2')).toBe('empty');
+    expect(stateOf(buildBoxLedger('1099-G', { unemploymentCompensation: 15600 }, [], '1 Unemployment compensation'), '2')).toBe('unread');
+  });
+
   it('records what became of each declared box', () => {
     const ledger = buildBoxLedger(
       '1098-T',
@@ -49,6 +73,54 @@ describe('every box the form prints is accounted for', () => {
     );
     expect(stateOf(ledger, '8')).toBe('unread');
     expect(stateOf(ledger, '9')).toBe('unread');
+  });
+
+  it('holds a box the form fills in that no tool accepts, instead of calling it blank', () => {
+    // 1099-DIV box 5 (Section 199A) is printed and filled, but the engine has no
+    // field for it. Before this existed the ledger could only see a schema box
+    // with no value, and called it empty — so the figure reached no one.
+    const unplaced = [{ key: '5', label: 'Section 199A dividends', text: '44.10' }];
+    const pageText = '5 Section 199A dividends 44.10';
+    const blind0 = buildBoxLedger('1099-DIV', { ordinaryDividends: 2410.55 }, [], pageText);
+
+    const held = buildBoxLedger('1099-DIV', { ordinaryDividends: 2410.55 }, [], pageText, unplaced);
+    expect(stateOf(held, '5')).toBe('held');
+    const entry = held.entries.find((e) => e.key === '5')!;
+    expect(entry.value).toBe('44.10');
+    expect(entry.reason).toContain('no part of the return takes it');
+    // The figure is on the form, so it is not counted as read and not as a miss.
+    expect(held.read).toBe(1);
+    expect(held.held).toBe(blind0.held + 1);
+
+    // Without the reader's report of it, the same box reads as blank. That
+    // difference is the whole point: the value is there or it is not.
+    const blind = buildBoxLedger('1099-DIV', { ordinaryDividends: 2410.55 }, [], pageText);
+    expect(stateOf(blind, '5')).toBe('empty');
+  });
+
+  it('carries the return field for a held box, so a value can be typed into it', () => {
+    const ledger = buildBoxLedger(
+      'W-2',
+      { wages: 68250 },
+      [],
+      '7 Social security tips 1,240.00',
+      [{ key: '7', label: 'Social security tips', text: '1,240.00' }],
+    );
+    // Box 7 is use:'review', so it feeds no field — there is nowhere to type it.
+    expect(stateOf(ledger, '7')).toBe('held');
+    expect(ledger.entries.find((e) => e.key === '7')!.field).toBeUndefined();
+
+    // A held box that does feed a field carries the name, which is what lets the
+    // preparer type straight into it. Box 1g feeds washSaleLossDisallowed.
+    const withField = buildBoxLedger(
+      '1099-B',
+      { proceeds: 125000 },
+      [{ field: 'washSaleLossDisallowed', value: '500', reason: 'not-an-amount', detail: 'printed beside box 1g' }],
+      '1g Wash sales 500.00',
+    );
+    const wash = withField.entries.find((e) => e.key === '1g')!;
+    expect(wash.state).toBe('held');
+    expect(wash.field).toBe('washSaleLossDisallowed');
   });
 
   it('says which boxes could not be read, by name', () => {

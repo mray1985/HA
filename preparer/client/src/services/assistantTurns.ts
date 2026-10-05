@@ -29,6 +29,7 @@ import {
 } from '@hatax/local-ai';
 import { FilingStatus, getStateName } from '@hatax/engine';
 import type { ClientQuestion } from '@hatax/local-ai';
+import { formGuidance } from '@hatax/local-ai';
 import { returnFieldSpec } from './returnFields';
 import type { ReviewItem } from './caseReview';
 
@@ -454,11 +455,19 @@ function turnForItem(item: ReviewItem, facts: TaxFact[], documents: IngestedDocu
 
   // ── A form read but not applied automatically ──
   if (item.id.startsWith('document:not-applied:')) {
+    // Say what the form is and what it does, rather than only that it was not
+    // entered: a preparer holding the document needs to know what they are
+    // looking at before they can decide anything about it.
+    const doc = documents.find((d) => d.documentId === item.documentId);
+    const index = Number(item.id.slice(item.id.lastIndexOf('#') + 1)) || 0;
+    const form = doc?.classifications?.[index]?.formType ?? doc?.formTypes?.[index] ?? null;
+    const guide = formGuidance(form);
     return {
       ...base,
       kind: 'needed',
-      say: item.message.replace(/^[^:]*:\s*/, '').replace(/ — enter it on the return\.$/, ', so it is not on the return yet.'),
-      ask: `Open the return and enter it, or tell me the amounts here.`,
+      say: `${guide.what} ${guide.applies}`,
+      ask: guide.byHand ?? `Open the return and enter it, or tell me the amounts here.`,
+      why: guide.why,
       intent: { kind: 'note' },
       weight: 450,
     };

@@ -1172,6 +1172,23 @@ function findNearbyText(textBlocks: TextBlock[], labelBlock: TextBlock, maxDista
     // — findNearbyText is for text values like wager types, not numbers
     if (/^\$?[\d,]+\.\d{2}\b/.test(trimmed)) continue;
 
+    // A label's own printed text is not its value. A label that wraps prints its
+    // remainder as a further run, and that run sits nearer the label than the
+    // value does: box 3 of a 1099-S reads "Address (including city, state, and
+    // ZIP code) or legal" and then "description", which was read back as the
+    // address. Letter-spaced print reaches here one glyph per block, so the
+    // remainder reads "d e s c r i p t i o n". Two or more words are separated
+    // by a wider gap, so a purely alphabetic run whose every gap is a single
+    // character is one letter-spaced word - the label continuing, not a value
+    // written in the box. A value is not printed letter-spaced.
+    const squashed = trimmed.replace(/\s+/g, '');
+    const gaps = trimmed.match(/\S\s+\S/g) ?? [];
+    const letterSpacedWord =
+      /^[A-Za-z]{4,}$/.test(squashed) &&
+      gaps.length >= 3 &&
+      gaps.every((g) => g.length === 3);
+    if (letterSpacedWord) continue;
+
     let dx: number;
     if (block.x >= labelLeft && block.x <= labelRight) {
       dx = 0;

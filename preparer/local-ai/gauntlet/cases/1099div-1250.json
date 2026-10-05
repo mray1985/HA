@@ -1,0 +1,45 @@
+{
+  "id": "1099div-1250",
+  "description": "1099-DIV Copy B with an unrecaptured Section 1250 gain filled in box 2b - the box whose printed label ('Unrecap. Sec. 1250 gain') once supplied its own value, which is why the sweep checks both directions. 1099div-fund leaves 2b blank and so guards fabrication; this case fills it, so a missed 2b fails too. 2c to 2f, box 3, 5, 6, 9, 10, 12, 13 and the state block stay blank. Synthetic data.",
+  "form": "f1099div.pdf",
+  "formType": "1099-DIV",
+  "pageIndex": 3,
+  "fieldPrefix": "topmostSubform[0].CopyB[0].",
+  "fields": {
+    "CopyHeader[0].CalendarYear[0].f2_1[0]": "2025",
+    "LeftCol[0].f2_2[0]": "BRIDGEPORT MUTUAL FUNDS\nPO BOX 8800\nHARTFORD CT 06104",
+    "LeftCol[0].f2_3[0]": "06-4412907",
+    "LeftCol[0].f2_4[0]": "XXX-XX-6789",
+    "LeftCol[0].f2_5[0]": "ROBIN TESTPAYER",
+    "LeftCol[0].f2_6[0]": "22 CHAPEL STREET",
+    "LeftCol[0].f2_7[0]": "HARTFORD CT 06103",
+    "RghtCol[0].f2_9[0]": "3,120.44",
+    "RghtCol[0].f2_10[0]": "2,905.18",
+    "RghtCol[0].Box2a_ReadOrder[0].f2_11[0]": "486.22",
+    "RghtCol[0].f2_12[0]": "137.65",
+    "RghtCol[0].f2_18[0]": "0.00",
+    "RghtCol[0].Box7_ReadOrder[0].f2_21[0]": "62.18"
+  },
+  "expectedBoxes": {
+    "1a": { "money": 3120.44, "field": "RghtCol[0].f2_9[0]" },
+    "1b": { "money": 2905.18, "field": "RghtCol[0].f2_10[0]" },
+    "2a": { "money": 486.22, "field": "RghtCol[0].Box2a_ReadOrder[0].f2_11[0]" },
+    "2b": { "money": 137.65, "field": "RghtCol[0].f2_12[0]" },
+    "4": { "money": 0, "field": "RghtCol[0].f2_18[0]" },
+    "7": { "money": 62.18, "field": "RghtCol[0].Box7_ReadOrder[0].f2_21[0]" }
+  },
+  "expectedKeys": { "payer.block": { "firstLine": "BRIDGEPORT MUTUAL FUNDS" } },
+  "blankBoxes": ["2c", "2d", "2e", "2f", "3", "5", "6", "9", "10", "12", "13", "14", "15", "16"],
+  "expected": {
+    "tool": "add_1099_div",
+    "args": {
+      "payerName": "BRIDGEPORT MUTUAL FUNDS",
+      "ordinaryDividends": 3120.44,
+      "qualifiedDividends": 2905.18,
+      "capitalGainDistributions": 486.22,
+      "unrecapturedSection1250Gain": 137.65,
+      "federalTaxWithheld": 0,
+      "foreignTaxPaid": 62.18
+    }
+  }
+}

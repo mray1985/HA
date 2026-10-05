@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
-import { missingDocumentTitle, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
+import { missingDocumentTitle, formGuidance, toolForForm, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
 import { loadDocumentFile } from '../../services/documentFiles';
 import { INTAKE_ACCEPT } from '../../services/caseIntake';
@@ -18,6 +18,7 @@ import TXFImportPanel from '../import/TXFImportPanel';
 import FDXImportPanel from '../import/FDXImportPanel';
 import CompetitorImportPanel from '../import/CompetitorImportPanel';
 import YoYComparisonCard from '../common/YoYComparisonCard';
+import ReviewActionForm from './ReviewActions';
 
 const OUTCOME_LABEL: Record<DocumentPieceOutcome, { text: string; className: string }> = {
   income_item: { text: 'Entered on the return', className: 'text-emerald-300' },
@@ -127,6 +128,7 @@ function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: T
       </div>
       {showSource && returnId && doc.status !== 'rejected' && <SourceDocument returnId={returnId} doc={doc} />}
       <GapList doc={doc} />
+      <ReadWarnings doc={doc} />
       {open && (
         <ul className="mt-2 space-y-1">
           {facts.map((fact) => (
@@ -146,15 +148,47 @@ function DocumentCard({ doc, facts, focused }: { doc: IngestedDocument; facts: T
 }
 
 /**
- * The boxes this reader could not append by itself, named.
+ * What the reader wants a preparer to know about this document.
+ *
+ * The reader writes these while reading — that the page was OCR rather than
+ * digital, that the file holds more than one form, that a K-1 captures only its
+ * common boxes, and a one-line account of what the box ledger made of it. They
+ * used to be produced and then dropped, which is how "verify every value" and
+ * "captures 13 common boxes" never reached anyone.
+ */
+function ReadWarnings({ doc }: { doc: IngestedDocument }) {
+  const warnings = doc.warnings ?? [];
+  if (warnings.length === 0) return null;
+  return (
+    <ul className="mt-2 space-y-0.5">
+      {warnings.map((w, i) => (
+        <li key={i} className="text-xs text-slate-400">{w}</li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The boxes this reader could not append by itself, named — and answerable.
  *
  * A preparer should never have to go back through the paperwork to find out what
- * the system did not manage. Every gap is listed with the box number as printed
- * and the form's own label for it, and nothing is treated as zero or as absent:
- * a box the reader could not confirm is a box someone still has to look at.
+ * the system did not manage, nor to open a PDF to put a value in. Every gap is
+ * listed with the box number as printed and the form's own label for it, the
+ * form says in words what it is and what it does, and any box that feeds a field
+ * on the return can be typed into from here.
  */
 function GapList({ doc }: { doc: IngestedDocument }) {
-  const gaps = (doc.boxGaps ?? []).filter((g) => g.boxes.length > 0);
+  // The index matters as much as the gap. Facts carry a form's key as
+  // document#piece, and boxGaps is built one entry per piece, so a gap's position
+  // in boxGaps *is* its form's index. Filtering first would shift every index
+  // after a piece with nothing outstanding, and a value typed into box 7 of the
+  // second form would be recorded against the first. So the original index is
+  // carried through rather than filtered away.
+  const gaps = (doc.boxGaps ?? [])
+    .map((gap, piece) => ({ gap, piece }))
+    .filter(({ gap }) => gap.boxes.length > 0);
+  const [open, setOpen] = useState<string | null>(null);
+  const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
   if (gaps.length === 0) return null;
 
   return (
@@ -162,28 +196,68 @@ function GapList({ doc }: { doc: IngestedDocument }) {
       <p className="text-xs font-medium text-amber-200">
         Not added by itself — check these against the form
       </p>
-      <ul className="mt-1 space-y-1">
-        {gaps.map((gap, i) => (
-          <li key={`${gap.formType ?? 'form'}-${i}`} className="text-xs">
-            <span className="text-amber-300/90">{gap.formType ?? 'This form'}</span>
-            <span className="text-slate-400">
-              {' '}
-              — {gap.read} of {gap.declared} boxes on the return were filled in
-            </span>
-            <ul className="ml-3 mt-0.5 space-y-0.5">
-              {gap.boxes.map((b, j) => (
-                <li key={`${b.box}-${j}`} className="text-slate-300">
-                  {b.box ? <span className="font-mono text-slate-400">box {b.box}</span> : null}
-                  {b.box ? ' · ' : ''}
-                  {b.label}
-                  {b.state === 'held' && (
-                    <span className="text-amber-300/80"> — read, but the page does not support it</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
+      <ul className="mt-1 space-y-2">
+        {gaps.map(({ gap, piece }) => {
+          const guide = formGuidance(gap.formType);
+          const tool = toolForForm(gap.formType as never);
+          const formKey = `${doc.documentId}#${piece}`;
+          return (
+            <li key={`${gap.formType ?? 'form'}-${piece}`} className="text-xs">
+              <p className="text-amber-300/90">{gap.formType ?? 'This form'}</p>
+              <p className="text-slate-300">{guide.what}</p>
+              <p className="text-slate-400">
+                {guide.applies}
+                {gap.read} of {gap.declared} boxes on the return were filled in.
+              </p>
+              {guide.byHand && <p className="mt-0.5 text-slate-300">{guide.byHand}</p>}
+              <ul className="ml-3 mt-1 space-y-1">
+                {gap.boxes.map((b, j) => {
+                  // Only a box that feeds a field can be typed into. A box the
+                  // return has nowhere for (W-2 box 7) is guidance, not an input.
+                  const enterable = Boolean(b.field && tool);
+                  const id = `${formKey}#${b.field ?? `${b.box}-${j}`}`;
+                  return (
+                    <li key={`${b.box}-${j}`} className="text-slate-300">
+                      {b.box ? <span className="font-mono text-slate-400">box {b.box}</span> : null}
+                      {b.box ? ' · ' : ''}
+                      {b.label}
+                      {b.state === 'held' && (
+                        <span className="text-amber-300/80"> — read, but the page does not support it</span>
+                      )}
+                      {enterable && (
+                        <>
+                          <button
+                            type="button"
+                            className="ml-1 underline decoration-dotted hover:text-amber-200"
+                            onClick={() => setOpen(open === id ? null : id)}
+                          >
+                            {open === id ? 'cancel' : 'type the value'}
+                          </button>
+                          {open === id && (
+                            <div className="mt-1">
+                              <ReviewActionForm
+                                action={{
+                                  kind: 'fix',
+                                  tool: tool!,
+                                  formKey,
+                                  fields: [b.field!],
+                                }}
+                                onDone={() => {
+                                  setOpen(null);
+                                  reloadEvidence();
+                                }}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
