@@ -35,6 +35,68 @@ describe('buildCaseReview', () => {
     expect(buildCaseReview({ taxReturn: makeReturn(), facts: [], documents: [] }).status).toBe('waiting_for_documents');
   });
 
+  it('does not let a case be approved while a document has boxes it could not place', () => {
+    // The Documents tab lists these boxes, but approval can be reached without
+    // that tab ever being open. A preparer inspecting the return cannot know
+    // which boxes the app was unsure about unless the case says so, so the list
+    // has to be an open item rather than a note in a tab nobody opened.
+    const withGaps: IngestedDocument = {
+      ...doc('DOC-W2'),
+      boxGaps: [{
+        formType: 'W-2',
+        declared: 25,
+        read: 23,
+        boxes: [
+          { box: '7', label: 'Social security tips', state: 'unread' },
+          { box: '14b', label: 'Treasury Tipped Occupation Code(s)', state: 'unread' },
+        ],
+      }],
+    };
+    const review = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [withGaps] });
+    expect(review.canApprove).toBe(false);
+    const item = review.open.find((i) => i.id.startsWith('document:gaps:'))!;
+    expect(item).toBeDefined();
+    expect(item.category).toBe('REVIEW');
+    // It names the document, the count and the boxes, so the note recorded
+    // against it says what was checked.
+    expect(item.message).toContain('DOC-W2.pdf');
+    expect(item.message).toContain('2 boxes on W-2');
+    expect(item.message).toContain('box 7');
+  });
+
+  it('asks again when a re-read leaves a different number of boxes', () => {
+    // The count is in the item id, so a document read again with a different set
+    // of gaps cannot inherit the acknowledgement given for the last one.
+    const gapsFor = (n: number) => [{
+      formType: 'W-2', declared: 25, read: 25 - n,
+      boxes: Array.from({ length: n }, (_, i) => ({ box: String(i + 1), label: `Box ${i + 1}`, state: 'unread' as const })),
+    }];
+    const first = buildCaseReview({
+      taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [],
+      documents: [{ ...doc('DOC-W2'), boxGaps: gapsFor(2) }],
+    });
+    const acknowledged = resolveItem({ resolutions: {} }, first.open.find((i) => i.id.startsWith('document:gaps:'))!, 'accepted', 'Checked both boxes against the form.');
+    const settled = buildCaseReview({
+      taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [],
+      documents: [{ ...doc('DOC-W2'), boxGaps: gapsFor(2) }], record: acknowledged,
+    });
+    expect(settled.canApprove).toBe(true);
+
+    // Same file, read again, one more box it could not place.
+    const reread = buildCaseReview({
+      taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [],
+      documents: [{ ...doc('DOC-W2'), boxGaps: gapsFor(3) }], record: acknowledged,
+    });
+    expect(reread.canApprove).toBe(false);
+    expect(reread.open.some((i) => i.id.startsWith('document:gaps:'))).toBe(true);
+  });
+
+  it('does not raise a gap item for a document with nothing left over', () => {
+    const review = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [doc('DOC-W2')] });
+    expect(review.items.some((i) => i.id.startsWith('document:gaps:'))).toBe(false);
+    expect(review.canApprove).toBe(true);
+  });
+
   it('is ready when nothing is open, and informational items never block', () => {
     const review = buildCaseReview({ taxReturn: makeReturn({ ...PERSON, w2Income: [W2] }), facts: [], documents: [doc('DOC-W2')] });
     expect(review.open).toEqual([]);

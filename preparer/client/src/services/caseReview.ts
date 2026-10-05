@@ -188,6 +188,28 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
       items.push({ id: `document:not-applied:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
         message: `${doc.fileName}: the ${form} was read but is not entered automatically — enter it on the return.` });
     });
+    // Boxes the reader could not place by itself.
+    //
+    // This is the only list that says a document is incomplete, so it has to be
+    // acknowledged before the case can be approved. A preparer inspecting the
+    // return cannot know which boxes the app was unsure about unless the case
+    // says so — the Documents tab holds the detail, and approval can be reached
+    // without that tab ever being open. REVIEW rather than BLOCKING: an unplaced
+    // box does not make the return wrong on its own (a blank W-2 tip box is
+    // nothing to fix), but it must be seen rather than passed over silently.
+    //
+    // The box count is in the id, so a re-read that leaves a different number of
+    // boxes opens a new item instead of inheriting the old acknowledgement.
+    const gaps = (doc.boxGaps ?? []).flatMap((g) => g.boxes);
+    if (doc.status === 'extracted' && gaps.length > 0) {
+      const forms = [...new Set((doc.boxGaps ?? []).map((g) => g.formType ?? 'this form'))];
+      const named = gaps.slice(0, 3).map((b) => (b.box ? `box ${b.box}` : b.label)).join(', ');
+      items.push({
+        id: `document:gaps:${doc.documentId}:${gaps.length}`,
+        category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
+        message: `${doc.fileName}: ${gaps.length} box${gaps.length === 1 ? '' : 'es'} on ${forms.join(' and ')} could not be added by itself — ${named}${gaps.length > 3 ? ', and more' : ''}. Check them against the form, then mark this checked.`,
+      });
+    }
   }
 
   const validation = validateImportedFacts(facts);

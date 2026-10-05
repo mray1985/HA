@@ -57,6 +57,10 @@ export default function ApprovePanel() {
   const [busy, setBusy] = useState(false);
   if (!returnId || !taxReturn || !review) return null;
   const name = [taxReturn.firstName, taxReturn.lastName].filter(Boolean).join('-') || 'client';
+  // Documents the reader could not finish, and how far that has been checked.
+  const gapItems = review.items.filter((i) => i.id.startsWith('document:gaps:'));
+  const openGaps = gapItems.filter((i) => !i.resolution);
+  const checkedBoxes = gapItems.reduce((n, i) => n + Number(i.id.split(':').pop()) || 0, 0);
   const result = refundOrOwed(calculation?.form1040);
 
   const buildFederal = async () => {
@@ -124,6 +128,15 @@ export default function ApprovePanel() {
             <div>
               <p className="text-white font-semibold">Ready to approve</p>
               <p className="text-sm text-slate-400 mt-1">Nothing is open in the review. <span className={result.className}>{result.text}</span>.</p>
+              {/* What the inspection covered, in the same place as the decision.
+                  A return is approved on a person's word that they read it, so
+                  the boxes the app could not place should be visible here rather
+                  than only in the Documents tab. */}
+              {gapItems.length > 0 && (
+                <p className="text-sm text-slate-400 mt-1">
+                  Checked against the form: {gapItems.length} document{gapItems.length === 1 ? '' : 's'}, {checkedBoxes} box{checkedBoxes === 1 ? '' : 'es'} the app could not add by itself.
+                </p>
+              )}
             </div>
             <button
               onClick={() => {
@@ -142,6 +155,11 @@ export default function ApprovePanel() {
               <p className="text-sm text-slate-400 mt-1">
                 {review.open.length} thing{review.open.length === 1 ? '' : 's'} still to clear — the assistant has them all.
               </p>
+              {openGaps.length > 0 && (
+                <p className="text-sm text-amber-300/90 mt-1">
+                  {openGaps.length} of those: boxes on {openGaps.length === 1 ? 'a document' : 'documents'} the app could not add by itself. Check them against the form.
+                </p>
+              )}
             </div>
             <button onClick={() => requestTab('assistant')} className="text-sm text-sky-300 hover:text-sky-200">Go to the assistant</button>
           </div>
