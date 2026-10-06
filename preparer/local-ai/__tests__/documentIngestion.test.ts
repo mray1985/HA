@@ -5,6 +5,8 @@ import {
   documentIdFromHash,
   factsHaveDocumentSource,
   findDocumentByHash,
+  gapsWithPieceIndex,
+  type DocumentBoxGap,
   MAX_INGEST_BYTES,
   screenDocument,
 } from '../src/documentIngestion.js';
@@ -174,5 +176,67 @@ describe('document ingestion (work-order step 3)', () => {
       verified: false,
     };
     expect(assertImportedValuesHaveSource([bad], documentIdFromHash(HASH)).ok).toBe(false);
+  });
+});
+
+describe('gapsWithPieceIndex', () => {
+  const gap = (formType: string | null, boxes: number): DocumentBoxGap => ({
+    formType,
+    declared: boxes ? 3 : 0,
+    read: 0,
+    boxes: Array.from({ length: boxes }, (_, i) => ({
+      box: String(i + 1),
+      label: `Box ${i + 1}`,
+      state: 'unread' as const,
+    })),
+  });
+
+  it('keeps a later form on its own piece when an earlier form has nothing outstanding', () => {
+    // This is the defect this exists for. Piece 0 (the first form in the file) has
+    // nothing outstanding and piece 1 does. Filtering first and numbering what is
+    // left would call the second form piece 0, so a value typed into its box 7
+    // would be recorded against the first form - the wrong employer, or the
+    // wrong income item where both forms carry the field.
+    const gaps = gapsWithPieceIndex([gap('W-2', 0), gap('1099-NEC', 1)]);
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]!.piece).toBe(1);
+    expect(gaps[0]!.gap.formType).toBe('1099-NEC');
+  });
+
+  it('numbers every gap by its own position, not by its place among the gaps', () => {
+    const gaps = gapsWithPieceIndex([
+      gap('W-2', 2),
+      gap('1099-NEC', 0),
+      gap('1099-INT', 1),
+      gap('K-1', 3),
+    ]);
+    expect(gaps.map((g) => [g.gap.formType, g.piece])).toEqual([
+      ['W-2', 0],
+      ['1099-INT', 2],
+      ['K-1', 3],
+    ]);
+  });
+
+  it('treats a form with no outstanding boxes as no gap at all', () => {
+    expect(gapsWithPieceIndex([gap('W-2', 0)])).toEqual([]);
+    expect(gapsWithPieceIndex(undefined)).toEqual([]);
+    expect(gapsWithPieceIndex([])).toEqual([]);
+  });
+
+  it('reports the piece index a fact would be filed under', () => {
+    // The gap's piece index is what becomes the form key `document#piece`, and it
+    // has to agree with the piece index on the facts the reader wrote.
+    const result = invokeTaxTool({
+      tool: 'add_w2',
+      args: { employerName: 'SECOND EMPLOYER LLC', wages: 100 },
+      context: { returnId: 'r', taxYear: 2025, sourceDocumentId: 'DOC-X', sourceFormIndex: 1, sourceFileName: 'two.pdf', extractor: 'test' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const fact: TaxFact | undefined = result.facts[0];
+    expect(fact?.sourceFormIndex).toBe(1);
+    // So the second form in a two-form file is piece 1, which is what the gap
+    // above must report.
+    expect(gapsWithPieceIndex([gap('W-2', 0), gap('W-2', 1)])[0]!.piece).toBe(fact?.sourceFormIndex);
   });
 });

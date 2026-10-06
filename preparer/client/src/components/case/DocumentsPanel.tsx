@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Landmark, Upload, FolderInput } from 'lucide-react';
-import { missingDocumentTitle, formGuidance, toolForForm, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
+import { missingDocumentTitle, formGuidance, gapsWithPieceIndex, toolForForm, type DocumentPieceOutcome, type IngestedDocument, type MissingDocument, type TaxFact } from '@hatax/local-ai';
 import { fetchModelStatus, type LocalRuntimeStatus } from '../../services/localModels';
 import { loadDocumentFile } from '../../services/documentFiles';
 import { INTAKE_ACCEPT } from '../../services/caseIntake';
@@ -178,15 +178,9 @@ function ReadWarnings({ doc }: { doc: IngestedDocument }) {
  * on the return can be typed into from here.
  */
 function GapList({ doc }: { doc: IngestedDocument }) {
-  // The index matters as much as the gap. Facts carry a form's key as
-  // document#piece, and boxGaps is built one entry per piece, so a gap's position
-  // in boxGaps *is* its form's index. Filtering first would shift every index
-  // after a piece with nothing outstanding, and a value typed into box 7 of the
-  // second form would be recorded against the first. So the original index is
-  // carried through rather than filtered away.
-  const gaps = (doc.boxGaps ?? [])
-    .map((gap, piece) => ({ gap, piece }))
-    .filter(({ gap }) => gap.boxes.length > 0);
+  // gapsWithPieceIndex keeps each gap's own piece index: boxGaps is one entry
+  // per form in the file, so a gap's position in it *is* its form's index.
+  const gaps = gapsWithPieceIndex(doc.boxGaps);
   const [open, setOpen] = useState<string | null>(null);
   const reloadEvidence = useCaseStore((s) => s.reloadEvidence);
   if (gaps.length === 0) return null;
