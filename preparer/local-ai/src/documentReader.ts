@@ -229,7 +229,7 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
   }
   const readings = verifyReadings(schema, primary.evidence, second?.values);
   const values = valuesAfterVerification(primary.evidence.values, readings);
-  const mapping = mapBoxesToTool(schema, values);
+  const mapping = mapBoxesToTool(schema, values, { matchedMarkers: primary.classification.matchedMarkers });
   const structured = mapping.tool ? extractStructuredFields(mapping.tool, mapping.bag, mapping.rawText) : null;
 
   const pageSize = { width: page.raster.width, height: page.raster.height };
@@ -265,7 +265,7 @@ export function finishReading(primary: PrimaryReading, page: Pick<ReaderPage, 'r
   // text, so the form is held for the preparer — never read as zero.
   for (const r of readings) {
     if (r.status !== 'missed' || !r.page) continue;
-    const probe = mapBoxesToTool(schema, { [r.key]: r.page });
+    const probe = mapBoxesToTool(schema, { [r.key]: r.page }, { matchedMarkers: primary.classification.matchedMarkers });
     for (const field of Object.keys(probe.bag)) {
       if (args[field] !== undefined) continue;
       args[field] = undefined;

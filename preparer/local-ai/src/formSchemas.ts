@@ -828,6 +828,93 @@ const SLI_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/**
+ * Schedule K-1 (Form 1065), 2025, the partner's copy: Part I about the
+ * partnership and partner, Part II the income and deductions, Part III the
+ * self-employment figure and what follows.
+ *
+ * Only the boxes that stand on their own are marked `tool`. Boxes 13 and 15 are
+ * one undivided number each on this page; what they are made of is carried by
+ * codes printed elsewhere (box 20's letters and the Schedule K-1 supplement), so
+ * splitting them here would be inventing a breakdown. They go to review with the
+ * amount the form prints. Boxes 9b and 9c are rate- and entity-dependent and go
+ * to review for the same reason.
+ */
+const K1_SCHEMA: FormExtractionSchema = {
+  formType: 'K-1',
+  revision: '2025',
+  boxes: [
+    box('year.beginning', 'For calendar year, or tax year beginning', 'text', 'review', ''),
+    box('year.ending', 'tax year ending', 'text', 'review', ''),
+    box('a', "Partnership's employer identification number", 'tin', 'tool'),
+    box('b', "Partnership's name, address, city, state, and ZIP code", 'text', 'tool'),
+    box('c', 'IRS center where partnership filed return', 'text', 'info'),
+    checkbox('d', 'Check if this is a publicly traded partnership (PTP)', 'info', { labelPhrase: 'publicly traded partnership', direction: 'right' }),
+    box('e', "Partner's SSN or TIN (Do not use TIN of a disregarded entity)", 'tin', 'info'),
+    box('f', 'Name, address, city, state, and ZIP code for partner entered in E', 'text', 'info'),
+    checkbox('g.general', 'General partner or LLC member-manager', 'info', { labelPhrase: 'General partner', direction: 'above' }),
+    checkbox('g.limited', 'Limited partner or other LLC member', 'info', { labelPhrase: 'Limited partner', direction: 'above' }),
+    checkbox('h1.domestic', 'Domestic partner', 'info', { labelPhrase: 'Domestic partner', direction: 'above' }),
+    checkbox('h1.foreign', 'Foreign partner', 'info', { labelPhrase: 'Foreign partner', direction: 'above' }),
+    box('h2.tin', "If the partner is a disregarded entity (DE), enter the partner's TIN", 'tin', 'review'),
+    box('h2.name', "If the partner is a disregarded entity (DE), enter the partner's name", 'text', 'review'),
+    box('h2.entityType', 'What type of entity is this partner?', 'text', 'review'),
+    checkbox('i1', 'If this partner is a retirement plan (IRA/SEP/Keogh/etc.), check here', 'info', { labelPhrase: 'retirement plan', direction: 'right' }),
+    box('j.profit.beginning', "Partner's share of profit, beginning percentage", 'percent', 'review'),
+    box('j.profit.ending', "Partner's share of profit, ending percentage", 'percent', 'review'),
+    box('j.loss.beginning', "Partner's share of loss, beginning percentage", 'percent', 'review'),
+    box('j.loss.ending', "Partner's share of loss, ending percentage", 'percent', 'review'),
+    box('j.capital.beginning', "Partner's share of capital, beginning percentage", 'percent', 'review'),
+    box('j.capital.ending', "Partner's share of capital, ending percentage", 'percent', 'review'),
+    box('k1.nonrecourse.beginning', "Partner's share of liabilities, nonrecourse, beginning", 'money', 'review'),
+    box('k1.nonrecourse.ending', "Partner's share of liabilities, nonrecourse, ending", 'money', 'review'),
+    box('k1.qualifiedNonrecourse.beginning', "Partner's share of liabilities, qualified nonrecourse financing, beginning", 'money', 'review'),
+    box('k1.qualifiedNonrecourse.ending', "Partner's share of liabilities, qualified nonrecourse financing, ending", 'money', 'review'),
+    box('k1.recourse.beginning', "Partner's share of liabilities, recourse, beginning", 'money', 'review'),
+    box('k1.recourse.ending', "Partner's share of liabilities, recourse, ending", 'money', 'review'),
+    checkbox('k2', 'Item K1 includes liability amounts from lower-tier partnerships', 'review', { labelPhrase: 'lower-tier', direction: 'right' }),
+    checkbox('k3', 'Any of the above liability is subject to guarantees or other payment obligations by the partner', 'review', { labelPhrase: 'guarantees', direction: 'right' }),
+    box('l.beginning', "Partner's capital account, beginning capital account", 'money', 'review'),
+    box('l.contributed', 'Capital contributed during the year', 'money', 'review'),
+    box('l.netIncome', 'Current year net income (loss)', 'money', 'review'),
+    box('l.other', 'Other increase (decrease) (attach explanation)', 'money', 'review'),
+    box('l.withdrawals', 'Withdrawals and distributions', 'money', 'review'),
+    box('l.ending', 'Ending capital account', 'money', 'review'),
+    checkbox('m', 'The partner contributed property with a built-in gain (loss)', 'review', { labelPhrase: 'built-in gain', direction: 'right' }),
+    box('n.beginning', "Partner's share of net unrecognized section 704(c) gain (loss), beginning", 'money', 'review'),
+    box('n.ending', "Partner's share of net unrecognized section 704(c) gain (loss), ending", 'money', 'review'),
+    box('1', 'Ordinary business income (loss)', 'money', 'tool'),
+    box('2', 'Net rental real estate income (loss)', 'money', 'tool'),
+    box('3', 'Other net rental income (loss)', 'money', 'review'),
+    box('4a', 'Guaranteed payments for services', 'money', 'review'),
+    box('4b', 'Guaranteed payments for capital', 'money', 'review'),
+    box('4c', 'Total guaranteed payments', 'money', 'tool'),
+    box('5', 'Interest income', 'money', 'tool'),
+    box('6a', 'Ordinary dividends', 'money', 'tool'),
+    box('6b', 'Qualified dividends', 'money', 'tool'),
+    box('6c', 'Dividend equivalents', 'money', 'review'),
+    box('7', 'Royalties', 'money', 'tool'),
+    box('8', 'Net short-term capital gain (loss)', 'money', 'tool'),
+    box('9a', 'Net long-term capital gain (loss)', 'money', 'tool'),
+    box('9b', 'Collectibles (28%) gain (loss)', 'money', 'review'),
+    box('9c', 'Unrecaptured section 1250 gain', 'money', 'review'),
+    box('10', 'Net section 1231 gain (loss)', 'money', 'tool'),
+    box('11', 'Other income (loss)', 'money', 'tool'),
+    box('12', 'Section 179 deduction', 'money', 'tool'),
+    box('13', 'Other deductions', 'money', 'review'),
+    box('14', 'Self-employment earnings (loss)', 'money', 'tool'),
+    box('15', 'Credits', 'money', 'review'),
+    checkbox('16', 'Schedule K-3 is attached if checked', 'review', { labelPhrase: 'K-3', direction: 'above' }),
+    box('17', 'Alternative minimum tax (AMT) items', 'money', 'review'),
+    box('18', 'Tax-exempt income and nondeductible expenses', 'money', 'review'),
+    box('19', 'Distributions', 'money', 'review'),
+    box('20', 'Other information', 'text', 'review'),
+    box('21', 'Foreign taxes paid or accrued', 'money', 'review'),
+    checkbox('22', 'More than one activity for at-risk purposes', 'review', { labelPhrase: 'at-risk', direction: 'above' }),
+    checkbox('23', 'More than one activity for passive activity purposes', 'review', { labelPhrase: 'passive activity', direction: 'above' }),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -849,6 +936,7 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   'W-2C': W2C_SCHEMA,
   'W-2G': W2G_SCHEMA,
   '1098-E': SLI_SCHEMA,
+  'K-1': K1_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -1028,6 +1116,38 @@ interface ToolMappingSpec {
   moreStates?: ReadonlyArray<{ key: string; field: string }>;
   /** A four-digit year printed in a text cell (W-2c box c, "2025 / W-2"). */
   year?: { key: string; field: string };
+  /**
+   * A K-1: the entity kind comes from the form number printed on the page, not
+   * from a box, because it decides self-employment treatment.
+   */
+  entity?: true;
+}
+
+/** What the page itself says about a form, beyond the boxes it prints. */
+export interface ToolMappingContext {
+  /**
+   * Markers the classifier matched on the printed page (the form number or
+   * title). Only read for forms whose entity kind is printed rather than boxed.
+   */
+  matchedMarkers?: readonly string[];
+}
+
+/**
+ * The entity kind a Schedule K-1's printed form number establishes.
+ *
+ * Form 1065 is a partnership and Form 1120-S an S corporation, and the engine
+ * relies on the difference. Form 1041 covers estates *and* trusts and the page
+ * does not say which, and the engine codes any non-partnership as an S
+ * corporation on Schedule E - so guessing here would file a trust's income as a
+ * corporation's. Left unknown instead, which holds the form for the preparer
+ * (FED.K1.ENTITY_TYPE).
+ */
+function entityTypeFromMarkers(markers: readonly string[] | undefined): string | undefined {
+  if (!markers) return undefined;
+  const text = markers.join(' ').toLowerCase();
+  if (/1120-?s/.test(text)) return 's_corp';
+  if (/form\s*1065|\b1065\b/.test(text)) return 'partnership';
+  return undefined;
 }
 
 export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
@@ -1241,6 +1361,27 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     name: { keys: ['lender.block'], field: 'lenderName' },
     checkboxes: { '2': 'originationFeesExcluded' },
   },
+  'K-1': {
+    tool: 'add_k1',
+    direct: {
+      a: 'entityEin',
+      '1': 'ordinaryBusinessIncome',
+      '2': 'rentalIncome',
+      '4c': 'guaranteedPayments',
+      '5': 'interestIncome',
+      '6a': 'ordinaryDividends',
+      '6b': 'qualifiedDividends',
+      '7': 'royalties',
+      '8': 'shortTermCapitalGain',
+      '9a': 'longTermCapitalGain',
+      '10': 'netSection1231Gain',
+      '11': 'otherIncome',
+      '12': 'section179Deduction',
+      '14': 'selfEmploymentIncome',
+    },
+    name: { keys: ['b'], field: 'entityName' },
+    entity: true,
+  },
   '1098-T': {
     tool: 'add_education_expense',
     direct: {
@@ -1271,6 +1412,7 @@ export function toolForForm(formType: ClassifiableFormType | null | undefined): 
 export function mapBoxesToTool(
   schema: FormExtractionSchema,
   values: Record<string, string>,
+  context?: ToolMappingContext,
 ): ToolMapping {
   const spec = TOOL_MAPPINGS[schema.formType];
   const tool = spec?.tool ?? null;
@@ -1327,6 +1469,15 @@ export function mapBoxesToTool(
   for (const cell of spec.moreStates ?? []) {
     const text = values[cell.key];
     if (text !== undefined) put(cell.field, stateCodeFromCell(text), text, [cell.key]);
+  }
+
+  if (spec.entity) {
+    // The kind is printed as the form number, not in a box, so it has no box key
+    // to cite. An unreadable form number leaves the field absent rather than
+    // defaulting to partnership, which holds the form (FED.K1.ENTITY_TYPE).
+    const markers = context?.matchedMarkers ?? [];
+    const kind = entityTypeFromMarkers(markers);
+    if (kind !== undefined) put('entityType', kind, markers.join('; '), []);
   }
 
   if (spec.year && values[spec.year.key] !== undefined) {

@@ -12,6 +12,7 @@ import {
 } from '../src/formSchemas.js';
 import { extractStructuredFields } from '../src/structuredExtraction.js';
 import type { ClassifiableFormType } from '../src/documentClassifier.js';
+import { IDENTITY_KEYS } from '../src/identity.js';
 
 const W2 = getFormExtractionSchema('W-2')!;
 
@@ -55,8 +56,10 @@ describe('form extraction schemas', () => {
     },
   );
 
-  it('returns null for forms without a schema', () => {
-    expect(getFormExtractionSchema('K-1')).toBeNull();
+  it('returns null when there is no schema for the form', () => {
+    // Every classifiable form now has one; a form nobody can read still must not
+    // be handed a schema.
+    expect(getFormExtractionSchema('NOT-A-FORM' as ClassifiableFormType)).toBeNull();
     expect(getFormExtractionSchema(null)).toBeNull();
   });
 });
@@ -399,5 +402,107 @@ describe('Form 1098-E (Rev. 2026)', () => {
     const mapped = mapBoxesToTool(SLI, { '1': '500.00', '2': 'maybe' });
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['2']);
     expect(mapped.bag).not.toHaveProperty('originationFeesExcluded');
+  });
+});
+describe('Schedule K-1 (Form 1065, 2025)', () => {
+  const K1 = getFormExtractionSchema('K-1')!;
+  const printed: Record<string, string> = {
+    a: '72-1234567',
+    b: 'RIVERBEND PARTNERS LP\n4100 CANAL ST\nNEW ORLEANS LA 70119',
+    '1': '48,200.00',
+    '2': '6,400.00',
+    '4c': '1,500.00',
+    '5': '212.00',
+    '6a': '900.00',
+    '6b': '450.00',
+    '7': '1,100.00',
+    '8': '(2,300.00)',
+    '9a': '15,750.00',
+    '10': '(4,100.00)',
+    '11': '320.00',
+    '12': '9,000.00',
+    '13': '4,200.00',
+    '14': '48,200.00',
+    '15': '310.00',
+  };
+
+  it('reads the printed form number as the entity kind', () => {
+    const partnership = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP' }, { matchedMarkers: ['schedule k-1', 'form 1065'] });
+    expect(extractStructuredFields('k1', partnership.bag, partnership.rawText).args.entityType).toBe('partnership');
+    const scorp = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND INC' }, { matchedMarkers: ['schedule k-1', 'form 1120-s'] });
+    expect(extractStructuredFields('k1', scorp.bag, scorp.rawText).args.entityType).toBe('s_corp');
+  });
+
+  it('leaves the entity kind unset for a Form 1041, which is an estate or a trust', () => {
+    // The page does not say which, and the engine codes anything that is not a
+    // partnership as an S corporation on Schedule E - so guessing would file a
+    // trust's income as a corporation's. Unset holds the form (FED.K1.ENTITY_TYPE).
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'THE ESTATE' }, { matchedMarkers: ['schedule k-1', 'form 1041'] });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).not.toHaveProperty('entityType');
+  });
+
+  it('leaves the entity kind unset when the page says nothing about the form', () => {
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP' });
+    expect(extractStructuredFields('k1', mapped.bag, mapped.rawText).args).not.toHaveProperty('entityType');
+  });
+
+  it('never guesses partnership when the form number was not read', () => {
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP', '1': '48,200.00' });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).not.toHaveProperty('entityType');
+    // The rest of the form is still read; only the kind is withheld.
+    expect(args).toMatchObject({ ordinaryBusinessIncome: 48200 });
+  });
+
+  it('places the boxes that stand on their own', () => {
+    const mapped = mapBoxesToTool(K1, printed, { matchedMarkers: ['schedule k-1', 'form 1065'] });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).toEqual({
+      entityEin: '72-1234567',
+      entityName: 'RIVERBEND PARTNERS LP',
+      entityType: 'partnership',
+      ordinaryBusinessIncome: 48200,
+      rentalIncome: 6400,
+      guaranteedPayments: 1500,
+      interestIncome: 212,
+      ordinaryDividends: 900,
+      qualifiedDividends: 450,
+      royalties: 1100,
+      shortTermCapitalGain: -2300,
+      longTermCapitalGain: 15750,
+      netSection1231Gain: -4100,
+      otherIncome: 320,
+      section179Deduction: 9000,
+      selfEmploymentIncome: 48200,
+    });
+  });
+
+  it('sends boxes 13 and 15 to review rather than splitting them by guesswork', () => {
+    // One undivided number each; what they comprise is carried by codes printed
+    // elsewhere, so no box13*/box15* field may be filled from the total.
+    const mapped = mapBoxesToTool(K1, printed, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['13', '15']));
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    for (const key of Object.keys(args)) {
+      expect(key).not.toMatch(/box13|box15|box131231|box15Other/);
+    }
+  });
+
+  it('sends the rate- and entity-dependent boxes to review', () => {
+    const mapped = mapBoxesToTool(K1, { ...printed, '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).not.toHaveProperty('collectiblesGain28');
+    expect(args).not.toHaveProperty('unrecapturedSection1250Gain');
+  });
+
+  it('names box 14 as the self-employment figure the form prints', () => {
+    expect(K1.boxes.find((b) => b.key === '14')).toMatchObject({ box: '14', label: 'Self-employment earnings (loss)', use: 'tool' });
+  });
+
+  it('reads the partner out of box E, where the form prints their SSN or TIN', () => {
+    expect(K1.boxes.find((b) => b.key === 'e')).toMatchObject({ box: 'e', kind: 'tin' });
+    expect(IDENTITY_KEYS['K-1']).toEqual({ tin: 'e', name: 'f', address: [] });
   });
 });

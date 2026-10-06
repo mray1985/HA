@@ -168,6 +168,25 @@ const SLI_FIELDS: Record<string, FieldKind> = {
   originationFeesExcluded: 'boolean',
 };
 
+const K1_FIELDS: Record<string, FieldKind> = {
+  entityName: 'text',
+  entityEin: 'text',
+  entityType: 'text',
+  ordinaryBusinessIncome: 'money',
+  rentalIncome: 'money',
+  guaranteedPayments: 'money',
+  interestIncome: 'money',
+  ordinaryDividends: 'money',
+  qualifiedDividends: 'money',
+  royalties: 'money',
+  shortTermCapitalGain: 'money',
+  longTermCapitalGain: 'money',
+  netSection1231Gain: 'money',
+  otherIncome: 'money',
+  section179Deduction: 'money',
+  selfEmploymentIncome: 'money',
+};
+
 const G_FIELDS: Record<string, FieldKind> = {
   payerName: 'text',
   unemploymentCompensation: 'money',
@@ -279,6 +298,7 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_w2c: W2C_FIELDS,
   add_w2g: W2G_FIELDS,
   add_1098_e: SLI_FIELDS,
+  add_k1: K1_FIELDS,
 };
 
 interface Normalized {

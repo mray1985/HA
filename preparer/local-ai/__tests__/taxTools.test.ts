@@ -379,3 +379,46 @@ describe('Form W-2G tool', () => {
     expect(Object.values(result.fields)).not.toContain(0);
   });
 });
+describe('Schedule K-1 tool', () => {
+  it('records pass-through income as an income item with K1 facts', () => {
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: {
+        entityName: 'RIVERBEND PARTNERS LP',
+        entityEin: '72-1234567',
+        entityType: 'partnership',
+        ordinaryBusinessIncome: 48200,
+        selfEmploymentIncome: 48200,
+      },
+      context: { ...ctx, sourceFileName: 'f1065sk1.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.incomeType).toBe('k1');
+    expect(result.application).toEqual({ kind: 'income_item', itemType: 'k1' });
+    expect(result.facts.some((f) => f.factType === 'K1_ordinaryBusinessIncome')).toBe(true);
+  });
+
+  it('never supplies an entity kind of its own when none is given', () => {
+    // Withholding an unreadable form number is the mapper's job (mapBoxesToTool);
+    // the tool's part is not to fill the gap with a default, because the kind
+    // decides self-employment treatment.
+    const result = invokeTaxTool({ tool: 'add_k1', args: { entityName: 'THE ESTATE' }, context: ctx });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual({ entityName: 'THE ESTATE' });
+    expect(result.fields).not.toHaveProperty('entityType');
+  });
+
+  it('rejects an entity kind that is not one of the four the engine knows', () => {
+    const result = invokeTaxTool({ tool: 'add_k1', args: { entityType: 'llc' }, context: ctx });
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a code-split box 13 or box 15 field the page cannot support', () => {
+    for (const key of ['box13CharitableCash', 'box15ForeignTaxPaid']) {
+      const result = invokeTaxTool({ tool: 'add_k1', args: { [key]: 100 }, context: ctx });
+      expect(result.ok, key).toBe(false);
+    }
+  });
+});

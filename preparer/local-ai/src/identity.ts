@@ -88,6 +88,8 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
     address: ['winner.street', 'winner.apt', 'winner.city', 'winner.state', 'winner.zip'],
   },
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
+  // The partner is the person this form is about; box E prints their SSN or TIN.
+  'K-1': { tin: 'e', name: 'f', address: [] },
   '1098-E': {
     tin: 'borrower.tin',
     name: 'borrower.name',

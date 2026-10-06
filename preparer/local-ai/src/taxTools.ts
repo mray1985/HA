@@ -45,6 +45,7 @@ export const FORM_TOOL_NAMES = [
   'add_w2c',
   'add_w2g',
   'add_1098_e',
+  'add_k1',
 ] as const;
 
 /**
@@ -74,7 +75,8 @@ export type RecordToolName = (typeof RECORD_TOOL_NAMES)[number];
 /** Tools whose result is one engine item per source (addIncomeItem). */
 export type TaxToolIncomeName =
   | 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r'
-  | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c' | 'add_w2g'
+  | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c'
+  | 'add_w2g' | 'add_k1'
   | 'add_schedule_c_income';
 
 export function isDocumentTool(name: string): name is DocumentToolName {
@@ -137,7 +139,7 @@ export type PreparerChoice = 'creditType' | 'qualifiedExpenses' | 'qualifiedMedi
 export type TaxToolIncomeType =
   | 'w2' | '1099int' | '1099div' | '1099nec' | '1099r'
   | '1099misc' | '1099g' | '1099b' | '1099k' | '1099oid' | '1099c'
-  | 'w2g' | 'business-receipts';
+  | 'w2g' | 'k1' | 'business-receipts';
 
 export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
@@ -152,6 +154,7 @@ export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> 
   add_1099_oid: '1099oid',
   add_1099_c: '1099c',
   add_w2g: 'w2g',
+  add_k1: 'k1',
   add_schedule_c_income: 'business-receipts',
 };
 
@@ -169,6 +172,7 @@ const INCOME_TYPE_TO_TOOL: Record<string, FormIncomeToolName> = {
   '1099oid': 'add_1099_oid',
   '1099c': 'add_1099_c',
   w2g: 'add_w2g',
+  k1: 'add_k1',
 };
 
 /** Classified document income type → the form tool that reads it (income items and preparer-choice forms). */
@@ -574,6 +578,35 @@ const Add1098EFieldsSchema = z
   })
   .strict();
 
+/**
+ * Schedule K-1 (Form 1065), 2025. Field names match the engine's IncomeK1.
+ *
+ * Only the boxes that stand on their own are arguments. Boxes 13 and 15 are one
+ * undivided number each on the printed page - what they comprise is carried by
+ * codes on box 20 and the K-1 supplement - so they are never passed here, and
+ * entityType is absent unless the printed form number established it.
+ */
+const AddK1FieldsSchema = z
+  .object({
+    entityName: optionalString,
+    entityEin: optionalString,
+    entityType: z.enum(['partnership', 's_corp', 'estate', 'trust']).optional(),
+    ordinaryBusinessIncome: optionalAmount,
+    rentalIncome: optionalAmount,
+    guaranteedPayments: optionalAmount,
+    interestIncome: optionalAmount,
+    ordinaryDividends: optionalAmount,
+    qualifiedDividends: optionalAmount,
+    royalties: optionalAmount,
+    shortTermCapitalGain: optionalAmount,
+    longTermCapitalGain: optionalAmount,
+    netSection1231Gain: optionalAmount,
+    otherIncome: optionalAmount,
+    section179Deduction: optionalAmount,
+    selfEmploymentIncome: optionalAmount,
+  })
+  .strict();
+
 const AddW2cFieldsSchema = z
   .object({
     employerName: optionalString,
@@ -772,6 +805,7 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_w2c: AddW2cFieldsSchema,
   add_w2g: AddW2GFieldsSchema,
   add_1098_e: Add1098EFieldsSchema,
+  add_k1: AddK1FieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
@@ -808,6 +842,7 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_w2c: { kind: 'w2_correction' },
   add_w2g: { kind: 'income_item', itemType: 'w2g' },
   add_1098_e: { kind: 'aggregate', target: 'studentLoanInterest' },
+  add_k1: { kind: 'income_item', itemType: 'k1' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -844,6 +879,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_w2c: 'W2C',
   add_w2g: 'W2G',
   add_1098_e: '1098E',
+  add_k1: 'K1',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',
