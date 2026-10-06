@@ -886,9 +886,11 @@ const K1_SCHEMA: FormExtractionSchema = {
     box('1', 'Ordinary business income (loss)', 'money', 'tool'),
     box('2', 'Net rental real estate income (loss)', 'money', 'tool'),
     box('3', 'Other net rental income (loss)', 'money', 'review'),
+    // Box 4 is guaranteed payments *to the partner* on a 1065 and *to the
+    // corporation* on a 1120-S, so it is held on every form.
     box('4a', 'Guaranteed payments for services', 'money', 'review'),
     box('4b', 'Guaranteed payments for capital', 'money', 'review'),
-    box('4c', 'Total guaranteed payments', 'money', 'tool'),
+    box('4c', 'Total guaranteed payments', 'money', 'review'),
     box('5', 'Interest income', 'money', 'tool'),
     box('6a', 'Ordinary dividends', 'money', 'tool'),
     box('6b', 'Qualified dividends', 'money', 'tool'),
@@ -900,9 +902,14 @@ const K1_SCHEMA: FormExtractionSchema = {
     box('9c', 'Unrecaptured section 1250 gain', 'money', 'review'),
     box('10', 'Net section 1231 gain (loss)', 'money', 'tool'),
     box('11', 'Other income (loss)', 'money', 'tool'),
-    box('12', 'Section 179 deduction', 'money', 'tool'),
+    // Box 12 is the section 179 deduction on a 1065 and the qualified business
+    // income deduction on a 1120-S; section179Deduction feeds Form 4562.
+    box('12', 'Section 179 deduction', 'money', 'review'),
     box('13', 'Other deductions', 'money', 'review'),
-    box('14', 'Self-employment earnings (loss)', 'money', 'tool'),
+    // Box 14 is one undivided amount on the page: code A is the net earnings
+    // Schedule SE uses, B and C are gross farming and nonfarm income. Recorded
+    // as a fact and flagged, never placed.
+    box('14', 'Self-employment earnings (loss)', 'money', 'review'),
     box('15', 'Credits', 'money', 'review'),
     checkbox('16', 'Schedule K-3 is attached if checked', 'review', { labelPhrase: 'K-3', direction: 'above' }),
     box('17', 'Alternative minimum tax (AMT) items', 'money', 'review'),
@@ -1433,7 +1440,6 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
       a: 'entityEin',
       '1': 'ordinaryBusinessIncome',
       '2': 'rentalIncome',
-      '4c': 'guaranteedPayments',
       '5': 'interestIncome',
       '6a': 'ordinaryDividends',
       '6b': 'qualifiedDividends',
@@ -1446,7 +1452,6 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
       '9c': 'unrecapturedSection1250Gain',
       '10': 'netSection1231Gain',
       '11': 'otherIncome',
-      '12': 'section179Deduction',
       '14': 'selfEmploymentIncome',
     },
     name: { keys: ['b'], field: 'entityName' },
@@ -1560,6 +1565,36 @@ export function mapBoxesToTool(
     const markers = context?.matchedMarkers ?? [];
     const kind = entityTypeFromMarkers(markers);
     if (kind !== undefined) put('entityType', kind, markers.join('; '), []);
+    // A Form 1041 places nothing. It covers estates *and* trusts, the page does
+    // not say which, and irsScheduleEMap codes anything that is not a
+    // partnership as an S corporation on Schedule E - so placing it would file a
+    // trust's income as a corporation's. Everything is sent to review instead.
+    // A 1120-S does place: the engine handles s_corp explicitly, and the boxes
+    // that differ between the two layouts (4, 12, 14, 9b, 9c) are held below on
+    // every form, not just on the one that made them necessary.
+    if (kind === undefined || kind === 'estate' || kind === 'trust') {
+      for (const key of Object.keys(spec.direct ?? {})) {
+        const text = values[key];
+        if (text === undefined) continue;
+        reviewBoxes.push({ key, label: boxByKey.get(key)?.label ?? key, text });
+        // The direct loop above has already run, so the amounts it placed have to
+        // come back out: this form places nothing.
+        const field = spec.direct![key];
+        delete bag[field];
+        delete rawText[field];
+        delete sourceKeys[field];
+      }
+      if (spec.name) {
+        for (const key of spec.name.keys) {
+          if (values[key] === undefined) continue;
+          reviewBoxes.push({ key, label: boxByKey.get(key)?.label ?? key, text: values[key]! });
+          delete bag[spec.name.field];
+          delete rawText[spec.name.field];
+          delete sourceKeys[spec.name.field];
+        }
+      }
+      return { tool, bag, rawText, reviewBoxes, sourceKeys };
+    }
   }
 
   if (spec.year && values[spec.year.key] !== undefined) {
