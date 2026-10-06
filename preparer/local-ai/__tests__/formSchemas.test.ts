@@ -11,6 +11,11 @@ import {
   type FormExtractionSchema,
 } from '../src/formSchemas.js';
 import { extractStructuredFields } from '../src/structuredExtraction.js';
+import type { ClassifiableFormType } from '../src/documentClassifier.js';
+import { IDENTITY_KEYS } from '../src/identity.js';
+import { invokeTaxTool } from '../src/taxTools.js';
+
+const ctx = { returnId: 'ret-1', taxYear: 2025, sourceDocumentId: 'DOC-1', sourceFileName: 'w2.pdf', extractor: 'test' };
 
 const W2 = getFormExtractionSchema('W-2')!;
 
@@ -54,8 +59,10 @@ describe('form extraction schemas', () => {
     },
   );
 
-  it('returns null for forms without a schema', () => {
-    expect(getFormExtractionSchema('K-1')).toBeNull();
+  it('returns null when there is no schema for the form', () => {
+    // Every classifiable form now has one; a form nobody can read still must not
+    // be handed a schema.
+    expect(getFormExtractionSchema('NOT-A-FORM' as ClassifiableFormType)).toBeNull();
     expect(getFormExtractionSchema(null)).toBeNull();
   });
 });
@@ -176,8 +183,12 @@ describe('mapBoxesToTool', () => {
   });
 
   it('routes every filled tax box on a form without a tax tool to review', () => {
+    // Every classifiable form now has a tax tool, so this exercises the
+    // fallback through a form type outside the union on purpose: the guarantee
+    // is that a filled box is never silently dropped, and it has to survive a
+    // future form that ships with a schema but no tool.
     const noTool: FormExtractionSchema = {
-      formType: 'W-2G',
+      formType: 'FUTURE-1099' as ClassifiableFormType,
       revision: 'test',
       boxes: [
         { key: '1', box: '1', label: 'Reportable winnings', kind: 'money', use: 'tool' },
@@ -287,5 +298,279 @@ describe('corrected forms (work order §15 "corrected W-2 handling", §72)', () 
       const b = getFormExtractionSchema(formType)!.boxes.find((x) => x.key === 'corrected');
       expect(b, formType).toMatchObject({ kind: 'checkbox', use: 'review', checkbox: { labelPhrase: 'CORRECTED', direction: 'left' } });
     }
+  });
+});
+
+describe('Form W-2G (Rev. January 2026)', () => {
+  const W2G = getFormExtractionSchema('W-2G')!;
+
+  it('names box 1 as the form prints it, "Reportable winnings"', () => {
+    // The engine's IncomeW2G field is still called grossWinnings, but this
+    // revision of the form prints "Reportable winnings". Sending a preparer to
+    // a label the form does not have is the failure printedBoxLabels guards.
+    expect(W2G.boxes.find((b) => b.key === '1')).toMatchObject({
+      box: '1',
+      label: 'Reportable winnings',
+      kind: 'money',
+      use: 'tool',
+    });
+  });
+
+  it('reads the type of wager from box 3, where the form prints it', () => {
+    // IncomeW2G in shared/types/index.ts comments this as "Box 4 description".
+    // Box 4 is federal income tax withheld; the wager type is box 3.
+    expect(W2G.boxes.find((b) => b.key === '3')).toMatchObject({ box: '3', label: 'Type of wager', use: 'tool' });
+    expect(W2G.boxes.find((b) => b.key === '4')).toMatchObject({ box: '4', label: 'Federal income tax withheld' });
+  });
+
+  it('keys the winner TIN by its printed box 9', () => {
+    expect(W2G.boxes.find((b) => b.key === '9')).toMatchObject({ box: '9', label: "WINNER'S TIN" });
+  });
+
+  it('maps boxes to add_w2g arguments and nothing else', () => {
+    const mapped = mapBoxesToTool(W2G, {
+      'payer.name': 'RIVERBEND CASINO\n4100 CANAL ST\nNEW ORLEANS LA 70119',
+      '1': '24,600.00',
+      '3': 'Poker tournament',
+      '4': '4,920.00',
+      '13': 'LA/98765',
+      '15': '1,230.00',
+      '7': '600.00',
+    });
+    expect(mapped.tool).toBe('add_w2g');
+    const structured = extractStructuredFields('w2g', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({
+      payerName: 'RIVERBEND CASINO',
+      grossWinnings: 24600,
+      typeOfWager: 'Poker tournament',
+      federalTaxWithheld: 4920,
+      // Only the two-letter code; the payer's state ID in the same cell is not
+      // passed as an argument.
+      stateCode: 'LA',
+      stateTaxWithheld: 1230,
+    });
+  });
+
+  it('routes winnings from identical wagers to review, since no argument takes them', () => {
+    const mapped = mapBoxesToTool(W2G, { '1': '1,000.00', '7': '250.00', '16': '100.00' });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['7', '16']);
+    expect(mapped.bag).not.toHaveProperty('identicalWagers');
+  });
+
+  it('leaves a blank box out of the arguments entirely', () => {
+    const mapped = mapBoxesToTool(W2G, { '1': '500.00', '4': '' });
+    const structured = extractStructuredFields('w2g', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({ grossWinnings: 500 });
+    expect(Object.values(structured.args)).not.toContain(0);
+  });
+});
+describe('Form 1098-E (Rev. 2026)', () => {
+  const SLI = getFormExtractionSchema('1098-E')!;
+
+  it('reads only the two boxes the form prints', () => {
+    expect(SLI.boxes.filter((b) => /^\d+$/.test(b.box)).map((b) => b.box)).toEqual(['1', '2']);
+  });
+
+  it('names box 1 as the form prints it, "Student loan interest received by lender"', () => {
+    expect(SLI.boxes.find((b) => b.key === '1')).toMatchObject({
+      box: '1',
+      label: 'Student loan interest received by lender',
+      kind: 'money',
+      use: 'tool',
+    });
+  });
+
+  it('maps box 1 to the tool and box 2 to a boolean', () => {
+    const mapped = mapBoxesToTool(SLI, {
+      'lender.block': 'MOUNT HOREAN NATIONAL BANK\nPO BOX 88\nCONCORD NH 03301',
+      '1': '1,842.55',
+      '2': 'X',
+    });
+    expect(mapped.tool).toBe('add_1098_e');
+    const structured = extractStructuredFields('1098e', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({
+      lenderName: 'MOUNT HOREAN NATIONAL BANK',
+      studentLoanInterest: 1842.55,
+      originationFeesExcluded: true,
+    });
+  });
+
+  it('reads an unchecked box 2 as false, not as absent', () => {
+    const mapped = mapBoxesToTool(SLI, { '1': '500.00', '2': 'no' });
+    const structured = extractStructuredFields('1098e', mapped.bag, mapped.rawText);
+    expect(structured.args).toEqual({ studentLoanInterest: 500, originationFeesExcluded: false });
+  });
+
+  it('sends an unreadable box 2 to review rather than guessing it was unchecked', () => {
+    const mapped = mapBoxesToTool(SLI, { '1': '500.00', '2': 'maybe' });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['2']);
+    expect(mapped.bag).not.toHaveProperty('originationFeesExcluded');
+  });
+});
+describe('Schedule K-1 (Form 1065, 2025)', () => {
+  const K1 = getFormExtractionSchema('K-1')!;
+  const printed: Record<string, string> = {
+    a: '72-1234567',
+    b: 'RIVERBEND PARTNERS LP\n4100 CANAL ST\nNEW ORLEANS LA 70119',
+    '1': '48,200.00',
+    '2': '6,400.00',
+    '4c': '1,500.00',
+    '5': '212.00',
+    '6a': '900.00',
+    '6b': '450.00',
+    '7': '1,100.00',
+    '8': '(2,300.00)',
+    '9a': '15,750.00',
+    '10': '(4,100.00)',
+    '11': '320.00',
+    '12': '9,000.00',
+    '13': '4,200.00',
+    '14': '48,200.00',
+    '15': '310.00',
+  };
+
+  it('reads the printed form number as the entity kind', () => {
+    const partnership = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP' }, { matchedMarkers: ['schedule k-1', 'form 1065'] });
+    expect(extractStructuredFields('k1', partnership.bag, partnership.rawText).args.entityType).toBe('partnership');
+    const scorp = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND INC' }, { matchedMarkers: ['schedule k-1', 'form 1120-s'] });
+    expect(extractStructuredFields('k1', scorp.bag, scorp.rawText).args.entityType).toBe('s_corp');
+  });
+
+  it('leaves the entity kind unset for a Form 1041, which is an estate or a trust', () => {
+    // The page does not say which, and the engine codes anything that is not a
+    // partnership as an S corporation on Schedule E - so guessing would file a
+    // trust's income as a corporation's. Unset holds the form (FED.K1.ENTITY_TYPE).
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'THE ESTATE' }, { matchedMarkers: ['schedule k-1', 'form 1041'] });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).not.toHaveProperty('entityType');
+  });
+
+  it('leaves the entity kind unset when the page says nothing about the form', () => {
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP' });
+    expect(extractStructuredFields('k1', mapped.bag, mapped.rawText).args).not.toHaveProperty('entityType');
+  });
+
+  it('never guesses partnership when the form number was not read', () => {
+    const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP', '1': '48,200.00' });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).not.toHaveProperty('entityType');
+    // The rest of the form is still read; only the kind is withheld.
+    expect(args).toMatchObject({ ordinaryBusinessIncome: 48200 });
+  });
+
+  it('places the boxes that stand on their own', () => {
+    const mapped = mapBoxesToTool(K1, printed, { matchedMarkers: ['schedule k-1', 'form 1065'] });
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    expect(args).toEqual({
+      entityEin: '72-1234567',
+      entityName: 'RIVERBEND PARTNERS LP',
+      entityType: 'partnership',
+      ordinaryBusinessIncome: 48200,
+      rentalIncome: 6400,
+      guaranteedPayments: 1500,
+      interestIncome: 212,
+      ordinaryDividends: 900,
+      qualifiedDividends: 450,
+      royalties: 1100,
+      shortTermCapitalGain: -2300,
+      longTermCapitalGain: 15750,
+      netSection1231Gain: -4100,
+      otherIncome: 320,
+      section179Deduction: 9000,
+      selfEmploymentIncome: 48200,
+    });
+  });
+
+  it('sends boxes 13 and 15 to review rather than splitting them by guesswork', () => {
+    // One undivided number each; what they comprise is carried by codes printed
+    // elsewhere, so no box13*/box15* field may be filled from the total.
+    const mapped = mapBoxesToTool(K1, printed, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['13', '15']));
+    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
+    for (const key of Object.keys(args)) {
+      expect(key).not.toMatch(/box13|box15|box131231|box15Other/);
+    }
+  });
+
+  it('sends the rate- and entity-dependent boxes to review, keeping their value', () => {
+    const mapped = mapBoxesToTool(K1, { ...printed, '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
+    // The value is kept: extractK1Fields() already reads these, and dropping them
+    // would leave a 28% or 25% gain unapplied with nothing flagging it.
+    expect(mapped.bag).toMatchObject({ collectiblesGain28: '1,000.00', unrecapturedSection1250Gain: '2,500.00' });
+  });
+
+  it('names box 14 as the self-employment figure the form prints', () => {
+    expect(K1.boxes.find((b) => b.key === '14')).toMatchObject({ box: '14', label: 'Self-employment earnings (loss)', use: 'tool' });
+  });
+
+  it('reads the partner out of box E, where the form prints their SSN or TIN', () => {
+    expect(K1.boxes.find((b) => b.key === 'e')).toMatchObject({ box: 'e', kind: 'tin' });
+    expect(IDENTITY_KEYS['K-1']).toEqual({ tin: 'e', name: 'f', address: [] });
+  });
+});
+describe('Form 1095-A (2025)', () => {
+  const PTC = getFormExtractionSchema('1095-A')!;
+
+  it('reads Part I, the five covered individuals and the twelve months', () => {
+    // Part I prints lines 1-15 unnumbered by column. Part II's five rows carry
+    // an A-E column (25 boxes), each of the twelve months carries A-C (36), and
+    // line 33 carries the annual totals A-C (3). The month name is a row label,
+    // so it is not counted as a printed box.
+    expect(PTC.boxes.filter((b) => /^\d+$/.test(b.box)).map((b) => b.box)).toEqual([
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15',
+    ]);
+    expect(PTC.boxes.filter((b) => /^\d+[a-e]$/.test(b.box))).toHaveLength(5 * 5 + 12 * 3 + 3);
+    expect(PTC.boxes.filter((b) => /^\d+\.month$/.test(b.key))).toHaveLength(12);
+  });
+
+  it('names Part II columns as the form prints them', () => {
+    expect(PTC.boxes.find((b) => b.key === '16.a')).toMatchObject({ box: '16a', label: 'Covered individual name (line 16)' });
+    expect(PTC.boxes.find((b) => b.key === '16.b')).toMatchObject({ box: '16b', kind: 'tin' });
+    expect(PTC.boxes.find((b) => b.key === '16.d')).toMatchObject({ box: '16d', label: 'Coverage start date (line 16)' });
+  });
+
+  it('names line 33 as the annual totals the form prints', () => {
+    expect(PTC.boxes.find((b) => b.key === '33.a')).toMatchObject({ box: '33a', kind: 'money', use: 'tool' });
+    expect(PTC.boxes.find((b) => b.key === '33.c')).toMatchObject({ box: '33c', use: 'review' });
+  });
+
+  it('records the statement without writing the premium tax credit', () => {
+    const mapped = mapBoxesToTool(PTC, {
+      '1': '31-1234567',
+      '2': 'P-987654321',
+      '3': 'RIVERBEND MARKETPLACE',
+      '4': 'ALEX RIVERBEND',
+      '5': '000-12-3456',
+      '33.a': '14,400.00',
+      '33.b': '11,220.00',
+      '33.c': '2,880.00',
+    });
+    expect(mapped.tool).toBe('add_1095_a');
+    expect(mapped.bag).toEqual({
+      marketplaceIdentifier: '31-1234567',
+      policyNumber: 'P-987654321',
+      policyIssuerName: 'RIVERBEND MARKETPLACE',
+      recipientName: 'ALEX RIVERBEND',
+      recipientSsn: '000-12-3456',
+      annualEnrollmentPremiums: '14,400.00',
+      annualSLCSPPremium: '11,220.00',
+    });
+    // The annual advance payment is review: it is a credit decision, not a reading.
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['33.c']);
+    expect(mapped.bag).not.toHaveProperty('annualAdvancePayment');
+  });
+
+  it('records the statement as a fact and never as a return amount', () => {
+    const result = invokeTaxTool({
+      tool: 'add_1095_a',
+      args: { recipientName: 'ALEX RIVERBEND', annualEnrollmentPremiums: 14400 },
+      context: { ...ctx, sourceFileName: 'f1095a.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.application).toEqual({ kind: 'candidate_fact' });
+    expect(result.incomeType).toBeUndefined();
+    expect(result.facts.some((f) => f.factType === '1095A_recipientName')).toBe(true);
   });
 });

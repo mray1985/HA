@@ -43,6 +43,10 @@ export const FORM_TOOL_NAMES = [
   'add_1099_sa',
   'add_1099_s',
   'add_w2c',
+  'add_w2g',
+  'add_1098_e',
+  'add_k1',
+  'add_1095_a',
 ] as const;
 
 /**
@@ -73,6 +77,7 @@ export type RecordToolName = (typeof RECORD_TOOL_NAMES)[number];
 export type TaxToolIncomeName =
   | 'add_w2' | 'add_1099_int' | 'add_1099_div' | 'add_1099_nec' | 'add_1099_r'
   | 'add_1099_misc' | 'add_1099_g' | 'add_1099_b' | 'add_1099_k' | 'add_1099_oid' | 'add_1099_c'
+  | 'add_w2g' | 'add_k1'
   | 'add_schedule_c_income';
 
 export function isDocumentTool(name: string): name is DocumentToolName {
@@ -84,7 +89,12 @@ export function isRecordTool(name: string): name is RecordToolName {
 }
 
 /** Totals the engine keeps once per return, recomputed from every source's facts. */
-export type AggregateTarget = 'socialSecurityBenefits' | 'mortgageInterest' | 'estimatedPayments' | 'stateResidency';
+export type AggregateTarget =
+  | 'socialSecurityBenefits'
+  | 'mortgageInterest'
+  | 'studentLoanInterest'
+  | 'estimatedPayments'
+  | 'stateResidency';
 
 /**
  * How a successful call applies to the return.
@@ -130,7 +140,7 @@ export type PreparerChoice = 'creditType' | 'qualifiedExpenses' | 'qualifiedMedi
 export type TaxToolIncomeType =
   | 'w2' | '1099int' | '1099div' | '1099nec' | '1099r'
   | '1099misc' | '1099g' | '1099b' | '1099k' | '1099oid' | '1099c'
-  | 'business-receipts';
+  | 'w2g' | 'k1' | 'business-receipts';
 
 export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> = {
   add_w2: 'w2',
@@ -144,6 +154,8 @@ export const TAX_TOOL_INCOME_TYPE: Record<TaxToolIncomeName, TaxToolIncomeType> 
   add_1099_k: '1099k',
   add_1099_oid: '1099oid',
   add_1099_c: '1099c',
+  add_w2g: 'w2g',
+  add_k1: 'k1',
   add_schedule_c_income: 'business-receipts',
 };
 
@@ -160,6 +172,8 @@ const INCOME_TYPE_TO_TOOL: Record<string, FormIncomeToolName> = {
   '1099k': 'add_1099_k',
   '1099oid': 'add_1099_oid',
   '1099c': 'add_1099_c',
+  w2g: 'add_w2g',
+  k1: 'add_k1',
 };
 
 /** Classified document income type → the form tool that reads it (income items and preparer-choice forms). */
@@ -168,10 +182,14 @@ const INCOME_TYPE_TO_FORM_TOOL: Record<string, DocumentToolName> = {
   ssa1099: 'add_ssa_1099',
   '1098': 'add_mortgage_interest',
   '1098t': 'add_education_expense',
+  '1098e': 'add_1098_e',
   '1099q': 'add_1099_q',
   '1099sa': 'add_1099_sa',
   '1099s': 'add_1099_s',
   w2c: 'add_w2c',
+  w2g: 'add_w2g',
+  k1: 'add_k1',
+  '1095a': 'add_1095_a',
 };
 
 export function formToolForIncomeType(incomeType: string | null | undefined): DocumentToolName | null {
@@ -539,6 +557,80 @@ const cap = (f: string) => f[0]!.toUpperCase() + f.slice(1);
 export const w2cField = (side: 'previous' | 'correct', field: W2cCorrectable) => `${side}${cap(field)}`;
 
 /** Form W-2c (Rev. January 2026): only the corrected boxes are printed. */
+/** Form W-2G (Rev. January 2026): gambling winnings. Field names match IncomeW2G. */
+const AddW2GFieldsSchema = z
+  .object({
+    payerName: optionalString,
+    grossWinnings: optionalAmount,
+    typeOfWager: optionalString,
+    federalTaxWithheld: optionalAmount,
+    stateCode: optionalString,
+    stateTaxWithheld: optionalAmount,
+  })
+  .strict();
+
+/**
+ * Form 1098-E (2026). Field names match the engine's studentLoanInterest, which
+ * is one value for the return rather than an array.
+ */
+const Add1098EFieldsSchema = z
+  .object({
+    lenderName: optionalString,
+    studentLoanInterest: optionalAmount,
+    /** Box 2: box 1 leaves out origination fees / capitalized pre-2004 interest. */
+    originationFeesExcluded: optionalBoolean,
+  })
+  .strict();
+
+/**
+ * Schedule K-1 (Form 1065), 2025. Field names match the engine's IncomeK1.
+ *
+ * Only the boxes that stand on their own are arguments. Boxes 13 and 15 are one
+ * undivided number each on the printed page - what they comprise is carried by
+ * codes on box 20 and the K-1 supplement - so they are never passed here, and
+ * entityType is absent unless the printed form number established it.
+ */
+const AddK1FieldsSchema = z
+  .object({
+    entityName: optionalString,
+    entityEin: optionalString,
+    entityType: z.enum(['partnership', 's_corp', 'estate', 'trust']).optional(),
+    ordinaryBusinessIncome: optionalAmount,
+    rentalIncome: optionalAmount,
+    guaranteedPayments: optionalAmount,
+    interestIncome: optionalAmount,
+    ordinaryDividends: optionalAmount,
+    qualifiedDividends: optionalAmount,
+    royalties: optionalAmount,
+    shortTermCapitalGain: optionalAmount,
+longTermCapitalGain: optionalAmount,
+  // Boxes 9b and 9c: recorded as facts, never written to the engine item (see
+  // FACT_ONLY_FIELDS). Their rate depends on the worksheet the preparer works.
+  collectiblesGain28: optionalAmount,
+  unrecapturedSection1250Gain: optionalAmount,
+  netSection1231Gain: optionalAmount,
+  otherIncome: optionalAmount,
+  section179Deduction: optionalAmount,
+  selfEmploymentIncome: optionalAmount,
+})
+  .strict();
+
+/**
+ * Form 1095-A (2025). Recorded as facts only: the advance premium tax credit is
+ * a preparer decision, not something this statement writes to the return.
+ */
+const Add1095AFieldsSchema = z
+  .object({
+    marketplaceIdentifier: optionalString,
+    policyNumber: optionalString,
+    policyIssuerName: optionalString,
+    recipientName: optionalString,
+    recipientSsn: optionalString,
+    annualEnrollmentPremiums: optionalAmount,
+    annualSLCSPPremium: optionalAmount,
+  })
+  .strict();
+
 const AddW2cFieldsSchema = z
   .object({
     employerName: optionalString,
@@ -735,11 +827,22 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_1099_sa: Add1099SaFieldsSchema,
   add_1099_s: Add1099SFieldsSchema,
   add_w2c: AddW2cFieldsSchema,
+  add_w2g: AddW2GFieldsSchema,
+  add_1098_e: Add1098EFieldsSchema,
+  add_k1: AddK1FieldsSchema,
+  add_1095_a: Add1095AFieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
 export const FACT_ONLY_FIELDS: Partial<Record<DocumentToolName, readonly string[]>> = {
   add_1099_c: ['personallyLiable'],
+  //
+  // Boxes 9b and 9c are read and kept as facts but not written to the engine
+  // item: the rate a collectibles gain and an unrecaptured section 1250 gain are
+  // taxed at depends on the worksheet the preparer works, and an unknown entity
+  // kind blocks it outright (FED.K1.ENTITY_TYPE). Dropping them silently was
+  // worse than recording them - the value has to survive to be reviewed.
+  add_k1: ['collectiblesGain28', 'unrecapturedSection1250Gain'],
 };
 
 /** An income item's fields as the engine takes them: fact-only fields removed. */
@@ -769,6 +872,11 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_1099_sa: { kind: 'needs_preparer_choice', target: 'hsaDistribution', choice: 'qualifiedMedicalExpenses' },
   add_1099_s: { kind: 'needs_preparer_choice', target: 'homeSale', choice: 'ownershipAndBasis' },
   add_w2c: { kind: 'w2_correction' },
+  add_w2g: { kind: 'income_item', itemType: 'w2g' },
+  add_1098_e: { kind: 'aggregate', target: 'studentLoanInterest' },
+  add_k1: { kind: 'income_item', itemType: 'k1' },
+  // Recorded, never applied: the credit decision belongs to the preparer.
+  add_1095_a: { kind: 'candidate_fact' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -803,6 +911,10 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_1099_sa: '1099SA',
   add_1099_s: '1099S',
   add_w2c: 'W2C',
+  add_w2g: 'W2G',
+  add_1098_e: '1098E',
+  add_k1: 'K1',
+  add_1095_a: '1095A',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',

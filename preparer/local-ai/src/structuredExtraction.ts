@@ -153,6 +153,52 @@ const MISC_FIELDS: Record<string, FieldKind> = {
   stateTaxWithheld: 'money',
 };
 
+const W2G_FIELDS: Record<string, FieldKind> = {
+  payerName: 'text',
+  grossWinnings: 'money',
+  typeOfWager: 'text',
+  federalTaxWithheld: 'money',
+  stateCode: 'text',
+  stateTaxWithheld: 'money',
+};
+
+const SLI_FIELDS: Record<string, FieldKind> = {
+  lenderName: 'text',
+  studentLoanInterest: 'money',
+  originationFeesExcluded: 'boolean',
+};
+
+const K1_FIELDS: Record<string, FieldKind> = {
+  entityName: 'text',
+  entityEin: 'text',
+  entityType: 'text',
+  ordinaryBusinessIncome: 'money',
+  rentalIncome: 'money',
+  guaranteedPayments: 'money',
+  interestIncome: 'money',
+  ordinaryDividends: 'money',
+  qualifiedDividends: 'money',
+  royalties: 'money',
+  shortTermCapitalGain: 'money',
+longTermCapitalGain: 'money',
+  collectiblesGain28: 'money',
+  unrecapturedSection1250Gain: 'money',
+  netSection1231Gain: 'money',
+  otherIncome: 'money',
+  section179Deduction: 'money',
+  selfEmploymentIncome: 'money',
+};
+
+const PTC_FIELDS: Record<string, FieldKind> = {
+  marketplaceIdentifier: 'text',
+  policyNumber: 'text',
+  policyIssuerName: 'text',
+  recipientName: 'text',
+  recipientSsn: 'text',
+  annualEnrollmentPremiums: 'money',
+  annualSLCSPPremium: 'money',
+};
+
 const G_FIELDS: Record<string, FieldKind> = {
   payerName: 'text',
   unemploymentCompensation: 'money',
@@ -262,6 +308,10 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_1099_sa: SA_FIELDS,
   add_1099_s: S_FIELDS,
   add_w2c: W2C_FIELDS,
+  add_w2g: W2G_FIELDS,
+  add_1098_e: SLI_FIELDS,
+  add_k1: K1_FIELDS,
+  add_1095_a: PTC_FIELDS,
 };
 
 interface Normalized {

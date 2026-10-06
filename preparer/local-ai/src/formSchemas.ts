@@ -757,6 +757,229 @@ const W2C_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/**
+ * Form W-2G (Rev. January 2026), Copy B. Labels are taken from the printed
+ * page, so box 1 reads "Reportable winnings" rather than the older "Gross
+ * winnings", and "Type of wager" is box 3. The winner's TIN is printed in the
+ * numbered box 9, not in the address block, so it is keyed by its box.
+ */
+const W2G_SCHEMA: FormExtractionSchema = {
+  formType: 'W-2G',
+  revision: 'January 2026',
+  boxes: [
+    CORRECTED,
+    box('payer.name', "PAYER'S name", 'text', 'tool', ''),
+    box('payer.street', "PAYER'S street address", 'text', 'info', ''),
+    box('payer.suite', "PAYER'S room or suite no.", 'text', 'info', ''),
+    box('payer.city', "PAYER'S city or town", 'text', 'info', ''),
+    box('payer.state', "PAYER'S state or province", 'text', 'info', ''),
+    box('payer.country', "PAYER'S country", 'text', 'info', ''),
+    box('payer.zip', "PAYER'S ZIP or foreign postal code", 'text', 'info', ''),
+    box('payer.tin', "PAYER'S TIN", 'tin', 'info', ''),
+    box('payer.phone', "PAYER'S telephone no.", 'text', 'info', ''),
+    box('9', "WINNER'S TIN", 'tin', 'info'),
+    box('winner.name', "WINNER'S name", 'text', 'info', ''),
+    box('winner.street', "WINNER'S street address", 'text', 'info', ''),
+    box('winner.apt', "WINNER'S apt. no.", 'text', 'info', ''),
+    box('winner.city', "WINNER'S city or town", 'text', 'info', ''),
+    box('winner.state', "WINNER'S state or province", 'text', 'info', ''),
+    box('winner.country', "WINNER'S country", 'text', 'info', ''),
+    box('winner.zip', "WINNER'S ZIP or foreign postal code", 'text', 'info', ''),
+    box('1', 'Reportable winnings', 'money', 'tool'),
+    box('2', 'Date won', 'date', 'review'),
+    box('3', 'Type of wager', 'text', 'tool'),
+    box('4', 'Federal income tax withheld', 'money', 'tool'),
+    box('5', 'Transaction', 'text', 'review'),
+    box('6', 'Race', 'text', 'review'),
+    box('7', 'Winnings from identical wagers', 'money', 'review'),
+    box('8', 'Cashier', 'text', 'info'),
+    box('10', 'Window', 'text', 'info'),
+    box('11', 'First identification no.', 'text', 'review'),
+    box('12', 'Second identification no.', 'text', 'review'),
+    box('13', "State/Payer's state identification no.", 'stateAndId', 'tool'),
+    box('14', 'State winnings', 'money', 'review'),
+    box('15', 'State income tax withheld', 'money', 'tool'),
+    box('16', 'Local winnings', 'money', 'review'),
+    box('17', 'Local income tax withheld', 'money', 'review'),
+    box('18', 'Name of locality', 'text', 'review'),
+  ],
+};
+
+/**
+ * Form 1098-E (Rev. 2026), Copy B for Borrower. The form prints only boxes 1
+ * and 2. Box 2 is the one that matters: when it is checked, box 1 excludes loan
+ * origination fees and capitalized interest on pre-2004 loans, so box 1 on its
+ * own is not the deductible amount and the Deduction Worksheet decides it.
+ */
+const SLI_SCHEMA: FormExtractionSchema = {
+  formType: '1098-E',
+  revision: '2026',
+  boxes: [
+    CORRECTED,
+    box('lender.block', "RECIPIENT'S/LENDER'S name, street address, room/suite no., city/town, state/province, country, ZIP/foreign code, and telephone number", 'text', 'tool', ''),
+    box('lender.tin', "RECIPIENT'S TIN", 'tin', 'info', ''),
+    box('borrower.tin', "BORROWER'S TIN", 'tin', 'info', ''),
+    box('borrower.name', "BORROWER'S name", 'text', 'info', ''),
+    box('borrower.street', "BORROWER'S street address and apt. no.", 'text', 'info', ''),
+    box('borrower.city', "BORROWER'S city/town, state/province, country, and ZIP/foreign code", 'text', 'info', ''),
+    box('account', 'Account number (see instructions)', 'text', 'info', ''),
+    box('1', 'Student loan interest received by lender', 'money', 'tool'),
+    checkbox('2', 'If checked, box 1 does not include loan origination fees and/or capitalized interest for loans made before September 1, 2004', 'tool', { labelPhrase: 'does', direction: 'below' }),
+  ],
+};
+
+/**
+ * Schedule K-1 (Form 1065), 2025, the partner's copy: Part I about the
+ * partnership and partner, Part II the income and deductions, Part III the
+ * self-employment figure and what follows.
+ *
+ * Only the boxes that stand on their own are marked `tool`. Boxes 13 and 15 are
+ * one undivided number each on this page; what they are made of is carried by
+ * codes printed elsewhere (box 20's letters and the Schedule K-1 supplement), so
+ * splitting them here would be inventing a breakdown. They go to review with the
+ * amount the form prints. Boxes 9b and 9c are rate- and entity-dependent and go
+ * to review for the same reason.
+ */
+const K1_SCHEMA: FormExtractionSchema = {
+  formType: 'K-1',
+  revision: '2025',
+  boxes: [
+    box('year.beginning', 'For calendar year, or tax year beginning', 'text', 'review', ''),
+    box('year.ending', 'tax year ending', 'text', 'review', ''),
+    box('a', "Partnership's employer identification number", 'tin', 'tool'),
+    box('b', "Partnership's name, address, city, state, and ZIP code", 'text', 'tool'),
+    box('c', 'IRS center where partnership filed return', 'text', 'info'),
+    checkbox('d', 'Check if this is a publicly traded partnership (PTP)', 'info', { labelPhrase: 'publicly traded partnership', direction: 'right' }),
+    box('e', "Partner's SSN or TIN (Do not use TIN of a disregarded entity)", 'tin', 'info'),
+    box('f', 'Name, address, city, state, and ZIP code for partner entered in E', 'text', 'info'),
+    checkbox('g.general', 'General partner or LLC member-manager', 'info', { labelPhrase: 'General partner', direction: 'above' }),
+    checkbox('g.limited', 'Limited partner or other LLC member', 'info', { labelPhrase: 'Limited partner', direction: 'above' }),
+    checkbox('h1.domestic', 'Domestic partner', 'info', { labelPhrase: 'Domestic partner', direction: 'above' }),
+    checkbox('h1.foreign', 'Foreign partner', 'info', { labelPhrase: 'Foreign partner', direction: 'above' }),
+    box('h2.tin', "If the partner is a disregarded entity (DE), enter the partner's TIN", 'tin', 'review'),
+    box('h2.name', "If the partner is a disregarded entity (DE), enter the partner's name", 'text', 'review'),
+    box('h2.entityType', 'What type of entity is this partner?', 'text', 'review'),
+    checkbox('i1', 'If this partner is a retirement plan (IRA/SEP/Keogh/etc.), check here', 'info', { labelPhrase: 'retirement plan', direction: 'right' }),
+    box('j.profit.beginning', "Partner's share of profit, beginning percentage", 'percent', 'review'),
+    box('j.profit.ending', "Partner's share of profit, ending percentage", 'percent', 'review'),
+    box('j.loss.beginning', "Partner's share of loss, beginning percentage", 'percent', 'review'),
+    box('j.loss.ending', "Partner's share of loss, ending percentage", 'percent', 'review'),
+    box('j.capital.beginning', "Partner's share of capital, beginning percentage", 'percent', 'review'),
+    box('j.capital.ending', "Partner's share of capital, ending percentage", 'percent', 'review'),
+    box('k1.nonrecourse.beginning', "Partner's share of liabilities, nonrecourse, beginning", 'money', 'review'),
+    box('k1.nonrecourse.ending', "Partner's share of liabilities, nonrecourse, ending", 'money', 'review'),
+    box('k1.qualifiedNonrecourse.beginning', "Partner's share of liabilities, qualified nonrecourse financing, beginning", 'money', 'review'),
+    box('k1.qualifiedNonrecourse.ending', "Partner's share of liabilities, qualified nonrecourse financing, ending", 'money', 'review'),
+    box('k1.recourse.beginning', "Partner's share of liabilities, recourse, beginning", 'money', 'review'),
+    box('k1.recourse.ending', "Partner's share of liabilities, recourse, ending", 'money', 'review'),
+    checkbox('k2', 'Item K1 includes liability amounts from lower-tier partnerships', 'review', { labelPhrase: 'lower-tier', direction: 'right' }),
+    checkbox('k3', 'Any of the above liability is subject to guarantees or other payment obligations by the partner', 'review', { labelPhrase: 'guarantees', direction: 'right' }),
+    box('l.beginning', "Partner's capital account, beginning capital account", 'money', 'review'),
+    box('l.contributed', 'Capital contributed during the year', 'money', 'review'),
+    box('l.netIncome', 'Current year net income (loss)', 'money', 'review'),
+    box('l.other', 'Other increase (decrease) (attach explanation)', 'money', 'review'),
+    box('l.withdrawals', 'Withdrawals and distributions', 'money', 'review'),
+    box('l.ending', 'Ending capital account', 'money', 'review'),
+    checkbox('m', 'The partner contributed property with a built-in gain (loss)', 'review', { labelPhrase: 'built-in gain', direction: 'right' }),
+    box('n.beginning', "Partner's share of net unrecognized section 704(c) gain (loss), beginning", 'money', 'review'),
+    box('n.ending', "Partner's share of net unrecognized section 704(c) gain (loss), ending", 'money', 'review'),
+    box('1', 'Ordinary business income (loss)', 'money', 'tool'),
+    box('2', 'Net rental real estate income (loss)', 'money', 'tool'),
+    box('3', 'Other net rental income (loss)', 'money', 'review'),
+    box('4a', 'Guaranteed payments for services', 'money', 'review'),
+    box('4b', 'Guaranteed payments for capital', 'money', 'review'),
+    box('4c', 'Total guaranteed payments', 'money', 'tool'),
+    box('5', 'Interest income', 'money', 'tool'),
+    box('6a', 'Ordinary dividends', 'money', 'tool'),
+    box('6b', 'Qualified dividends', 'money', 'tool'),
+    box('6c', 'Dividend equivalents', 'money', 'review'),
+    box('7', 'Royalties', 'money', 'tool'),
+    box('8', 'Net short-term capital gain (loss)', 'money', 'tool'),
+    box('9a', 'Net long-term capital gain (loss)', 'money', 'tool'),
+    box('9b', 'Collectibles (28%) gain (loss)', 'money', 'review'),
+    box('9c', 'Unrecaptured section 1250 gain', 'money', 'review'),
+    box('10', 'Net section 1231 gain (loss)', 'money', 'tool'),
+    box('11', 'Other income (loss)', 'money', 'tool'),
+    box('12', 'Section 179 deduction', 'money', 'tool'),
+    box('13', 'Other deductions', 'money', 'review'),
+    box('14', 'Self-employment earnings (loss)', 'money', 'tool'),
+    box('15', 'Credits', 'money', 'review'),
+    checkbox('16', 'Schedule K-3 is attached if checked', 'review', { labelPhrase: 'K-3', direction: 'above' }),
+    box('17', 'Alternative minimum tax (AMT) items', 'money', 'review'),
+    box('18', 'Tax-exempt income and nondeductible expenses', 'money', 'review'),
+    box('19', 'Distributions', 'money', 'review'),
+    box('20', 'Other information', 'text', 'review'),
+    box('21', 'Foreign taxes paid or accrued', 'money', 'review'),
+    checkbox('22', 'More than one activity for at-risk purposes', 'review', { labelPhrase: 'at-risk', direction: 'above' }),
+    checkbox('23', 'More than one activity for passive activity purposes', 'review', { labelPhrase: 'passive activity', direction: 'above' }),
+  ],
+};
+
+/** One Part II row: a covered individual, columns A-E as the form prints them. */
+function coveredIndividual(row: number): FormBoxSchema[] {
+  const line = String(15 + row);
+  return [
+    box(`${line}.a`, `Covered individual name (line ${line})`, 'text', 'review', `${line}a`),
+    box(`${line}.b`, `Covered individual SSN (line ${line})`, 'tin', 'review', `${line}b`),
+    box(`${line}.c`, `Covered individual date of birth (line ${line})`, 'date', 'review', `${line}c`),
+    box(`${line}.d`, `Coverage start date (line ${line})`, 'date', 'review', `${line}d`),
+    box(`${line}.e`, `Coverage termination date (line ${line})`, 'date', 'review', `${line}e`),
+  ];
+}
+
+/** One Part III row: a month, columns A-C as the form prints them. */
+function coverageMonth(line: number, month: string): FormBoxSchema[] {
+  return [
+    // The month is a printed row label, not a box number, so it prints as none.
+  box(`${line}.month`, `${month} (line ${line})`, 'text', 'info', ''),
+    box(`${line}.a`, `Monthly enrollment premiums, ${month}`, 'money', 'review', `${line}a`),
+    box(`${line}.b`, `Monthly second lowest cost silver plan (SLCSP) premium, ${month}`, 'money', 'review', `${line}b`),
+    box(`${line}.c`, `Monthly advance payment of premium tax credit, ${month}`, 'money', 'review', `${line}c`),
+  ];
+}
+
+/**
+ * Form 1095-A (2025), the Marketplace's statement to the recipient.
+ *
+ * Nothing here is written to the return. The advance premium tax credit in
+ * column C drives Form 8962 and is the largest consequential number a
+ * Marketplace statement carries, and the engine's own note records that it
+ * circles with Form 7206 (self-employment health insurance versus the credit).
+ * So the statement is read and recorded as facts, and the credit decision is
+ * left to the preparer rather than taken from column C automatically.
+ */
+const PTC_SCHEMA: FormExtractionSchema = {
+  formType: '1095-A',
+  revision: '2025',
+  boxes: [
+    checkbox('void', 'VOID box', 'review', { labelPhrase: 'VOID', direction: 'right' }, ''),
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
+    box('1', 'Marketplace identifier', 'text', 'tool'),
+    box('2', 'Marketplace-assigned policy number', 'text', 'tool'),
+    box('3', "Policy issuer's name", 'text', 'tool'),
+    box('4', "Recipient's name", 'text', 'tool'),
+    box('5', "Recipient's SSN", 'tin', 'tool'),
+    box('6', "Recipient's date of birth", 'date', 'review'),
+    box('7', "Recipient's spouse's name", 'text', 'review'),
+    box('8', "Recipient's spouse's SSN", 'tin', 'review'),
+    box('9', "Recipient's spouse's date of birth", 'date', 'review'),
+    box('10', 'Policy start date', 'date', 'review'),
+    box('11', 'Policy termination date', 'date', 'review'),
+    box('12', 'Street address (including apartment no.)', 'text', 'info'),
+    box('13', 'City or town', 'text', 'info'),
+    box('14', 'State or province', 'text', 'info'),
+    box('15', 'Country and ZIP or foreign postal code', 'text', 'info'),
+    ...[1, 2, 3, 4, 5].flatMap(coveredIndividual),
+    ...[
+      [21, 'January'], [22, 'February'], [23, 'March'], [24, 'April'], [25, 'May'], [26, 'June'],
+      [27, 'July'], [28, 'August'], [29, 'September'], [30, 'October'], [31, 'November'], [32, 'December'],
+    ].flatMap(([line, month]) => coverageMonth(line as number, month as string)),
+    box('33.a', 'Annual enrollment premiums, total', 'money', 'tool', '33a'),
+    box('33.b', 'Annual second lowest cost silver plan (SLCSP) premium, total', 'money', 'tool', '33b'),
+    box('33.c', 'Annual advance payment of premium tax credit, total', 'money', 'review', '33c'),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -776,6 +999,10 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   '1099-SA': SA_SCHEMA,
   '1099-S': S_SCHEMA,
   'W-2C': W2C_SCHEMA,
+  'W-2G': W2G_SCHEMA,
+  '1098-E': SLI_SCHEMA,
+  'K-1': K1_SCHEMA,
+  '1095-A': PTC_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -955,6 +1182,38 @@ interface ToolMappingSpec {
   moreStates?: ReadonlyArray<{ key: string; field: string }>;
   /** A four-digit year printed in a text cell (W-2c box c, "2025 / W-2"). */
   year?: { key: string; field: string };
+  /**
+   * A K-1: the entity kind comes from the form number printed on the page, not
+   * from a box, because it decides self-employment treatment.
+   */
+  entity?: true;
+}
+
+/** What the page itself says about a form, beyond the boxes it prints. */
+export interface ToolMappingContext {
+  /**
+   * Markers the classifier matched on the printed page (the form number or
+   * title). Only read for forms whose entity kind is printed rather than boxed.
+   */
+  matchedMarkers?: readonly string[];
+}
+
+/**
+ * The entity kind a Schedule K-1's printed form number establishes.
+ *
+ * Form 1065 is a partnership and Form 1120-S an S corporation, and the engine
+ * relies on the difference. Form 1041 covers estates *and* trusts and the page
+ * does not say which, and the engine codes any non-partnership as an S
+ * corporation on Schedule E - so guessing here would file a trust's income as a
+ * corporation's. Left unknown instead, which holds the form for the preparer
+ * (FED.K1.ENTITY_TYPE).
+ */
+function entityTypeFromMarkers(markers: readonly string[] | undefined): string | undefined {
+  if (!markers) return undefined;
+  const text = markers.join(' ').toLowerCase();
+  if (/1120-?s/.test(text)) return 's_corp';
+  if (/form\s*1065|\b1065\b/.test(text)) return 'partnership';
+  return undefined;
 }
 
 export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec>> = {
@@ -1149,6 +1408,62 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     year: { key: 'c', field: 'taxYearCorrected' },
     checkboxes: { e: 'correctsSsnOrName' },
   },
+  'W-2G': {
+    tool: 'add_w2g',
+    direct: {
+      '1': 'grossWinnings',
+      '3': 'typeOfWager',
+      '4': 'federalTaxWithheld',
+      '15': 'stateTaxWithheld',
+    },
+    name: { keys: ['payer.name'], field: 'payerName' },
+    // Box 13 prints the state and the payer's state ID in one cell; only the
+    // two-letter code is an argument.
+    state: { key: '13', field: 'stateCode' },
+  },
+  '1098-E': {
+    tool: 'add_1098_e',
+    direct: { '1': 'studentLoanInterest' },
+    name: { keys: ['lender.block'], field: 'lenderName' },
+    checkboxes: { '2': 'originationFeesExcluded' },
+  },
+  'K-1': {
+    tool: 'add_k1',
+    direct: {
+      a: 'entityEin',
+      '1': 'ordinaryBusinessIncome',
+      '2': 'rentalIncome',
+      '4c': 'guaranteedPayments',
+      '5': 'interestIncome',
+      '6a': 'ordinaryDividends',
+      '6b': 'qualifiedDividends',
+      '7': 'royalties',
+      '8': 'shortTermCapitalGain',
+      '9a': 'longTermCapitalGain',
+      // Recorded as facts, not placed: the rate depends on the worksheet and an
+      // unknown entity kind blocks it (FED.K1.ENTITY_TYPE).
+      '9b': 'collectiblesGain28',
+      '9c': 'unrecapturedSection1250Gain',
+      '10': 'netSection1231Gain',
+      '11': 'otherIncome',
+      '12': 'section179Deduction',
+      '14': 'selfEmploymentIncome',
+    },
+    name: { keys: ['b'], field: 'entityName' },
+    entity: true,
+  },
+  '1095-A': {
+    tool: 'add_1095_a',
+    direct: {
+      '1': 'marketplaceIdentifier',
+      '2': 'policyNumber',
+      '3': 'policyIssuerName',
+      '4': 'recipientName',
+      '5': 'recipientSsn',
+      '33.a': 'annualEnrollmentPremiums',
+      '33.b': 'annualSLCSPPremium',
+    },
+  },
   '1098-T': {
     tool: 'add_education_expense',
     direct: {
@@ -1179,6 +1494,7 @@ export function toolForForm(formType: ClassifiableFormType | null | undefined): 
 export function mapBoxesToTool(
   schema: FormExtractionSchema,
   values: Record<string, string>,
+  context?: ToolMappingContext,
 ): ToolMapping {
   const spec = TOOL_MAPPINGS[schema.formType];
   const tool = spec?.tool ?? null;
@@ -1235,6 +1551,15 @@ export function mapBoxesToTool(
   for (const cell of spec.moreStates ?? []) {
     const text = values[cell.key];
     if (text !== undefined) put(cell.field, stateCodeFromCell(text), text, [cell.key]);
+  }
+
+  if (spec.entity) {
+    // The kind is printed as the form number, not in a box, so it has no box key
+    // to cite. An unreadable form number leaves the field absent rather than
+    // defaulting to partnership, which holds the form (FED.K1.ENTITY_TYPE).
+    const markers = context?.matchedMarkers ?? [];
+    const kind = entityTypeFromMarkers(markers);
+    if (kind !== undefined) put('entityType', kind, markers.join('; '), []);
   }
 
   if (spec.year && values[spec.year.key] !== undefined) {

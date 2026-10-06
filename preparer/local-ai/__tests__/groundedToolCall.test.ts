@@ -56,7 +56,7 @@ describe('groundedToolDefinitions', () => {
     expect(toolForFormType('1099-R')).toBe('add_1099_r');
     expect(toolForFormType('SSA-1099')).toBe('add_ssa_1099');
     expect(toolForFormType('1098')).toBe('add_mortgage_interest');
-    expect(toolForFormType('K-1')).toBeNull();
+    expect(toolForFormType('K-1')).toBe('add_k1');
   });
 });
 

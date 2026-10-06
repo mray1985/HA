@@ -63,9 +63,15 @@ function noteDocumentOutcome(returnId: string, formKey: string, outcome: ApplyOu
   const [documentId, index] = formKey.split('#');
   const doc = loadDocuments(returnId).find((d) => d.documentId === documentId);
   if (!doc?.appliedAs) return;
+  const i = Number(index);
   const appliedAs = [...doc.appliedAs];
-  appliedAs[Number(index)] = outcomeOfApply(outcome);
-  upsertDocument(returnId, { ...doc, appliedAs });
+  appliedAs[i] = outcomeOfApply(outcome);
+  // The reason is kept beside the outcome, so it has to be replaced with it: a
+  // corrected 1098-E can change from "no readable box 1" to "box 2 checked", and
+  // case review quoting the first would send the preparer after the wrong thing.
+  const applyReasons = [...(doc.applyReasons ?? doc.appliedAs.map(() => ''))];
+  applyReasons[i] = 'reason' in outcome && typeof outcome.reason === 'string' ? outcome.reason : '';
+  upsertDocument(returnId, { ...doc, appliedAs, applyReasons });
 }
 
 /** Re-apply one form from its facts (after a decision or a correction). */
@@ -101,7 +107,7 @@ export function withdrawReleasedForm(returnId: string, formKey: string): ApplyOu
   const outcome = reapplyForm(returnId, formKey);
   const tool = formToolOfFacts(formFacts(returnId, formKey));
   const application = tool ? TOOL_APPLICATION[tool] : undefined;
-  if (application?.kind === 'aggregate' && (application.target === 'socialSecurityBenefits' || application.target === 'mortgageInterest')) {
+  if (application?.kind === 'aggregate' && (application.target === 'socialSecurityBenefits' || application.target === 'mortgageInterest' || application.target === 'studentLoanInterest')) {
     clearAggregateWithoutForms(returnId, application.target);
   }
   return outcome;

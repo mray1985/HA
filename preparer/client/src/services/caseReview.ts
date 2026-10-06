@@ -183,10 +183,19 @@ function documentItems(facts: TaxFact[], documents: IngestedDocument[], taxRetur
         message: `${doc.fileName} is a ${year} ${form}; this is the ${taxReturn.taxYear} return. It is held and not on the return: its amounts belong on the ${year} return — move it to that case, or mark it checked and correct with why it belongs here and it is added. Not applicable keeps it off.` });
     });
     (doc.appliedAs ?? []).forEach((outcome, index) => {
-      if (outcome !== 'not_applied') return;
       const form = doc.classifications?.[index]?.formType ?? doc.formTypes?.[index] ?? 'form';
-      items.push({ id: `document:not-applied:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
-        message: `${doc.fileName}: the ${form} was read but is not entered automatically — enter it on the return.` });
+      if (outcome === 'not_applied') {
+        items.push({ id: `document:not-applied:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
+          message: `${doc.fileName}: the ${form} was read but is not entered automatically — enter it on the return.` });
+        return;
+      }
+      // A total that is waiting on another form, or on a decision the form
+      // cannot make, leaves the return short without saying why. The reason the
+      // applier recorded is the only thing that explains the missing amount.
+      if (outcome !== 'aggregate_waiting') return;
+      const why = doc.applyReasons?.[index]?.trim();
+      items.push({ id: `document:aggregate-waiting:${doc.documentId}#${index}`, category: 'REVIEW', group: 'documents', source: 'document', documentId: doc.documentId,
+        message: `${doc.fileName}: the ${form} was read but its amount is not on the return yet — ${why || 'it waits for the preparer'}.` });
     });
     // Boxes the reader could not place by itself.
     //

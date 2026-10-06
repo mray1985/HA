@@ -81,7 +81,22 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
   '1099-SA': RECIPIENT,
   '1099-S': RECIPIENT,
   '1098': { tin: 'borrower.tin', name: 'borrower.name', address: ['borrower.street', 'borrower.city'] },
+  // The winner's TIN is printed in numbered box 9, not in the address block.
+  'W-2G': {
+    tin: '9',
+    name: 'winner.name',
+    address: ['winner.street', 'winner.apt', 'winner.city', 'winner.state', 'winner.zip'],
+  },
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
+  // The partner is the person this form is about; box E prints their SSN or TIN.
+  'K-1': { tin: 'e', name: 'f', address: [] },
+  // Line 5 is the recipient's SSN, the person this statement is about.
+  '1095-A': { tin: '5', name: '4', address: ['12', '13', '14'] },
+  '1098-E': {
+    tin: 'borrower.tin',
+    name: 'borrower.name',
+    address: ['borrower.street', 'borrower.city'],
+  },
 };
 
 /** Forms whose person may be a dependent: read to place the form only. */

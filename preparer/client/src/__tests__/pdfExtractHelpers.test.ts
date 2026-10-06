@@ -19,6 +19,7 @@ import {
   extract1098Fields,
   extractK1Fields,
   extractW2GFields,
+  extract1098EFields,
   type TextBlock,
   type FieldSourceLocation,
 } from '../services/pdfExtractHelpers';
@@ -1070,5 +1071,20 @@ describe('detectFormPages', () => {
     const spans = detectFormPages([...mediumPage, ...highPage]);
     expect(spans).toHaveLength(1);
     expect(spans[0].confidence).toBe('high');
+  });
+});
+
+describe('extract1098EFields names box 1 as the engine names it', () => {
+  it('returns studentLoanInterest, the field the form schema and engine use', () => {
+    // The two paths disagreed: the text layer returned interestPaid while the
+    // schema accepted only studentLoanInterest, so a box 1 read here was
+    // discarded and the aggregate reported no readable interest.
+    const blocks: TextBlock[] = [
+      tb('1 Student loan interest received by lender', 40, 40, 240, 10),
+      tb('$ 1,842.55', 290, 40, 70, 10),
+    ];
+    const out = extract1098EFields(blocks) as Record<string, unknown>;
+    expect(out).not.toHaveProperty('interestPaid');
+    expect(out.studentLoanInterest).toBe(1842.55);
   });
 });

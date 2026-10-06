@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   addW2,
+  engineItemFields,
+  formToolForIncomeType,
   invokeTaxTool,
   setFilingStatusCandidate,
   toolNameForIncomeType,
 } from '../src/taxTools.js';
+import { incomeTypeForFormType } from '../src/documentClassifier.js';
+import { getFormExtractionSchema, mapBoxesToTool } from '../src/formSchemas.js';
 import type { TaxFact } from '../src/taxFact.js';
 
 const ctx = {
@@ -153,8 +157,8 @@ describe('tax tools (HA-AI-011)', () => {
     expect(toolNameForIncomeType('w2')).toBe('add_w2');
     expect(toolNameForIncomeType('1099int')).toBe('add_1099_int');
     expect(toolNameForIncomeType('1099misc')).toBe('add_1099_misc');
-    // Forms with no tax tool yet, and preparer-choice forms, are not income-item tools.
-    expect(toolNameForIncomeType('w2g')).toBeNull();
+    expect(toolNameForIncomeType('w2g')).toBe('add_w2g');
+    // Preparer-choice forms are not income-item tools.
     expect(toolNameForIncomeType('1099q')).toBeNull();
   });
 
@@ -320,5 +324,156 @@ describe('SSA-1099, 1098 and 1098-T tools', () => {
     if (!r.ok) return;
     expect(r.fields).toEqual({ scholarships: 3000 });
     expect(r.facts.find((f) => f.sourceField === 'tuitionPaid')?.status).toBe('unknown');
+  });
+});
+
+describe('Form W-2G tool', () => {
+  it('records gambling winnings as an income item with W2G facts', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: {
+        payerName: 'RIVERBEND CASINO',
+        grossWinnings: 24600,
+        typeOfWager: 'Poker tournament',
+        federalTaxWithheld: 4920,
+        stateCode: 'LA',
+        stateTaxWithheld: 1230,
+      },
+      context: { ...ctx, sourceFileName: 'fw2g.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.incomeType).toBe('w2g');
+    expect(result.application).toEqual({ kind: 'income_item', itemType: 'w2g' });
+    expect(result.fields).toEqual({
+      payerName: 'RIVERBEND CASINO',
+      grossWinnings: 24600,
+      typeOfWager: 'Poker tournament',
+      federalTaxWithheld: 4920,
+      stateCode: 'LA',
+      stateTaxWithheld: 1230,
+    });
+    // Field names must match shared/types IncomeW2G so the item stores as-is.
+    for (const key of Object.keys(result.fields)) {
+      expect(result.facts.some((f) => f.factType === `W2G_${key}`), key).toBe(true);
+    }
+  });
+
+  it('rejects a field the form does not have rather than inventing one', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: { grossWinnings: 100, netWinnings: 100 },
+      context: ctx,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain('netWinnings');
+  });
+
+  it('omits an absent box instead of passing zero for it', () => {
+    const result = invokeTaxTool({
+      tool: 'add_w2g',
+      args: { grossWinnings: 500, federalTaxWithheld: null, stateTaxWithheld: '' },
+      context: ctx,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual({ grossWinnings: 500 });
+    expect(result.fields).not.toHaveProperty('federalTaxWithheld');
+    expect(Object.values(result.fields)).not.toContain(0);
+  });
+});
+describe('Schedule K-1 tool', () => {
+  it('records pass-through income as an income item with K1 facts', () => {
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: {
+        entityName: 'RIVERBEND PARTNERS LP',
+        entityEin: '72-1234567',
+        entityType: 'partnership',
+        ordinaryBusinessIncome: 48200,
+        selfEmploymentIncome: 48200,
+      },
+      context: { ...ctx, sourceFileName: 'f1065sk1.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.incomeType).toBe('k1');
+    expect(result.application).toEqual({ kind: 'income_item', itemType: 'k1' });
+    expect(result.facts.some((f) => f.factType === 'K1_ordinaryBusinessIncome')).toBe(true);
+  });
+
+  it('never supplies an entity kind of its own when none is given', () => {
+    // Withholding an unreadable form number is the mapper's job (mapBoxesToTool);
+    // the tool's part is not to fill the gap with a default, because the kind
+    // decides self-employment treatment.
+    const result = invokeTaxTool({ tool: 'add_k1', args: { entityName: 'THE ESTATE' }, context: ctx });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual({ entityName: 'THE ESTATE' });
+    expect(result.fields).not.toHaveProperty('entityType');
+  });
+
+  it('rejects an entity kind that is not one of the four the engine knows', () => {
+    const result = invokeTaxTool({ tool: 'add_k1', args: { entityType: 'llc' }, context: ctx });
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a code-split box 13 or box 15 field the page cannot support', () => {
+    for (const key of ['box13CharitableCash', 'box15ForeignTaxPaid']) {
+      const result = invokeTaxTool({ tool: 'add_k1', args: { [key]: 100 }, context: ctx });
+      expect(result.ok, key).toBe(false);
+    }
+  });
+});
+
+describe('every classifiable form reaches a tool', () => {
+  it.each([
+    ['W-2G', 'w2g', 'add_w2g'],
+    ['1098-E', '1098e', 'add_1098_e'],
+    ['K-1', 'k1', 'add_k1'],
+    ['1095-A', '1095a', 'add_1095_a'],
+  ] as const)('%s reaches %s through its classified income type', (formType, incomeType, tool) => {
+    // A schema and an application are not enough: intake resolves a classified
+    // form through formToolForIncomeType, so a form missing from that map is read
+    // and then reported to the preparer as not applied.
+    expect(incomeTypeForFormType(formType)).toBe(incomeType);
+    expect(formToolForIncomeType(incomeType)).toBe(tool);
+  });
+});
+describe('Schedule K-1 boxes 9b and 9c keep their value without being placed', () => {
+  it('records the amounts as facts and leaves them out of the engine item', () => {
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: {
+        entityName: 'RIVERBEND PARTNERS LP',
+        entityType: 'partnership',
+        longTermCapitalGain: 15750,
+        collectiblesGain28: 1000,
+        unrecapturedSection1250Gain: 2500,
+      },
+      context: ctx,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // The value has to survive: an extractK1Fields() read that is dropped here
+    // is a collectibles gain taxed at the wrong rate with nothing flagging it.
+    expect(result.fields).toMatchObject({ collectiblesGain28: 1000, unrecapturedSection1250Gain: 2500 });
+    expect(result.facts.some((f) => f.factType === 'K1_collectiblesGain28')).toBe(true);
+    expect(result.facts.some((f) => f.factType === 'K1_unrecapturedSection1250Gain')).toBe(true);
+    // But the engine item must not take them: the rate depends on the worksheet
+    // the preparer works, and an unknown entity kind blocks it outright.
+    expect(engineItemFields('k1', result.fields)).not.toHaveProperty('collectiblesGain28');
+    expect(engineItemFields('k1', result.fields)).not.toHaveProperty('unrecapturedSection1250Gain');
+    expect(engineItemFields('k1', result.fields)).toMatchObject({ longTermCapitalGain: 15750 });
+  });
+
+  it('still sends boxes 9b and 9c to review, so the preparer sees them', () => {
+    const k1 = getFormExtractionSchema('K-1')!;
+    const mapped = mapBoxesToTool(k1, { '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
+    // Both: the value is kept and the box is flagged.
+    expect(mapped.bag).toHaveProperty('collectiblesGain28');
+    expect(mapped.bag).toHaveProperty('unrecapturedSection1250Gain');
   });
 });
