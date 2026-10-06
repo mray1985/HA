@@ -603,12 +603,16 @@ const AddK1FieldsSchema = z
     qualifiedDividends: optionalAmount,
     royalties: optionalAmount,
     shortTermCapitalGain: optionalAmount,
-    longTermCapitalGain: optionalAmount,
-    netSection1231Gain: optionalAmount,
-    otherIncome: optionalAmount,
-    section179Deduction: optionalAmount,
-    selfEmploymentIncome: optionalAmount,
-  })
+longTermCapitalGain: optionalAmount,
+  // Boxes 9b and 9c: recorded as facts, never written to the engine item (see
+  // FACT_ONLY_FIELDS). Their rate depends on the worksheet the preparer works.
+  collectiblesGain28: optionalAmount,
+  unrecapturedSection1250Gain: optionalAmount,
+  netSection1231Gain: optionalAmount,
+  otherIncome: optionalAmount,
+  section179Deduction: optionalAmount,
+  selfEmploymentIncome: optionalAmount,
+})
   .strict();
 
 /**
@@ -832,6 +836,13 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
 /** Fields recorded as facts for review but not written to the engine's item. */
 export const FACT_ONLY_FIELDS: Partial<Record<DocumentToolName, readonly string[]>> = {
   add_1099_c: ['personallyLiable'],
+  //
+  // Boxes 9b and 9c are read and kept as facts but not written to the engine
+  // item: the rate a collectibles gain and an unrecaptured section 1250 gain are
+  // taxed at depends on the worksheet the preparer works, and an unknown entity
+  // kind blocks it outright (FED.K1.ENTITY_TYPE). Dropping them silently was
+  // worse than recording them - the value has to survive to be reviewed.
+  add_k1: ['collectiblesGain28', 'unrecapturedSection1250Gain'],
 };
 
 /** An income item's fields as the engine takes them: fact-only fields removed. */

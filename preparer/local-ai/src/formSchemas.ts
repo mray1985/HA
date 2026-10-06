@@ -1440,6 +1440,10 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
       '7': 'royalties',
       '8': 'shortTermCapitalGain',
       '9a': 'longTermCapitalGain',
+      // Recorded as facts, not placed: the rate depends on the worksheet and an
+      // unknown entity kind blocks it (FED.K1.ENTITY_TYPE).
+      '9b': 'collectiblesGain28',
+      '9c': 'unrecapturedSection1250Gain',
       '10': 'netSection1231Gain',
       '11': 'otherIncome',
       '12': 'section179Deduction',

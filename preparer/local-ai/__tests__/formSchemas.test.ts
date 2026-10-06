@@ -492,12 +492,12 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     }
   });
 
-  it('sends the rate- and entity-dependent boxes to review', () => {
+  it('sends the rate- and entity-dependent boxes to review, keeping their value', () => {
     const mapped = mapBoxesToTool(K1, { ...printed, '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
-    const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
-    expect(args).not.toHaveProperty('collectiblesGain28');
-    expect(args).not.toHaveProperty('unrecapturedSection1250Gain');
+    // The value is kept: extractK1Fields() already reads these, and dropping them
+    // would leave a 28% or 25% gain unapplied with nothing flagging it.
+    expect(mapped.bag).toMatchObject({ collectiblesGain28: '1,000.00', unrecapturedSection1250Gain: '2,500.00' });
   });
 
   it('names box 14 as the self-employment figure the form prints', () => {
