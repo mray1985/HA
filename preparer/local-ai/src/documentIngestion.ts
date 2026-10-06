@@ -127,6 +127,25 @@ export interface DocumentBoxGap {
   boxes: Array<{ box: string; label: string; state: 'held' | 'unread'; field?: string }>;
 }
 
+/**
+ * The gaps that still need a person, each with the piece it came from.
+ *
+ * `boxGaps` is built one entry per form in the file, in the same order as the
+ * extraction pieces, so a gap's position in that array *is* its form's piece
+ * index. The index has to survive being filtered: dropping the pieces with
+ * nothing outstanding first and numbering what is left shifts every later index,
+ * and a value typed into box 7 of the second form in a file would then be
+ * recorded against the first form - the wrong employer, or the wrong income item
+ * where both forms carry the field.
+ */
+export function gapsWithPieceIndex(
+  boxGaps: readonly DocumentBoxGap[] | undefined,
+): Array<{ gap: DocumentBoxGap; piece: number }> {
+  return (boxGaps ?? [])
+    .map((gap, piece) => ({ gap, piece }))
+    .filter(({ gap }) => gap.boxes.length > 0);
+}
+
 export interface DocumentFileMeta {
   fileName: string;
   mimeType: string;
