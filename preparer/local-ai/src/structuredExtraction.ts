@@ -187,6 +187,16 @@ const K1_FIELDS: Record<string, FieldKind> = {
   selfEmploymentIncome: 'money',
 };
 
+const PTC_FIELDS: Record<string, FieldKind> = {
+  marketplaceIdentifier: 'text',
+  policyNumber: 'text',
+  policyIssuerName: 'text',
+  recipientName: 'text',
+  recipientSsn: 'text',
+  annualEnrollmentPremiums: 'money',
+  annualSLCSPPremium: 'money',
+};
+
 const G_FIELDS: Record<string, FieldKind> = {
   payerName: 'text',
   unemploymentCompensation: 'money',
@@ -299,6 +309,7 @@ const FORM_FIELDS: Record<DocumentToolName, Record<string, FieldKind>> = {
   add_w2g: W2G_FIELDS,
   add_1098_e: SLI_FIELDS,
   add_k1: K1_FIELDS,
+  add_1095_a: PTC_FIELDS,
 };
 
 interface Normalized {

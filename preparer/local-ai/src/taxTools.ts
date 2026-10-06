@@ -46,6 +46,7 @@ export const FORM_TOOL_NAMES = [
   'add_w2g',
   'add_1098_e',
   'add_k1',
+  'add_1095_a',
 ] as const;
 
 /**
@@ -607,6 +608,22 @@ const AddK1FieldsSchema = z
   })
   .strict();
 
+/**
+ * Form 1095-A (2025). Recorded as facts only: the advance premium tax credit is
+ * a preparer decision, not something this statement writes to the return.
+ */
+const Add1095AFieldsSchema = z
+  .object({
+    marketplaceIdentifier: optionalString,
+    policyNumber: optionalString,
+    policyIssuerName: optionalString,
+    recipientName: optionalString,
+    recipientSsn: optionalString,
+    annualEnrollmentPremiums: optionalAmount,
+    annualSLCSPPremium: optionalAmount,
+  })
+  .strict();
+
 const AddW2cFieldsSchema = z
   .object({
     employerName: optionalString,
@@ -806,6 +823,7 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
   add_w2g: AddW2GFieldsSchema,
   add_1098_e: Add1098EFieldsSchema,
   add_k1: AddK1FieldsSchema,
+  add_1095_a: Add1095AFieldsSchema,
 };
 
 /** Fields recorded as facts for review but not written to the engine's item. */
@@ -843,6 +861,8 @@ export const TOOL_APPLICATION: Record<TaxToolName, TaxToolApplication> = {
   add_w2g: { kind: 'income_item', itemType: 'w2g' },
   add_1098_e: { kind: 'aggregate', target: 'studentLoanInterest' },
   add_k1: { kind: 'income_item', itemType: 'k1' },
+  // Recorded, never applied: the credit decision belongs to the preparer.
+  add_1095_a: { kind: 'candidate_fact' },
   set_filing_status_candidate: { kind: 'candidate_fact' },
   add_dependent: { kind: 'dependent' },
   add_schedule_c_income: { kind: 'income_item', itemType: 'business-receipts' },
@@ -880,6 +900,7 @@ const FACT_TYPE_PREFIX: Record<TaxToolName, string> = {
   add_w2g: 'W2G',
   add_1098_e: '1098E',
   add_k1: 'K1',
+  add_1095_a: '1095A',
   set_filing_status_candidate: 'FILING_STATUS',
   add_dependent: 'DEPENDENT',
   add_schedule_c_income: 'SCHC_RECEIPTS',

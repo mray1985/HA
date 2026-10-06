@@ -13,6 +13,9 @@ import {
 import { extractStructuredFields } from '../src/structuredExtraction.js';
 import type { ClassifiableFormType } from '../src/documentClassifier.js';
 import { IDENTITY_KEYS } from '../src/identity.js';
+import { invokeTaxTool } from '../src/taxTools.js';
+
+const ctx = { returnId: 'ret-1', taxYear: 2025, sourceDocumentId: 'DOC-1', sourceFileName: 'w2.pdf', extractor: 'test' };
 
 const W2 = getFormExtractionSchema('W-2')!;
 
@@ -504,5 +507,70 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
   it('reads the partner out of box E, where the form prints their SSN or TIN', () => {
     expect(K1.boxes.find((b) => b.key === 'e')).toMatchObject({ box: 'e', kind: 'tin' });
     expect(IDENTITY_KEYS['K-1']).toEqual({ tin: 'e', name: 'f', address: [] });
+  });
+});
+describe('Form 1095-A (2025)', () => {
+  const PTC = getFormExtractionSchema('1095-A')!;
+
+  it('reads Part I, the five covered individuals and the twelve months', () => {
+    // Part I prints lines 1-15 unnumbered by column. Part II's five rows carry
+    // an A-E column (25 boxes), each of the twelve months carries A-C (36), and
+    // line 33 carries the annual totals A-C (3). The month name is a row label,
+    // so it is not counted as a printed box.
+    expect(PTC.boxes.filter((b) => /^\d+$/.test(b.box)).map((b) => b.box)).toEqual([
+      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15',
+    ]);
+    expect(PTC.boxes.filter((b) => /^\d+[a-e]$/.test(b.box))).toHaveLength(5 * 5 + 12 * 3 + 3);
+    expect(PTC.boxes.filter((b) => /^\d+\.month$/.test(b.key))).toHaveLength(12);
+  });
+
+  it('names Part II columns as the form prints them', () => {
+    expect(PTC.boxes.find((b) => b.key === '16.a')).toMatchObject({ box: '16a', label: 'Covered individual name (line 16)' });
+    expect(PTC.boxes.find((b) => b.key === '16.b')).toMatchObject({ box: '16b', kind: 'tin' });
+    expect(PTC.boxes.find((b) => b.key === '16.d')).toMatchObject({ box: '16d', label: 'Coverage start date (line 16)' });
+  });
+
+  it('names line 33 as the annual totals the form prints', () => {
+    expect(PTC.boxes.find((b) => b.key === '33.a')).toMatchObject({ box: '33a', kind: 'money', use: 'tool' });
+    expect(PTC.boxes.find((b) => b.key === '33.c')).toMatchObject({ box: '33c', use: 'review' });
+  });
+
+  it('records the statement without writing the premium tax credit', () => {
+    const mapped = mapBoxesToTool(PTC, {
+      '1': '31-1234567',
+      '2': 'P-987654321',
+      '3': 'RIVERBEND MARKETPLACE',
+      '4': 'ALEX RIVERBEND',
+      '5': '000-12-3456',
+      '33.a': '14,400.00',
+      '33.b': '11,220.00',
+      '33.c': '2,880.00',
+    });
+    expect(mapped.tool).toBe('add_1095_a');
+    expect(mapped.bag).toEqual({
+      marketplaceIdentifier: '31-1234567',
+      policyNumber: 'P-987654321',
+      policyIssuerName: 'RIVERBEND MARKETPLACE',
+      recipientName: 'ALEX RIVERBEND',
+      recipientSsn: '000-12-3456',
+      annualEnrollmentPremiums: '14,400.00',
+      annualSLCSPPremium: '11,220.00',
+    });
+    // The annual advance payment is review: it is a credit decision, not a reading.
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(['33.c']);
+    expect(mapped.bag).not.toHaveProperty('annualAdvancePayment');
+  });
+
+  it('records the statement as a fact and never as a return amount', () => {
+    const result = invokeTaxTool({
+      tool: 'add_1095_a',
+      args: { recipientName: 'ALEX RIVERBEND', annualEnrollmentPremiums: 14400 },
+      context: { ...ctx, sourceFileName: 'f1095a.pdf' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.application).toEqual({ kind: 'candidate_fact' });
+    expect(result.incomeType).toBeUndefined();
+    expect(result.facts.some((f) => f.factType === '1095A_recipientName')).toBe(true);
   });
 });

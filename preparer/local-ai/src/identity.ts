@@ -90,6 +90,8 @@ export const IDENTITY_KEYS: Partial<Record<ClassifiableFormType, IdentityKeys>> 
   'SSA-1099': { tin: '2', name: '1', address: ['7'] },
   // The partner is the person this form is about; box E prints their SSN or TIN.
   'K-1': { tin: 'e', name: 'f', address: [] },
+  // Line 5 is the recipient's SSN, the person this statement is about.
+  '1095-A': { tin: '5', name: '4', address: ['12', '13', '14'] },
   '1098-E': {
     tin: 'borrower.tin',
     name: 'borrower.name',

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { CLASSIFIABLE_FORM_TYPES } from '../src/documentClassifier';
-import { FORM_EXTRACTION_SCHEMAS } from '../src/formSchemas';
+import { FORM_EXTRACTION_SCHEMAS, TOOL_MAPPINGS } from '../src/formSchemas';
+import { TOOL_APPLICATION } from '../src/taxTools';
 import { FORM_GUIDANCE, formGuidance } from '../src/formGuidance';
 
 describe('form guidance', () => {
@@ -32,11 +33,20 @@ describe('form guidance', () => {
   });
 
   it('tells the preparer what to do for a form nothing places automatically', () => {
-    // W-2G, 1098-E, 1095-A and K-1 have no schema and no tool: they are read
-    // from the text layer and a person still enters them. Saying so is the whole
-    // point, so it must not be left blank.
+    // Every classifiable form now has a schema and a tool, so "nothing places it"
+    // no longer means "no schema": it means the tool records the form without
+    // writing an amount to the return. Those forms must still say what a person
+    // has to do, which is the whole point of the guidance.
+    const recordedOnly = CLASSIFIABLE_FORM_TYPES.filter((formType) => {
+      const tool = TOOL_MAPPINGS[formType]?.tool;
+      return !!tool && TOOL_APPLICATION[tool]?.kind === 'candidate_fact';
+    });
+    expect(recordedOnly.length).toBeGreaterThan(0);
+    for (const formType of recordedOnly) {
+      expect(FORM_GUIDANCE[formType].byHand, `${formType} says nothing about manual entry`).toBeTruthy();
+    }
+    // A form the app cannot read at all is still described.
     const schemaless = CLASSIFIABLE_FORM_TYPES.filter((f) => !FORM_EXTRACTION_SCHEMAS[f]);
-    expect(schemaless.length).toBeGreaterThan(0);
     for (const formType of schemaless) {
       expect(FORM_GUIDANCE[formType].byHand, `${formType} says nothing about manual entry`).toBeTruthy();
     }

@@ -915,6 +915,71 @@ const K1_SCHEMA: FormExtractionSchema = {
   ],
 };
 
+/** One Part II row: a covered individual, columns A-E as the form prints them. */
+function coveredIndividual(row: number): FormBoxSchema[] {
+  const line = String(15 + row);
+  return [
+    box(`${line}.a`, `Covered individual name (line ${line})`, 'text', 'review', `${line}a`),
+    box(`${line}.b`, `Covered individual SSN (line ${line})`, 'tin', 'review', `${line}b`),
+    box(`${line}.c`, `Covered individual date of birth (line ${line})`, 'date', 'review', `${line}c`),
+    box(`${line}.d`, `Coverage start date (line ${line})`, 'date', 'review', `${line}d`),
+    box(`${line}.e`, `Coverage termination date (line ${line})`, 'date', 'review', `${line}e`),
+  ];
+}
+
+/** One Part III row: a month, columns A-C as the form prints them. */
+function coverageMonth(line: number, month: string): FormBoxSchema[] {
+  return [
+    // The month is a printed row label, not a box number, so it prints as none.
+  box(`${line}.month`, `${month} (line ${line})`, 'text', 'info', ''),
+    box(`${line}.a`, `Monthly enrollment premiums, ${month}`, 'money', 'review', `${line}a`),
+    box(`${line}.b`, `Monthly second lowest cost silver plan (SLCSP) premium, ${month}`, 'money', 'review', `${line}b`),
+    box(`${line}.c`, `Monthly advance payment of premium tax credit, ${month}`, 'money', 'review', `${line}c`),
+  ];
+}
+
+/**
+ * Form 1095-A (2025), the Marketplace's statement to the recipient.
+ *
+ * Nothing here is written to the return. The advance premium tax credit in
+ * column C drives Form 8962 and is the largest consequential number a
+ * Marketplace statement carries, and the engine's own note records that it
+ * circles with Form 7206 (self-employment health insurance versus the credit).
+ * So the statement is read and recorded as facts, and the credit decision is
+ * left to the preparer rather than taken from column C automatically.
+ */
+const PTC_SCHEMA: FormExtractionSchema = {
+  formType: '1095-A',
+  revision: '2025',
+  boxes: [
+    checkbox('void', 'VOID box', 'review', { labelPhrase: 'VOID', direction: 'right' }, ''),
+    checkbox('corrected', 'CORRECTED (if checked)', 'review', { labelPhrase: 'CORRECTED', direction: 'left' }, ''),
+    box('1', 'Marketplace identifier', 'text', 'tool'),
+    box('2', 'Marketplace-assigned policy number', 'text', 'tool'),
+    box('3', "Policy issuer's name", 'text', 'tool'),
+    box('4', "Recipient's name", 'text', 'tool'),
+    box('5', "Recipient's SSN", 'tin', 'tool'),
+    box('6', "Recipient's date of birth", 'date', 'review'),
+    box('7', "Recipient's spouse's name", 'text', 'review'),
+    box('8', "Recipient's spouse's SSN", 'tin', 'review'),
+    box('9', "Recipient's spouse's date of birth", 'date', 'review'),
+    box('10', 'Policy start date', 'date', 'review'),
+    box('11', 'Policy termination date', 'date', 'review'),
+    box('12', 'Street address (including apartment no.)', 'text', 'info'),
+    box('13', 'City or town', 'text', 'info'),
+    box('14', 'State or province', 'text', 'info'),
+    box('15', 'Country and ZIP or foreign postal code', 'text', 'info'),
+    ...[1, 2, 3, 4, 5].flatMap(coveredIndividual),
+    ...[
+      [21, 'January'], [22, 'February'], [23, 'March'], [24, 'April'], [25, 'May'], [26, 'June'],
+      [27, 'July'], [28, 'August'], [29, 'September'], [30, 'October'], [31, 'November'], [32, 'December'],
+    ].flatMap(([line, month]) => coverageMonth(line as number, month as string)),
+    box('33.a', 'Annual enrollment premiums, total', 'money', 'tool', '33a'),
+    box('33.b', 'Annual second lowest cost silver plan (SLCSP) premium, total', 'money', 'tool', '33b'),
+    box('33.c', 'Annual advance payment of premium tax credit, total', 'money', 'review', '33c'),
+  ],
+};
+
 export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormExtractionSchema>> = {
   'W-2': W2_SCHEMA,
   '1099-INT': INT_SCHEMA,
@@ -937,6 +1002,7 @@ export const FORM_EXTRACTION_SCHEMAS: Partial<Record<ClassifiableFormType, FormE
   'W-2G': W2G_SCHEMA,
   '1098-E': SLI_SCHEMA,
   'K-1': K1_SCHEMA,
+  '1095-A': PTC_SCHEMA,
 };
 
 export function getFormExtractionSchema(
@@ -1381,6 +1447,18 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     },
     name: { keys: ['b'], field: 'entityName' },
     entity: true,
+  },
+  '1095-A': {
+    tool: 'add_1095_a',
+    direct: {
+      '1': 'marketplaceIdentifier',
+      '2': 'policyNumber',
+      '3': 'policyIssuerName',
+      '4': 'recipientName',
+      '5': 'recipientSsn',
+      '33.a': 'annualEnrollmentPremiums',
+      '33.b': 'annualSLCSPPremium',
+    },
   },
   '1098-T': {
     tool: 'add_education_expense',
