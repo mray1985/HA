@@ -512,13 +512,36 @@ export function detectFormPages(
     return { page, ...result };
   });
 
+  // The payer's EIN, when this page carries one. Used only to tell a form's own
+  // second page from a second, separate form of the same type - a page range on
+  // its own cannot do that.
+  const employerIds = new Map<number, string>();
+  for (const [page, blocks] of pageMap) {
+    const found = new Set<string>();
+    for (const b of blocks) {
+      for (const m of (b.text ?? '').matchAll(/\b(\d{2}-\d{7})\b/g)) found.add(m[1]!);
+    }
+    if (found.size > 0) employerIds.set(page, [...found].sort().join(','));
+  }
+
   // Build contiguous form spans
   const spans: FormPageSpan[] = [];
   let currentSpan: FormPageSpan | null = null;
 
   for (const det of detections) {
     if (det.type !== null) {
-      if (currentSpan && det.type === currentSpan.type) {
+      // Two pages of the same form type are usually one form - a W-2 prints Copy
+      // A and Copy B - but a scanner also produces two clients' W-2s in one file,
+      // and merging those silently drops the second one's income. A page that
+      // carries a *different* employer id is therefore a new form, not a
+      // continuation. Only a provable difference splits: a page without an
+      // employer id, or one that cannot be compared, keeps the current
+      // behaviour rather than guessing.
+      const thisId = employerIds.get(det.page);
+      const firstId = currentSpan ? employerIds.get(currentSpan.startPage) : undefined;
+      const samePayer = !(thisId !== undefined && firstId !== undefined && thisId !== firstId);
+
+      if (currentSpan && det.type === currentSpan.type && samePayer) {
         // Same form type — extend the current span
         currentSpan.endPage = det.page;
         currentSpan.matchedKeywords = [

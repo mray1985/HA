@@ -58,11 +58,11 @@ describe('a two-form file, end to end', () => {
 
   // Two completed W-2s, from different employers, in one file. The case a
   // preparer creates every time they scan two clients' paystubs together.
-  it.fails('finds both employers in one file of two completed W-2s', async () => {
-    // Currently only the first employer survives, with nothing reported as
-    // missing - see #39. Kept as a failing test rather than deleted so the gap
-    // stays visible, and so that it starts failing when the behaviour is fixed
-    // and can then be changed into a real one.
+  it('finds both employers in one file of two completed W-2s', async () => {
+    // This was `it.fails` while detectFormPages merged consecutive pages of the
+    // same form type into one span, which dropped the second employer with
+    // nothing reported as missing (#39). The sentinel did its job: it started
+    // failing the moment the behaviour was fixed.
     const pieces = await piecesOf(await twoFormsInOneFile(STRESS, 'ava-w2.pdf', 'gus-w2.pdf'), 'two-w2s.pdf');
     const employers = pieces.map((p) => String((p.extractedData as { employerName?: string } | undefined)?.employerName ?? ''));
     expect(employers).toContain('CAPITOL CITY ANALYTICS INC');
