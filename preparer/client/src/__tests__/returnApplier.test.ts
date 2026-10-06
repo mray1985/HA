@@ -399,3 +399,63 @@ describe('apply reasons stay true when a form is reapplied', () => {
     expect(again.applyReasons?.[0]).toContain('Deduction Worksheet');
   });
 });
+describe('a held box is held against a reader, not against a preparer', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  it('keeps a machine reading of a held box off the engine item', () => {
+    // A K-1's box 14 prints one undivided amount: code A is the net earnings
+    // Schedule SE uses, B and C are gross farming income. Nothing read off the
+    // page may be filed as self-employment income.
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, selfEmploymentIncome: 48200 },
+      context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-K1', sourceFileName: 'f1065sk1.pdf', extractor: 'test' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const facts = (result as TaxToolSuccess).facts;
+    appendTaxFacts(returnId, facts);
+    const outcome = applyToolResult(returnId, result as TaxToolSuccess, { documentId: 'DOC-K1' });
+    expect(outcome.kind).toBe('income_item');
+    expect(getReturn(returnId).incomeK1?.[0]).not.toHaveProperty('selfEmploymentIncome');
+  });
+
+  it('applies the same box when a preparer corrected it', () => {
+    // The review panel offers "type the value" for a held box. If that correction
+    // is stripped too, the box is neither placed automatically nor enterable and
+    // the workflow is a dead end - so the strip is decided by the fact's own
+    // provenance, not by the field's name.
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, selfEmploymentIncome: 48200 },
+      context: {
+        returnId, taxYear: 2026, sourceDocumentId: 'DOC-K1', sourceFileName: 'f1065sk1.pdf',
+        extractor: 'preparer', sourceKind: 'preparer_correction',
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    appendTaxFacts(returnId, (result as TaxToolSuccess).facts);
+    applyToolResult(returnId, result as TaxToolSuccess, { documentId: 'DOC-K1' });
+    expect(getReturn(returnId).incomeK1?.[0]).toMatchObject({ selfEmploymentIncome: 48200 });
+  });
+
+  it('still places the boxes that are not held', () => {
+    const result = invokeTaxTool({
+      tool: 'add_k1',
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200 },
+      context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-K1', sourceFileName: 'f1065sk1.pdf', extractor: 'test' },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    appendTaxFacts(returnId, (result as TaxToolSuccess).facts);
+    applyToolResult(returnId, result as TaxToolSuccess, { documentId: 'DOC-K1' });
+    expect(getReturn(returnId).incomeK1?.[0]).toMatchObject({ ordinaryBusinessIncome: 48200 });
+  });
+});

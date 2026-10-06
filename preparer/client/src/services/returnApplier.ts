@@ -336,6 +336,37 @@ function markDiscovered(returnId: string, key: string | undefined): void {
   updateReturn(returnId, { incomeDiscovery: { ...tr.incomeDiscovery, [key]: 'yes' } });
 }
 
+/**
+ * The fields a tool keeps as facts without writing to the engine item, minus any
+ * a preparer has since corrected by hand.
+ *
+ * A held box is held because a *reader* cannot settle it: a K-1's box 14 carries
+ * no code, so the undivided amount is not necessarily the Code A net earnings
+ * Schedule SE wants. That says nothing about a person typing the value into the
+ * review panel - and stripping that too makes the workflow a dead end, because
+ * the box is then neither placed automatically nor enterable.
+ *
+ * So the strip is decided per fact's own provenance (§60). A machine reading -
+ * `document`, `structured_import`, `ai_inference` - is held. A
+ * `preparer_correction` is the human's own answer and is allowed through.
+ */
+function engineFieldsWithCorrections(
+  returnId: string,
+  itemType: string,
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
+  const stripped = engineItemFields(itemType, fields);
+  const restored: Record<string, unknown> = {};
+  for (const fact of loadTaxFacts(returnId)) {
+    if (fact.sourceKind !== 'preparer_correction') continue;
+    // Only a field the strip actually removed is worth putting back.
+    if (fact.sourceField in fields && !(fact.sourceField in stripped)) {
+      restored[fact.sourceField] = fields[fact.sourceField];
+    }
+  }
+  return Object.keys(restored).length === 0 ? stripped : { ...stripped, ...restored };
+}
+
 function putIncomeItem(returnId: string, itemType: string, formKey: string, fields: Record<string, unknown>): ApplyOutcome {
   const field = ARRAY_FIELD_MAP[itemType];
   if (!field) throw new Error(`No return field for item type ${itemType}`);
@@ -344,7 +375,7 @@ function putIncomeItem(returnId: string, itemType: string, formKey: string, fiel
   const index = items.findIndex((i) => i[SOURCE_FORM_KEY] === formKey);
   // The whole item is rewritten: a box read before but unknown now must not linger.
   const id = index >= 0 ? String(items[index]!.id) : crypto.randomUUID();
-  const item: Record<string, unknown> = { ...engineItemFields(itemType, fields), [SOURCE_FORM_KEY]: formKey, id };
+  const item: Record<string, unknown> = { ...engineFieldsWithCorrections(returnId, itemType, fields), [SOURCE_FORM_KEY]: formKey, id };
   // On a joint return, a W-2 or 1099-R is the person's its form names.
   if (itemType === 'w2' || itemType === '1099r') {
     const who = personOfForm(tr, identityOfForm(returnId, formKey));

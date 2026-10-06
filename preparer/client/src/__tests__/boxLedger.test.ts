@@ -123,6 +123,36 @@ describe('every box the form prints is accounted for', () => {
     expect(wash.field).toBe('washSaleLossDisallowed');
   });
 
+  it('offers no return field for a 1120-S, whose boxes are numbered differently', () => {
+    // Boxes 7 and 10 on a 1120-S are short-term gain and other income. Against the
+    // 1065 map they read as royalties and section 1231 gain, so a preparer typing
+    // the printed amount would put a wrong value in a wrong return field.
+    const held1120 = [
+      { key: '7', label: 'Net short-term capital gain', text: '12,400.00' },
+      { key: '10', label: 'Other income', text: '3,100.00' },
+    ];
+    const sCorp = buildBoxLedger(
+      'K-1',
+      { entityName: 'RIVERBEND PARTNERS LP' },
+      [],
+      'Schedule K-1 (Form 1120-S) 7 Net short-term capital gain 12,400.00',
+      held1120,
+    );
+    for (const key of ['7', '10']) {
+      expect(sCorp.entries.find((e) => e.key === key)!.field, key).toBeUndefined();
+    }
+
+    // The same K-1 printed as a 1065 keeps its correction route: the map is the
+    // 1065's and is right there.
+    const partnership = buildBoxLedger(
+      'K-1',
+      { entityName: 'RIVERBEND PARTNERS LP' },
+      [],
+      'Schedule K-1 (Form 1065) 14 Self-employment earnings 48,200.00',
+      [{ key: '14', label: "Partner's self-employment earnings", text: '48,200.00' }],
+    );
+    expect(partnership.entries.find((e) => e.key === '14')!.field).toBe('selfEmploymentIncome');
+  });
   it('says which boxes could not be read, by name', () => {
     const note = summariseBoxLedger(
       buildBoxLedger('1098-T', {}, [], '1 Payments received 5 Scholarships or grants'),
