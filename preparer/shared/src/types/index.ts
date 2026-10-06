@@ -363,10 +363,16 @@ export interface Income1099SA {
 export interface IncomeW2G {
   id: string;
   payerName: string;
-  grossWinnings: number;          // Box 1: Gross winnings
+  /**
+   * Box 1. The Rev. January 2026 form prints "Reportable winnings"; earlier
+   * revisions printed "Gross winnings". The field keeps the older name, because
+   * renaming it would ripple through stored returns and the Schedules.
+   */
+  grossWinnings: number;
   federalTaxWithheld?: number;    // Box 4: Federal income tax withheld
-  typeOfWager?: string;           // Box 4 description: type of wager
-  stateCode?: string;             // Box 13: State abbreviation (2-letter)
+  typeOfWager?: string;           // Box 3: Type of wager. Not box 4, which is the withholding.
+  /** Box 13: the two-letter code, from the cell that also prints the payer's state id. */
+  stateCode?: string;
   stateTaxWithheld?: number;      // Box 15: State income tax withheld
 }
 
