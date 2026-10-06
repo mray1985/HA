@@ -842,7 +842,12 @@ export const FACT_ONLY_FIELDS: Partial<Record<DocumentToolName, readonly string[
   // taxed at depends on the worksheet the preparer works, and an unknown entity
   // kind blocks it outright (FED.K1.ENTITY_TYPE). Dropping them silently was
   // worse than recording them - the value has to survive to be reviewed.
-  add_k1: ['collectiblesGain28', 'unrecapturedSection1250Gain'],
+  //
+  // Box 14 is one undivided amount on the page: code A is the net earnings
+  // Schedule SE uses, B and C are gross farming and nonfarm income. A farming
+  // K-1 placed at the undivided amount would understate self-employment tax, so
+  // the value is kept as a fact and the box is flagged instead.
+  add_k1: ['collectiblesGain28', 'unrecapturedSection1250Gain', 'selfEmploymentIncome'],
 };
 
 /** An income item's fields as the engine takes them: fact-only fields removed. */

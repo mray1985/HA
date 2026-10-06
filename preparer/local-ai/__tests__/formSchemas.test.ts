@@ -436,9 +436,9 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(extractStructuredFields('k1', scorp.bag, scorp.rawText).args.entityType).toBe('s_corp');
   });
 
-  it('leaves the entity kind unset for a Form 1041, which is an estate or a trust', () => {
-    // The page does not say which, and the engine codes anything that is not a
-    // partnership as an S corporation on Schedule E - so guessing would file a
+  it('places nothing on a Form 1041, which is an estate or a trust', () => {
+    // The page does not say which, and irsScheduleEMap codes anything that is not
+    // a partnership as an S corporation on Schedule E - placing it would file a
     // trust's income as a corporation's. Unset holds the form (FED.K1.ENTITY_TYPE).
     const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'THE ESTATE' }, { matchedMarkers: ['schedule k-1', 'form 1041'] });
     const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
@@ -454,8 +454,11 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     const mapped = mapBoxesToTool(K1, { a: '72-1234567', b: 'RIVERBEND PARTNERS LP', '1': '48,200.00' });
     const args = extractStructuredFields('k1', mapped.bag, mapped.rawText).args;
     expect(args).not.toHaveProperty('entityType');
-    // The rest of the form is still read; only the kind is withheld.
-    expect(args).toMatchObject({ ordinaryBusinessIncome: 48200 });
+    // With the kind unknown the form places nothing at all, rather than placing
+    // a partnership's numbers and leaving the kind to be assumed: the boxes are
+    // still read, they are just all sent to review.
+    expect(args).not.toHaveProperty('ordinaryBusinessIncome');
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['1']));
   });
 
   it('places the boxes that stand on their own', () => {
@@ -467,7 +470,6 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       entityType: 'partnership',
       ordinaryBusinessIncome: 48200,
       rentalIncome: 6400,
-      guaranteedPayments: 1500,
       interestIncome: 212,
       ordinaryDividends: 900,
       qualifiedDividends: 450,
@@ -476,7 +478,7 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       longTermCapitalGain: 15750,
       netSection1231Gain: -4100,
       otherIncome: 320,
-      section179Deduction: 9000,
+      // Kept as a fact; FACT_ONLY_FIELDS keeps it off the engine item.
       selfEmploymentIncome: 48200,
     });
   });
@@ -500,8 +502,63 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(mapped.bag).toMatchObject({ collectiblesGain28: '1,000.00', unrecapturedSection1250Gain: '2,500.00' });
   });
 
-  it('names box 14 as the self-employment figure the form prints', () => {
-    expect(K1.boxes.find((b) => b.key === '14')).toMatchObject({ box: '14', label: 'Self-employment earnings (loss)', use: 'tool' });
+  it('names box 14 as the form prints it, and keeps it out of the return', () => {
+    // The page prints one undivided amount. Code A is the net earnings Schedule
+    // SE uses; B and C are gross farming and nonfarm income. Placing it either
+    // way is a guess, so the value is kept as a fact and the box is flagged.
+    expect(K1.boxes.find((b) => b.key === '14')).toMatchObject({
+      box: '14',
+      label: 'Self-employment earnings (loss)',
+      use: 'review',
+    });
+    const mapped = mapBoxesToTool(K1, { ...printed }, { matchedMarkers: ['form 1065'] });
+    expect(mapped.bag).toHaveProperty('selfEmploymentIncome');
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['14']));
+  });
+
+  it('places the boxes that mean the same thing on a partnership and an S corporation', () => {
+    // Boxes 1, 2, 5, 6a, 6b, 7, 8, 9a, 10 and 11 carry the same meaning on a
+    // 1065 and a 1120-S, and the engine documents them with no form-specific
+    // caveat. Holding a whole S corporation K-1 would put the preparer back to
+    // typing it, which is the outcome this is meant to avoid.
+    const args = extractStructuredFields(
+      'k1',
+      mapBoxesToTool(K1, printed, { matchedMarkers: ['form 1120-s'] }).bag,
+      {},
+    ).args;
+    expect(args).toMatchObject({
+      entityType: 's_corp',
+      ordinaryBusinessIncome: 48200,
+      rentalIncome: 6400,
+      interestIncome: 212,
+      ordinaryDividends: 900,
+      royalties: 1100,
+      shortTermCapitalGain: -2300,
+      longTermCapitalGain: 15750,
+      netSection1231Gain: -4100,
+      otherIncome: 320,
+    });
+  });
+
+  it('holds the boxes that differ between layouts or carry a code', () => {
+    // 4 is guaranteed payments to the partner on a 1065 and to the corporation
+    // on a 1120-S; 12 is section 179 on a 1065 and the QBI deduction on a
+    // 1120-S, and section179Deduction feeds Form 4562; 14 and 9b/9c are held for
+    // the reasons their own tests give.
+    for (const markers of [['form 1065'], ['form 1120-s']]) {
+      const mapped = mapBoxesToTool(K1, { ...printed, '12': '9,000.00' }, { matchedMarkers: markers });
+      expect(mapped.reviewBoxes.map((b) => b.key), markers.join()).toEqual(
+        expect.arrayContaining(['4c', '12', '14', '13', '15']),
+      );
+      expect(mapped.bag, markers.join()).not.toHaveProperty('section179Deduction');
+      expect(mapped.bag, markers.join()).not.toHaveProperty('guaranteedPayments');
+    }
+  });
+
+  it('places nothing when the form number was not read at all', () => {
+    const unknown = mapBoxesToTool(K1, { ...printed });
+    expect(unknown.bag).toEqual({});
+    expect(unknown.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['1', '12']));
   });
 
   it('reads the partner out of box E, where the form prints their SSN or TIN', () => {
