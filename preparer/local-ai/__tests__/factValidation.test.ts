@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { add1099R, addW2 } from '../src/taxTools.js';
+import { add1099R, addW2, invokeTaxTool } from '../src/taxTools.js';
 import { factsFromFields } from '../src/taxFact.js';
 import type { TaxFact } from '../src/taxFact.js';
 import {
@@ -7,6 +7,7 @@ import {
   isFactAmountReady,
   numericOrMissing,
   omitInvalidToolFields,
+  REQUIRED_FORM_FIELDS,
   validateImportedFacts,
 } from '../src/factValidation.js';
 
@@ -322,5 +323,32 @@ describe('fact validation (development-order step 8)', () => {
     const validation = validateImportedFacts(facts, { taxYear: 2025 });
     expect(validation.issues.every((i) => i.severity === 'warning')).toBe(true);
     expect(validation.ready).toBe(true);
+  });
+});
+
+describe('the four newly read forms are validated like every other', () => {
+  it.each([
+    ['W-2G', ['grossWinnings']],
+    ['1098-E', ['studentLoanInterest']],
+    ['K-1', ['ordinaryBusinessIncome']],
+  ] as const)('%s has a required amount, or a blank box would be read as zero', (form, fields) => {
+    expect(REQUIRED_FORM_FIELDS[form]).toEqual(fields);
+  });
+
+  it.each([
+    ['W2G_', 'add_w2g', { payerName: 'RIVERBEND CASINO', grossWinnings: 24600 }],
+    ['1098E_', 'add_1098_e', { lenderName: 'BANK A', studentLoanInterest: 1842.55 }],
+    ['K1_', 'add_k1', { entityName: 'RIVERBEND PARTNERS LP', ordinaryBusinessIncome: 48200 }],
+    ['1095A_', 'add_1095_a', { recipientName: 'ALEX RIVERBEND', annualEnrollmentPremiums: 14400 }],
+  ] as const)('%s writes facts the validator can price', (prefix, tool, args) => {
+    const result = invokeTaxTool({ tool, args, context: { ...ctx, sourceFileName: 'f.pdf' } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const facts = result.facts;
+    expect(facts.length, `${prefix} produced no facts`).toBeGreaterThan(0);
+    // An amount the reader did not get must stay unpriced rather than becoming 0.
+    const amounts = facts.map(amountFromFact);
+    expect(amounts.every((a) => a === undefined || Number.isFinite(a))).toBe(true);
+    expect(amounts.some((a) => a === 0)).toBe(false);
   });
 });

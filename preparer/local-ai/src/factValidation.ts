@@ -543,6 +543,10 @@ const FORM_BY_PREFIX: ReadonlyArray<[string, string]> = [
   ['1099S_', '1099-S'],
   ['SCHC_RECEIPTS_', 'Business receipts'],
   ['ESTPAY_', 'Estimated payment'],
+  ['W2G_', 'W-2G'],
+  ['1098E_', '1098-E'],
+  ['K1_', 'K-1'],
+  ['1095A_', '1095-A'],
 ];
 
 function formOf(fields: Map<string, TaxFact>): string | null {
@@ -576,6 +580,12 @@ export const REQUIRED_FORM_FIELDS: Readonly<Record<string, readonly string[]>> =
   'Estimated payment': ['amount', 'jurisdiction'],
   // Without the employer EIN a W-2c cannot be matched to the W-2 it corrects.
   'W-2C': ['employerEin'],
+  // Without box 1 the winnings are unknown, and the engine would read them as zero.
+  'W-2G': ['grossWinnings'],
+  // Box 1 is the interest; a blank box 1 would become a zero deduction.
+  '1098-E': ['studentLoanInterest'],
+  // Box 1 is the partner's share of ordinary business income.
+  'K-1': ['ordinaryBusinessIncome'],
 };
 
 /** Records from record tools (any evidence), as opposed to one tax form. */

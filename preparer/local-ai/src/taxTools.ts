@@ -187,6 +187,9 @@ const INCOME_TYPE_TO_FORM_TOOL: Record<string, DocumentToolName> = {
   '1099sa': 'add_1099_sa',
   '1099s': 'add_1099_s',
   w2c: 'add_w2c',
+  w2g: 'add_w2g',
+  k1: 'add_k1',
+  '1095a': 'add_1095_a',
 };
 
 export function formToolForIncomeType(incomeType: string | null | undefined): DocumentToolName | null {

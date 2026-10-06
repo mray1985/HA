@@ -1948,11 +1948,14 @@ export function extract1098EFields(
 ): Record<string, unknown> {
   return {
     lenderName: extractPayerName(textBlocks, ["recipient's name", "lender's name", 'lender name', 'recipient'], fieldRawTokens, 'lenderName', fieldSourceLocations),
-    interestPaid: extractBoxValue(
+    // Named as the engine names it (TaxReturn.studentLoanInterest) so the
+    // text-layer path and the form schema agree on one field name; they did not,
+    // and a box 1 read here was discarded once 1098-E went through the schema.
+    studentLoanInterest: extractBoxValue(
       textBlocks,
       ['student loan interest', '1 student loan interest', 'box 1'],
       fieldRawTokens,
-      'interestPaid',
+      'studentLoanInterest',
       fieldSourceLocations,
     ),
   };
@@ -2386,7 +2389,7 @@ const FIELD_LABELS: Record<SupportedFormType, Record<string, string>> = {
   },
   '1098-E': {
     lenderName: 'Lender Name',
-    interestPaid: 'Student Loan Interest Paid (Box 1)',
+    studentLoanInterest: 'Student Loan Interest (Box 1)',
   },
   '1095-A': {
     marketplaceName: 'Marketplace Name',

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   addW2,
+  formToolForIncomeType,
   invokeTaxTool,
   setFilingStatusCandidate,
   toolNameForIncomeType,
 } from '../src/taxTools.js';
+import { incomeTypeForFormType } from '../src/documentClassifier.js';
 import type { TaxFact } from '../src/taxFact.js';
 
 const ctx = {
@@ -420,5 +422,20 @@ describe('Schedule K-1 tool', () => {
       const result = invokeTaxTool({ tool: 'add_k1', args: { [key]: 100 }, context: ctx });
       expect(result.ok, key).toBe(false);
     }
+  });
+});
+
+describe('every classifiable form reaches a tool', () => {
+  it.each([
+    ['W-2G', 'w2g', 'add_w2g'],
+    ['1098-E', '1098e', 'add_1098_e'],
+    ['K-1', 'k1', 'add_k1'],
+    ['1095-A', '1095a', 'add_1095_a'],
+  ] as const)('%s reaches %s through its classified income type', (formType, incomeType, tool) => {
+    // A schema and an application are not enough: intake resolves a classified
+    // form through formToolForIncomeType, so a form missing from that map is read
+    // and then reported to the preparer as not applied.
+    expect(incomeTypeForFormType(formType)).toBe(incomeType);
+    expect(formToolForIncomeType(incomeType)).toBe(tool);
   });
 });

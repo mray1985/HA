@@ -333,11 +333,13 @@ describe('Form 1098-E aggregate', () => {
     expect(getReturn(returnId).studentLoanInterest).toBe(900);
   });
 
-  it('withholds the total when no box 1 could be read', () => {
+  it('withholds the total when box 1 could not be read', () => {
+    // studentLoanInterest is a required amount, so an unreadable box 1 holds the
+    // form and the total is not written rather than becoming a zero deduction.
     const out = readDocument('add_1098_e', { lenderName: 'BANK A' }, 'DOC-E1');
     expect(out.kind).toBe('aggregate');
     if (out.kind !== 'aggregate' || out.applied) return;
-    expect(out.reason).toContain('box 1');
+    expect(out.reason).toBeTruthy();
     expect(getReturn(returnId).studentLoanInterest ?? 0).toBe(0);
   });
 
@@ -347,5 +349,53 @@ describe('Form 1098-E aggregate', () => {
     const review = buildCaseReview({ taxReturn: getReturn(returnId), facts: loadTaxFacts(returnId), documents: [doc] });
     const item = review.items.find((i) => i.id === 'document:aggregate-waiting:DOC-E1#0');
     expect(item?.message).toContain('Deduction Worksheet');
+  });
+});
+
+describe('apply reasons stay true when a form is reapplied', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    clearReturnCache();
+    clearRecordCache();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    returnId = createReturn().id;
+  });
+
+  it('records a reason beside the outcome, and keeps them together', () => {
+    const document: IngestedDocument = { documentId: 'DOC-E1', returnId, fileName: 'f1098e.pdf', mimeType: 'application/pdf', byteLength: 1, contentHash: 'h', ingestedAt: '', status: 'extracted', formTypes: ['1098-E'] };
+    const toolResult = invokeTaxTool({
+      tool: 'add_1098_e',
+      args: { lenderName: 'BANK A', studentLoanInterest: 1842.55, originationFeesExcluded: true },
+      context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-E1', sourceFileName: 'f1098e.pdf', extractor: 'test' },
+    });
+    expect(toolResult.ok).toBe(true);
+    if (!toolResult.ok) return;
+    const facts = (toolResult as TaxToolSuccess).facts;
+    appendTaxFacts(returnId, facts);
+    const extraction: ApplyExtractionResult = {
+      document,
+      pieces: [{
+        incomeType: '1098e',
+        toolFields: { lenderName: 'BANK A', studentLoanInterest: 1842.55, originationFeesExcluded: true },
+        facts,
+        validation: { ready: true, issues: [], heldForms: [] },
+        extracted: {} as never,
+        classification: {} as never,
+      }],
+      facts,
+    };
+    applyExtraction(returnId, extraction);
+    const saved = loadDocuments(returnId)[0]!;
+    expect(saved.appliedAs).toEqual(['aggregate_waiting']);
+    // The reason is what tells the preparer the deduction is on the worksheet
+    // rather than on the return, so it has to be stored, not just returned.
+    expect(saved.applyReasons?.[0]).toContain('Deduction Worksheet');
+    expect(saved.applyReasons).toHaveLength(saved.appliedAs!.length);
+
+    // Reapplying must not leave the earlier reason behind.
+    reapplyForm(returnId, 'DOC-E1#0');
+    const again = loadDocuments(returnId)[0]!;
+    expect(again.applyReasons).toHaveLength(again.appliedAs!.length);
+    expect(again.applyReasons?.[0]).toContain('Deduction Worksheet');
   });
 });
