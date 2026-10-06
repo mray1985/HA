@@ -408,32 +408,43 @@ describe('a held box is held against a reader, not against a preparer', () => {
     returnId = createReturn().id;
   });
 
-  it('keeps a machine reading of a held box off the engine item', () => {
-    // A K-1's box 14 prints one undivided amount: code A is the net earnings
-    // Schedule SE uses, B and C are gross farming income. Nothing read off the
-    // page may be filed as self-employment income.
+  // Every box the schema maps but the reader must not set. All five take the same
+  // path, so they are covered together: a hold is a property of how a fact was
+  // obtained, not of any one field.
+  const HELD: [field: string, box: string, why: string][] = [
+    ['selfEmploymentIncome', '14', 'prints one undivided amount: code A is the net earnings Schedule SE uses, B and C are gross farming income'],
+    ['collectiblesGain28', '9b', 'is taxed at the 28% collectibles rate, which a reader cannot see from the amount'],
+    ['unrecapturedSection1250Gain', '9c', 'is an unrecaptured gain under section 1250, which the page does not identify'],
+    ['guaranteedPayments', '4c', 'totals boxes 4a and 4b and carries the partner\'s own tax treatment'],
+    ['section179Deduction', '12', 'feeds Form 4562, so it is not a return figure on its own'],
+  ];
+
+  it.each(HELD)('keeps a machine reading of box %s off the engine item', (field, box, _why) => {
+    // Nothing read off the page may be filed as a held figure.
     const result = invokeTaxTool({
       tool: 'add_k1',
-      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, selfEmploymentIncome: 48200 },
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, [field]: 48200 },
       context: { returnId, taxYear: 2026, sourceDocumentId: 'DOC-K1', sourceFileName: 'f1065sk1.pdf', extractor: 'test' },
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const facts = (result as TaxToolSuccess).facts;
-    appendTaxFacts(returnId, facts);
+    // The fact is recorded either way - the value is on the document and a
+    // preparer needs to see it - it just must not reach the engine item.
+    expect((result as TaxToolSuccess).fields).toMatchObject({ [field]: 48200 });
+    appendTaxFacts(returnId, (result as TaxToolSuccess).facts);
     const outcome = applyToolResult(returnId, result as TaxToolSuccess, { documentId: 'DOC-K1' });
     expect(outcome.kind).toBe('income_item');
-    expect(getReturn(returnId).incomeK1?.[0]).not.toHaveProperty('selfEmploymentIncome');
+    expect(getReturn(returnId).incomeK1?.[0], `box ${box}`).not.toHaveProperty(field);
   });
 
-  it('applies the same box when a preparer corrected it', () => {
+  it.each(HELD)('applies box %s when a preparer corrected it', (field, box, _why) => {
     // The review panel offers "type the value" for a held box. If that correction
     // is stripped too, the box is neither placed automatically nor enterable and
     // the workflow is a dead end - so the strip is decided by the fact's own
     // provenance, not by the field's name.
     const result = invokeTaxTool({
       tool: 'add_k1',
-      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, selfEmploymentIncome: 48200 },
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', ordinaryBusinessIncome: 48200, [field]: 48200 },
       context: {
         returnId, taxYear: 2026, sourceDocumentId: 'DOC-K1', sourceFileName: 'f1065sk1.pdf',
         extractor: 'preparer', sourceKind: 'preparer_correction',
@@ -443,7 +454,7 @@ describe('a held box is held against a reader, not against a preparer', () => {
     if (!result.ok) return;
     appendTaxFacts(returnId, (result as TaxToolSuccess).facts);
     applyToolResult(returnId, result as TaxToolSuccess, { documentId: 'DOC-K1' });
-    expect(getReturn(returnId).incomeK1?.[0]).toMatchObject({ selfEmploymentIncome: 48200 });
+    expect(getReturn(returnId).incomeK1?.[0], `box ${box}`).toMatchObject({ [field]: 48200 });
   });
 
   it('still places the boxes that are not held', () => {
