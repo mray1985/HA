@@ -1448,11 +1448,8 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
       '9a': 'longTermCapitalGain',
       // Recorded as facts, not placed: the rate depends on the worksheet and an
       // unknown entity kind blocks it (FED.K1.ENTITY_TYPE).
-      '9b': 'collectiblesGain28',
-      '9c': 'unrecapturedSection1250Gain',
       '10': 'netSection1231Gain',
       '11': 'otherIncome',
-      '14': 'selfEmploymentIncome',
     },
     name: { keys: ['b'], field: 'entityName' },
     entity: true,
@@ -1565,14 +1562,21 @@ export function mapBoxesToTool(
     const markers = context?.matchedMarkers ?? [];
     const kind = entityTypeFromMarkers(markers);
     if (kind !== undefined) put('entityType', kind, markers.join('; '), []);
-    // A Form 1041 places nothing. It covers estates *and* trusts, the page does
+    // Only a Form 1065 places anything.
+    //
+    // A 1120-S numbers the same income differently: interest is box 4,
+    // dividends 5a/5b, royalties 6, short-term gain 7, long-term gain 8a, section
+    // 1231 gain 9 and other income 10, against this schema's 5, 6a/6b, 7, 8, 9a, 10
+    // and 11. The repo says so itself - collectibles is 9b on a 1065 and 8b on a
+    // 1120-S (shared/src/types/index.ts), which means everything after it
+    // shifts. Reading an S corporation through this map would file dividends as
+    // interest, short-term gain as royalties, long-term as short-term and other
+    // income as section 1231 gain, silently.
+    //
+    // A Form 1041 is worse still: it covers estates *and* trusts, the page does
     // not say which, and irsScheduleEMap codes anything that is not a
-    // partnership as an S corporation on Schedule E - so placing it would file a
-    // trust's income as a corporation's. Everything is sent to review instead.
-    // A 1120-S does place: the engine handles s_corp explicitly, and the boxes
-    // that differ between the two layouts (4, 12, 14, 9b, 9c) are held below on
-    // every form, not just on the one that made them necessary.
-    if (kind === undefined || kind === 'estate' || kind === 'trust') {
+    // partnership as an S corporation on Schedule E.
+    if (kind !== 'partnership') {
       for (const key of Object.keys(spec.direct ?? {})) {
         const text = values[key];
         if (text === undefined) continue;

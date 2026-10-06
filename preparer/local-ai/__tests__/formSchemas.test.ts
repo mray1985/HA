@@ -478,8 +478,6 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       longTermCapitalGain: 15750,
       netSection1231Gain: -4100,
       otherIncome: 320,
-      // Kept as a fact; FACT_ONLY_FIELDS keeps it off the engine item.
-      selfEmploymentIncome: 48200,
     });
   });
 
@@ -499,7 +497,10 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
     // The value is kept: extractK1Fields() already reads these, and dropping them
     // would leave a 28% or 25% gain unapplied with nothing flagging it.
-    expect(mapped.bag).toMatchObject({ collectiblesGain28: '1,000.00', unrecapturedSection1250Gain: '2,500.00' });
+    // Not arguments: nothing read from the page may set these. They stay in the
+    // tool schema so a preparer's own correction can.
+    expect(mapped.bag).not.toHaveProperty('collectiblesGain28');
+    expect(mapped.bag).not.toHaveProperty('unrecapturedSection1250Gain');
   });
 
   it('names box 14 as the form prints it, and keeps it out of the return', () => {
@@ -512,49 +513,40 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       use: 'review',
     });
     const mapped = mapBoxesToTool(K1, { ...printed }, { matchedMarkers: ['form 1065'] });
-    expect(mapped.bag).toHaveProperty('selfEmploymentIncome');
+    expect(mapped.bag).not.toHaveProperty('selfEmploymentIncome');
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['14']));
   });
 
-  it('places the boxes that mean the same thing on a partnership and an S corporation', () => {
-    // Boxes 1, 2, 5, 6a, 6b, 7, 8, 9a, 10 and 11 carry the same meaning on a
-    // 1065 and a 1120-S, and the engine documents them with no form-specific
-    // caveat. Holding a whole S corporation K-1 would put the preparer back to
-    // typing it, which is the outcome this is meant to avoid.
-    const args = extractStructuredFields(
-      'k1',
-      mapBoxesToTool(K1, printed, { matchedMarkers: ['form 1120-s'] }).bag,
-      {},
-    ).args;
-    expect(args).toMatchObject({
-      entityType: 's_corp',
-      ordinaryBusinessIncome: 48200,
-      rentalIncome: 6400,
-      interestIncome: 212,
-      ordinaryDividends: 900,
-      royalties: 1100,
-      shortTermCapitalGain: -2300,
-      longTermCapitalGain: 15750,
-      netSection1231Gain: -4100,
-      otherIncome: 320,
-    });
+  it('places nothing on a 1120-S, because its boxes are numbered differently', () => {
+    // A 1120-S puts interest in box 4, dividends in 5a/5b, royalties in 6,
+    // short-term gain in 7, long-term gain in 8a, section 1231 gain in 9 and
+    // other income in 10. This schema reads boxes 5, 6a/6b, 7, 8, 9a, 10 and
+    // 11, so reading a partnership-shaped fixture through a 1120-S marker would
+    // file dividends as interest and short-term gain as royalties. An earlier
+    // version of this test changed only the marker and passed, which proved
+    // nothing at all about a real S corporation K-1.
+    const scorp = mapBoxesToTool(K1, printed, { matchedMarkers: ['schedule k-1', 'form 1120-s'] });
+    expect(scorp.bag).toEqual({ entityType: 's_corp' });
+    expect(scorp.reviewBoxes.map((b) => b.key)).toEqual(
+      expect.arrayContaining(['1', '5', '6a', '7', '8', '9a', '10', '11']),
+    );
   });
 
-  it('holds the boxes that differ between layouts or carry a code', () => {
-    // 4 is guaranteed payments to the partner on a 1065 and to the corporation
-    // on a 1120-S; 12 is section 179 on a 1065 and the QBI deduction on a
-    // 1120-S, and section179Deduction feeds Form 4562; 14 and 9b/9c are held for
-    // the reasons their own tests give.
-    for (const markers of [['form 1065'], ['form 1120-s']]) {
-      const mapped = mapBoxesToTool(K1, { ...printed, '12': '9,000.00' }, { matchedMarkers: markers });
-      expect(mapped.reviewBoxes.map((b) => b.key), markers.join()).toEqual(
-        expect.arrayContaining(['4c', '12', '14', '13', '15']),
-      );
-      expect(mapped.bag, markers.join()).not.toHaveProperty('section179Deduction');
-      expect(mapped.bag, markers.join()).not.toHaveProperty('guaranteedPayments');
+  it('holds the boxes that carry a code or a worksheet on a 1065 too', () => {
+    // 4 is guaranteed payments to the partner here and to the corporation on a
+    // 1120-S; 12 is section 179 here and the QBI deduction there, and
+    // section179Deduction feeds Form 4562; 9b/9c and 14 are rate- or
+    // code-qualified.
+    const mapped = mapBoxesToTool(K1, { ...printed, '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
+    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(
+      expect.arrayContaining(['4c', '12', '13', '15', '9b', '9c', '14']),
+    );
+    // Not mapped as arguments, so nothing automatic carries them. They stay in
+    // the tool schema so a preparer's own correction can set them.
+    for (const field of ['collectiblesGain28', 'unrecapturedSection1250Gain', 'selfEmploymentIncome', 'section179Deduction', 'guaranteedPayments']) {
+      expect(mapped.bag, field).not.toHaveProperty(field);
     }
   });
-
   it('places nothing when the form number was not read at all', () => {
     const unknown = mapBoxesToTool(K1, { ...printed });
     expect(unknown.bag).toEqual({});

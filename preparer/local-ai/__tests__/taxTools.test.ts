@@ -441,39 +441,31 @@ describe('every classifiable form reaches a tool', () => {
     expect(formToolForIncomeType(incomeType)).toBe(tool);
   });
 });
-describe('Schedule K-1 boxes 9b and 9c keep their value without being placed', () => {
-  it('records the amounts as facts and leaves them out of the engine item', () => {
+
+describe('Schedule K-1 boxes the reader may not set on its own', () => {
+  it('accepts a preparer correction for a held box, so the held field is not lost', () => {
+    // The box is not mapped from the page, so nothing automatic carries it - but
+    // the field has to survive in the schema, or a preparer who types the Code A
+    // amount from the review panel is silently discarded.
     const result = invokeTaxTool({
       tool: 'add_k1',
-      args: {
-        entityName: 'RIVERBEND PARTNERS LP',
-        entityType: 'partnership',
-        longTermCapitalGain: 15750,
-        collectiblesGain28: 1000,
-        unrecapturedSection1250Gain: 2500,
-      },
+      args: { entityName: 'RIVERBEND PARTNERS LP', entityType: 'partnership', selfEmploymentIncome: 48200 },
       context: ctx,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // The value has to survive: an extractK1Fields() read that is dropped here
-    // is a collectibles gain taxed at the wrong rate with nothing flagging it.
-    expect(result.fields).toMatchObject({ collectiblesGain28: 1000, unrecapturedSection1250Gain: 2500 });
-    expect(result.facts.some((f) => f.factType === 'K1_collectiblesGain28')).toBe(true);
-    expect(result.facts.some((f) => f.factType === 'K1_unrecapturedSection1250Gain')).toBe(true);
-    // But the engine item must not take them: the rate depends on the worksheet
-    // the preparer works, and an unknown entity kind blocks it outright.
-    expect(engineItemFields('k1', result.fields)).not.toHaveProperty('collectiblesGain28');
-    expect(engineItemFields('k1', result.fields)).not.toHaveProperty('unrecapturedSection1250Gain');
-    expect(engineItemFields('k1', result.fields)).toMatchObject({ longTermCapitalGain: 15750 });
+    expect(result.fields).toMatchObject({ selfEmploymentIncome: 48200 });
+    expect(engineItemFields('k1', result.fields)).toMatchObject({ selfEmploymentIncome: 48200 });
   });
 
-  it('still sends boxes 9b and 9c to review, so the preparer sees them', () => {
-    const k1 = getFormExtractionSchema('K-1')!;
-    const mapped = mapBoxesToTool(k1, { '9b': '1,000.00', '9c': '2,500.00' }, { matchedMarkers: ['form 1065'] });
-    expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
-    // Both: the value is kept and the box is flagged.
-    expect(mapped.bag).toHaveProperty('collectiblesGain28');
-    expect(mapped.bag).toHaveProperty('unrecapturedSection1250Gain');
-  });
+  it.each(['collectiblesGain28', 'unrecapturedSection1250Gain', 'selfEmploymentIncome', 'section179Deduction', 'guaranteedPayments'])(
+    'never strips a preparer-supplied %s',
+    (field) => {
+      const result = invokeTaxTool({ tool: 'add_k1', args: { [field]: 100 }, context: ctx });
+      expect(result.ok, field).toBe(true);
+      if (!result.ok) return;
+      expect(result.fields, field).toMatchObject({ [field]: 100 });
+      expect(engineItemFields('k1', result.fields), field).toMatchObject({ [field]: 100 });
+    },
+  );
 });
