@@ -478,6 +478,11 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       longTermCapitalGain: 15750,
       netSection1231Gain: -4100,
       otherIncome: 320,
+      // Held from the engine item by FACT_ONLY_FIELDS, but mapped so a
+      // preparer correction has a route to the right return field.
+      guaranteedPayments: 1500,
+      section179Deduction: 9000,
+      selfEmploymentIncome: 48200,
     });
   });
 
@@ -497,10 +502,10 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['9b', '9c']));
     // The value is kept: extractK1Fields() already reads these, and dropping them
     // would leave a 28% or 25% gain unapplied with nothing flagging it.
-    // Not arguments: nothing read from the page may set these. They stay in the
-    // tool schema so a preparer's own correction can.
-    expect(mapped.bag).not.toHaveProperty('collectiblesGain28');
-    expect(mapped.bag).not.toHaveProperty('unrecapturedSection1250Gain');
+    // Mapped so a correction can be routed, and held from the engine by
+    // FACT_ONLY_FIELDS rather than by being absent.
+    expect(mapped.bag).toHaveProperty('collectiblesGain28');
+    expect(mapped.bag).toHaveProperty('unrecapturedSection1250Gain');
   });
 
   it('names box 14 as the form prints it, and keeps it out of the return', () => {
@@ -513,7 +518,9 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
       use: 'review',
     });
     const mapped = mapBoxesToTool(K1, { ...printed }, { matchedMarkers: ['form 1065'] });
-    expect(mapped.bag).not.toHaveProperty('selfEmploymentIncome');
+    // Mapped so a preparer can correct it, and FACT_ONLY_FIELDS keeps a machine
+    // reading off the engine item.
+    expect(mapped.bag).toHaveProperty('selfEmploymentIncome');
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['14']));
   });
 
@@ -541,10 +548,13 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(
       expect.arrayContaining(['4c', '12', '13', '15', '9b', '9c', '14']),
     );
-    // Not mapped as arguments, so nothing automatic carries them. They stay in
-    // the tool schema so a preparer's own correction can set them.
+    // Mapped as arguments, and held from the engine item by FACT_ONLY_FIELDS.
+    // The mapping is what gives a held box a route: fieldsByBox needs a field to
+    // render "type the value", so unmapping these left them neither placed nor
+    // enterable. engineItemFields decides the strip per fact's sourceKind, so a
+    // machine reading is held and a preparer correction still applies.
     for (const field of ['collectiblesGain28', 'unrecapturedSection1250Gain', 'selfEmploymentIncome', 'section179Deduction', 'guaranteedPayments']) {
-      expect(mapped.bag, field).not.toHaveProperty(field);
+      expect(mapped.bag, field).toHaveProperty(field);
     }
   });
   it('places nothing when the form number was not read at all', () => {

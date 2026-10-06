@@ -48,12 +48,34 @@ export interface BoxLedger {
   entries: BoxLedgerEntry[];
 }
 
+/**
+ * A K-1 other than a 1065, read off the page text.
+ *
+ * The K-1 schema is the 1065's, so its box map is wrong for a 1120-S: interest
+ * and dividends swap places at box 4, short-term gain lands where royalties go,
+ * and box 14 is a "Schedule K-3 is attached" checkbox rather than self-employment
+ * earnings. Those boxes are held rather than placed, but the review panel still
+ * renders "type the value" from this map, so leaving it in place offered a
+ * preparer the 1065 label for a box the 1120-S prints differently. Returns null
+ * for a 1065 and for a page that does not say, so an unread subtype keeps the
+ * existing behaviour instead of being held on a guess.
+ */
+function nonPartnershipK1Subtype(pageText: string): string | null {
+  if (/form\s+1120[-\s]?s\b/.test(pageText)) return '1120-S';
+  if (/form\s+1041\b/.test(pageText)) return '1041';
+  return null;
+}
+
 /** The tool field each declared box feeds, where the schema says it feeds one. */
-function fieldsByBox(formType: string | null): Map<string, string> {
+function fieldsByBox(formType: string | null, pageText = ''): Map<string, string> {
   const key = (formType ?? '') as ClassifiableFormType;
   const mapping = TOOL_MAPPINGS[key];
   const out = new Map<string, string>();
   if (!mapping) return out;
+  // Only a positively identified non-1065 K-1 loses its associations: those
+  // labels belong to the 1065 and would misroute a correction into the wrong
+  // return field.
+  if (key === 'K-1' && nonPartnershipK1Subtype(pageText)) return out;
   for (const [boxKey, field] of Object.entries(mapping.direct ?? {})) out.set(boxKey, field);
   for (const [boxKey, field] of Object.entries(mapping.checkboxes ?? {})) out.set(boxKey, field);
   if (mapping.state?.key) out.set(mapping.state.key, mapping.state.field);
@@ -128,10 +150,10 @@ export function buildBoxLedger(
   unplaced: readonly UnplacedBox[] = [],
 ): BoxLedger {
   const schema = FORM_EXTRACTION_SCHEMAS[(formType ?? '') as ClassifiableFormType];
-  const fields = fieldsByBox(formType);
+  const text = (pageText ?? '').toLowerCase();
+  const fields = fieldsByBox(formType, text);
   const held = new Map(rejectedReads.map((r) => [r.field, r]));
   const filled = new Map(unplaced.map((u) => [u.key, u]));
-  const text = (pageText ?? '').toLowerCase();
 
   const entries: BoxLedgerEntry[] = [];
   // The schema declares a row per state (W-2 boxes 15–20), so a form for one

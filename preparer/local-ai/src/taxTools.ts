@@ -836,6 +836,20 @@ export const TOOL_FIELD_SCHEMAS: Record<DocumentToolName, z.ZodObject<z.ZodRawSh
 /** Fields recorded as facts for review but not written to the engine's item. */
 export const FACT_ONLY_FIELDS: Partial<Record<DocumentToolName, readonly string[]>> = {
   add_1099_c: ['personallyLiable'],
+  //
+  // Boxes 9b, 9c and 14 are decided by a code or a worksheet a reader cannot
+  // see, so a *machine* reading of them must not reach the engine item - and
+  // this list is also the only guard on the text-layer path, where
+  // extractK1Fields supplies these fields independently of the schema. A
+  // preparer's own correction is exempted at apply time by its fact's sourceKind
+  // (see engineFieldsWithCorrections in the client), so this is not a dead end.
+  add_k1: [
+    'collectiblesGain28',
+    'unrecapturedSection1250Gain',
+    'selfEmploymentIncome',
+    'guaranteedPayments',
+    'section179Deduction',
+  ],
 };
 
 

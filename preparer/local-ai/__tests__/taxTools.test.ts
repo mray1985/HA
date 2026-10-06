@@ -455,7 +455,7 @@ describe('Schedule K-1 boxes the reader may not set on its own', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.fields).toMatchObject({ selfEmploymentIncome: 48200 });
-    expect(engineItemFields('k1', result.fields)).toMatchObject({ selfEmploymentIncome: 48200 });
+    expect(engineItemFields('k1', result.fields)).not.toHaveProperty('selfEmploymentIncome');
   });
 
   it.each(['collectiblesGain28', 'unrecapturedSection1250Gain', 'selfEmploymentIncome', 'section179Deduction', 'guaranteedPayments'])(
@@ -465,7 +465,9 @@ describe('Schedule K-1 boxes the reader may not set on its own', () => {
       expect(result.ok, field).toBe(true);
       if (!result.ok) return;
       expect(result.fields, field).toMatchObject({ [field]: 100 });
-      expect(engineItemFields('k1', result.fields), field).toMatchObject({ [field]: 100 });
+      // Held from the engine item for a machine read; the applier exempts a
+      // preparer correction by the fact's sourceKind.
+      expect(engineItemFields('k1', result.fields), field).not.toHaveProperty(field);
     },
   );
 });

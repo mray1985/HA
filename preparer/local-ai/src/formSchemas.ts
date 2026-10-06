@@ -1439,6 +1439,18 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     direct: {
       a: 'entityEin',
       '1': 'ordinaryBusinessIncome',
+      // Held boxes, still mapped so a preparer correction has a route:
+      // 4 is guaranteed payments to the partner here, to the corporation on a
+      // 1120-S; 12 is section 179 here, the QBI deduction there, and
+      // section179Deduction feeds Form 4562.
+      '4c': 'guaranteedPayments',
+      '12': 'section179Deduction',
+      // Boxes the reader may not decide, but a person can: kept in the map so
+      // fieldsByBox can route a preparer correction to the right return field.
+      // FACT_ONLY_FIELDS is what stops a *read* of them reaching the engine.
+      '9b': 'collectiblesGain28',
+      '9c': 'unrecapturedSection1250Gain',
+      '14': 'selfEmploymentIncome',
       '2': 'rentalIncome',
       '5': 'interestIncome',
       '6a': 'ordinaryDividends',
