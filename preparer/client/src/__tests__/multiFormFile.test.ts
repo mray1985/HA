@@ -19,7 +19,7 @@ async function twoFormsInOneFile(...files: string[]): Promise<Uint8Array> {
 async function piecesOf(bytes: Uint8Array, name: string): Promise<Record<string, unknown>[]> {
   const r = (await extractFromPDF(new File([new Uint8Array(bytes)], name, {
     type: 'application/pdf',
-  }))) as Record<string, unknown>;
+  }))) as unknown as Record<string, unknown>;
   return [r, ...((r.additionalResults ?? []) as Record<string, unknown>[])];
 }
 
