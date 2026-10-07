@@ -47,3 +47,7 @@ preparer/local-ai/gauntlet/out/
 
 # Development server data (sign-in database, token key, model verification)
 preparer/server/data/
+
+# Scratch: probe scripts, CI logs, PR bodies, debug dumps. Written by hand while
+# investigating, and not part of any build.
+/tmp/
