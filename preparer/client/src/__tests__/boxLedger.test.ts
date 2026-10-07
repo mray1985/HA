@@ -123,24 +123,36 @@ describe('every box the form prints is accounted for', () => {
     expect(wash.field).toBe('washSaleLossDisallowed');
   });
 
-  it('offers no return field for a 1120-S, whose boxes are numbered differently', () => {
-    // Boxes 7 and 10 on a 1120-S are short-term gain and other income. Against the
-    // 1065 map they read as royalties and section 1231 gain, so a preparer typing
-    // the printed amount would put a wrong value in a wrong return field.
-    const held1120 = [
-      { key: '7', label: 'Net short-term capital gain', text: '12,400.00' },
-      { key: '10', label: 'Other income', text: '3,100.00' },
-    ];
+  it('gives a 1120-S its own labels, and a 1041 none at all', () => {
+    // Boxes 7 and 10 on a 1120-S are short-term capital gain and other income.
+    // Against the 1065 map they read as royalties and section 1231 gain, so a
+    // preparer typing the printed amount would put a wrong value in a wrong
+    // return field.
     const sCorp = buildBoxLedger(
       'K-1',
       { entityName: 'RIVERBEND PARTNERS LP' },
       [],
       'Schedule K-1 (Form 1120-S) 7 Net short-term capital gain 12,400.00',
-      held1120,
+      [
+        { key: '7', label: 'Net short-term capital gain (loss)', text: '12,400.00' },
+        { key: '10', label: 'Other income (loss)', text: '3,100.00' },
+      ],
     );
-    for (const key of ['7', '10']) {
-      expect(sCorp.entries.find((e) => e.key === key)!.field, key).toBeUndefined();
-    }
+    // Now mapped from the 1120-S's own printed numbers, so a correction lands on
+    // the right return field.
+    expect(sCorp.entries.find((e) => e.key === '7')!.field).toBe('shortTermCapitalGain');
+    expect(sCorp.entries.find((e) => e.key === '10')!.field).toBe('otherIncome');
+
+    // A 1041 prints no box map of its own - it covers estates and trusts and
+    // does not say which - so it offers nothing rather than the 1065's labels.
+    const estate = buildBoxLedger(
+      'K-1',
+      { entityName: 'RIVERBEND ESTATE' },
+      [],
+      'Schedule K-1 (Form 1041) 7 12,400.00',
+      [{ key: '7', label: 'Net short-term capital gain (loss)', text: '12,400.00' }],
+    );
+    expect(estate.entries.find((e) => e.key === '7')!.field).toBeUndefined();
 
     // The same K-1 printed as a 1065 keeps its correction route: the map is the
     // 1065's and is right there.

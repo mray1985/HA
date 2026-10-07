@@ -1185,6 +1185,16 @@ interface ToolMappingSpec {
   choice?: { field: string; options: Record<string, string | boolean> };
   /** W-2 box 12 entries and box 13 checkboxes. */
   w2?: true;
+  /**
+   * A different box map for one entity kind, when the printed form number
+   * establishes the kind and that form numbers its boxes differently.
+   *
+   * A K-1 is the case: Part I prints under different letters on a 1120-S, and
+   * from box 4 the two forms carry different meanings at the same number. The
+   * keys are chosen from the printed page, and a key is only included here when
+   * the 1120-S prints a box that feeds a field.
+   */
+  byEntityType?: Record<string, { direct: Record<string, string> }>;
   /** Further state-code cells (W-2c: the previously reported and the correct state). */
   moreStates?: ReadonlyArray<{ key: string; field: string }>;
   /** A four-digit year printed in a text cell (W-2c box c, "2025 / W-2"). */
@@ -1465,6 +1475,38 @@ export const TOOL_MAPPINGS: Partial<Record<ClassifiableFormType, ToolMappingSpec
     },
     name: { keys: ['b'], field: 'entityName' },
     entity: true,
+    // Form 1120-S, read off the printed blank. Part I keeps the same keys - A is
+    // the corporation's EIN and B its name - so only the income boxes move.
+    //
+    // A 1120-S prints no guaranteed payments and no self-employment earnings, so
+    // those two fields are absent here rather than held: there is no box to
+    // read and nothing for a preparer to confirm. Box 11 is section 179 as on a
+    // partnership, and 8b/8c are the same two rate- and code-qualified boxes, so
+    // FACT_ONLY_FIELDS holds all three exactly as it does on a 1065.
+    //
+    // Boxes 12 (other deductions), 13 (credits) and 14 (Schedule K-3 attached)
+    // print and are left out: no field on the tool schema takes them, so they
+    // stay review boxes with nothing to file.
+    byEntityType: {
+      s_corp: {
+        direct: {
+          a: 'entityEin',
+          '1': 'ordinaryBusinessIncome',
+          '2': 'rentalIncome',
+          '4': 'interestIncome',
+          '5a': 'ordinaryDividends',
+          '5b': 'qualifiedDividends',
+          '6': 'royalties',
+          '7': 'shortTermCapitalGain',
+          '8a': 'longTermCapitalGain',
+          '8b': 'collectiblesGain28',
+          '8c': 'unrecapturedSection1250Gain',
+          '9': 'netSection1231Gain',
+          '10': 'otherIncome',
+          '11': 'section179Deduction',
+        },
+      },
+    },
   },
   '1095-A': {
     tool: 'add_1095_a',
@@ -1510,7 +1552,13 @@ export function mapBoxesToTool(
   values: Record<string, string>,
   context?: ToolMappingContext,
 ): ToolMapping {
-  const spec = TOOL_MAPPINGS[schema.formType];
+  const declared = TOOL_MAPPINGS[schema.formType];
+  // A K-1's box map depends on which form printed it. Resolved before anything
+  // is placed, so the variant is what the loops below read rather than being
+  // undone afterwards.
+  const entityKind = declared?.entity ? entityTypeFromMarkers(context?.matchedMarkers) : undefined;
+  const variant = entityKind !== undefined ? declared?.byEntityType?.[entityKind] : undefined;
+  const spec = variant && declared ? { ...declared, direct: variant.direct } : declared;
   const tool = spec?.tool ?? null;
   const bag: Record<string, unknown> = {};
   const rawText: Record<string, string> = {};
@@ -1574,7 +1622,8 @@ export function mapBoxesToTool(
     const markers = context?.matchedMarkers ?? [];
     const kind = entityTypeFromMarkers(markers);
     if (kind !== undefined) put('entityType', kind, markers.join('; '), []);
-    // Only a Form 1065 places anything.
+    // Only a Form 1065 places anything, unless this form printed a box map of
+    // its own for the kind it named - which a 1120-S does, above.
     //
     // A 1120-S numbers the same income differently: interest is box 4,
     // dividends 5a/5b, royalties 6, short-term gain 7, long-term gain 8a, section
@@ -1587,8 +1636,9 @@ export function mapBoxesToTool(
     //
     // A Form 1041 is worse still: it covers estates *and* trusts, the page does
     // not say which, and irsScheduleEMap codes anything that is not a
-    // partnership as an S corporation on Schedule E.
-    if (kind !== 'partnership') {
+    // partnership as an S corporation on Schedule E. It has no variant, so it is
+    // still held here.
+    if (kind !== 'partnership' && !variant) {
       for (const key of Object.keys(spec.direct ?? {})) {
         const text = values[key];
         if (text === undefined) continue;

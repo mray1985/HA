@@ -49,20 +49,19 @@ export interface BoxLedger {
 }
 
 /**
- * A K-1 other than a 1065, read off the page text.
+ * The entity kind a K-1's printed form number establishes, when it is not a
+ * partnership.
  *
- * The K-1 schema is the 1065's, so its box map is wrong for a 1120-S: interest
- * and dividends swap places at box 4, short-term gain lands where royalties go,
- * and box 14 is a "Schedule K-3 is attached" checkbox rather than self-employment
- * earnings. Those boxes are held rather than placed, but the review panel still
- * renders "type the value" from this map, so leaving it in place offered a
- * preparer the 1065 label for a box the 1120-S prints differently. Returns null
- * for a 1065 and for a page that does not say, so an unread subtype keeps the
- * existing behaviour instead of being held on a guess.
+ * The K-1 schema is the 1065's, so its box map is wrong for anything else: on a
+ * 1120-S interest and dividends swap places at box 4, short-term gain lands
+ * where royalties go, and box 14 is a "Schedule K-3 is attached" checkbox rather
+ * than self-employment earnings. Returns null for a 1065 and for a page that
+ * does not say, so an unread subtype keeps the existing behaviour instead of
+ * being held on a guess.
  */
-function nonPartnershipK1Subtype(pageText: string): string | null {
-  if (/form\s+1120[-\s]?s\b/.test(pageText)) return '1120-S';
-  if (/form\s+1041\b/.test(pageText)) return '1041';
+function nonPartnershipK1(pageText: string): 's_corp' | 'estate_or_trust' | null {
+  if (/form\s+1120[-\s]?s\b/.test(pageText)) return 's_corp';
+  if (/form\s+1041\b/.test(pageText)) return 'estate_or_trust';
   return null;
 }
 
@@ -72,10 +71,23 @@ function fieldsByBox(formType: string | null, pageText = ''): Map<string, string
   const mapping = TOOL_MAPPINGS[key];
   const out = new Map<string, string>();
   if (!mapping) return out;
-  // Only a positively identified non-1065 K-1 loses its associations: those
-  // labels belong to the 1065 and would misroute a correction into the wrong
-  // return field.
-  if (key === 'K-1' && nonPartnershipK1Subtype(pageText)) return out;
+  // A K-1's boxes mean different things at different numbers on a 1120-S, so a
+  // non-1065 K-1 is read through the map it printed - the one keyed by its
+  // entity kind. A 1041 prints no map of its own, so its associations are dropped
+  // entirely rather than left pointing at 1065 labels a preparer would file
+  // against.
+  if (key === 'K-1') {
+    const kind = nonPartnershipK1(pageText);
+    if (kind) {
+      const byKind = mapping.byEntityType?.[kind];
+      // No map for this kind - a 1041 - so its associations are dropped rather
+      // than left pointing at 1065 labels a preparer would file against.
+      if (!byKind) return out;
+      for (const [boxKey, field] of Object.entries(byKind.direct)) out.set(boxKey, field);
+      if (mapping.name?.keys?.length) out.set(mapping.name.keys[0]!, mapping.name.field);
+      return out;
+    }
+  }
   for (const [boxKey, field] of Object.entries(mapping.direct ?? {})) out.set(boxKey, field);
   for (const [boxKey, field] of Object.entries(mapping.checkboxes ?? {})) out.set(boxKey, field);
   if (mapping.state?.key) out.set(mapping.state.key, mapping.state.field);
