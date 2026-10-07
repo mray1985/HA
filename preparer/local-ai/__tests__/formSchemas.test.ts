@@ -524,17 +524,60 @@ describe('Schedule K-1 (Form 1065, 2025)', () => {
     expect(mapped.reviewBoxes.map((b) => b.key)).toEqual(expect.arrayContaining(['14']));
   });
 
-  it('places nothing on a 1120-S, because its boxes are numbered differently', () => {
-    // A 1120-S puts interest in box 4, dividends in 5a/5b, royalties in 6,
-    // short-term gain in 7, long-term gain in 8a, section 1231 gain in 9 and
-    // other income in 10. This schema reads boxes 5, 6a/6b, 7, 8, 9a, 10 and
-    // 11, so reading a partnership-shaped fixture through a 1120-S marker would
-    // file dividends as interest and short-term gain as royalties. An earlier
-    // version of this test changed only the marker and passed, which proved
-    // nothing at all about a real S corporation K-1.
+  it('reads a 1120-S by the boxes it prints, not by the 1065s numbers', () => {
+    // From the blank: a 1120-S puts interest in box 4, dividends in 5a/5b,
+    // royalties in 6, short-term gain in 7, long-term gain in 8a, section 1231
+    // gain in 9, other income in 10 and section 179 in 11. Values are written in
+    // those boxes, so each field below can only be right if the printed numbers
+    // were used - a 1065 map would file box 7 as royalties and box 10 as section
+    // 1231 gain. An earlier version of this test changed only the marker and
+    // passed, which proved nothing about a real S corporation K-1.
+    const scorp = mapBoxesToTool(
+      K1,
+      {
+        ...printed,
+        '4': '3,000.00',
+        '5a': '9,000.00',
+        '5b': '7,500.00',
+        '6': '1,200.00',
+        '7': '4,400.00',
+        '8a': '21,000.00',
+        '9': '2,750.00',
+        '10': '600.00',
+        '11': '18,000.00',
+      },
+      { matchedMarkers: ['schedule k-1', 'form 1120-s'] },
+    );
+    expect(scorp.bag).toMatchObject({
+      entityType: 's_corp',
+      interestIncome: '3,000.00',
+      ordinaryDividends: '9,000.00',
+      qualifiedDividends: '7,500.00',
+      royalties: '1,200.00',
+      shortTermCapitalGain: '4,400.00',
+      longTermCapitalGain: '21,000.00',
+      netSection1231Gain: '2,750.00',
+      otherIncome: '600.00',
+      section179Deduction: '18,000.00',
+    });
+  });
+
+  it('takes no self-employment or guaranteed payments from a 1120-S', () => {
+    // Neither box is on the blank, so there is nothing to read and nothing for a
+    // preparer to confirm. If either field could appear here it would be a value
+    // on a return with no box behind it.
     const scorp = mapBoxesToTool(K1, printed, { matchedMarkers: ['schedule k-1', 'form 1120-s'] });
-    expect(scorp.bag).toEqual({ entityType: 's_corp' });
-    expect(scorp.reviewBoxes.map((b) => b.key)).toEqual(
+    expect(scorp.bag).not.toHaveProperty('selfEmploymentIncome');
+    expect(scorp.bag).not.toHaveProperty('guaranteedPayments');
+  });
+
+  it('still places nothing on a 1041, which the page does not pin down', () => {
+    // A 1041 covers estates and trusts and does not say which, and the engine
+    // codes anything non-partnership as an S corporation on Schedule E. No
+    // variant exists for it, so it is held like before.
+    const estate = mapBoxesToTool(K1, printed, { matchedMarkers: ['schedule k-1', 'form 1041'] });
+    expect(estate.bag).toEqual({});
+    expect(estate.reviewBoxes.map((b) => b.key)).toEqual(
       expect.arrayContaining(['1', '5', '6a', '7', '8', '9a', '10', '11']),
     );
   });

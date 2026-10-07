@@ -140,12 +140,50 @@ describe('the printed K-1, not the engine comment, says where a box is', () => {
       return opening(a) === opening(partnership.get(number));
     });
 
-    // Ordinary business income and net rental real estate are the whole overlap
-    // among the sixteen boxes the schema maps. Every other one either means
-    // something different on a 1120-S or has no counterpart there, so an S-corp
-    // K-1 contributes two figures automatically and holds the rest.
+    // Of the boxes the 1065's schema maps, these two are the whole overlap
+    // between the forms.
     expect(sameOnBothForms.map(([k]) => k).sort()).toEqual(['1', '2']);
-    // And that is a small fraction, which is the point.
-    expect(sameOnBothForms.length).toBeLessThan(mapped.size / 2);
+
+    // The rest are not dropped: they are read through the 1120-S's own map, so
+    // what has to be right now is that map, box for box, against the printed
+    // page. These keys are the 1120-S's printed box numbers, not the 1065's.
+    const mapping = TOOL_MAPPINGS['K-1' as ClassifiableFormType];
+    const byScorp = mapping?.byEntityType?.['s_corp']?.direct ?? {};
+    expect(Object.keys(byScorp).sort()).toEqual(
+      ['1', '10', '11', '2', '4', '5a', '5b', '6', '7', '8a', '8b', '8c', '9', 'a'].sort(),
+    );
+
+    // Each mapped number must print what the field it feeds means. The 1065's
+    // map would file box 7 as royalties; the blank says short-term gain.
+    expect(opening(scorp.get('7')!, 3)).toBe('net short-term capital');
+    expect(opening(scorp.get('10')!, 2)).toBe('other income');
+    expect(opening(scorp.get('4')!, 2)).toBe('interest income');
+    expect(opening(scorp.get('9')!, 3)).toBe('net section 1231');
+    expect(opening(scorp.get('11')!, 3)).toBe('section 179 deduction');
+
+    // The printed label is only half the claim: the box number has to be wired
+    // to the field that label means. Checking the number and the label alone
+    // would pass if box 7 still said "short-term gain" but fed royalties.
+    expect(byScorp).toMatchObject({
+      '1': 'ordinaryBusinessIncome',
+      '2': 'rentalIncome',
+      '4': 'interestIncome',
+      '5a': 'ordinaryDividends',
+      '5b': 'qualifiedDividends',
+      '6': 'royalties',
+      '7': 'shortTermCapitalGain',
+      '8a': 'longTermCapitalGain',
+      '8b': 'collectiblesGain28',
+      '8c': 'unrecapturedSection1250Gain',
+      '9': 'netSection1231Gain',
+      '10': 'otherIncome',
+      '11': 'section179Deduction',
+      a: 'entityEin',
+    });
+
+    // And the two boxes a 1120-S does not have must not be reachable at all -
+    // there is no box behind them to confirm against.
+    expect(byScorp).not.toHaveProperty('4c');
+    expect(byScorp).not.toHaveProperty('14');
   });
 });
