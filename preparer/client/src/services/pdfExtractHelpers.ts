@@ -539,9 +539,19 @@ export function detectFormPages(
       // behaviour rather than guessing.
       const thisId = employerIds.get(det.page);
       const firstId = currentSpan ? employerIds.get(currentSpan.startPage) : undefined;
-      const samePayer = !(thisId !== undefined && firstId !== undefined && thisId !== firstId);
+      const idsKnown = thisId !== undefined && firstId !== undefined;
+      // A form has one payer, so a page carrying the same employer id as the
+      // span's first page belongs to that form - whatever it was classified as.
+      // This matters because a form's own continuation pages get misread: page 5
+      // of a 1099-G and page 5 of a 1099-B both classify as a different form.
+      const samePayer = idsKnown && thisId === firstId;
+      // A page that names a *different* employer is a new form, not a
+      // continuation. Only a provable difference or a provable match changes
+      // anything: a page with no employer id, or one that cannot be compared,
+      // keeps the existing behaviour rather than being guessed at.
+      const differentPayer = idsKnown && thisId !== firstId;
 
-      if (currentSpan && det.type === currentSpan.type && samePayer) {
+      if (currentSpan && det.type === currentSpan.type && !differentPayer) {
         // Same form type — extend the current span
         currentSpan.endPage = det.page;
         currentSpan.matchedKeywords = [
@@ -551,6 +561,12 @@ export function detectFormPages(
         if (det.confidence === 'high') currentSpan.confidence = 'high';
         else if (det.confidence === 'medium' && currentSpan.confidence === 'low')
           currentSpan.confidence = 'medium';
+      } else if (currentSpan && samePayer) {
+        // Classified as a different form, but it names the same employer as the
+        // span already open, so it is that form's own continuation page. Taking
+        // the classification here would tear one form into two and file the
+        // second half as a different kind of income.
+        currentSpan.endPage = det.page;
       } else {
         // Different form type — close current span, start new one
         if (currentSpan) spans.push(currentSpan);
