@@ -2573,18 +2573,25 @@ export function calculateLiabilitySection(ctx: Form1040Context): void {
       ],
     });
   }
-  ctx.tb.trace('form1040.line37', isRefund ? 'Refund' : 'Amount Owed', isRefund ? ctx.refundAmount : ctx.amountOwed, {
+  ctx.tb.trace(isRefund ? 'form1040.line34' : 'form1040.line37', isRefund ? 'Overpayment' : 'Amount Owed', isRefund ? ctx.refundAmount : ctx.amountOwed, {
     authority: isRefund ? 'Form 1040, Line 34' : 'Form 1040, Line 37',
-    formula: 'Total Tax − Credits − Payments',
+    formula: isRefund ? 'Payments − tax after credits − penalty' : 'Tax after credits + penalty − payments',
     inputs: [
-      { lineId: 'form1040.line24', label: 'Total Tax', value: ctx.totalTax },
-      ...(ctx.credits.totalCredits > 0 ? [{ lineId: 'form1040.line21', label: 'Total Credits', value: ctx.credits.totalCredits }] : []),
-      ...(ctx.totalPayments > 0 ? [{ lineId: 'form1040.line33', label: 'Total Payments', value: ctx.totalPayments }] : []),
+      { lineId: 'form1040.line24', label: 'Total tax after credits', value: ctx.taxAfterCredits },
+      { lineId: 'form1040.line33', label: 'Total payments', value: ctx.totalPayments },
+      ...(ctx.estimatedTaxPenalty > 0 ? [{ lineId: 'form1040.line38', label: 'Estimated tax penalty', value: ctx.estimatedTaxPenalty }] : []),
     ],
-    note: isRefund
-      ? `Refund of $${ctx.refundAmount.toLocaleString()}`
-      : ctx.amountOwed > 0 ? `Amount owed: $${ctx.amountOwed.toLocaleString()}` : 'No balance due',
   });
+  if (isRefund) {
+    ctx.tb.trace('form1040.line35a', 'Refund requested', ctx.netRefund, {
+      authority: 'Form 1040, lines 34–36',
+      formula: 'Overpayment − amount applied to next year',
+      inputs: [
+        { lineId: 'form1040.line34', label: 'Overpayment', value: ctx.refundAmount },
+        { lineId: 'form1040.line36', label: 'Applied to next year', value: ctx.refundAppliedToNextYear },
+      ],
+    });
+  }
 }
 
 // ─── Output Assembly ──────────────────────────────────────

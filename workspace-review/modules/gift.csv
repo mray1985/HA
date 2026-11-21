@@ -1,0 +1,4 @@
+year,item,official title,revision,IRS source,instructions,dependencies,implementation,PDF,public individual MeF listing,HA filing,verification
+2024,Form 709,United States Gift (and Generation-Skipping Transfer) Tax Return,2024,https://www.irs.gov/pub/irs-prior/f709--2024.pdf,https://www.irs.gov/pub/irs-prior/i709--2024.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 709,United States Gift (and Generation - Skipping Transfer) Tax Return,2025,https://www.irs.gov/pub/irs-prior/f709--2025.pdf,https://www.irs.gov/pub/irs-prior/i709--2025.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2026,Form 709,,,,,unreconciled,unassessed,unassessed,unreconciled,disabled,verify current or continuous revision and tax-year applicability

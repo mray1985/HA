@@ -47,11 +47,11 @@ export default function TaxSummaryStep() {
       <div className={`rounded-xl border mt-6 text-center py-8 px-6 ${isRefund ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
         <p className="text-slate-400 text-sm mb-1">{isRefund ? 'Estimated Refund' : 'Estimated Tax Owed'}</p>
         <p className={`text-5xl font-bold ${isRefund ? 'text-emerald-400' : 'text-amber-400'}`}>
-          ${(isRefund ? f.refundAmount : f.amountOwed).toLocaleString()}
+          ${(isRefund ? (f.netRefund ?? f.refundAmount) : f.amountOwed).toLocaleString()}
         </p>
-        {findTrace('form1040.line37') && (
+        {findTrace(isRefund ? 'form1040.line35a' : 'form1040.line37') && (
           <div className="flex justify-center mt-3">
-            <TraceDisclosure trace={findTrace('form1040.line37')!} />
+            <TraceDisclosure trace={findTrace(isRefund ? 'form1040.line35a' : 'form1040.line37')!} />
           </div>
         )}
       </div>

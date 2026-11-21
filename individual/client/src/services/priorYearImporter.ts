@@ -63,10 +63,10 @@ export const FORM_1040_EXTRACT_FIELDS = {
   deduction:      `${P2}.f2_02[0]`,   // Line 12e — Standard/Itemized deduction
   taxableIncome:  `${P2}.f2_06[0]`,   // Line 15 — Taxable income
   totalTax:       `${P2}.f2_16[0]`,   // Line 24 — Total tax
-  estimatedPmts:  `${P2}.f2_25[0]`,   // Line 26 — Estimated tax payments
+  estimatedPmts:  `${P2}.f2_21[0]`,   // Line 26 — Estimated tax payments
   totalPayments:  `${P2}.f2_29[0]`,   // Line 33 — Total payments
   refund:         `${P2}.f2_31[0]`,   // Line 35a — Refund
-  amountOwed:     `${P2}.f2_36[0]`,   // Line 37 — Amount owed
+  amountOwed:     `${P2}.f2_35[0]`,   // Line 37 — Amount owed
 } as const;
 
 // 2024 field names (from f1040-2024.pdf — different numbering)
@@ -82,11 +82,11 @@ export const FORM_1040_EXTRACT_FIELDS_2024 = {
   agi:            `${L4_11}.f1_56[0]`,        // Line 11
   deduction:      `${P1}.f1_57[0]`,           // Line 12
   taxableIncome:  `${P1}.f1_60[0]`,           // Line 15
-  totalTax:       `${P2}.f2_09[0]`,           // Line 24
-  estimatedPmts:  `${P2}.f2_14[0]`,           // Line 26
-  totalPayments:  `${P2}.f2_23[0]`,           // Line 33
-  refund:         `${P2}.f2_27[0]`,           // Line 35a
-  amountOwed:     `${P2}.f2_29[0]`,           // Line 37
+  totalTax:       `${P2}.f2_10[0]`,           // Line 24
+  estimatedPmts:  `${P2}.f2_15[0]`,           // Line 26
+  totalPayments:  `${P2}.f2_22[0]`,           // Line 33
+  refund:         `${P2}.f2_24[0]`,           // Line 35a
+  amountOwed:     `${P2}.f2_28[0]`,           // Line 37
 } as const;
 
 // ─── Text extraction keywords for each line ────────

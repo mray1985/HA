@@ -283,7 +283,7 @@ describe('importPriorYear1040PDF', () => {
       { fieldName: `${P2}.f2_16[0]`, fieldValue: '9,256' },
       { fieldName: `${P2}.f2_29[0]`, fieldValue: '12,000' },
       { fieldName: `${P2}.f2_31[0]`, fieldValue: '2,744' },
-      { fieldName: `${P2}.f2_36[0]`, fieldValue: '0' },
+      { fieldName: `${P2}.f2_35[0]`, fieldValue: '0' },
     ]);
 
     const file = new File(['fake-pdf'], 'return.pdf', { type: 'application/pdf' });

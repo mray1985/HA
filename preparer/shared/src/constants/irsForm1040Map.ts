@@ -1056,7 +1056,7 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
   // f2_30: Line 34 — Overpaid amount (if line 33 > line 24)
   {
     pdfFieldName: `${P2}.f2_30[0]`,
-    sourcePath: '',
+    sourcePath: 'form1040.refundAmount',
     source: 'calculationResult',
     format: 'dollarNoCents',
     transform: (_tr, calc) => {
@@ -1069,11 +1069,11 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
   // f2_31: Line 35a — Refund amount
   {
     pdfFieldName: `${P2}.f2_31[0]`,
-    sourcePath: '',
+    sourcePath: 'form1040.netRefund',
     source: 'calculationResult',
     format: 'dollarNoCents',
     transform: (_tr, calc) => {
-      const refund = calc.form1040.refundAmount || 0;
+      const refund = calc.form1040.netRefund ?? calc.form1040.refundAmount ?? 0;
       return refund > 0 ? Math.round(refund).toString() : '';
     },
     formLabel: 'Line 35a: Refund amount',
@@ -1121,12 +1121,19 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
     formLabel: 'Direct deposit: Savings',
   },
 
-  // f2_35: Line 36 — Amount applied to next year estimated tax (not yet supported)
-
-  // f2_36: Line 37 — Amount you owe
+  // 2025 Form 1040, page 2, lines 36–38.
   {
-    pdfFieldName: `${P2}.f2_36[0]`,
-    sourcePath: '',
+    pdfFieldName: `${P2}.f2_34[0]`,
+    sourcePath: 'form1040.refundAppliedToNextYear',
+    source: 'calculationResult',
+    format: 'dollarNoCents',
+    formLabel: 'Line 36: Applied to next year',
+  },
+
+  // f2_35: Line 37 — Amount you owe
+  {
+    pdfFieldName: `${P2}.f2_35[0]`,
+    sourcePath: 'form1040.amountOwed',
     source: 'calculationResult',
     format: 'dollarNoCents',
     transform: (_tr, calc) => {
@@ -1137,9 +1144,8 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
   },
 
   // Line 38 — Estimated tax penalty (Form 2210)
-  // Note: field position TBD — may need verification for penalty line
   {
-    pdfFieldName: `${P2}.f2_34[0]`,
+    pdfFieldName: `${P2}.f2_36[0]`,
     sourcePath: 'form1040.estimatedTaxPenalty',
     source: 'calculationResult',
     format: 'dollarNoCents',

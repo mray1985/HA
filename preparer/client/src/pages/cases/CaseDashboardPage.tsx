@@ -171,6 +171,7 @@ export default function CaseDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold text-white">HA Tax Preparer</h1>
+          <a className="underline" href="/return-workspace/index.html">Practice with a linked W-2 and Form 1040</a>
             <span className="text-xs bg-HATaxService-orange-500/20 text-HATaxService-orange-400 px-2 py-0.5 rounded">CASES</span>
           </div>
           <div className="flex items-center gap-3">

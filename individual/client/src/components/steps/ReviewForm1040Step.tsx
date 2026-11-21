@@ -218,9 +218,9 @@ export default function ReviewForm1040Step() {
               <div>
                 <div className="flex justify-between py-2">
                   <span className="text-emerald-300 font-semibold">Refund</span>
-                  <span className="text-emerald-400 text-lg font-bold">${f.refundAmount.toLocaleString()}</span>
+                  <span className="text-emerald-400 text-lg font-bold">${(f.netRefund ?? f.refundAmount).toLocaleString()}</span>
                 </div>
-                {findTrace('form1040.line37') && <TraceDisclosure trace={findTrace('form1040.line37')!} />}
+                {findTrace('form1040.line35a') && <TraceDisclosure trace={findTrace('form1040.line35a')!} />}
               </div>
             ) : (
               <div>

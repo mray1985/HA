@@ -69,7 +69,11 @@ const LINEID_TO_SOURCE_PATH: Record<string, string> = {
   'form1040.line25d': 'form1040.totalWithholding',
   'form1040.line26': 'form1040.estimatedPayments',
   'form1040.line33': 'form1040.totalPayments',
-  'form1040.line37': 'form1040.estimatedTaxPenalty',
+  'form1040.line34': 'form1040.refundAmount',
+  'form1040.line35a': 'form1040.netRefund',
+  'form1040.line36': 'form1040.refundAppliedToNextYear',
+  'form1040.line37': 'form1040.amountOwed',
+  'form1040.line38': 'form1040.estimatedTaxPenalty',
 
   // Schedule C
   'scheduleC.line1':  'scheduleC.grossReceipts',

@@ -358,6 +358,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
         {/* Header */}
         <div className="mb-2">
           <h1 className="text-4xl sm:text-5xl font-bold">HA Tax service</h1>
+          <a className="underline" href="/return-workspace/index.html">Practice with a linked W-2 and Form 1040</a>
           <p className="text-slate-400 text-sm">2025 Tax Year</p>
         </div>
         <p className="text-slate-400 mb-8 mt-2">

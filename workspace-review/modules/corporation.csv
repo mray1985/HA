@@ -1,0 +1,9 @@
+year,item,official title,revision,IRS source,instructions,dependencies,implementation,PDF,public individual MeF listing,HA filing,verification
+2024,Form 1120,U.S. Corporation Income Tax Return,2024,https://www.irs.gov/pub/irs-prior/f1120--2024.pdf,https://www.irs.gov/pub/irs-prior/i1120--2024.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2024,Form 1120 (Schedule D),Capital Gains and Losses,2024,https://www.irs.gov/pub/irs-prior/f1120sd--2024.pdf,https://www.irs.gov/pub/irs-prior/i1120sd--2024.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2024,Form 1120 (Schedule N),Foreign Operations of U.S. Corporations,2024,https://www.irs.gov/pub/irs-prior/f1120sn--2024.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 1120,U.S. Corporation Income Tax Return,2025,https://www.irs.gov/pub/irs-prior/f1120--2025.pdf,https://www.irs.gov/pub/irs-prior/i1120--2025.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 1120 (Schedule D),Capital Gains and Losses,2025,https://www.irs.gov/pub/irs-prior/f1120sd--2025.pdf,https://www.irs.gov/pub/irs-prior/i1120sd--2025.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 1120 (Schedule N),Foreign Operations of U.S. Corporations,2025,https://www.irs.gov/pub/irs-prior/f1120sn--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2026,Form 1120,,,,,unreconciled,unassessed,unassessed,unreconciled,disabled,verify current or continuous revision and tax-year applicability
+2026,Form 1120 (Schedule N),Foreign Operations of U.S. Corporations,2026,https://www.irs.gov/pub/irs-prior/f1120sn--2026.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only

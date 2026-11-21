@@ -1,0 +1,27 @@
+year,item,official title,revision,IRS source,instructions,dependencies,implementation,PDF,public individual MeF listing,HA filing,verification
+2024,Form 706,,,,,unreconciled,unassessed,unassessed,unreconciled,disabled,verify current or continuous revision and tax-year applicability
+2025,Form 706,United States Estate (and Generation-Skipping Transfer) Tax Return,2025,https://www.irs.gov/pub/irs-prior/f706--2025.pdf,https://www.irs.gov/pub/irs-prior/i706--2025.pdf,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule A),Real Estate,2025,https://www.irs.gov/pub/irs-prior/f706sa--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule B),Stocks and Bonds,2025,https://www.irs.gov/pub/irs-prior/f706sb--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule C),"Mortgages, Notes, and Cash",2025,https://www.irs.gov/pub/irs-prior/f706sc--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule D),Insurance on the Decedent's Life,2025,https://www.irs.gov/pub/irs-prior/f706sd--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule E),Jointly Owned Property,2025,https://www.irs.gov/pub/irs-prior/f706se--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule F),Other Miscellaneous Property Not Reportable Under Any Other Schedule,2025,https://www.irs.gov/pub/irs-prior/f706sf--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule G),Transfers During the Decedent's Lifetime,2025,https://www.irs.gov/pub/irs-prior/f706sg--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule H),Powers of Appointment,2025,https://www.irs.gov/pub/irs-prior/f706sh--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule I),Annuities,2025,https://www.irs.gov/pub/irs-prior/f706si--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule J),Funeral Expenses and Expenses Incurred In Administering Property Subject to Claims,2025,https://www.irs.gov/pub/irs-prior/f706sj--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule K),"Debts, Mortgages, and Liens",2025,https://www.irs.gov/pub/irs-prior/f706sk--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule L),Net Losses During Administration and Expenses Incurred In Administering Property Not Subject to Claims,2025,https://www.irs.gov/pub/irs-prior/f706sl--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule M),"Bequests, etc., to Surviving Spouse",2025,https://www.irs.gov/pub/irs-prior/f706sm--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule O),"Charitable, Public, and Similar Gifts and Bequests",2025,https://www.irs.gov/pub/irs-prior/f706so--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule P),Credit for Certain Foreign Taxes,2025,https://www.irs.gov/pub/irs-prior/f706scp--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule PC),Protective Claim for Refund,2025,https://www.irs.gov/pub/irs-prior/f706spc--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule Q),Credit for Tax on Prior Transfers,2025,https://www.irs.gov/pub/irs-prior/f706sq--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule R),Generation-Skipping Transfer Tax,2025,https://www.irs.gov/pub/irs-prior/f706sr--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule R-1),Generating-Skipping Transfer Tax,2025,https://www.irs.gov/pub/irs-prior/f706sr1--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule T),Section 2032A Property Valuation,2025,https://www.irs.gov/pub/irs-prior/f706st--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule U),Qualified Conservation Easement Exclusion,2025,https://www.irs.gov/pub/irs-prior/f706su--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2025,Form 706 (Schedule W),Continuation Schedule for Form 706 Schedules,2025,https://www.irs.gov/pub/irs-prior/f706sw--2025.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
+2026,Form 706,,,,,unreconciled,unassessed,unassessed,unreconciled,disabled,verify current or continuous revision and tax-year applicability
+2026,Form 706 (Schedule J),Funeral Expenses and Expenses Incurred In Administering Property Subject to Claims,Jul 2026,https://www.irs.gov/pub/irs-prior/f706sj--2026.pdf,,unreconciled,unassessed,unassessed,unreconciled,disabled,catalog metadata only
