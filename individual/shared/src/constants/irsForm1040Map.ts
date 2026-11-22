@@ -17,6 +17,11 @@ import { isAge65OrOlder } from '../engine/form1040Sections.js';
 // Uses parseDateString to avoid timezone hazards with new Date(string).
 // Matches the engine's isUnderAge logic in credits.ts.
 const TAX_YEAR = 2025;
+/** Form 1040 line 22 excludes Schedule 2 Part II and refundable credits. */
+function incomeTaxAfterNonrefundableCredits(calc: CalculationResult): number {
+  const f = calc.form1040;
+  return Math.max(0, f.incomeTax + (f.amtAmount || 0) + (f.excessAPTCRepayment || 0) - (calc.credits?.totalNonRefundable || 0));
+}
 function isDepUnder17(dep: Dependent | undefined): boolean {
   if (!dep?.dateOfBirth) return false;
   const dob = parseDateString(dep.dateOfBirth);
@@ -823,9 +828,8 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
     source: 'calculationResult',
     format: 'dollarNoCents',
     transform: (_tr, calc) => {
-      // Schedule 2 Part I, Line 3 = AMT + excess premium credit repayment
-      // For most returns this is 0
-      return '';
+      const total = (calc.form1040.amtAmount || 0) + (calc.form1040.excessAPTCRepayment || 0);
+      return total ? Math.round(total).toString() : '';
     },
     formLabel: 'Line 17: Amount from Schedule 2, Part I',
   },
@@ -837,6 +841,7 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
     source: 'calculationResult',
     format: 'dollarNoCents',
     formLabel: 'Line 18: Tax plus Schedule 2',
+    transform: (_tr, calc) => Math.round(calc.form1040.incomeTax + (calc.form1040.amtAmount || 0) + (calc.form1040.excessAPTCRepayment || 0)).toString(),
   },
 
   // f2_11: Line 19 — Child tax credit or credit for other dependents
@@ -906,6 +911,7 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
     source: 'calculationResult',
     format: 'dollarNoCents',
     formLabel: 'Line 22: Tax after credits',
+    transform: (_tr, calc) => Math.round(incomeTaxAfterNonrefundableCredits(calc)).toString(),
   },
 
   // f2_15: Line 23 — Other taxes from Schedule 2, line 21
@@ -915,12 +921,9 @@ export const FORM_1040_FIELDS: IRSFieldMapping[] = [
     source: 'calculationResult',
     format: 'dollarNoCents',
     transform: (_tr, calc) => {
-      // Schedule 2 Part II total = SE tax + household employment + additional Medicare + NIIT + penalties
-      const seTax = calc.form1040.seTax || 0;
-      const schedH = calc.form1040.householdEmploymentTax || 0;
-      const addlMedicare = calc.form1040.additionalMedicareTaxW2 || 0;
-      const niit = calc.form1040.niitTax || 0;
-      const total = seTax + schedH + addlMedicare + niit;
+      // The engine's total tax includes all supported Part II taxes. Exclude
+      // line 22, rather than silently omitting a supported additional tax.
+      const total = Math.max(0, calc.form1040.totalTax - incomeTaxAfterNonrefundableCredits(calc));
       return total ? Math.round(total).toString() : '';
     },
     formLabel: 'Line 23: Other taxes from Schedule 2',

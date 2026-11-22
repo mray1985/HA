@@ -6,6 +6,7 @@ import { useChatStore } from '../store/chatStore';
 import WizardLayout from '../components/layout/WizardLayout';
 import StepRenderer from '../components/steps/StepRenderer';
 import { toast } from 'sonner';
+import HAWorkspace from '../components/ha/HAWorkspace';
 
 export default function WizardPage() {
   const { id } = useParams<{ id: string }>();
@@ -73,7 +74,7 @@ export default function WizardPage() {
 
   const taxReturn = useTaxReturnStore((s) => s.taxReturn);
 
-  if (!taxReturn) {
+  if (!taxReturn || taxReturn.id !== id) {
     return (
       <div className="min-h-screen bg-surface-900">
         {/* Skeleton header */}
@@ -107,6 +108,8 @@ export default function WizardPage() {
       </div>
     );
   }
+
+  if (window.location.pathname.endsWith('/workspace')) return <HAWorkspace />;
 
   return (
     <WizardLayout>

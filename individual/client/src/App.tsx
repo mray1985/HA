@@ -11,6 +11,7 @@ import { isEncryptionSetup, isUnlocked, setupEncryption, unlock, lock } from './
 import { loadAllReturns, clearReturnCache } from './api/client';
 import { useAISettingsStore } from './store/aiSettingsStore';
 import { useDeductionFinderStore } from './store/deductionFinderStore';
+import HAWorkspace from './components/ha/HAWorkspace';
 
 type AppState = 'initializing' | 'lock-setup' | 'lock-unlock' | 'unlocked';
 
@@ -162,6 +163,7 @@ export default function App() {
           <Route path="/pledge" element={<PledgePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/ha" element={<HAWorkspace educationOnly />} />
           <Route path="/return/:id/*" element={isLocked ? <Navigate to="/" replace /> : <WizardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -10,6 +10,8 @@ import ImportTraceSection from './ImportTraceSection';
 import FormField from '../common/FormField';
 import CurrencyInput from '../common/CurrencyInput';
 import { useDocumentImport, isImageFile } from '../../hooks/useDocumentImport';
+import { useTaxReturnStore } from '../../store/taxReturnStore';
+import { Link } from 'react-router-dom';
 
 interface PDFImportPanelProps {
   onBack: () => void;
@@ -133,6 +135,7 @@ const PREVIEW_FIELDS: PreviewField[] = [
 ];
 
 export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
+  const statementReturnId = useTaxReturnStore(s => s.taxReturn?.id);
   const {
     state,
     result,
@@ -169,6 +172,7 @@ export default function PDFImportPanel({ onBack }: PDFImportPanelProps) {
         <ArrowLeft className="w-4 h-4" />
         Back to import options
       </button>
+      {statementReturnId && <p className="mb-4 text-sm text-blue-300"><Link to={`/return/${statementReturnId}/workspace?view=statements`}>Read a K-1 / K-3 packet with its supporting statements</Link></p>}
 
       {/* ─── State: UPLOAD ─────────────────────────────── */}
       {state === 'upload' && (

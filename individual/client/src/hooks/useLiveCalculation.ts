@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTaxReturnStore } from '../store/taxReturnStore';
 import { calculateForm1040, FilingStatus } from '@hatax/engine';
 
@@ -14,12 +14,14 @@ import { calculateForm1040, FilingStatus } from '@hatax/engine';
  * and TaxSummaryStep via the Zustand store.
  */
 export function useLiveCalculation() {
+  const [calculationError, setCalculationError] = useState<string | null>(null);
   const taxReturn = useTaxReturnStore((s) => s.taxReturn);
   const setCalculation = useTaxReturnStore((s) => s.setCalculation);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (!taxReturn) {
+      setCalculationError(null);
       setCalculation(null);
       return;
     }
@@ -43,6 +45,7 @@ export function useLiveCalculation() {
       (taxReturn.otherIncome || 0) > 0;
 
     if (!hasIncome) {
+      setCalculationError(null);
       setCalculation(null);
       return;
     }
@@ -62,11 +65,14 @@ export function useLiveCalculation() {
           { enabled: true },
         );
         setCalculation(result);
+        setCalculationError(null);
       } catch {
-        // Silently ignore calculation errors during data entry
+        setCalculation(null);
+        setCalculationError('This return could not be calculated. Review the last entry in the interview before relying on the results.');
       }
     }, 150);
 
     return () => clearTimeout(debounceRef.current);
   }, [taxReturn, setCalculation]);
+  return { calculationError };
 }

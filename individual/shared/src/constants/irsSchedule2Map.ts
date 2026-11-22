@@ -55,13 +55,20 @@ export const SCHEDULE_2_FIELDS: IRSFieldMapping[] = [
     format: 'dollarNoCents',
   },
 
-  // f1_11: Line 2 — Alternative minimum tax (Form 6251)
-  // AMT not computed by our engine — leave blank
+  // f1_11: Line 2 - Alternative minimum tax (Form 6251)
+  {
+    pdfFieldName: `${P1}.f1_11[0]`,
+    formLabel: 'Line 2: Alternative minimum tax',
+    sourcePath: 'form1040.amtAmount',
+    source: 'calculationResult',
+    format: 'dollarNoCents',
+  },
 
   // f1_12: Line 3 — Add lines 1z and 2 → goes to Form 1040, line 17
   {
     pdfFieldName: `${P1}.f1_12[0]`,
     formLabel: 'Line 3: Add lines 1z and 2',
+    transform: (_tr, calc) => Math.round((calc.form1040.excessAPTCRepayment || 0) + (calc.form1040.amtAmount || 0)).toString(),
     sourcePath: 'form1040.excessAPTCRepayment',
     source: 'calculationResult',
     format: 'dollarNoCents',
@@ -104,6 +111,7 @@ export const SCHEDULE_2_FIELDS: IRSFieldMapping[] = [
   {
     pdfFieldName: `${P1}.f1_18[0]`,
     formLabel: 'Line 8: Additional tax on IRAs or other tax-favored accounts',
+    transform: (_tr, calc) => Math.round((calc.form1040.earlyDistributionPenalty || 0) + (calc.form1040.excessContributionPenalty || 0) + (calc.form1040.penalty529 || 0)).toString(),
     sourcePath: 'form1040.excessContributionPenalty',
     source: 'calculationResult',
     format: 'dollarNoCents',
@@ -139,13 +147,27 @@ export const SCHEDULE_2_FIELDS: IRSFieldMapping[] = [
   },
 
   // f1_27: Line 21 — Total other taxes (on page 2)
-  // Page 2 fields:
-  // f2_20: Line 18 — Total additional taxes (17a-17z)
-  // f2_21: Line 19 — Recapture of net EPE
-  // f2_22: Line 20 — Section 965 net tax
-  // f2_23: Line 21 — Add lines 4, 7, 8-16, 18, 19
   {
-    pdfFieldName: `${P2}.f2_23[0]`,
+    pdfFieldName: `${P2}.f2_04[0]`,
+    formLabel: 'Line 17c: Additional tax on HSA distributions',
+    sourcePath: 'form1040.hsaDistributionPenalty',
+    source: 'calculationResult',
+    format: 'dollarNoCents',
+  },
+  {
+    pdfFieldName: `${P2}.f2_21[0]`,
+    formLabel: 'Line 18: Total additional taxes',
+    sourcePath: 'form1040.hsaDistributionPenalty',
+    source: 'calculationResult',
+    format: 'dollarNoCents',
+  },
+  // Page 2 fields:
+  // f2_21: Line 18 - Total additional taxes (17a-17z)
+  // f2_22: Line 19 - Recapture of net EPE
+  // f2_23: Line 20 - Section 965 net tax
+  // f2_24: Line 21 - Add lines 4, 7, 8-16, 18, 19
+  {
+    pdfFieldName: `${P2}.f2_24[0]`,
     formLabel: 'Line 21: Total additional taxes',
     sourcePath: '',
     source: 'calculationResult',
@@ -157,7 +179,7 @@ export const SCHEDULE_2_FIELDS: IRSFieldMapping[] = [
       const niit = calc.form1040.niitTax || 0;
       const form5329 = calc.form1040.excessContributionPenalty || 0;
       const unreportedTip = calc.form1040.form4137Tax || 0;
-      const total = seTax + schedH + addlMedicare + niit + form5329 + unreportedTip;
+      const total = seTax + schedH + addlMedicare + niit + form5329 + unreportedTip + (calc.form1040.earlyDistributionPenalty || 0) + (calc.form1040.hsaDistributionPenalty || 0) + (calc.form1040.penalty529 || 0);
       return total ? Math.round(total).toString() : '';
     },
   },
@@ -175,7 +197,7 @@ export const SCHEDULE_2_TEMPLATE: IRSFormTemplate = {
     const niit = calc.form1040.niitTax || 0;
     const form5329 = calc.form1040.excessContributionPenalty || 0;
     const excessAPTC = calc.form1040.excessAPTCRepayment || 0;
-    return (seTax + schedH + addlMedicare + niit + form5329 + excessAPTC) > 0;
+    return (seTax + schedH + addlMedicare + niit + form5329 + excessAPTC + (calc.form1040.amtAmount || 0) + (calc.form1040.form4137Tax || 0) + (calc.form1040.earlyDistributionPenalty || 0) + (calc.form1040.hsaDistributionPenalty || 0) + (calc.form1040.penalty529 || 0)) > 0;
   },
   fields: SCHEDULE_2_FIELDS,
 };

@@ -161,6 +161,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
           })()}
 
           {/* Explain my taxes toggle */}
+          <button onClick={() => { const id = useTaxReturnStore.getState().returnId; if (id) navigate(`/return/${id}/workspace`); }} className="text-sm font-semibold text-orange-300 hover:text-white">Three-screen workspace</button>
           {calculation && (
             <button
               onClick={handleExplainToggle}

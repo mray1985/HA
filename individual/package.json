@@ -14,6 +14,7 @@
     "build:shared": "npm run build -w shared",
     "build": "npm run build -w client",
     "start": "node scripts/start-site.mjs",
+    "start:workspace": "npm run preview -w client -- --configLoader runner --host 127.0.0.1 --port 5179",
     "test": "npm test -w shared && npm test -w server",
     "test:engine": "npm test -w shared",
     "gen:constants": "npx tsx scripts/gen-constants-doc.ts"

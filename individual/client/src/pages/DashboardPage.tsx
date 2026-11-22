@@ -365,6 +365,7 @@ export default function DashboardPage({ lockMode, onUnlock, lockError }: Dashboa
         </p>
 
         {/* Value props */}
+        <button className="btn-primary mb-6" onClick={() => navigate('/ha')}>Tax game · Taxtionary · HA Tax Radio</button>
         <div className="grid sm:grid-cols-3 gap-3 mb-8">
           <button
             onClick={() => navigate('/pledge')}
