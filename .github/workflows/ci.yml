@@ -131,7 +131,8 @@ jobs:
   # ──────────────────────────────────────────────
   e2e-tests:
     name: E2E Tests (Playwright, ${{ matrix.app }})
-    runs-on: ubuntu-latest
+    # Playwright 1.58.2 cannot install Chromium on the new Ubuntu 26.04 image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -201,4 +202,6 @@ jobs:
         run: npm run build:shared
 
       - name: Build client
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run build

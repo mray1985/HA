@@ -36,6 +36,26 @@ export function parsePacketAmount(text: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// Read whole monetary cells, rather than finding number fragments inside an
+// invalid value. Unbalanced parentheses or extra decimal digits need review.
+function parseAmountCells(text: string): number[] {
+  const token = /(?:\(\s*\$?\s*\d[\d,]*(?:\.\d{1,2})?\s*\)|(?:-\s*\$?|\$\s*-?)?\s*\d[\d,]*(?:\.\d{1,2})?)/y;
+  const amounts: number[] = [];
+  let offset = 0;
+  while (offset < text.length) {
+    while (/\s/.test(text[offset] ?? '') && offset < text.length) offset++;
+    if (offset === text.length) break;
+    token.lastIndex = offset;
+    const match = token.exec(text);
+    if (!match || (token.lastIndex < text.length && !/\s/.test(text[token.lastIndex]))) return [];
+    const value = parsePacketAmount(match[0]);
+    if (value === null) return [];
+    amounts.push(value);
+    offset = token.lastIndex;
+  }
+  return amounts;
+}
+
 function makeLines(blocks: PacketBlock[]): PacketSource[] {
   const lines: PacketBlock[][] = [];
   for (const b of [...blocks].sort((a, b) => a.y - b.y || a.x - b.x)) {
@@ -95,10 +115,12 @@ export function correlateTaxPacket(blocks: PacketBlock[], id = 'packet'): TaxPac
       const rule = RULES.find(r => r.pattern.test(line.text));
       if (!rule) continue;
       const label = rule.pattern.exec(line.text)!;
-      const suffix = line.text.slice(label.index + label[0].length).replace(/^\s*[:=—–-]\s*/, '');
+      // An ASCII minus belongs to the amount, even when no colon separates
+      // the label and value. Removing it would turn a reported loss into income.
+      const suffix = line.text.slice(label.index + label[0].length).replace(/^\s*[:=—–]\s*/, '');
       // Multiple monetary cells are preserved as ambiguous; never sum or pick a column.
       const amountTail = suffix.replace(/\*+$/, '').trim();
-      const amounts = /^[\d\s$(),.\-]+$/.test(amountTail) ? [...amountTail.matchAll(/(?:\$?\(?-?\d[\d,]*(?:\.\d{1,2})?\)?)/g)].map(m => parsePacketAmount(m[0])).filter((n): n is number => n !== null) : [];
+      const amounts = parseAmountCells(amountTail);
       const value = amounts.length === 1 ? amounts[0] : null;
       const qbiComponent = qbiStatement && rule.field === "ordinaryBusinessIncome";
       const foreign = page.kind === 'K-3' || /foreign|category|country/i.test(line.text) || page.categories.length > 0;
@@ -136,3 +158,4 @@ export function applyReviewedPacket(tr: TaxReturn, target: IncomeK1, report: Tax
   }
   return next;
 }
+
