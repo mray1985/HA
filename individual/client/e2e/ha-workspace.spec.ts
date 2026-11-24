@@ -71,7 +71,7 @@ test.describe('Connected HA workspace', () => {
     }
     await expect(page.getByText(/500 of 500 points/)).toBeVisible();
     await page.getByRole('button', { name: 'Play again', exact: true }).click();
-    await expect(page.getByText('Question 1 of 5 � 0 points', { exact: true })).toBeVisible();
+    await expect(page.getByText('Question 1 of 5 · 0 points', { exact: true })).toBeVisible();
     await page.getByRole('navigation', { name: 'HA workspace' }).getByRole('button', { name: 'Taxtionary', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Find a tax word' }).fill('withholding');
     await expect(page.locator('.ha-definitions dt')).toHaveText(['Withholding']);
