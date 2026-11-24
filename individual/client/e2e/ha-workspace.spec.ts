@@ -13,7 +13,7 @@ async function openWorkspace(page: Page) {
     const tr = api.createReturn();
     api.updateReturn(tr.id, {
       firstName: 'Jordan', lastName: 'Sample', ssn: '000000000',
-      dateOfBirth: '1985-01-01', filingStatus: 'single',
+      dateOfBirth: '1985-01-01', filingStatus: 1,
       addressStreet: '123 Example Lane', addressCity: 'Example', addressState: 'LA', addressZip: '00000',
       w2Income: [{ id: 'sample-w2', employerName: 'Fictional Employer', wages: 55000, federalTaxWithheld: 6000, socialSecurityWages: 55000, socialSecurityTax: 3410, medicareWages: 55000, medicareTax: 797.50 }],
       businesses: [{ id: 'sample-business', businessName: 'Fictional Design', businessDescription: 'Design services', accountingMethod: 'cash', didStartThisYear: false }],
@@ -74,7 +74,7 @@ test.describe('Connected HA workspace', () => {
     await expect(page.getByText('Question 1 of 5 · 0 points', { exact: true })).toBeVisible();
     await page.getByRole('navigation', { name: 'HA workspace' }).getByRole('button', { name: 'Taxtionary', exact: true }).click();
     await page.getByRole('searchbox', { name: 'Find a tax word' }).fill('withholding');
-    await expect(page.locator('.ha-definitions dt')).toHaveText(['Withholding']);
+    await expect(page.locator('.ha-definitions dt')).toHaveText(['Withholding', 'Estimated tax']);
     const radio = page.getByRole('complementary', { name: 'HA Tax Radio' });
     await radio.getByRole('button', { name: 'Transcript & audio' }).click();
     await expect(radio.locator('.ha-radio-details')).toContainText('reduces');
