@@ -11,7 +11,7 @@ export const PACKET_FIELD_LABELS: Record<PacketField, string> = {
 };
 const RULES: { field: PacketField; pattern: RegExp; supported: boolean }[] = [
   { field: 'section199AQBI', pattern: /(?:section\s*199a\s+)?(?:qualified business income(?:\s*\(loss\))?|qbi(?:\s*\(loss\))?)/i, supported: true },
-  { field: 'qbiW2Wages', pattern: /(?:qbi\s+)?w[–-]?2\s+wages/i, supported: false },
+  { field: 'qbiW2Wages', pattern: /(?:qbi\s+)?w[--]?2\s+wages/i, supported: false },
   { field: 'qbiUBIA', pattern: /(?:unadjusted basis(?: immediately after acquisition)?(?:\s*\(ubia\))?|ubia)(?: of qualified property)?/i, supported: false },
   { field: 'ordinaryBusinessIncome', pattern: /ordinary business income(?:\s*\(loss\))?/i, supported: true },
   { field: 'rentalIncome', pattern: /net rental real estate income(?:\s*\(loss\))?/i, supported: true },
@@ -20,13 +20,13 @@ const RULES: { field: PacketField; pattern: RegExp; supported: boolean }[] = [
   { field: 'ordinaryDividends', pattern: /ordinary dividends/i, supported: true },
   { field: 'interestIncome', pattern: /interest income/i, supported: true },
   { field: 'royalties', pattern: /royalties/i, supported: true },
-  { field: 'shortTermCapitalGain', pattern: /(?:net\s+)?short[–-]term capital gain(?:\s*\(loss\))?/i, supported: true },
-  { field: 'longTermCapitalGain', pattern: /(?:net\s+)?long[–-]term capital gain(?:\s*\(loss\))?/i, supported: true },
+  { field: 'shortTermCapitalGain', pattern: /(?:net\s+)?short[--]term capital gain(?:\s*\(loss\))?/i, supported: true },
+  { field: 'longTermCapitalGain', pattern: /(?:net\s+)?long[--]term capital gain(?:\s*\(loss\))?/i, supported: true },
   { field: 'netSection1231Gain', pattern: /net section\s*1231\s+gain(?:\s*\(loss\))?/i, supported: true },
-  { field: 'selfEmploymentIncome', pattern: /(?:net earnings from self[–-]employment|self[–-]employment (?:income|earnings))/i, supported: true },
+  { field: 'selfEmploymentIncome', pattern: /(?:net earnings from self[--]employment|self[--]employment (?:income|earnings))/i, supported: true },
   { field: 'section179Deduction', pattern: /section\s*179\s+(?:expense\s+)?deduction/i, supported: true },
   { field: 'foreignTaxPaid', pattern: /foreign (?:income )?taxes? (?:paid(?:\s*(?:or|\/)\s*accrued)?|accrued)/i, supported: false },
-  { field: 'foreignSourceIncome', pattern: /foreign[–-]?\s*source (?:gross )?income/i, supported: false },
+  { field: 'foreignSourceIncome', pattern: /foreign[--]?\s*source (?:gross )?income/i, supported: false },
 ];
 const normalizeTin = (s?: string) => s?.replace(/\D/g, '');
 export function parsePacketAmount(text: string): number | null {
@@ -34,6 +34,26 @@ export function parsePacketAmount(text: string): number | null {
   if (!/^(?:-?\d+(?:\.\d{1,2})?|\(\d+(?:\.\d{1,2})?\))$/.test(cleaned)) return null;
   const n = Number(cleaned.replace(/[()]/g, '')) * (cleaned.startsWith('(') ? -1 : 1);
   return Number.isFinite(n) ? n : null;
+}
+
+// Read whole monetary cells, rather than finding number fragments inside an
+// invalid value. Unbalanced parentheses or extra decimal digits need review.
+function parseAmountCells(text: string): number[] {
+  const token = /(?:\(\s*\$?\s*\d[\d,]*(?:\.\d{1,2})?\s*\)|(?:-\s*\$?|\$\s*-?)?\s*\d[\d,]*(?:\.\d{1,2})?)/y;
+  const amounts: number[] = [];
+  let offset = 0;
+  while (offset < text.length) {
+    while (/\s/.test(text[offset] ?? '') && offset < text.length) offset++;
+    if (offset === text.length) break;
+    token.lastIndex = offset;
+    const match = token.exec(text);
+    if (!match || (token.lastIndex < text.length && !/\s/.test(text[token.lastIndex]))) return [];
+    const value = parsePacketAmount(match[0]);
+    if (value === null) return [];
+    amounts.push(value);
+    offset = token.lastIndex;
+  }
+  return amounts;
 }
 
 function makeLines(blocks: PacketBlock[]): PacketSource[] {
@@ -70,11 +90,11 @@ export function correlateTaxPacket(blocks: PacketBlock[], id = 'packet'): TaxPac
   for (const block of blocks) { const key = `${block.documentId}:${block.page}`; grouped.set(key, [...(grouped.get(key) ?? []), block]); }
   const pages: PacketPage[] = [...grouped.values()].map(pageBlocks => {
     const lines = makeLines(pageBlocks), text = lines.map(l => l.text).join('\n');
-    const title = lines.filter(l => l.y < (lines[0]?.y ?? 0) + 160).map(l => l.text.match(/^\s*schedule\s+k[–-]?([13])\b/i)?.[1]).find(Boolean);
+    const title = lines.filter(l => l.y < (lines[0]?.y ?? 0) + 160).map(l => l.text.match(/^\s*schedule\s+k[--]?([13])\b/i)?.[1]).find(Boolean);
     const kind = title === '3' ? 'K-3' : title === '1' ? 'K-1' : /statement|supplement|section\s*199a|box\s*\d+\s*code/i.test(text) ? 'Statement' : 'Other';
     const formNumbers = unique([...text.matchAll(/\bForm\s+(1065|1120[- ]?S|1041)\b/gi)].map(m => m[1].toUpperCase().replace("1120S", "1120-S").replace("1120 S", "1120-S"))); const formNumber = formNumbers.length === 1 ? formNumbers[0] : undefined;
-    const year = labelledValue(lines, /(?:tax|calendar)\s+year(?:\s+(?:ending|ended))?\s*[:=]?/i, /\b20\d{2}\b/) || (/schedule\s+k[–-]?[13]/i.test(text.slice(0, 500)) ? text.slice(0, 500).match(/\b20\d{2}\b/)?.[0] : undefined);
-    return { documentId: pageBlocks[0].documentId, fileName: pageBlocks[0].fileName, page: pageBlocks[0].page, kind, formNumber, entityEin: labelledValue(lines, issuerLabel, /\b\d{2}-\d{7}\b/), recipientTin: labelledValue(lines, recipientLabel, /\b(?:\d{3}-\d{2}-\d{4}|\d{2}-\d{7})\b/), taxYear: year ? Number(year) : undefined, sections: unique(lines.map(l => l.text.match(/\bpart\s+[IVX]+(?:\s*[—–-]\s*[^\d]+)?(?:.*?section\s+\d+)?/i)?.[0])), categories: unique(lines.flatMap(l => l.text.match(/(?:passive|general|foreign branch|section\s*951a|treaty resourced)\s+category/gi) || [])), country: labelledValue(lines, /country(?:\s+code)?\s*[:=]/i, /[A-Z]{2}\b/), ocr: pageBlocks.some(b => b.ocr), lines };
+    const year = labelledValue(lines, /(?:tax|calendar)\s+year(?:\s+(?:ending|ended))?\s*[:=]?/i, /\b20\d{2}\b/) || (/schedule\s+k[--]?[13]/i.test(text.slice(0, 500)) ? text.slice(0, 500).match(/\b20\d{2}\b/)?.[0] : undefined);
+    return { documentId: pageBlocks[0].documentId, fileName: pageBlocks[0].fileName, page: pageBlocks[0].page, kind, formNumber, entityEin: labelledValue(lines, issuerLabel, /\b\d{2}-\d{7}\b/), recipientTin: labelledValue(lines, recipientLabel, /\b(?:\d{3}-\d{2}-\d{4}|\d{2}-\d{7})\b/), taxYear: year ? Number(year) : undefined, sections: unique(lines.map(l => l.text.match(/\bpart\s+[IVX]+(?:\s*[---]\s*[^\d]+)?(?:.*?section\s+\d+)?/i)?.[0])), categories: unique(lines.flatMap(l => l.text.match(/(?:passive|general|foreign branch|section\s*951a|treaty resourced)\s+category/gi) || [])), country: labelledValue(lines, /country(?:\s+code)?\s*[:=]/i, /[A-Z]{2}\b/), ocr: pageBlocks.some(b => b.ocr), lines };
   });
   const allEntities = unique(pages.map(p => p.entityEin)), allYears = unique(pages.map(p => p.taxYear?.toString())), allRecipients = unique(pages.map(p => p.recipientTin));
   const allFormNumbers = unique(pages.map(p => p.formNumber));
@@ -90,15 +110,17 @@ export function correlateTaxPacket(blocks: PacketBlock[], id = 'packet'): TaxPac
     for (const line of page.lines) {
       if (/^part\s+[IVX]+\b/i.test(line.text)) section = line.text;
       const activityMatch = line.text.match(/^(?:trade or business|business|activity)(?:\s+(?:name|number))?\s*[:=]\s*(.+)$/i); if (activityMatch) activity = activityMatch[1].trim();
-      const codeMatch = line.text.match(/\bbox\s*(\d+[a-z]?)\s*[,;:—–-]?\s*code\s*([a-z]{1,2})\b/i);
+      const codeMatch = line.text.match(/\bbox\s*(\d+[a-z]?)\s*[,;:---]?\s*code\s*([a-z]{1,2})\b/i);
       if (codeMatch) code = `Box ${codeMatch[1]}, code ${codeMatch[2].toUpperCase()}`;
       const rule = RULES.find(r => r.pattern.test(line.text));
       if (!rule) continue;
       const label = rule.pattern.exec(line.text)!;
-      const suffix = line.text.slice(label.index + label[0].length).replace(/^\s*[:=—–-]\s*/, '');
+      // An ASCII minus belongs to the amount, even when no colon separates
+      // the label and value. Removing it would turn a reported loss into income.
+      const suffix = line.text.slice(label.index + label[0].length).replace(/^\s*[:=--]\s*/, '');
       // Multiple monetary cells are preserved as ambiguous; never sum or pick a column.
       const amountTail = suffix.replace(/\*+$/, '').trim();
-      const amounts = /^[\d\s$(),.\-]+$/.test(amountTail) ? [...amountTail.matchAll(/(?:\$?\(?-?\d[\d,]*(?:\.\d{1,2})?\)?)/g)].map(m => parsePacketAmount(m[0])).filter((n): n is number => n !== null) : [];
+      const amounts = parseAmountCells(amountTail);
       const value = amounts.length === 1 ? amounts[0] : null;
       const qbiComponent = qbiStatement && rule.field === "ordinaryBusinessIncome";
       const foreign = page.kind === 'K-3' || /foreign|category|country/i.test(line.text) || page.categories.length > 0;
@@ -136,3 +158,4 @@ export function applyReviewedPacket(tr: TaxReturn, target: IncomeK1, report: Tax
   }
   return next;
 }
+
